@@ -1,0 +1,23 @@
+{
+  // The exercise core: no DOM library and no ambient types, so a stray
+  // `document`, `AudioContext` or `indexedDB` fails the type check.
+  "compilerOptions": {
+    "composite": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.core.tsbuildinfo",
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "types": [],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "emitDeclarationOnly": true,
+    "declarationDir": "./node_modules/.tmp/core-types",
+    "skipLibCheck": true
+  },
+  "include": ["src/core"],
+  "exclude": ["src/core/**/*.test.ts"]
+}

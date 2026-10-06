@@ -1,0 +1,77 @@
+:root {
+  --accent: #2563eb;
+  --bg: #f5f5f4;
+  --card: #fff;
+  --ink: #1c1917;
+  --mute: #78716c;
+  --line: #e7e5e4;
+  --panel: #fafaf9;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.4 system-ui, sans-serif;
+  overflow: hidden;
+}
+
+h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--mute);
+  margin: 0 0 6px;
+}
+
+.workstation {
+  display: grid;
+  grid-template-columns: 230px 1fr 250px;
+  height: 100vh;
+}
+
+.library {
+  border-right: 1px solid var(--line);
+  background: var(--panel);
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+}
+.app-name { font-size: 16px; margin: 0; }
+
+.notation-view { flex: 1; overflow: auto; padding: 10px 16px; background: var(--card); min-height: 0; }
+
+.editor-panel {
+  border-top: 1px solid var(--line);
+  padding: 8px 16px;
+  background: var(--panel);
+  min-height: 30vh;
+  max-height: 52vh;
+  overflow: auto;
+}
+
+.settings {
+  border-left: 1px solid var(--line);
+  background: var(--panel);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: auto;
+}
+.settings .group { display: flex; flex-direction: column; gap: 6px; }

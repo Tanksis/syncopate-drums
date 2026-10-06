@@ -12,3 +12,7 @@
 - [ ] The Actions workflow runs Vitest on every push to `main` and deploys only if it passes; a deliberately failing test blocks the deploy
 - [ ] The same Vitest check runs on every pull request into `main` (without deploying), so PRs can't merge red, per the [branching ADR](../../../docs/adr/0001-branching-and-releases.md)
 - [ ] Every dependency is MIT or CC0
+
+## Comments
+
+- 2026-10-06: Implemented on `feature/15-app-skeleton-deployed`. Vite 8 + React 19 + Zustand 5 + TypeScript 7, Vitest 5. The core (`src/core/`) is its own TypeScript project with no DOM lib and no ambient types, plus a test that checks its imports. It holds only the tick constants and `clampBpm` for now; ticket 16 brings the model. One workflow (`.github/workflows/ci.yml`): a `test` job (type check, licence check, Vitest) on PRs and pushes to `main`, and a `deploy` job to Pages that needs `test` and runs only on `main`. The licence check covers shipped (non-dev) packages; dev tooling such as TypeScript (Apache-2.0) isn't shipped. One-time repo setting needed: Settings → Pages → Source = "GitHub Actions".
