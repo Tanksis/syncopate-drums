@@ -2,7 +2,7 @@
 
 A laptop-first drum practice app for working through rhythm books such as Ted Reed's *Syncopation*. Type in a line one beat at a time, see it on a drum staff with the sticking printed under the notes, add a jazz groove on top, and play along with a metronome: looping hard bars, at any tempo, with swing.
 
-It will run in the browser as an installable, offline PWA at **https://tanksis.github.io/syncopate-drums/** (not live yet).
+It will run in the browser as an installable, offline PWA at **https://tanksis.github.io/syncopate-drums/**. The skeleton is live there now.
 
 ## Status
 
