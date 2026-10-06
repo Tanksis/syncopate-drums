@@ -13,6 +13,8 @@ export interface BeatView {
   hits: string
   /** The beat's first note continues the previous beat's last note rather than being struck. */
   tiedInto: boolean
+  /** The beat's last note ends early, with a rest after it. */
+  cutShort: boolean
 }
 
 /** One tick of the timeline: a struck note, a note still sounding, or silence. */
@@ -162,6 +164,10 @@ function slotTicks(triplet: boolean): number[] {
   return triplet ? [0, 4, 8] : [0, 3, 6, 9]
 }
 
+function beatCells({ cells }: Timeline, beat: number): Cell[] {
+  return cells.slice(beat * TICKS_PER_BEAT, (beat + 1) * TICKS_PER_BEAT)
+}
+
 function hitsOf({ cells, triplet }: Timeline, beat: number): string {
   const first = beat * TICKS_PER_BEAT
   return slotTicks(triplet[beat])
@@ -179,7 +185,13 @@ export function beatViews(bars: readonly Bar[]): BeatView[][] {
     Array.from({ length: BEATS_PER_BAR }, (_, beat) => {
       const index = b * BEATS_PER_BAR + beat
       const hits = hitsOf(timeline, index)
-      return { figure: figureOfHits(hits), hits, tiedInto: timeline.cells[index * TICKS_PER_BEAT].state === 'hold' }
+      const cells = beatCells(timeline, index)
+      return {
+        figure: figureOfHits(hits),
+        hits,
+        tiedInto: cells[0].state === 'hold',
+        cutShort: cells.at(-1)!.state === 'rest' && cells.some((c) => c.state !== 'rest'),
+      }
     }),
   )
 }
@@ -215,16 +227,43 @@ export function setBeat(bars: readonly Bar[], bar: number, beat: number, hits: s
 
 /**
  * Ties the beat's first note to the previous beat's last note, or unties it. A tie needs the beat
- * to start with a hit and the previous beat to end with a note; otherwise the bars are returned
- * unchanged.
+ * to start with a hit and the previous beat to end with a note; otherwise the same bars are
+ * returned.
  */
-export function toggleTie(bars: readonly Bar[], bar: number, beat: number): Bar[] {
+export function toggleTie(bars: Bar[], bar: number, beat: number): Bar[] {
   const timeline = toTimeline(bars)
   const first = (bar * BEATS_PER_BAR + beat) * TICKS_PER_BEAT
   const cell = timeline.cells[first]
   if (cell.state === 'hold') timeline.cells[first] = { state: 'hit' }
   else if (cell.state === 'hit' && first > 0 && timeline.cells[first - 1].state !== 'rest') {
     timeline.cells[first] = { state: 'hold' }
-  } else return [...bars]
+  } else return bars
+  return fromTimeline(timeline)
+}
+
+/**
+ * Cuts the beat's last note short, or lets it ring to the end of the beat again. Cut short, the
+ * note lasts an eighth if it starts on 1 or & of a straight beat, a sixteenth otherwise, and one
+ * triplet eighth in a triplet beat, with a rest after it. A note already that short can't be cut,
+ * so the same bars are returned.
+ */
+export function toggleCutShort(bars: Bar[], bar: number, beat: number): Bar[] {
+  const timeline = toTimeline(bars)
+  const index = bar * BEATS_PER_BAR + beat
+  const first = index * TICKS_PER_BEAT
+  const { cells } = timeline
+  let lastSounding = TICKS_PER_BEAT - 1
+  while (lastSounding >= 0 && cells[first + lastSounding].state === 'rest') lastSounding--
+  if (lastSounding < 0) return bars
+  if (lastSounding < TICKS_PER_BEAT - 1) {
+    for (let t = lastSounding + 1; t < TICKS_PER_BEAT; t++) cells[first + t] = { state: 'hold' }
+  } else {
+    const triplet = timeline.triplet[index]
+    const hits = hitsOf(timeline, index)
+    const start = slotTicks(triplet)[hits.lastIndexOf('x')]
+    const end = start + (triplet ? 4 : start % 6 === 0 ? 6 : 3)
+    if (end >= TICKS_PER_BEAT) return bars
+    for (let t = end; t < TICKS_PER_BEAT; t++) cells[first + t] = { state: 'rest' }
+  }
   return fromTimeline(timeline)
 }

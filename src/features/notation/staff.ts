@@ -2,7 +2,7 @@
 // between). We do the line wrapping ourselves: 4 bars per line, fewer on a narrow window, and a
 // short last line keeps the bar width and stays left aligned.
 
-import { Beam, Dot, Formatter, Fraction, Renderer, Stave, StaveNote, Tuplet, Voice } from 'vexflow/bravura'
+import { Beam, Dot, Formatter, Fraction, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
 import type { Cursor, Exercise, Item, PlacedItem } from '@/core'
 import { TICKS_PER_BEAT, placeItems, restBar, setBeat } from '@/core'
 
@@ -90,6 +90,8 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   renderer.resize(width, lines * LINE_HEIGHT + STAVE_TOP)
   const ctx = renderer.getContext()
   const placed = placeItems(bars)
+  // Every drawn note in exercise order, with its line, for drawing the ties once all bars are formatted.
+  const drawn: { note: StaveNote; line: number }[] = []
 
   bars.forEach((_, b) => {
     const line = Math.floor(b / barsPerLine)
@@ -114,10 +116,33 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
       staveNote(p.item, b === cursor.bar && Math.floor(p.start / TICKS_PER_BEAT) === cursor.beat),
     )
     drawNotes(stave, inBar, notes, 4, Math.max(30, x + w - stave.getNoteStartX() - 18))
+    notes.forEach((note) => drawn.push({ note, line }))
+  })
+
+  // A tie that runs over a line break is drawn as two halves: out of one line and into the next.
+  placed.forEach((_, i) => {
+    if (!placed[i + 1]?.continuation) return
+    const from = drawn[i]
+    const to = drawn[i + 1]
+    const ties =
+      from.line === to.line
+        ? [new StaveTie({ firstNote: from.note, lastNote: to.note, firstIndexes: [0], lastIndexes: [0] })]
+        : [
+            new StaveTie({ firstNote: from.note, lastNote: null, firstIndexes: [0], lastIndexes: [0] }),
+            incomingTie(to.note),
+          ]
+    ties.forEach((tie) => tie.setContext(ctx).draw())
   })
 
   const top = Math.floor(cursor.bar / barsPerLine) * LINE_HEIGHT
   return { top, bottom: top + LINE_HEIGHT + STAVE_TOP }
+}
+
+/** The second half of a tie split by a line break: it starts back by the clef, not at the note. */
+function incomingTie(note: StaveNote): StaveTie {
+  const tie = new StaveTie({ firstNote: null, lastNote: note, firstIndexes: [0], lastIndexes: [0] })
+  tie.renderOptions.firstXShift = -12
+  return tie
 }
 
 /** Draws one beat figure on its own, shrunk to fit a palette tile. */
