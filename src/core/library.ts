@@ -3,17 +3,15 @@
 import type { Exercise } from './model'
 
 /**
- * The id of the exercise to open at launch: the one last open if it still exists, otherwise the
- * most recently opened. Null for an empty library, where a new Untitled exercise opens instead.
+ * The exercise to open at launch: the one last open if it still exists, otherwise the most
+ * recently opened. Null for an empty library, where a new Untitled exercise opens instead.
  */
-export function exerciseToOpenAtLaunch(
-  library: Pick<Exercise, 'id' | 'lastOpened'>[],
+export function exerciseToOpenAtLaunch<E extends Pick<Exercise, 'id' | 'lastOpened'>>(
+  library: E[],
   lastOpenedId: string | null,
-): string | null {
-  if (library.some((e) => e.id === lastOpenedId)) return lastOpenedId
-  const latest = library.reduce<(typeof library)[number] | null>(
-    (best, e) => (best === null || e.lastOpened > best.lastOpened ? e : best),
-    null,
+): E | null {
+  return (
+    library.find((e) => e.id === lastOpenedId) ??
+    library.reduce<E | null>((latest, e) => (latest === null || e.lastOpened > latest.lastOpened ? e : latest), null)
   )
-  return latest?.id ?? null
 }

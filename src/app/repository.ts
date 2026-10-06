@@ -18,7 +18,7 @@ export interface DeviceSettingsStore {
   save(settings: DeviceSettings): Promise<void>
 }
 
-export interface Storage {
+export interface AppStorage {
   exercises: ExerciseRepository
   device: DeviceSettingsStore
 }
@@ -31,8 +31,12 @@ interface Schema extends DBSchema {
 
 type Db = IDBPDatabase<Schema>
 
-/** Opens the database, bringing any exercise stored by an older app version up to date. */
-export async function openStorage(): Promise<Storage> {
+/**
+ * Opens the database, bringing any exercise stored by an older app version up to date. One from a
+ * newer version (an older cached copy of the app) is left alone and kept out of the library, so
+ * this version never overwrites it.
+ */
+export async function openStorage(): Promise<AppStorage> {
   const db = await openDB<Schema>('syncopate', 1, {
     upgrade(db) {
       db.createObjectStore('exercises', { keyPath: 'id' })
@@ -46,15 +50,20 @@ export async function openStorage(): Promise<Storage> {
 async function migrateStored(db: Db) {
   const tx = db.transaction('exercises', 'readwrite')
   for (const stored of await tx.store.getAll()) {
-    if (stored.schemaVersion !== SCHEMA_VERSION) await tx.store.put(migrateExercise(stored))
+    if (!isNewer(stored) && stored.schemaVersion !== SCHEMA_VERSION) await tx.store.put(migrateExercise(stored))
   }
   await tx.done
 }
 
+const isNewer = (exercise: Exercise) => exercise.schemaVersion > SCHEMA_VERSION
+
 function exerciseRepository(db: Db): ExerciseRepository {
   return {
-    list: () => db.getAll('exercises'),
-    get: (id) => db.get('exercises', id),
+    list: async () => (await db.getAll('exercises')).filter((e) => !isNewer(e)),
+    get: async (id) => {
+      const exercise = await db.get('exercises', id)
+      return exercise && !isNewer(exercise) ? exercise : undefined
+    },
     put: async (exercise) => {
       await db.put('exercises', exercise)
     },
