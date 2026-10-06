@@ -10,10 +10,14 @@ See [spec.md](../spec.md): Sticking in the core, with its worked examples.
 
 **Blocked by:** 20 (Ties and cut short)
 
-**Status:** ready-for-agent
+**Status:** done (merged in PR #11, 2026-10-06)
 
-- [ ] The core's `sticking(exercise)` returns the computed hand, override (if any) and shown hand for each struck note. It is computed once from bar 1, regardless of the loop range
-- [ ] Tests cover the worked examples (lead R): `3♪♪♪ | ♪♪ | 3♪♪♪ | 3♪♪♪` → `RLR | RL | RLR | LRL`; dotted eighth + sixteenth → `R . . L`; triplet ♩♪ → `R . R`; 7 notes under alternate → `RLRLRLR`. Tests also cover lead L, rests, ties and the bass drum voice
-- [ ] The notation view prints R/L as annotations below the notes, and nothing under off or bass drum
-- [ ] Sidebar controls for mode, lead hand and voice; each change autosaves and is undoable
-- [ ] The bass drum voice plays the bass drum sample and draws bass drum noteheads, stems down
+- [x] The core's `sticking(exercise)` returns the computed hand, override (if any) and shown hand for each struck note. It is computed once from bar 1, regardless of the loop range
+- [x] Tests cover the worked examples (lead R): `3♪♪♪ | ♪♪ | 3♪♪♪ | 3♪♪♪` → `RLR | RL | RLR | LRL`; dotted eighth + sixteenth → `R . . L`; triplet ♩♪ → `R . R`; 7 notes under alternate → `RLRLRLR`. Tests also cover lead L, rests, ties and the bass drum voice
+- [x] The notation view prints R/L as annotations below the notes, and nothing under off or bass drum
+- [x] Sidebar controls for mode, lead hand and voice; each change autosaves and is undoable
+- [x] The bass drum voice plays the bass drum sample and draws bass drum noteheads, stems down
+
+## Comments
+
+- 2026-10-06: Squash-merged as PR #11. Choices where the spec was silent: the hands are drawn as one aligned row of text below the stems and tuplets rather than VexFlow `Annotation`s, which collided with the triplet "3"s, so lines of music are a little taller; each hand sits in an SVG group tagged `data-note-id` for ticket 25's clicks. With sticking off, `computed` is null; under the bass drum voice it is still computed, only hidden. The sidebar uses button rows rather than selects, so a click never takes the editor's keys. Settings changes go through the editor as `setExerciseSettings`, one undo step each. A rest beat ends a natural-sticking triplet run. Bass drum noteheads sit on f/4.
