@@ -2,7 +2,7 @@
 
 import { create } from 'zustand'
 import type { DeviceSettings, EditCommand, EditorState } from '@/core'
-import { applyEdit, clampBpm, newEditorState, newExercise } from '@/core'
+import { applyEdit, newEditorState, newExercise, withBpm } from '@/core'
 
 interface AppState {
   editor: EditorState
@@ -19,10 +19,6 @@ export const useAppStore = create<AppState>()((set) => ({
   device: { countIn: true },
   playing: false,
   dispatch: (command) => set((s) => ({ editor: applyEdit(s.editor, command) })),
-  setBpm: (bpm) =>
-    set(({ editor }) => {
-      const { exercise } = editor
-      return { editor: { ...editor, exercise: { ...exercise, practice: { ...exercise.practice, bpm: clampBpm(bpm) } } } }
-    }),
+  setBpm: (bpm) => set(({ editor }) => ({ editor: { ...editor, exercise: withBpm(editor.exercise, bpm) } })),
   setPlaying: (playing) => set({ playing }),
 }))

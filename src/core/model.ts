@@ -113,3 +113,8 @@ export function clampBpm(bpm: number): number {
   if (Number.isNaN(bpm)) return MIN_BPM
   return Math.min(MAX_BPM, Math.max(MIN_BPM, Math.round(bpm)))
 }
+
+/** The exercise at a new tempo, kept inside the supported range. */
+export function withBpm(exercise: Exercise, bpm: number): Exercise {
+  return { ...exercise, practice: { ...exercise.practice, bpm: clampBpm(bpm) } }
+}

@@ -9,8 +9,10 @@ const LOOKAHEAD = 0.1
 /** Head start for the first event, so it isn't late before the first tick has run. */
 const START_DELAY = 0.05
 
+type Layer = ScheduledEvent['kind']
+
 /** The gain each layer feeds into the master. Device volumes replace these in a later ticket. */
-const LAYER_GAIN: Record<ScheduledEvent['kind'], number> = { click: 0.6, exercise: 0.9, groove: 0.7 }
+const LAYER_GAIN: Record<Layer, number> = { click: 0.6, exercise: 0.9, groove: 0.7 }
 
 /** Virtuosity Drums one-shots for each kit piece, played round-robin, at a fixed velocity. */
 const SAMPLES: Record<Exclude<Instrument, 'click'>, { files: string[]; velocity: number }> = {
@@ -31,7 +33,7 @@ export interface PlaybackInput {
 
 interface Audio {
   ctx: AudioContext
-  layers: Record<ScheduledEvent['kind'], GainNode>
+  layers: Record<Layer, GainNode>
   buffers: Map<string, AudioBuffer>
 }
 
@@ -84,13 +86,15 @@ function createAudio(): Audio {
   const ctx = new AudioContext({ latencyHint: 'interactive' })
   const master = ctx.createGain()
   master.connect(ctx.destination)
-  const layer = (kind: ScheduledEvent['kind']) => {
-    const gain = ctx.createGain()
-    gain.gain.value = LAYER_GAIN[kind]
-    gain.connect(master)
-    return gain
-  }
-  return { ctx, layers: { click: layer('click'), exercise: layer('exercise'), groove: layer('groove') }, buffers: new Map() }
+  const layers = Object.fromEntries(
+    Object.entries(LAYER_GAIN).map(([layer, value]) => {
+      const gain = ctx.createGain()
+      gain.gain.value = value
+      gain.connect(master)
+      return [layer, gain]
+    }),
+  ) as Record<Layer, GainNode>
+  return { ctx, layers, buffers: new Map() }
 }
 
 async function loadSamples({ ctx, buffers }: Audio): Promise<void> {
@@ -129,7 +133,11 @@ function createTicker(): Worker {
 function tick(): void {
   if (!audio || !cursor || !read) return
   const { exercise, device } = read()
-  const horizon = audio.ctx.currentTime + LOOKAHEAD
+  const now = audio.ctx.currentTime
+  // After a stall longer than the lookahead, carry on from now rather than play the missed
+  // events all at once: the music pauses for the stall but stays in time afterwards.
+  if (cursor.time < now) cursor = { ...cursor, time: now + START_DELAY }
+  const horizon = now + LOOKAHEAD
   const result = schedule(exercise, exercise.practice, device, cursor.position, horizon - cursor.time)
   for (const event of result.events) play(audio, cursor.time + event.time, event)
   cursor = { position: result.next, time: cursor.time + result.nextTime }

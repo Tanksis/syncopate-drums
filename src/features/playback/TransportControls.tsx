@@ -28,13 +28,15 @@ export function TransportControls() {
 function BpmControl() {
   const bpm = useAppStore((s) => s.editor.exercise.practice.bpm)
   const setBpm = useAppStore((s) => s.setBpm)
-  // While typing, the box holds the text as typed; a value in range applies at once.
+  // While typing, the box holds the text as typed. A value in range applies at once, unless
+  // more digits could still follow (typing 300 shouldn't play at 30 on the way); Enter or
+  // leaving the box applies whatever is there.
   const [draft, setDraft] = useState<string | null>(null)
 
   const type = (text: string) => {
     setDraft(text)
     const value = Number(text)
-    if (text !== '' && value >= MIN_BPM && value <= MAX_BPM) setBpm(value)
+    if (text !== '' && value >= MIN_BPM && value <= MAX_BPM && value * 10 > MAX_BPM) setBpm(value)
   }
   const commit = () => {
     if (draft !== null && draft !== '') setBpm(Number(draft))

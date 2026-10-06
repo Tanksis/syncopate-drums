@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { EditorState, KeyPress } from './index'
-import { applyEdit, beatViews, commandForKey, newEditorState, newExercise } from './index'
+import { applyEdit, beatViews, commandForKey, newEditorState, newExercise, withBpm } from './index'
 
 const press = (key: string, mods: Partial<KeyPress> = {}): KeyPress => ({
   key,
@@ -78,5 +78,16 @@ describe('the key map', () => {
     expect(commandForKey(press(' ', { ctrlKey: true }))).toBeNull()
     expect(commandForKey(press('z', { metaKey: true }))).toBeNull()
     expect(commandForKey(press('1', { altKey: true }))).toBeNull()
+  })
+})
+
+describe('the tempo', () => {
+  it('is set as a whole number from 30 to 300 BPM', () => {
+    const ex = newExercise({ id: 'e1', now: 0 })
+    expect(withBpm(ex, 144).practice.bpm).toBe(144)
+    expect(withBpm(ex, 99.6).practice.bpm).toBe(100)
+    expect(withBpm(ex, 12).practice.bpm).toBe(30)
+    expect(withBpm(ex, 400).practice.bpm).toBe(300)
+    expect(withBpm(ex, 144).practice).toMatchObject({ loopRange: null, groove: 'off' })
   })
 })
