@@ -4,7 +4,7 @@
 import { FIGURES, REST_FIGURE } from './figures'
 import type { Exercise } from './model'
 import { BEATS_PER_BAR, restBar } from './model'
-import { setBeat } from './speller'
+import { setBeat, toggleCutShort, toggleTie } from './speller'
 
 export interface Cursor {
   bar: number
@@ -16,7 +16,10 @@ export interface EditorState {
   cursor: Cursor
 }
 
-export type EditCommand = { type: 'enterFigure'; hits: string }
+export type EditCommand =
+  | { type: 'enterFigure'; hits: string }
+  | { type: 'toggleTie' }
+  | { type: 'toggleCutShort' }
 
 /** The parts of a key press the key map reads, as `KeyboardEvent` reports them. */
 export interface KeyPress {
@@ -44,12 +47,21 @@ export function applyEdit(state: EditorState, command: EditCommand): EditorState
       }
       return { exercise: { ...state.exercise, bars }, cursor }
     }
+    case 'toggleTie':
+    case 'toggleCutShort': {
+      const { bar, beat } = state.cursor
+      const toggle = command.type === 'toggleTie' ? toggleTie : toggleCutShort
+      const bars = toggle(state.exercise.bars, bar, beat)
+      return bars === state.exercise.bars ? state : { ...state, exercise: { ...state.exercise, bars } }
+    }
   }
 }
 
 export function commandForKey(press: KeyPress): EditCommand | null {
   if (press.ctrlKey || press.altKey || press.metaKey) return null
   const key = press.key.toLowerCase()
+  if (key === 't') return { type: 'toggleTie' }
+  if (key === '.') return { type: 'toggleCutShort' }
   const figure = key === REST_FIGURE.key ? REST_FIGURE : FIGURES.find((f) => f.key === key)
   return figure ? { type: 'enterFigure', hits: figure.hits } : null
 }

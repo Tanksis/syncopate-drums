@@ -17,11 +17,16 @@ export function BeatStrip() {
               <div
                 key={beat}
                 aria-current={current || undefined}
-                className={`flex h-9 w-10 flex-col items-center justify-center rounded-md border border-stone-300 bg-card font-mono text-[10px]/[1.1] ${
+                title={[view.tiedInto && 'tied into', view.cutShort && 'cut short'].filter(Boolean).join(', ') || undefined}
+                className={`relative flex h-9 w-10 flex-col items-center justify-center rounded-md border border-stone-300 bg-card font-mono text-[10px]/[1.1] ${
                   current ? 'outline-3 -outline-offset-2 outline-accent' : ''
                 }`}
               >
-                <b className="text-sm">{view.figure === REST_FIGURE ? '␣' : (view.figure?.key.toUpperCase() ?? '?')}</b>
+                {view.tiedInto && <span className="absolute -top-2 -left-2 text-sm text-accent">⌒</span>}
+                <b className="text-sm">
+                  {view.figure === REST_FIGURE ? '␣' : (view.figure?.key.toUpperCase() ?? '?')}
+                  {view.cutShort && <span className="text-accent">.</span>}
+                </b>
                 <span className="text-mute">{view.hits}</span>
               </div>
             )

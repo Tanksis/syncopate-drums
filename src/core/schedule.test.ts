@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DeviceSettings, Exercise, ScheduledEvent } from './index'
-import { newExercise, schedule, setBeat } from './index'
+import { newExercise, schedule, setBeat, toggleTie } from './index'
 
 const device: DeviceSettings = { countIn: true, lastOpenedId: null }
 
@@ -140,5 +140,15 @@ describe('starting playback', () => {
     const ex = line(['x...'])
     const { events } = schedule(ex, ex.practice, { ...device, countIn: false }, 'start', 0.1)
     expect(show(events)).toEqual(['0.000 click click accent', '0.000 exercise snare 0:0'])
+  })
+})
+
+describe('ties', () => {
+  it("doesn't strike tied continuations, also across a bar line", () => {
+    const ex = line(['x...', '..x.', 'x...', '..x.', 'x.x.'], 60)
+    const bars = toggleTie(toggleTie(ex.bars, 0, 2), 1, 0)
+    const tied = { ...ex, bars }
+    const { events } = schedule(tied, tied.practice, device, { bar: 0, tick: 0 }, 5)
+    expect(events.filter((e) => e.kind === 'exercise').map((e) => e.noteId)).toEqual(['0:0', '0:18', '0:42', '1:6'])
   })
 })

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useAppStore } from '@/app/store'
-import type { Figure } from '@/core'
+import type { EditCommand, Figure } from '@/core'
 import { FIGURES, REST_FIGURE, beatViews } from '@/core'
 import { drawFigure, notationFontsReady } from '@/features/notation/staff'
 
@@ -39,6 +39,19 @@ export function Palette() {
     </button>
   )
 
+  const toggle = (label: string, title: string, command: EditCommand) => (
+    <button
+      type="button"
+      title={title}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={() => dispatch(command)}
+      className="cursor-pointer rounded-md border border-line bg-card px-3 text-xs text-mute hover:border-accent"
+      style={{ height: TILE_HEIGHT }}
+    >
+      {label}
+    </button>
+  )
+
   return (
     <div aria-label="Beat figure palette" className="flex flex-col gap-1.5">
       <div className="flex gap-1.5">{FIGURES.filter((f) => f.row === 0).map((f) => tile(f))}</div>
@@ -46,6 +59,8 @@ export function Palette() {
       <div className="flex gap-1.5 pl-9">
         {FIGURES.filter((f) => f.row === 2).map((f) => tile(f))}
         {tile(REST_FIGURE, true)}
+        {toggle('T · tie', 'Tie into the beat', { type: 'toggleTie' })}
+        {toggle('. · cut short', 'End the beat’s last note early', { type: 'toggleCutShort' })}
       </div>
     </div>
   )

@@ -97,3 +97,35 @@ describe('the tempo', () => {
     expect(withBpm(ex, 144).practice).toMatchObject({ loopRange: null, groove: 'off' })
   })
 })
+
+describe('ties and cut short', () => {
+  const views = (state: EditorState) => beatViews(state.exercise.bars)[state.cursor.bar]
+
+  it('T ties the cursor beat into the one before it, without moving the cursor', () => {
+    const state = { ...type(['1', '1']), cursor: { bar: 0, beat: 1 } }
+    const tied = type(['t'], state)
+    expect(tied.cursor).toEqual({ bar: 0, beat: 1 })
+    expect(views(tied)[1].tiedInto).toBe(true)
+    expect(views(type(['T'], tied))[1].tiedInto).toBe(false)
+  })
+
+  it('. cuts the cursor beat short, without moving the cursor', () => {
+    const state = { ...type(['1']), cursor: { bar: 0, beat: 0 } }
+    const cut = type(['.'], state)
+    expect(cut.cursor).toEqual({ bar: 0, beat: 0 })
+    expect(views(cut)[0].cutShort).toBe(true)
+    expect(views(type(['.'], cut))[0].cutShort).toBe(false)
+  })
+
+  it('leaves the state alone when there is nothing to tie or cut', () => {
+    const state = type(['3'])
+    expect(type(['t'], state)).toBe(state)
+    expect(type(['.'], state)).toBe(state)
+  })
+
+  it('maps T and . to the toggles', () => {
+    expect(commandForKey(press('t'))).toEqual({ type: 'toggleTie' })
+    expect(commandForKey(press('T'))).toEqual({ type: 'toggleTie' })
+    expect(commandForKey(press('.'))).toEqual({ type: 'toggleCutShort' })
+  })
+})
