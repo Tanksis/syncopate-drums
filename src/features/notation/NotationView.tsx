@@ -5,6 +5,7 @@ import { drawExercise, notationFontsReady } from './staff'
 export function NotationView() {
   const exercise = useAppStore((s) => s.editor.exercise)
   const cursor = useAppStore((s) => s.editor.cursor)
+  const dispatch = useAppStore((s) => s.dispatch)
   const scrollerRef = useRef<HTMLElement>(null)
   const staffRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
@@ -42,7 +43,14 @@ export function NotationView() {
       aria-label="Notation view"
       className="relative min-h-0 flex-1 overflow-auto bg-card px-4 py-2.5"
     >
-      <div ref={staffRef} />
+      <div
+        ref={staffRef}
+        onClick={(e) => {
+          // A click on a note moves the cursor to its beat.
+          const note = (e.target as Element).closest<SVGElement>('[data-bar]')
+          if (note) dispatch({ type: 'moveTo', bar: Number(note.dataset.bar), beat: Number(note.dataset.beat) })
+        }}
+      />
     </section>
   )
 }

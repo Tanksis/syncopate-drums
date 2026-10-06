@@ -77,7 +77,10 @@ export interface CursorLine {
   bottom: number
 }
 
-/** Draws the whole exercise into `el`, replacing what was there, at the given width. */
+/**
+ * Draws the whole exercise into `el`, replacing what was there, at the given width. Each note's
+ * SVG element carries `data-bar` and `data-beat`, the beat it sits in.
+ */
 export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor, width: number): CursorLine {
   el.replaceChildren()
   const { bars } = exercise
@@ -116,7 +119,14 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
       staveNote(p.item, b === cursor.bar && Math.floor(p.start / TICKS_PER_BEAT) === cursor.beat),
     )
     drawNotes(stave, inBar, notes, 4, Math.max(30, x + w - stave.getNoteStartX() - 18))
-    notes.forEach((note) => drawn.push({ note, line }))
+    notes.forEach((note, i) => {
+      // Tagged with its beat, so a click on it can move the cursor there.
+      const svg = note.getSVGElement()
+      svg?.setAttribute('data-bar', String(b))
+      svg?.setAttribute('data-beat', String(Math.floor(inBar[i].start / TICKS_PER_BEAT)))
+      svg?.classList.add('cursor-pointer')
+      drawn.push({ note, line })
+    })
   })
 
   // A tie that runs over a line break is drawn as two halves: out of one line and into the next.
