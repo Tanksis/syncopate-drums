@@ -77,8 +77,9 @@ function leave(exercise: Exercise, library: Exercise[]): Exercise[] {
   return library.filter((e) => e.id !== exercise.id)
 }
 
-const createInitialExercise = () => newExercise({ id: crypto.randomUUID(), now: Date.now() })
-const initialExercise = createInitialExercise()
+/** A new Untitled exercise, made now. */
+const untitledExercise = () => newExercise({ id: crypto.randomUUID(), now: Date.now() })
+const initialExercise = untitledExercise()
 
 export const useAppStore = create<AppState>()((set, get) => {
   /** Saves a change to the open exercise and keeps its list entry in step, in place. */
@@ -125,7 +126,7 @@ export const useAppStore = create<AppState>()((set, get) => {
       const target = get().library.find((e) => e.id === id)
       if (target && id !== get().editor.exercise.id) switchTo(target, updatedInPlace)
     },
-    createExercise: () => switchTo(createInitialExercise(), addedOnTop),
+    createExercise: () => switchTo(untitledExercise(), addedOnTop),
     duplicateOpenExercise: () =>
       switchTo(duplicateExercise(get().editor.exercise, { id: crypto.randomUUID(), now: Date.now() }), addedOnTop),
     renameExercise: (id, name) => {
@@ -158,7 +159,7 @@ export async function launchApp() {
     const stored = await opened.exercises.list()
     const found = exerciseToOpenAtLaunch(stored, device.lastOpenedId)
     const now = Date.now()
-    const exercise = found ? { ...found, lastOpened: now } : newExercise({ id: crypto.randomUUID(), now })
+    const exercise = found ? { ...found, lastOpened: now } : untitledExercise()
     if (found) await opened.exercises.put(exercise)
     // The order is taken before the open exercise's new last-opened time, and then kept all session.
     const order = launchListOrder(stored)

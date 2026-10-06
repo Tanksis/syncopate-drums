@@ -1,11 +1,11 @@
 // Layout A, "Workstation": library sidebar | header, notation view, editor panel | settings sidebar.
 
+import { useState } from 'react'
 import { GridEditor } from '@/features/editor/GridEditor'
 import { LibrarySidebar } from '@/features/library/LibrarySidebar'
 import { NotationView } from '@/features/notation/NotationView'
 import { TransportControls } from '@/features/playback/TransportControls'
 import { SettingsSidebar } from '@/features/settings/SettingsSidebar'
-import { useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { NameInput } from '@/components/NameInput'
 

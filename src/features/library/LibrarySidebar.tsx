@@ -15,7 +15,10 @@ const buttonClass =
 export function LibrarySidebar() {
   const library = useAppStore((s) => s.library)
   const openId = useAppStore((s) => s.editor.exercise.id)
-  const { openExercise, createExercise, duplicateOpenExercise, renameExercise } = useAppStore.getState()
+  const openExercise = useAppStore((s) => s.openExercise)
+  const createExercise = useAppStore((s) => s.createExercise)
+  const duplicateOpenExercise = useAppStore((s) => s.duplicateOpenExercise)
+  const renameExercise = useAppStore((s) => s.renameExercise)
   const [filter, setFilter] = useState('')
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const shown = filterByName(library, filter)
