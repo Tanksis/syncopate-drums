@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Bar, Item } from './index'
-import { FIGURES, REST_FIGURE, TICKS_PER_BAR, beatViews, itemTicks, restBar, setBeat } from './index'
+import { FIGURES, REST_FIGURE, TICKS_PER_BAR, beatViews, itemTicks, restBar, setBeat, toggleTie } from './index'
 
 /** A bar in shorthand: q e s for note values, `.` for a dot, 3 for a triplet, r for a rest, ~ for a tie. */
 function text(bars: Bar[]): string {
@@ -123,5 +123,18 @@ describe('beat views', () => {
     expect(kept[0].items[0]).toMatchObject({ kind: 'note', duration: 'eighth', override: 'L' })
     const dropped = setBeat(withOverride, 0, 0, '..x.')
     expect(dropped[0].items.some((i) => i.kind === 'note' && i.override)).toBe(false)
+  })
+})
+
+describe('ties', () => {
+  it('merges a note tied into the next beat into a dotted value', () => {
+    const bars = toggleTie(bar('x...', '..x.', 'x...', '..x.'), 0, 2)
+    expect(text(bars)).toBe('q re q. re e')
+    expect(beatViews(bars)[0].map((v) => v.tiedInto)).toEqual([false, false, true, false])
+  })
+  it('keeps the tie when a new figure starting with a hit is entered, and drops it otherwise', () => {
+    const tied = toggleTie(bar('x...', 'x...'), 0, 1)
+    expect(beatViews(setBeat(tied, 0, 1, 'x.x.'))[0][1].tiedInto).toBe(true)
+    expect(beatViews(setBeat(tied, 0, 1, '..x.'))[0][1].tiedInto).toBe(false)
   })
 })

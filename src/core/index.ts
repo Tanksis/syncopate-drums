@@ -3,7 +3,7 @@
 
 export * from './model'
 export * from './figures'
-export { beatViews, placeItems, setBeat } from './speller'
+export { beatViews, placeItems, setBeat, toggleTie } from './speller'
 export type { BeatView, PlacedItem } from './speller'
 export * from './editor'
 export * from './schedule'
