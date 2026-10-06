@@ -8,12 +8,16 @@ See [spec.md](../spec.md): Ties and the auto-speller, including the exact cut-sh
 
 **Blocked by:** 19 (Triplet beat figures)
 
-**Status:** ready-for-agent
+**Status:** done (merged in PR #7, 2026-10-06)
 
-- [ ] T toggles the tie with the legality rules (no tie from a rest; the exercise's last note can't be tied forward). Ties may cross bar lines and triplet beats
-- [ ] Re-entering a figure keeps the tie if the figure starts with a hit; entering a figure clears cut short
-- [ ] Cut short ends the last note at an eighth if it starts on 1 or & of a straight beat, at a sixteenth otherwise, and at one triplet eighth in a triplet beat, with a rest after it
-- [ ] The speller merges held notes into dotted values where legal (`q~e` → `q.`); e.g. four figures with a tie into beat 3 spell as `♩ ♪ ♩. ♪` (tested)
-- [ ] Round-trip tests cover all 22 figures with tie/cut combinations, including ties across bar lines and triplet beats
-- [ ] The beat strip shows ⌒ on tied-into beats; the notation draws ties and dots
-- [ ] `schedule` doesn't strike tied continuations (tested)
+- [x] T toggles the tie with the legality rules (no tie from a rest; the exercise's last note can't be tied forward). Ties may cross bar lines and triplet beats
+- [x] Re-entering a figure keeps the tie if the figure starts with a hit; entering a figure clears cut short
+- [x] Cut short ends the last note at an eighth if it starts on 1 or & of a straight beat, at a sixteenth otherwise, and at one triplet eighth in a triplet beat, with a rest after it
+- [x] The speller merges held notes into dotted values where legal (`q~e` → `q.`); e.g. four figures with a tie into beat 3 spell as `♩ ♪ ♩. ♪` (tested)
+- [x] Round-trip tests cover all 22 figures with tie/cut combinations, including ties across bar lines and triplet beats
+- [x] The beat strip shows ⌒ on tied-into beats; the notation draws ties and dots
+- [x] `schedule` doesn't strike tied continuations (tested)
+
+## Comments
+
+- 2026-10-06: Squash-merged as PR #7. Only figures 1, Z, B, D and G can be cut short (the rest already end at the cut length). T and . are silent when illegal. Until ticket 21 adds cursor moves, T can only tie the beat at the cursor.
