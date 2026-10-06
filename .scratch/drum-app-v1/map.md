@@ -51,7 +51,7 @@ A v1 spec for a laptop-first web app, with the platform, data model, notation re
 
 ## Not yet specified
 
-- **Assembling the spec**: every ticket is settled, so the way is clear. The final pass combines the decisions above into the v1 spec (`/to-spec`).
+- Nothing. The v1 spec is assembled in [spec.md](spec.md) (`Status: ready-for-agent`), and split into build tickets 15–34 in [issues/](issues/). Next is implementation, starting at 15 (App skeleton deployed to GitHub Pages).
 
 ## Out of scope
 
