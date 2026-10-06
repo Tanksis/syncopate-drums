@@ -64,6 +64,12 @@ describe('entering figures', () => {
 })
 
 describe('the key map', () => {
+  it('maps the home row to the triplet figures', () => {
+    expect(commandForKey(press('a'))).toEqual({ type: 'enterFigure', hits: 'xxx' })
+    expect(commandForKey(press('S'))).toEqual({ type: 'enterFigure', hits: 'x.x' })
+    expect(commandForKey(press('h'))).toEqual({ type: 'enterFigure', hits: '..x' })
+  })
+
   it('maps the number row, the bottom row and Space to figures', () => {
     expect(commandForKey(press('2'))).toEqual({ type: 'enterFigure', hits: 'x.x.' })
     expect(commandForKey(press('b'))).toEqual({ type: 'enterFigure', hits: 'xx..' })

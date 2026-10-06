@@ -34,7 +34,7 @@ describe('the count-in', () => {
   })
 })
 
-/** An exercise from beat figures on the sixteenth grid, one string per beat: `['x.x.', '....', …]`. */
+/** An exercise from beat figures, one string per beat: `['x.x.', 'xxx', '....', …]`. */
 const line = (beats: string[], bpm = 120): Exercise => {
   const ex = blank(bpm)
   let bars = ex.bars
@@ -60,6 +60,24 @@ describe('playing the exercise', () => {
       '1.375 exercise snare 0:33',
       '1.500 click click',
       '1.500 exercise snare 0:36',
+    ])
+  })
+
+  it('places triplet notes at thirds of the beat, next to straight beats', () => {
+    const ex = line(['x.x.', 'xxx', 'x.x', '....'], 60)
+    const { events } = schedule(ex, ex.practice, device, { bar: 0, tick: 0 }, 3.1)
+    expect(show(events)).toEqual([
+      '0.000 click click accent',
+      '0.000 exercise snare 0:0',
+      '0.500 exercise snare 0:6',
+      '1.000 click click',
+      '1.000 exercise snare 0:12',
+      '1.333 exercise snare 0:16',
+      '1.667 exercise snare 0:20',
+      '2.000 click click',
+      '2.000 exercise snare 0:24',
+      '2.667 exercise snare 0:32',
+      '3.000 click click',
     ])
   })
 

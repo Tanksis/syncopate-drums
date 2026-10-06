@@ -2,8 +2,8 @@
 // between). We do the line wrapping ourselves: 4 bars per line, fewer on a narrow window, and a
 // short last line keeps the bar width and stays left aligned.
 
-import { Beam, Dot, Formatter, Fraction, Renderer, Stave, StaveNote, Voice } from 'vexflow/bravura'
-import type { Cursor, Exercise, Item } from '@/core'
+import { Beam, Dot, Formatter, Fraction, Renderer, Stave, StaveNote, Tuplet, Voice } from 'vexflow/bravura'
+import type { Cursor, Exercise, Item, PlacedItem } from '@/core'
 import { TICKS_PER_BEAT, placeItems, restBar, setBeat } from '@/core'
 
 // Mirrors the accent and a light tint of it from the design tokens in styles/index.css.
@@ -41,14 +41,34 @@ function staveNote(item: Item, highlight: boolean): StaveNote {
   return note
 }
 
-/** Formats and draws one bar's (or one beat's) notes on a stave, beamed by the beat. */
-function drawNotes(stave: Stave, notes: StaveNote[], beats: number, width: number) {
+/**
+ * Formats and draws one bar's (or one beat's) notes on a stave, beamed by the beat. Each triplet
+ * group gets its tuplet "3", with a bracket when not all of its notes are beamed.
+ */
+function drawNotes(stave: Stave, placed: readonly PlacedItem[], notes: StaveNote[], beats: number, width: number) {
   const ctx = stave.getContext()
+  const byBeat = new Map<number, { notes: StaveNote[]; triplet: boolean }>()
+  placed.forEach((p, i) => {
+    const beat = Math.floor(p.start / TICKS_PER_BEAT)
+    const group = byBeat.get(beat) ?? { notes: [], triplet: p.item.triplet }
+    group.notes.push(notes[i])
+    byBeat.set(beat, group)
+  })
+  const groups = [...byBeat.values()]
+  // Tuplets first: they scale their notes' ticks, which the beams and the formatter read.
+  const tuplets = groups
+    .filter((g) => g.triplet)
+    .map((g) => new Tuplet(g.notes, { numNotes: 3, notesOccupied: 2, location: Tuplet.LOCATION_BOTTOM }))
   const voice = new Voice({ numBeats: beats, beatValue: 4 }).setStrict(false).addTickables(notes)
-  const beams = Beam.generateBeams(notes, { groups: [new Fraction(1, 4)], stemDirection: -1 })
+  // Beamed beat by beat: VexFlow's own grouping loses count of the beats after a triplet group.
+  const beams = groups.flatMap((g) =>
+    Beam.generateBeams(g.notes, { groups: [new Fraction(1, 4)], stemDirection: -1 }),
+  )
+  tuplets.forEach((t) => t.setBracketed(t.getNotes().some((n) => !n.hasBeam())))
   new Formatter().joinVoices([voice]).format([voice], width)
   voice.draw(ctx, stave)
   beams.forEach((beam) => beam.setContext(ctx).draw())
+  tuplets.forEach((tuplet) => tuplet.setContext(ctx).draw())
 }
 
 /** Where the cursor's line was drawn, so the view can scroll it into view. */
@@ -89,10 +109,11 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
     }
     stave.setContext(ctx).draw()
 
-    const notes = placed
-      .filter((p) => p.bar === b)
-      .map((p) => staveNote(p.item, b === cursor.bar && Math.floor(p.start / TICKS_PER_BEAT) === cursor.beat))
-    drawNotes(stave, notes, 4, Math.max(30, x + w - stave.getNoteStartX() - 18))
+    const inBar = placed.filter((p) => p.bar === b)
+    const notes = inBar.map((p) =>
+      staveNote(p.item, b === cursor.bar && Math.floor(p.start / TICKS_PER_BEAT) === cursor.beat),
+    )
+    drawNotes(stave, inBar, notes, 4, Math.max(30, x + w - stave.getNoteStartX() - 18))
   })
 
   const top = Math.floor(cursor.bar / barsPerLine) * LINE_HEIGHT
@@ -103,14 +124,12 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
 export function drawFigure(el: HTMLElement, hits: string, width: number, height: number) {
   el.replaceChildren()
   const scale = 0.55
-  const items = placeItems(setBeat([restBar()], 0, 0, hits))
-    .filter((p) => p.start < TICKS_PER_BEAT)
-    .map((p) => p.item)
+  const placed = placeItems(setBeat([restBar()], 0, 0, hits)).filter((p) => p.start < TICKS_PER_BEAT)
   const renderer = new Renderer(el as HTMLDivElement, Renderer.Backends.SVG)
   renderer.resize(width, height)
   const ctx = renderer.getContext()
   ctx.scale(scale, scale)
   const stave = new Stave(0, -22, width / scale).setContext(ctx)
   stave.draw()
-  drawNotes(stave, items.map((item) => staveNote(item, false)), 1, width / scale - 30)
+  drawNotes(stave, placed, placed.map((p) => staveNote(p.item, false)), 1, width / scale - 30)
 }
