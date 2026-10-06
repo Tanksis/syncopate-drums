@@ -63,9 +63,12 @@ function BpmControl() {
         min={MIN_BPM}
         max={MAX_BPM}
         value={bpm}
-        onChange={(e) => setBpm(Number(e.target.value))}
-        // Hand the keyboard back to the editor once a drag ends.
-        onPointerUp={(e) => e.currentTarget.blur()}
+        onChange={(e) => setBpm(Number(e.target.value), { dragging: true })}
+        // Once a drag ends, save the tempo it settled on and hand the keyboard back to the editor.
+        onPointerUp={(e) => {
+          setBpm(Number(e.currentTarget.value))
+          e.currentTarget.blur()
+        }}
         className="w-36 accent-accent"
       />
     </label>

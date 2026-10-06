@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { DeviceSettings, Exercise, ScheduledEvent } from './index'
 import { newExercise, schedule, setBeat } from './index'
 
-const device: DeviceSettings = { countIn: true }
+const device: DeviceSettings = { countIn: true, lastOpenedId: null }
 
 const blank = (bpm = 120): Exercise => {
   const ex = newExercise({ id: 'e1', now: 0 })
@@ -120,7 +120,7 @@ describe('a tempo change while playing', () => {
 describe('starting playback', () => {
   it('goes straight to bar 1 when the count-in is off', () => {
     const ex = line(['x...'])
-    const { events } = schedule(ex, ex.practice, { countIn: false }, 'start', 0.1)
+    const { events } = schedule(ex, ex.practice, { ...device, countIn: false }, 'start', 0.1)
     expect(show(events)).toEqual(['0.000 click click accent', '0.000 exercise snare 0:0'])
   })
 })

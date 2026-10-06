@@ -158,7 +158,7 @@ Pressing Ctrl+Space plays a one-bar **count-in** and then the exercise, with the
 - Samples: Virtuosity Drums (CC0) for snare, kick (including feathered), ride, ride bell, hi-hat closed and pedal. The click is synthesized.
 - Storage: IndexedDB via `idb`, behind a small repository interface. Call `navigator.storage.persist()`. Each stored exercise carries a schema version.
 - PWA via `vite-plugin-pwa`, with samples precached. Hosted on GitHub Pages at `https://tanksis.github.io/syncopate-drums/`, so Vite `base` and the service-worker scope are `/syncopate-drums/`. A GitHub Actions workflow deploys every push to `main` after the Vitest suite passes; a failing test blocks the deploy.
-- All dependencies are MIT or CC0, so nothing blocks a possible later public app. No accounts and no sync.
+- All dependencies are MIT, ISC (`idb`; equivalent to MIT) or CC0, so nothing blocks a possible later public app. No accounts and no sync.
 
 ### Modules
 

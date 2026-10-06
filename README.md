@@ -19,7 +19,7 @@ Planning is done and the build has started. Ticket 15 put up the app skeleton (t
 
 ## Planned stack
 
-TypeScript, Vite and React with Zustand; VexFlow 5 for notation; a custom Web Audio scheduler with CC0 drum samples (Virtuosity Drums); IndexedDB via `idb`; `vite-plugin-pwa`; Vitest. All dependencies are MIT or CC0. GitHub Actions runs the tests and deploys to GitHub Pages.
+TypeScript, Vite and React with Zustand; VexFlow 5 for notation; a custom Web Audio scheduler with CC0 drum samples (Virtuosity Drums); IndexedDB via `idb`; `vite-plugin-pwa`; Vitest. All dependencies are MIT, ISC or CC0. GitHub Actions runs the tests and deploys to GitHub Pages.
 
 ## Development
 
@@ -36,7 +36,7 @@ npm run preview      # serve the production build
 
 The exercise core lives in `src/core/`. It must not import React, the DOM, Web Audio or IndexedDB: its TypeScript project has no DOM library, and a test checks its imports. It is the one place covered by tests.
 
-GitHub Actions (`.github/workflows/ci.yml`) runs the type check, a licence check (every shipped dependency must be MIT or CC0) and Vitest on every pull request into `main` and every push to it. A push to `main` deploys to GitHub Pages only if those pass.
+GitHub Actions (`.github/workflows/ci.yml`) runs the type check, a licence check (every shipped dependency must be MIT, ISC or CC0) and Vitest on every pull request into `main` and every push to it. A push to `main` deploys to GitHub Pages only if those pass.
 
 ## Repo guide
 
