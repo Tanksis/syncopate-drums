@@ -7,6 +7,8 @@ import { PanelHeading } from '@/components/PanelHeading'
 import type { Exercise } from '@/core'
 import { filterByName } from '@/core'
 
+const exerciseCount = (list: unknown[]) => (list.length === 1 ? '1 exercise' : `${list.length} exercises`)
+
 // Buttons keep focus off themselves, so Space still enters a rest rather than clicking them again.
 const keepFocus = (e: MouseEvent) => e.preventDefault()
 
@@ -93,7 +95,7 @@ export function LibrarySidebar() {
             type="button"
             onMouseDown={keepFocus}
             onClick={() => setToDelete(selected)}
-            className="cursor-pointer rounded-md border border-line bg-card px-1.5 py-1 font-semibold text-red-700 hover:border-red-700"
+            className="cursor-pointer rounded-md border border-line bg-card px-1.5 py-1 font-semibold text-danger hover:border-danger"
           >
             Delete selected
           </button>
@@ -140,8 +142,8 @@ export function LibrarySidebar() {
       </ul>
       {toDelete && (
         <ConfirmDialog
-          title={toDelete.length === 1 ? `Delete “${toDelete[0].name}”?` : `Delete ${toDelete.length} exercises?`}
-          confirmLabel={toDelete.length === 1 ? 'Delete 1 exercise' : `Delete ${toDelete.length} exercises`}
+          title={toDelete.length === 1 ? `Delete “${toDelete[0].name}”?` : `Delete ${exerciseCount(toDelete)}?`}
+          confirmLabel={`Delete ${exerciseCount(toDelete)}`}
           onConfirm={() => {
             const ids = toDelete.map((e) => e.id)
             deleteExercises(ids)

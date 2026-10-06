@@ -19,9 +19,11 @@ export function ConfirmDialog({
   onCancel: () => void
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
+  const cancel = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     const shown = dialog.current
     shown?.showModal()
+    cancel.current?.focus()
     return () => shown?.close()
   }, [])
 
@@ -43,8 +45,8 @@ export function ConfirmDialog({
         <div>{children}</div>
         <div className="flex justify-end gap-2">
           <button
+            ref={cancel}
             type="button"
-            autoFocus
             onClick={onCancel}
             className="cursor-pointer rounded-md border border-line bg-card px-3 py-1 font-semibold hover:border-accent"
           >
@@ -53,7 +55,7 @@ export function ConfirmDialog({
           <button
             type="button"
             onClick={onConfirm}
-            className="cursor-pointer rounded-md border border-red-700 bg-red-700 px-3 py-1 font-semibold text-white hover:bg-red-800"
+            className="cursor-pointer rounded-md border border-danger bg-danger px-3 py-1 font-semibold text-white hover:opacity-90"
           >
             {confirmLabel}
           </button>
