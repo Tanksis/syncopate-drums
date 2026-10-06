@@ -8,6 +8,7 @@ A v1 spec for a laptop-first web app, with the platform, data model, notation re
 
 ## Notes
 
+- **Name**: Syncopate! (repo [`syncopate-drums`](https://github.com/Tanksis/syncopate-drums)).
 - **Domain**: drum practice. Use the vocabulary in `CONTEXT.md` (Exercise, Bar, Note, Voice, Sticking, Groove layer, Swing feel, Notation view, Grid editor, Click, Count-in).
 - **Skills**: grilling tickets call `grilling` + `domain-modeling`; prototype tickets call `prototype`; research tickets call `research`. Keep `CONTEXT.md` a glossary only.
 - **Prior research**: [OMR / camera import](../../docs/research/omr-drum-notation.md): no off-the-shelf drum OMR; camera import deferred.
@@ -46,18 +47,18 @@ A v1 spec for a laptop-first web app, with the platform, data model, notation re
 - [Screen layout](issues/10-screen-layout.md): layout A, three columns (library sidebar | header, notation, editor panel with strip + palette | settings sidebar); 4 bars per line; click bar numbers to loop; Ctrl+Space plays. Also: library order stable while open, sticking mode "off", swing presets, vim keys can be turned off, ✕ to delete a bar.
 - [Sticking override input](issues/11-sticking-override-input.md): click the R/L (or Alt+1–4 on the cursor beat) to flip to the other hand, click again to clear; overrides in an accent colour; "Reset overrides (n)" in the Sticking sidebar; hidden but kept when sticking is off.
 - [Alternate sticking and looping](issues/12-alternate-sticking-and-looping.md): sticking is computed once over the whole exercise and always played as printed; loop repeats restart (an odd count gives a double at the seam) and a narrowed loop range keeps the printed hands.
+- [Static host](issues/14-static-host.md): GitHub Pages at `tanksis.github.io/syncopate-drums/` (subpath base and SW scope); Actions deploys every push to `main` after Vitest passes.
 
 ## Not yet specified
 
-- **Static host choice**: GitHub Pages vs. Cloudflare Pages/Netlify for the PWA. Deferred by the user; decide when the repo gets a remote.
-- **Assembling the spec**: every ticket is now settled, so the way is clear. The final pass combines the decisions above into the v1 spec (`/to-spec`).
+- **Assembling the spec**: every ticket is settled, so the way is clear. The final pass combines the decisions above into the v1 spec (`/to-spec`).
 
 ## Out of scope
 
 - **Camera/photo import**: deferred until after v1. A separate effort should start with the Claude-vision trial and the 30-photo test set from the [research](../../docs/research/omr-drum-notation.md).
 - **iPhone / mobile support**: the user chose laptop first; mobile adds too many decisions for now.
 - **MIDI in (timing feedback) and MIDI out (e-drum module sounds)**: after v1.
-- **Sync between devices / accounts**: to be discussed later (possibly with the public-app question).
+- **Sync between devices / accounts**: to be discussed later (possibly with the public-app question). Includes using the app on both a laptop and a personal PC; until then, move exercises with export/import.
 - **Time signatures other than 4/4**.
 - **Editable groove layer** (beyond presets).
 - **Swing on the groove layer only** (exercise straight): the alternative to the chosen swing approach.

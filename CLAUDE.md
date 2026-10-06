@@ -1,4 +1,4 @@
-# Drum App
+# Syncopate!
 
 ## Agent skills
 

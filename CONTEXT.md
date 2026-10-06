@@ -1,6 +1,6 @@
-# Drum App
+# Syncopate!
 
-A personal drum practice tool: enter rhythm exercises (e.g. lines from Ted Reed's *Syncopation*), see the sticking, add a groove layer on top, and hear and play along with them against a metronome.
+Syncopate! (repo `syncopate-drums`) is a personal drum practice tool: enter rhythm exercises (e.g. lines from Ted Reed's *Syncopation*), see the sticking, add a groove layer on top, and hear and play along with them against a metronome.
 
 ## Language
 
