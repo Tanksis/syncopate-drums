@@ -6,7 +6,7 @@ It will run in the browser as an installable, offline PWA at **https://tanksis.g
 
 ## Status
 
-Planning is done; the app hasn't been built yet. The v1 spec and its build tickets are ready, and implementation starts with ticket 15 (the app skeleton and deploy pipeline).
+Planning is done and the build has started. Ticket 15 put up the app skeleton (the empty three-column layout) and the test-and-deploy pipeline; the remaining build tickets (16–34) fill it in.
 
 ## What v1 does
 
@@ -21,7 +21,22 @@ Planning is done; the app hasn't been built yet. The v1 spec and its build ticke
 
 TypeScript, Vite and React with Zustand; VexFlow 5 for notation; a custom Web Audio scheduler with CC0 drum samples (Virtuosity Drums); IndexedDB via `idb`; `vite-plugin-pwa`; Vitest. All dependencies are MIT or CC0. GitHub Actions runs the tests and deploys to GitHub Pages.
 
-Setup and dev commands will be added here with ticket 15.
+## Development
+
+Needs Node 22.
+
+```sh
+npm install
+npm run dev          # dev server at http://localhost:5173/syncopate-drums/
+npx vitest           # tests, in watch mode (npx vitest run for a single run)
+npm run typecheck    # TypeScript across the core, app and config
+npm run build        # type check + production build into dist/
+npm run preview      # serve the production build
+```
+
+The exercise core lives in `src/core/`. It must not import React, the DOM, Web Audio or IndexedDB: its TypeScript project has no DOM library, and a test checks its imports. It is the one place covered by tests.
+
+GitHub Actions (`.github/workflows/ci.yml`) runs the type check, a licence check (every shipped dependency must be MIT or CC0) and Vitest on every pull request into `main` and every push to it. A push to `main` deploys to GitHub Pages only if those pass.
 
 ## Repo guide
 

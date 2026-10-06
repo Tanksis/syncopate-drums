@@ -1,0 +1,36 @@
+import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { describe, expect, it } from 'vitest'
+import { TICKS_PER_BAR, TICKS_PER_BEAT, clampBpm } from './index'
+
+describe('ticks', () => {
+  it('fit both a sixteenth and an eighth-note triplet in one beat', () => {
+    expect(TICKS_PER_BEAT % 4).toBe(0)
+    expect(TICKS_PER_BEAT % 3).toBe(0)
+    expect(TICKS_PER_BAR).toBe(48)
+  })
+})
+
+describe('clampBpm', () => {
+  it('keeps tempos inside 30–300 BPM', () => {
+    expect(clampBpm(80)).toBe(80)
+    expect(clampBpm(12)).toBe(30)
+    expect(clampBpm(400)).toBe(300)
+    expect(clampBpm(92.6)).toBe(93)
+    expect(clampBpm(Number.NaN)).toBe(30)
+  })
+})
+
+describe('the core stays pure', () => {
+  const forbidden = /from\s+['"](react|react-dom|zustand|idb|vexflow)(\/[^'"]*)?['"]|from\s+['"]\.\.\//
+
+  it('imports nothing from React, the store, storage, notation or outside the core', () => {
+    const dir = import.meta.dirname
+    const sources = readdirSync(dir, { recursive: true, encoding: 'utf8' })
+      .filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts'))
+    expect(sources.length).toBeGreaterThan(0)
+    for (const file of sources) {
+      expect(readFileSync(join(dir, file), 'utf8'), file).not.toMatch(forbidden)
+    }
+  })
+})
