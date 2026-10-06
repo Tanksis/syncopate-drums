@@ -12,10 +12,14 @@ See [spec.md](../spec.md): editor commands (`applyEdit` over exercise, cursor, s
 
 **Blocked by:** 16 (Enter straight beat figures and see them on the staff)
 
-**Status:** ready-for-agent
+**Status:** done (merged in PR #8, 2026-10-06)
 
-- [ ] All the moves, rest-and-back, rest-in-place, bar add/duplicate/delete, bar select, copy and paste-replaces are `applyEdit` commands, mapped from keys by the core's pure key map
-- [ ] The beat strip shows a ✕ on hover that deletes that bar, and shows the bar selection
-- [ ] Clicking a beat box or a note in the notation moves the cursor there; clicking never changes the editor mode
-- [ ] Undo/redo covers every editing command; tests cover command sequences (e.g. paste replaces later bars; delete then undo restores the bar)
-- [ ] Deleting the only bar leaves one bar of rests rather than an empty exercise
+- [x] All the moves, rest-and-back, rest-in-place, bar add/duplicate/delete, bar select, copy and paste-replaces are `applyEdit` commands, mapped from keys by the core's pure key map
+- [x] The beat strip shows a ✕ on hover that deletes that bar, and shows the bar selection
+- [x] Clicking a beat box or a note in the notation moves the cursor there; clicking never changes the editor mode
+- [x] Undo/redo covers every editing command; tests cover command sequences (e.g. paste replaces later bars; delete then undo restores the bar)
+- [x] Deleting the only bar leaves one bar of rests rather than an empty exercise
+
+## Comments
+
+- 2026-10-06: Squash-merged as PR #8. Choices where the spec was silent: Home/End jump to the first/last beat of the exercise; ↑/↓ and Ctrl+←/→ keep the beat; with nothing selected, Ctrl+C copies and Ctrl+Backspace deletes the cursor bar; copy keeps the selection; paste writes from the cursor bar and leaves the cursor on its first beat; bar operations cut ties that would run into a bar that was never tied into; undo restores bars and cursor, not BPM. Ctrl+C/V outside text fields no longer copy page text.
