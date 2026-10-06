@@ -127,9 +127,9 @@ describe('beat views', () => {
 })
 
 describe('ties', () => {
-  it('merges a note tied into the next beat into a dotted value', () => {
-    const bars = toggleTie(bar('x...', '..x.', 'x...', '..x.'), 0, 2)
-    expect(text(bars)).toBe('q re q. re e')
+  it('merges a note tied into the next beat into a dotted value: ♩ ♪ ♩. ♪', () => {
+    const bars = toggleTie(bar('x...', 'x.x.', 'x...', '..x.'), 0, 2)
+    expect(text(bars)).toBe('q e q. re e')
     expect(beatViews(bars)[0].map((v) => v.tiedInto)).toEqual([false, false, true, false])
   })
   it('keeps the tie when a new figure starting with a hit is entered, and drops it otherwise', () => {

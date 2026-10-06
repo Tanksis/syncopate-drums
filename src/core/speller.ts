@@ -241,6 +241,10 @@ export function toggleTie(bars: Bar[], bar: number, beat: number): Bar[] {
   return fromTimeline(timeline)
 }
 
+const EIGHTH = 6
+const SIXTEENTH = 3
+const TRIPLET_EIGHTH = 4
+
 /**
  * Cuts the beat's last note short, or lets it ring to the end of the beat again. Cut short, the
  * note lasts an eighth if it starts on 1 or & of a straight beat, a sixteenth otherwise, and one
@@ -261,7 +265,7 @@ export function toggleCutShort(bars: Bar[], bar: number, beat: number): Bar[] {
     const triplet = timeline.triplet[index]
     const hits = hitsOf(timeline, index)
     const start = slotTicks(triplet)[hits.lastIndexOf('x')]
-    const end = start + (triplet ? 4 : start % 6 === 0 ? 6 : 3)
+    const end = start + (triplet ? TRIPLET_EIGHTH : start % EIGHTH === 0 ? EIGHTH : SIXTEENTH)
     if (end >= TICKS_PER_BEAT) return bars
     for (let t = end; t < TICKS_PER_BEAT; t++) cells[first + t] = { state: 'rest' }
   }
