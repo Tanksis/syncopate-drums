@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE · Swing &amp; groove playback check</title>
+<style>
+  :root { --accent:#2563eb; --bg:#fafaf9; --card:#fff; --ink:#1c1917; --mute:#78716c; --line:#e7e5e4; --hit:#f59e0b; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui, sans-serif; }
+  main { max-width:1100px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  h2 { font-size:15px; margin:0 0 10px; text-transform:uppercase; letter-spacing:.04em; color:var(--mute); }
+  .badge { display:inline-block; background:#fee2e2; color:#991b1b; font-size:12px; font-weight:600; padding:2px 8px; border-radius:99px; margin-bottom:8px; }
+  .intro { color:#44403c; max-width:820px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:16px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:820px){ .grid2 { grid-template-columns:1fr; } }
+  button { font:inherit; border:1px solid var(--line); background:#fff; border-radius:7px; padding:6px 12px; cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  button.on { background:#dbeafe; border-color:var(--accent); }
+  .row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:8px 0; }
+  .row label { min-width:130px; color:#44403c; }
+  input[type=range] { width:220px; }
+  select { font:inherit; padding:4px 6px; }
+  dl.state { display:grid; grid-template-columns:200px 1fr; gap:4px 12px; margin:0; }
+  dl.state dt { color:var(--mute); }
+  dl.state dd { margin:0; font-weight:500; }
+  dd.changed { color:var(--accent); }
+  .bars { display:flex; flex-wrap:wrap; gap:10px; }
+  .bar { border:1px solid var(--line); border-radius:6px; padding:6px; }
+  .bar.inloop { border-color:var(--accent); }
+  .bar .label { font-size:12px; color:var(--mute); }
+  .lane { position:relative; width:240px; height:18px; margin:3px 0; background:repeating-linear-gradient(90deg,#f5f5f4 0 59px,#d6d3d1 59px 60px); border-radius:3px; }
+  .lane .tag { position:absolute; left:-0px; top:-15px; font-size:10px; color:var(--mute); }
+  .dot { position:absolute; top:4px; width:10px; height:10px; margin-left:-5px; border-radius:50%; background:#57534e; }
+  .dot.trip { background:#7c3aed; border-radius:2px; }
+  .dot.groove { background:#a8a29e; width:8px; height:8px; top:5px; margin-left:-4px; }
+  .dot.ghost { background:none; border:1px dashed #a8a29e; }
+  .dot.now { background:var(--hit); box-shadow:0 0 0 3px #fde68a; }
+  .tabs { display:flex; flex-wrap:wrap; gap:4px; border-bottom:1px solid var(--line); margin-bottom:12px; }
+  .tabs button { border:none; border-bottom:2px solid transparent; border-radius:0; background:none; }
+  .tabs button.on { border-bottom-color:var(--accent); color:var(--accent); background:none; }
+  ol.steps { padding-left:20px; }
+  ol.steps li { margin:6px 0; }
+  ol.steps li.done { color:var(--mute); }
+  ol.steps li.next button { border-color:var(--accent); }
+  .log { font:12px/1.4 ui-monospace, monospace; background:#f5f5f4; padding:8px; border-radius:6px; white-space:pre-wrap; max-height:160px; overflow:auto; }
+  .legend { font-size:12px; color:var(--mute); }
+  .legend span.k { display:inline-block; width:10px; height:10px; border-radius:50%; vertical-align:middle; margin:0 4px 0 10px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="badge">PROTOTYPE · throwaway · Swing and groove playback check (ticket 04)</div>
+  <h1>Does the planned playback sound right?</h1>
+  <p class="intro">
+    Plays a hard-coded <i>Syncopation</i>-style line through the planned engine: our own Web Audio lookahead scheduler,
+    Virtuosity Drums samples (CC0) and a synthesized click. Listen on the laptop with wired headphones and decide:
+    <b>(1)</b> the default swing amount, <b>(2)</b> whether swing should get straighter as the tempo rises,
+    <b>(3)</b> whether triplets stay put under swing (A/B), <b>(4)</b> whether sixteenths swing proportionally or stay straight (A/B),
+    and <b>(5)</b> whether the samples and the approach are good enough to commit to.
+    The dots below show where each note <i>actually</i> lands in the beat after swing (grey lines = beats).
+  </p>
+
+  <div class="card">
+    <div class="row">
+      <button id="play" class="primary">▶ Play (with count-in)</button>
+      <button id="stop">■ Stop</button>
+      <span id="loadmsg" class="legend">Loading samples…</span>
+    </div>
+    <div id="bars" class="bars"></div>
+    <div class="legend" style="margin-top:6px">
+      <span class="k" style="background:#57534e"></span>exercise note (binary grid)
+      <span class="k" style="background:#7c3aed;border-radius:2px"></span>exercise note (triplet grid)
+      <span class="k" style="background:#a8a29e"></span>groove layer
+      <span class="k" style="border:1px dashed #a8a29e"></span>where it would be straight
+      <span class="k" style="background:#f59e0b"></span>sounding now
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>Controls (free play)</h2>
+      <div class="row"><label>Exercise</label><select id="exercise"></select></div>
+      <div class="row"><label>Groove preset</label><select id="groove"></select></div>
+      <div class="row"><label>Tempo</label><input id="bpm" type="range" min="30" max="300" step="1"><span id="bpmv"></span>
+        <button data-bpm="60">60</button><button data-bpm="120">120</button><button data-bpm="180">180</button><button data-bpm="250">250</button></div>
+      <div class="row"><label>Swing feel</label><button id="swingOn">On</button><button id="swingOff">Off (straight)</button></div>
+      <div class="row"><label>Swing amount</label><input id="swing" type="range" min="50" max="75" step="0.5"><span id="swingv"></span>
+        <button data-swing="58">light</button><button data-swing="62">medium</button><button data-swing="66.7">triplet</button><button data-swing="75">dotted</button></div>
+      <div class="row"><label>Swing vs tempo</label><button data-scale="fixed">Same at every tempo</button><button data-scale="tempo">Straighter as it gets faster</button></div>
+      <div class="row"><label>Triplets under swing</label><button data-trip="keep">Stay put</button><button data-trip="warp">Get swung too</button></div>
+      <div class="row"><label>Sixteenths under swing</label><button data-six="proportional">Swing proportionally</button><button data-six="straight">Beat with 16ths stays straight</button></div>
+      <div class="row"><label>Loop bars</label><select id="loopFrom"></select> to <select id="loopTo"></select></div>
+      <div class="row"><label>Click volume</label><input id="vclick" type="range" min="0" max="1" step="0.01"></div>
+      <div class="row"><label>Exercise volume</label><input id="vex" type="range" min="0" max="1" step="0.01"><button id="muteEx">Mute exercise</button></div>
+      <div class="row"><label>Groove volume</label><input id="vgroove" type="range" min="0" max="1" step="0.01"></div>
+      <div class="row"><label>Kit sound</label><button data-kit="oh">Overhead mics</button><button data-kit="close">Close mics (snare/kick)</button></div>
+      <div class="row"><label>Highlight offset</label><input id="calib" type="range" min="-100" max="100" step="1"><span id="calibv"></span></div>
+    </div>
+    <div class="card">
+      <h2>Current state</h2>
+      <dl id="state" class="state"></dl>
+      <h2 style="margin-top:16px">Audio device (log)</h2>
+      <div id="audiolog" class="log">Press Play to start audio.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Guided listening</h2>
+    <div id="tabs" class="tabs"></div>
+    <div id="scenario"></div>
+  </div>
+</main>
+
+<script src="samples.js"></script>
+
+<!-- ============================================================
+     Portable logic: exercise + settings -> timed events. No DOM.
+     Positions are ticks, 12 per beat (matches the data model).
+     ============================================================ -->
+<script>
+const Playback = (() => {
+  const TPB = 12; // ticks per beat
+
+  // Compact beat notation for the prototype only:
+  //   binary beat: 4 chars on the sixteenth grid, e.g. "x-x-" = two eighths
+  //   triplet beat: "t" + 3 chars on the triplet-eighth grid, e.g. "tx-x"
+  function parseBar(str) {
+    const beats = str.trim().split(/\s+/);
+    const notes = [];
+    beats.forEach((b, beat) => {
+      if (b[0] === 't') {
+        [...b.slice(1)].forEach((c, i) => { if (c === 'x') notes.push({ beat, tick: i * 4, grid: 'triplet' }); });
+      } else {
+        [...b].forEach((c, i) => { if (c === 'x') notes.push({ beat, tick: i * 3, grid: 'binary' }); });
+      }
+    });
+    return notes;
+  }
+
+  function makeExercise(name, bars, about) {
+    return { name, about, bars: bars.map(parseBar) };
+  }
+
+  const EXERCISES = [
+    makeExercise('Comping line (eighths)', [
+      'x--- --x- x--- --x-',
+      '--x- --x- x-x- ----',
+      'x-x- --x- ---- x---',
+      '--x- x--- --x- x---',
+    ], 'Quarters and off-beat eighths, the classic Syncopation comping shape.'),
+    makeExercise('Eighths + triplets mixed', [
+      'tx-x x-x- txxx --x-',
+      't-xx x--- tx-x x-x-',
+      'x-x- txxx --x- tx-x',
+      't-xx --x- x--- x---',
+    ], 'Swung eighths next to notated triplets.'),
+    makeExercise('Sixteenths line', [
+      'xxxx x-x- xx-x x---',
+      'x--x --x- x-xx ----',
+      'x-x- xxxx --xx x---',
+      'xx-x x--- x-x- x---',
+    ], 'Sixteenth figures inside a swing feel.'),
+    makeExercise('A/B probe: swung eighths vs triplets', [
+      'x-x- tx-x x-x- tx-x',
+      'x-x- tx-x x-x- tx-x',
+    ], 'Beats 1 & 3: two eighths. Beats 2 & 4: triplet with the middle note left out. At triplet swing (66.7%) they should sound identical.'),
+    makeExercise('A/B probe: eighths vs sixteenths', [
+      'x-x- xxxx x-x- xxxx',
+      'x-x- xxxx x-x- xxxx',
+    ], 'Alternating swung eighths and a run of four sixteenths.'),
+  ];
+
+  // Groove layer presets: per-beat hits, same notation, with a sound name.
+  const GROOVES = {
+    none: { name: 'No groove layer', beats: () => [] },
+    jazz: { name: 'Jazz ride + hi-hat on 2 & 4', beats: jazzRide(false) },
+    jazzBd: { name: 'Jazz ride + hi-hat 2 & 4 + feathered bass drum', beats: jazzRide(true) },
+    hh8: { name: 'Straight eighths on hi-hat', beats: (b) => [
+      { tick: 0, grid: 'binary', sound: 'hhClosed', vel: b % 2 === 0 ? 1 : 0.85 },
+      { tick: 6, grid: 'binary', sound: 'hhClosed', vel: 0.6 },
+    ] },
+  };
+  function jazzRide(feather) {
+    return (b) => {
+      const hits = [{ tick: 0, grid: 'binary', sound: 'ride', vel: b % 2 === 1 ? 1 : 0.85 }];
+      if (b % 2 === 1) hits.push({ tick: 6, grid: 'binary', sound: 'rideSkip', vel: 0.6 }); // "skip" note on & of 2 and 4
+      if (b % 2 === 1) hits.push({ tick: 0, grid: 'binary', sound: 'hhPedal', vel: 0.9 });
+      if (feather) hits.push({ tick: 0, grid: 'binary', sound: 'kickFeather', vel: 0.5 });
+      return hits;
+    };
+  }
+
+  // Effective swing ratio (length of the first eighth as a fraction of the beat).
+  function effectiveSwing(s) {
+    if (!s.swingOn) return 0.5;
+    if (s.swingScale === 'fixed') return s.swing / 100;
+    // Straighter as it gets faster: full amount up to 120 BPM, straight by 320 BPM.
+    const k = Math.min(1, Math.max(0, (320 - s.bpm) / (320 - 120)));
+    return 0.5 + (s.swing / 100 - 0.5) * k;
+  }
+
+  // Piecewise-linear warp of a binary-grid position x in [0,1) within the beat.
+  function warp(x, r) {
+    return x < 0.5 ? x * (r / 0.5) : r + (x - 0.5) * ((1 - r) / 0.5);
+  }
+
+  // Where in the beat (0..1) a hit lands. beatHasSixteenths: any binary note on e/a in this beat.
+  function placeInBeat(tick, grid, r, s, beatHasSixteenths) {
+    const x = tick / TPB;
+    if (grid === 'triplet') return s.tripletMode === 'warp' ? warp(x, r) : x;
+    if (beatHasSixteenths && s.sixteenthMode === 'straight') return x;
+    return warp(x, r);
+  }
+
+  function hasSixteenths(notes) {
+    return notes.some((n) => n.grid === 'binary' && n.tick % 6 !== 0);
+  }
+
+  // All hits of one beat of the loop. loopBeat counts beats from the start of the loop range.
+  // Negative beatIndex = count-in (click only).
+  function beatEvents(s, beatIndex) {
+    const r = effectiveSwing(s);
+    const out = [];
+    if (beatIndex < 0) {
+      out.push({ frac: 0, layer: 'click', sound: beatIndex === -4 ? 'clickHi' : 'clickLo', vel: 1 });
+      return out;
+    }
+    const ex = EXERCISES[s.exercise];
+    const loopLen = (s.loopTo - s.loopFrom + 1) * 4;
+    const bar = s.loopFrom + Math.floor((beatIndex % loopLen) / 4);
+    const beat = beatIndex % 4;
+    out.push({ frac: 0, layer: 'click', sound: beat === 0 ? 'clickHi' : 'clickLo', vel: 1 });
+    const notes = ex.bars[bar].filter((n) => n.beat === beat);
+    const six = hasSixteenths(notes);
+    notes.forEach((n, i) => out.push({
+      frac: placeInBeat(n.tick, n.grid, r, s, six), layer: 'exercise', sound: 'snare', vel: 1,
+      noteId: `${bar}:${n.beat}:${n.tick}`,
+    }));
+    GROOVES[s.groove].beats(beat).forEach((g) => out.push({
+      frac: placeInBeat(g.tick, g.grid, r, s, false), layer: 'groove', sound: g.sound, vel: g.vel,
+    }));
+    return out.sort((a, b) => a.frac - b.frac);
+  }
+
+  return { TPB, EXERCISES, GROOVES, effectiveSwing, warp, placeInBeat, hasSixteenths, beatEvents };
+})();
+</script>
+
+<!-- ============================================================
+     Throwaway shell: audio engine + page.
+     ============================================================ -->
+<script>
+const INITIAL = {
+  exercise: 0, groove: 'jazz', bpm: 120, swingOn: true, swing: 66.7, swingScale: 'fixed',
+  tripletMode: 'keep', sixteenthMode: 'proportional', loopFrom: 0, loopTo: 3,
+  vclick: 0.6, vex: 0.9, vgroove: 0.7, muteEx: false, kit: 'oh', calib: 0,
+};
+let S = { ...INITIAL };
+let lastChanged = new Set();
+
+// ---------- audio ----------
+let ctx = null, gains = null, buffers = {}, rr = {};
+const LOOKAHEAD = 0.1, TICK_MS = 25;
+let worker = null, playing = false, cursor = null, scheduled = [], lateCount = 0, visualQueue = [];
+
+const SAMPLE_SETS = {
+  snare:      { oh: ['oh_snare_center_vl18', 'oh_snare_center_vl21', 'oh_snare_center_vl24'],
+                close: ['snaremic_snare_center_vl18', 'snaremic_snare_center_vl21', 'snaremic_snare_center_vl24'] },
+  kickFeather:{ oh: ['oh_kick_snoff_vl1_rr1', 'oh_kick_snoff_vl1_rr2'],
+                close: ['kickmic_kick_snoff_vl1_rr1', 'kickmic_kick_snoff_vl1_rr2'] },
+  ride:       { all: ['oh_ride_ride_vl2_rr1', 'oh_ride_ride_vl2_rr2'] },
+  rideSkip:   { all: ['oh_ride_ride_vl1_rr1'] },
+  hhPedal:    { all: ['oh_hh_pedal_vl2_rr1', 'oh_hh_pedal_vl2_rr2'] },
+  hhClosed:   { all: ['oh_hh_closed_vl2_rr1', 'oh_hh_closed_vl3_rr1'] },
+};
+const trimInfo = [];
+
+function b64ToArrayBuffer(b64) {
+  const bin = atob(b64); const u = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  return u.buffer;
+}
+// Trim leading silence so the onset sits at frame 0 (keep ~1 ms before the threshold crossing).
+function trimOnset(buf) {
+  let peak = 0; const chans = [];
+  for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c); chans.push(d); for (const v of d) peak = Math.max(peak, Math.abs(v)); }
+  const thr = peak * 0.01; let start = 0;
+  outer: for (let i = 0; i < buf.length; i++) for (const d of chans) if (Math.abs(d[i]) > thr) { start = i; break outer; }
+  start = Math.max(0, start - Math.round(buf.sampleRate * 0.001));
+  const out = ctx.createBuffer(buf.numberOfChannels, buf.length - start, buf.sampleRate);
+  chans.forEach((d, c) => out.copyToChannel(d.subarray(start), c));
+  return { out, ms: (start / buf.sampleRate) * 1000 };
+}
+async function initAudio() {
+  if (ctx) { await ctx.resume(); return; }
+  ctx = new AudioContext({ latencyHint: 'interactive' });
+  const master = ctx.createGain(); master.connect(ctx.destination);
+  gains = { click: ctx.createGain(), exercise: ctx.createGain(), groove: ctx.createGain() };
+  Object.values(gains).forEach((g) => g.connect(master));
+  applyGains(true);
+  for (const [name, b64] of Object.entries(window.SAMPLES)) {
+    const raw = await ctx.decodeAudioData(b64ToArrayBuffer(b64));
+    const { out, ms } = trimOnset(raw);
+    buffers[name] = out; trimInfo.push(`${name}: trimmed ${ms.toFixed(1)} ms, ${raw.numberOfChannels}ch`);
+  }
+  const blob = new Blob([`let t=null;onmessage=e=>{if(e.data==='start'){clearInterval(t);t=setInterval(()=>postMessage('tick'),${TICK_MS});}else{clearInterval(t);}}`], { type: 'text/javascript' });
+  worker = new Worker(URL.createObjectURL(blob));
+  worker.onmessage = schedule;
+  logAudio();
+  requestAnimationFrame(draw);
+}
+function applyGains(now) {
+  if (!gains) return;
+  const t = ctx.currentTime;
+  const set = (g, v) => now ? (g.gain.value = v) : g.gain.setTargetAtTime(v, t, 0.015);
+  set(gains.click, S.vclick); set(gains.exercise, S.muteEx ? 0 : S.vex); set(gains.groove, S.vgroove);
+}
+function pickBuffer(sound) {
+  const set = SAMPLE_SETS[sound]; const list = set.all || set[S.kit];
+  rr[sound] = ((rr[sound] ?? -1) + 1) % list.length;
+  return buffers[list[rr[sound]]];
+}
+function playClick(when, hi) {
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.frequency.value = hi ? 1800 : 1200;
+  g.gain.setValueAtTime(0.0001, when);
+  g.gain.exponentialRampToValueAtTime(hi ? 0.9 : 0.55, when + 0.001);
+  g.gain.exponentialRampToValueAtTime(0.0001, when + 0.04);
+  o.connect(g).connect(gains.click); o.start(when); o.stop(when + 0.05);
+  return o;
+}
+function playSample(when, sound, vel, layer) {
+  const src = ctx.createBufferSource(); src.buffer = pickBuffer(sound);
+  const g = ctx.createGain(); g.gain.value = vel;
+  src.connect(g).connect(gains[layer]); src.start(when);
+  return src;
+}
+
+function start() {
+  stop();
+  const t0 = ctx.currentTime + 0.1;
+  cursor = { beatIndex: -4, beatStart: t0, beatDur: 60 / S.bpm, events: null, i: 0 };
+  playing = true; lateCount = 0; worker.postMessage('start'); schedule();
+}
+function stop() {
+  playing = false; if (worker) worker.postMessage('stop');
+  const t = ctx ? ctx.currentTime : 0;
+  scheduled.forEach((n) => { try { n.stop(t); } catch {} }); scheduled = []; visualQueue = [];
+}
+// Lookahead scheduler: every 25 ms, schedule everything due in the next 100 ms.
+// Tempo is fixed per beat when the beat is entered, so a BPM change lands on the next beat.
+function schedule() {
+  if (!playing) return;
+  const horizon = ctx.currentTime + LOOKAHEAD;
+  while (true) {
+    if (!cursor.events) { cursor.events = Playback.beatEvents(S, cursor.beatIndex); cursor.i = 0; }
+    while (cursor.i < cursor.events.length) {
+      const e = cursor.events[cursor.i];
+      const when = cursor.beatStart + e.frac * cursor.beatDur;
+      if (when > horizon) return;
+      if (when < ctx.currentTime) lateCount++;
+      const node = e.layer === 'click' ? playClick(when, e.sound === 'clickHi') : playSample(when, e.sound, e.vel, e.layer);
+      scheduled.push(node); node.onended = () => { scheduled = scheduled.filter((n) => n !== node); };
+      if (e.noteId) visualQueue.push({ when, noteId: e.noteId });
+      cursor.i++;
+    }
+    const next = cursor.beatStart + cursor.beatDur;
+    if (next > horizon) return;
+    cursor = { beatIndex: cursor.beatIndex + 1, beatStart: next, beatDur: 60 / S.bpm, events: null, i: 0 };
+  }
+}
+// Note highlight against what is audible now (getOutputTimestamp) + calibration offset.
+let currentNote = null;
+function draw() {
+  if (ctx && playing) {
+    const ts = ctx.getOutputTimestamp();
+    let audible = ts.contextTime ? ts.contextTime + (performance.now() - ts.performanceTime) / 1000
+                                 : ctx.currentTime - (ctx.outputLatency || 0) - ctx.baseLatency;
+    audible -= S.calib / 1000;
+    while (visualQueue.length && visualQueue[0].when <= audible) currentNote = visualQueue.shift().noteId;
+    document.querySelectorAll('.dot.now').forEach((d) => d.classList.remove('now'));
+    if (currentNote) document.querySelector(`[data-note="${currentNote}"]`)?.classList.add('now');
+  }
+  requestAnimationFrame(draw);
+}
+function logAudio() {
+  const lines = [
+    `Browser: ${navigator.userAgent.match(/(Edg|Firefox|Chrome)\/[\d.]+/)?.[0] ?? navigator.userAgent}`,
+    `sampleRate: ${ctx.sampleRate} Hz`,
+    `baseLatency: ${(ctx.baseLatency * 1000).toFixed(1)} ms`,
+    `outputLatency: ${ctx.outputLatency !== undefined ? (ctx.outputLatency * 1000).toFixed(1) + ' ms' : 'not supported'}`,
+    `late notes this run: ${lateCount}`,
+    '', ...trimInfo,
+  ];
+  document.getElementById('audiolog').textContent = lines.join('\n');
+}
+setInterval(() => { if (ctx) logAudio(); }, 1000);
+
+// ---------- page ----------
+const $ = (id) => document.getElementById(id);
+function set(patch) {
+  lastChanged = new Set(Object.keys(patch).filter((k) => S[k] !== patch[k]));
+  S = { ...S, ...patch };
+  const nBars = Playback.EXERCISES[S.exercise].bars.length;
+  if (S.loopTo >= nBars) S.loopTo = nBars - 1;
+  if (S.loopFrom > S.loopTo) S.loopFrom = S.loopTo;
+  applyGains(false);
+  render();
+}
+function ratioText(r) { return `${(r * 100).toFixed(1)}% (${(r / (1 - r)).toFixed(2)} : 1)`; }
+function render() {
+  const ex = Playback.EXERCISES[S.exercise];
+  $('exercise').value = S.exercise; $('groove').value = S.groove;
+  $('bpm').value = S.bpm; $('bpmv').textContent = `${S.bpm} BPM`;
+  $('swing').value = S.swing; $('swingv').textContent = `${S.swing}%`;
+  $('vclick').value = S.vclick; $('vex').value = S.vex; $('vgroove').value = S.vgroove;
+  $('calib').value = S.calib; $('calibv').textContent = `${S.calib} ms`;
+  $('muteEx').classList.toggle('on', S.muteEx);
+  $('swingOn').classList.toggle('on', S.swingOn); $('swingOff').classList.toggle('on', !S.swingOn);
+  document.querySelectorAll('[data-scale]').forEach((b) => b.classList.toggle('on', b.dataset.scale === S.swingScale));
+  document.querySelectorAll('[data-trip]').forEach((b) => b.classList.toggle('on', b.dataset.trip === S.tripletMode));
+  document.querySelectorAll('[data-six]').forEach((b) => b.classList.toggle('on', b.dataset.six === S.sixteenthMode));
+  document.querySelectorAll('[data-kit]').forEach((b) => b.classList.toggle('on', b.dataset.kit === S.kit));
+  for (const id of ['loopFrom', 'loopTo']) {
+    $(id).innerHTML = ex.bars.map((_, i) => `<option value="${i}">Bar ${i + 1}</option>`).join('');
+  }
+  $('loopFrom').value = S.loopFrom; $('loopTo').value = S.loopTo;
+
+  // Bars with notes placed where swing puts them.
+  const r = Playback.effectiveSwing(S);
+  $('bars').innerHTML = ex.bars.map((notes, bi) => {
+    let exLane = '', grLane = '';
+    for (let beat = 0; beat < 4; beat++) {
+      const bn = notes.filter((n) => n.beat === beat);
+      const six = Playback.hasSixteenths(bn);
+      bn.forEach((n) => {
+        const x = (beat + Playback.placeInBeat(n.tick, n.grid, r, S, six)) * 60;
+        const straight = (beat + n.tick / 12) * 60;
+        if (Math.abs(x - straight) > 0.5) exLane += `<div class="dot ghost" style="left:${straight}px"></div>`;
+        exLane += `<div class="dot ${n.grid === 'triplet' ? 'trip' : ''}" data-note="${bi}:${n.beat}:${n.tick}" style="left:${x}px"></div>`;
+      });
+      Playback.GROOVES[S.groove].beats(beat).forEach((g) => {
+        const x = (beat + Playback.placeInBeat(g.tick, g.grid, r, S, false)) * 60;
+        grLane += `<div class="dot groove" title="${g.sound}" style="left:${x}px"></div>`;
+      });
+    }
+    const inLoop = bi >= S.loopFrom && bi <= S.loopTo;
+    return `<div class="bar ${inLoop ? 'inloop' : ''}"><div class="label">Bar ${bi + 1}${inLoop ? ' · in loop' : ''}</div>
+      <div class="lane">${grLane}</div><div class="lane">${exLane}</div></div>`;
+  }).join('');
+
+  const rows = [
+    ['exercise', 'Exercise', `${ex.name} — ${ex.about}`],
+    ['groove', 'Groove preset', Playback.GROOVES[S.groove].name],
+    ['bpm', 'Tempo', `${S.bpm} BPM`],
+    ['swingOn', 'Swing feel', S.swingOn ? 'on' : 'off (straight)'],
+    ['swing', 'Swing amount (set)', `${S.swing}%`],
+    ['swingScale', 'Swing vs tempo', S.swingScale === 'fixed' ? 'same at every tempo' : 'straighter as it gets faster (full ≤120 BPM, straight at 320)'],
+    ['effective', 'Swing actually played', ratioText(r)],
+    ['tripletMode', 'Triplets under swing', S.tripletMode === 'keep' ? 'stay put' : 'get swung too'],
+    ['sixteenthMode', 'Sixteenths under swing', S.sixteenthMode === 'proportional' ? 'swing proportionally' : 'beat with 16ths stays straight'],
+    ['loopFrom', 'Loop range', `bar ${S.loopFrom + 1} to bar ${S.loopTo + 1}`],
+    ['vclick', 'Volumes', `click ${Math.round(S.vclick * 100)} · exercise ${S.muteEx ? 'muted' : Math.round(S.vex * 100)} · groove ${Math.round(S.vgroove * 100)}`],
+    ['kit', 'Kit sound', S.kit === 'oh' ? 'overhead mics' : 'close mics on snare and bass drum'],
+    ['playing', 'Playback', playing ? 'playing' : 'stopped'],
+  ];
+  const changed = (k) => lastChanged.has(k) || (k === 'effective' && ['swing', 'swingOn', 'swingScale', 'bpm'].some((x) => lastChanged.has(x)))
+    || (k === 'vclick' && ['vex', 'vgroove', 'muteEx'].some((x) => lastChanged.has(x))) || (k === 'loopFrom' && lastChanged.has('loopTo'));
+  $('state').innerHTML = rows.map(([k, l, v]) => `<dt>${l}</dt><dd class="${changed(k) ? 'changed' : ''}">${v}</dd>`).join('');
+}
+
+// Wire controls.
+$('exercise').innerHTML = Playback.EXERCISES.map((e, i) => `<option value="${i}">${e.name}</option>`).join('');
+$('groove').innerHTML = Object.entries(Playback.GROOVES).map(([k, g]) => `<option value="${k}">${g.name}</option>`).join('');
+$('exercise').onchange = (e) => set({ exercise: +e.target.value, loopFrom: 0, loopTo: Playback.EXERCISES[+e.target.value].bars.length - 1 });
+$('groove').onchange = (e) => set({ groove: e.target.value });
+$('bpm').oninput = (e) => set({ bpm: +e.target.value });
+$('swing').oninput = (e) => set({ swing: +e.target.value, swingOn: true });
+$('vclick').oninput = (e) => set({ vclick: +e.target.value });
+$('vex').oninput = (e) => set({ vex: +e.target.value });
+$('vgroove').oninput = (e) => set({ vgroove: +e.target.value });
+$('calib').oninput = (e) => set({ calib: +e.target.value });
+$('loopFrom').onchange = (e) => set({ loopFrom: +e.target.value });
+$('loopTo').onchange = (e) => set({ loopTo: +e.target.value });
+$('muteEx').onclick = () => set({ muteEx: !S.muteEx });
+$('swingOn').onclick = () => set({ swingOn: true });
+$('swingOff').onclick = () => set({ swingOn: false });
+document.querySelectorAll('[data-bpm]').forEach((b) => b.onclick = () => set({ bpm: +b.dataset.bpm }));
+document.querySelectorAll('[data-swing]').forEach((b) => b.onclick = () => set({ swing: +b.dataset.swing, swingOn: true }));
+document.querySelectorAll('[data-scale]').forEach((b) => b.onclick = () => set({ swingScale: b.dataset.scale }));
+document.querySelectorAll('[data-trip]').forEach((b) => b.onclick = () => set({ tripletMode: b.dataset.trip }));
+document.querySelectorAll('[data-six]').forEach((b) => b.onclick = () => set({ sixteenthMode: b.dataset.six }));
+document.querySelectorAll('[data-kit]').forEach((b) => b.onclick = () => set({ kit: b.dataset.kit }));
+$('play').onclick = async () => { await initAudio(); start(); lastChanged = new Set(['playing']); render(); };
+$('stop').onclick = () => { if (ctx) stop(); lastChanged = new Set(['playing']); render(); };
+$('loadmsg').textContent = window.SAMPLES ? `${Object.keys(window.SAMPLES).length} samples ready (decoded on first Play).` : 'samples.js missing!';
+
+// ---------- guided listening ----------
+const EX = Object.fromEntries(Playback.EXERCISES.map((e, i) => [e.name, i]));
+const playStep = (label, patch) => ({ label, run: async () => { set(patch); await initAudio(); start(); render(); } });
+const step = (label, patch) => ({ label, run: () => set(patch) });
+const SCENARIOS = [
+  { title: '1 · Default groove', about: 'The everyday case: a comping line over the default preset at 120 BPM. Find the swing amount that feels like the default you want. Listen for whether the ride "skip" note and your snare off-beats line up.',
+    steps: [
+      playStep('Play: comping line, jazz ride + hi-hat, triplet swing (66.7%)', { ...INITIAL, exercise: EX['Comping line (eighths)'] }),
+      step('Lighter swing: 60%', { swing: 60 }),
+      step('Medium: 62%', { swing: 62 }),
+      step('Back to triplet: 66.7%', { swing: 66.7 }),
+      step('Heavy / dotted: 75%', { swing: 75 }),
+      step('Straight (swing off) for comparison', { swingOn: false }),
+      step('Add feathered bass drum preset', { swingOn: true, swing: 66.7, groove: 'jazzBd' }),
+      step('Try straight hi-hat eighths preset (swung by the swing setting)', { groove: 'hh8' }),
+    ] },
+  { title: '2 · Triplets under swing (A/B)', about: 'Probe line: beats 1 & 3 are two eighths, beats 2 & 4 are a triplet with the middle note left out. With "stay put" at 66.7%, every beat should sound the same. Then hear what "get swung too" does to real triplets in a line.',
+    steps: [
+      playStep('Play probe at 66.7%, triplets stay put', { ...INITIAL, exercise: EX['A/B probe: swung eighths vs triplets'], groove: 'none', bpm: 100, loopTo: 1 }),
+      step('B: triplets get swung too', { tripletMode: 'warp' }),
+      step('A: triplets stay put', { tripletMode: 'keep' }),
+      step('Now a real mixed line, triplets stay put', { exercise: EX['Eighths + triplets mixed'], groove: 'jazz', loopFrom: 0, loopTo: 3 }),
+      step('Same line, triplets get swung too', { tripletMode: 'warp' }),
+      step('Back to stay put', { tripletMode: 'keep' }),
+    ] },
+  { title: '3 · Sixteenths under swing (A/B)', about: 'Proportional: the "e" lands halfway through the long eighth and the "a" halfway through the short one. Straight: any beat that has sixteenths is played straight, while eighth beats still swing. Which sounds like what you play?',
+    steps: [
+      playStep('Play probe, sixteenths swing proportionally', { ...INITIAL, exercise: EX['A/B probe: eighths vs sixteenths'], groove: 'none', bpm: 90, loopTo: 1 }),
+      step('B: beat with sixteenths stays straight', { sixteenthMode: 'straight' }),
+      step('A: proportional again', { sixteenthMode: 'proportional' }),
+      step('Real sixteenths line with groove, proportional', { exercise: EX['Sixteenths line'], groove: 'jazz', loopFrom: 0, loopTo: 3 }),
+      step('Same line, straight sixteenth beats', { sixteenthMode: 'straight' }),
+      step('Swing off entirely (reference)', { swingOn: false }),
+    ] },
+  { title: '4 · Tempo extremes', about: 'Does one swing amount work at 60 and at 250 BPM, or should swing get straighter as the tempo rises (as jazz players tend to do)? Also listen for any timing wobble at 250.',
+    steps: [
+      playStep('Play at 60 BPM, triplet swing, same at every tempo', { ...INITIAL, exercise: EX['Comping line (eighths)'], bpm: 60 }),
+      step('180 BPM', { bpm: 180 }),
+      step('250 BPM', { bpm: 250 }),
+      step('250 BPM, straighter as it gets faster', { swingScale: 'tempo' }),
+      step('180 BPM, straighter as it gets faster', { bpm: 180 }),
+      step('60 BPM (scaling makes no difference here)', { bpm: 60 }),
+      step('Change tempo while playing: jump to 140', { bpm: 140 }),
+    ] },
+  { title: '5 · Click, count-in & volumes', about: 'Count-in is one bar of click before the exercise. Check the accented beat 1 is clear, the click cuts through the ride, and muting the exercise leaves click + groove to play along with.',
+    steps: [
+      playStep('Play from the top (listen to the count-in)', { ...INITIAL, exercise: EX['Comping line (eighths)'] }),
+      step('Mute the exercise (you play it)', { muteEx: true }),
+      step('Click louder', { vclick: 1 }),
+      step('Groove quieter', { vgroove: 0.35 }),
+      step('Click only (no groove)', { groove: 'none' }),
+      step('Loop just bar 2', { muteEx: false, groove: 'jazz', vclick: 0.6, vgroove: 0.7, loopFrom: 1, loopTo: 1 }),
+    ] },
+  { title: '6 · Kit sound & latency', about: 'Compare the overhead-mic kit with close-miked snare/bass drum. Then read the audio log (right) and note baseLatency / outputLatency and any late notes. Nudge the highlight offset until the orange dot flashes with the snare.',
+    steps: [
+      playStep('Play with overhead mics', { ...INITIAL, exercise: EX['Comping line (eighths)'], groove: 'jazzBd' }),
+      step('Close mics on snare and bass drum', { kit: 'close' }),
+      step('Overhead mics again', { kit: 'oh' }),
+      step('Slow down to 70 to judge the highlight', { bpm: 70 }),
+    ] },
+];
+let tab = 0, progress = 0;
+function renderScenario() {
+  $('tabs').innerHTML = SCENARIOS.map((s, i) => `<button class="${i === tab ? 'on' : ''}" data-tab="${i}">${s.title}</button>`).join('');
+  document.querySelectorAll('[data-tab]').forEach((b) => b.onclick = () => { tab = +b.dataset.tab; progress = 0; renderScenario(); });
+  const sc = SCENARIOS[tab];
+  $('scenario').innerHTML = `<p>${sc.about}</p><ol class="steps">${sc.steps.map((st, i) =>
+    `<li class="${i < progress ? 'done' : i === progress ? 'next' : ''}"><button data-step="${i}">${st.label}</button></li>`).join('')}</ol>`;
+  document.querySelectorAll('[data-step]').forEach((b) => b.onclick = async () => {
+    const i = +b.dataset.step; await SCENARIOS[tab].steps[i].run(); progress = i + 1; renderScenario();
+  });
+}
+render(); renderScenario();
+</script>
+</body>
+</html>

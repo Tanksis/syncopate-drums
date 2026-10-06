@@ -1,0 +1,941 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE · Screen layout</title>
+<!--
+  PROTOTYPE, throwaway. Ticket: .scratch/drum-app-v1/issues/10-screen-layout.md
+  Four structurally different laptop layouts, switchable via ?variant=A|B|C|D and the floating bar
+  (Alt+← / Alt+→). All four drive the same in-memory exercise library, editor and playback:
+    A  Workstation      library sidebar | notation over editor + palette | settings sidebar  (stacked)
+    B  Practice / Edit  two modes that replace each other; library in a drawer                (replacing)
+    C  Score first      beat boxes sit under the notation itself; palette shows in Insert mode;
+                        settings in header pop-overs; library is its own screen               (merged)
+    D  Side by side     notation left, editor + settings right; quick-open (Ctrl+P) library    (side by side)
+  The floating bar also sets how the notation wraps (fit width / 4 / 2 bars per line).
+  Playback is real but rough (synth sounds, setInterval scheduler). Nothing is saved.
+-->
+<script src="vexflow.js"></script>
+<style>
+  :root { --accent:#2563eb; --bg:#f5f5f4; --card:#fff; --ink:#1c1917; --mute:#78716c; --line:#e7e5e4; --ov:#c2410c; --sel:#dbeafe; --loop:#fef3c7; --play:#dc2626; }
+  * { box-sizing:border-box; }
+  html, body { height:100%; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.4 system-ui, sans-serif; overflow:hidden; }
+  button { font:inherit; border:1px solid var(--line); background:#fff; border-radius:6px; padding:3px 9px; cursor:pointer; color:inherit; }
+  button:hover { border-color:var(--accent); }
+  button.on { background:var(--sel); border-color:var(--accent); }
+  select, input { font:inherit; }
+  input[type=number] { width:58px; padding:2px 4px; }
+  input[type=range] { vertical-align:middle; }
+  kbd { font:11px ui-monospace, monospace; background:#f5f5f4; border:1px solid #d6d3d1; border-bottom-width:2px; border-radius:4px; padding:0 4px; }
+  .mute { color:var(--mute); }
+  h3 { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--mute); margin:0 0 6px; }
+
+  /* shared widgets */
+  .notation { position:relative; }
+  .notation svg { display:block; }
+  .notation .vf-stavenote { cursor:pointer; }
+  .notation .playing path, .notation .playing text { fill:var(--play) !important; stroke:var(--play); }
+  .barno { position:absolute; font:11px ui-monospace, monospace; padding:0 5px; border-radius:4px; color:var(--mute); background:transparent; border:1px solid transparent; z-index:2; }
+  .barno:hover { border-color:var(--accent); color:var(--accent); }
+  .barno.inloop { background:#f59e0b; color:#fff; }
+  .play { width:40px; height:40px; border-radius:50%; font-size:16px; background:var(--ink); color:#fff; border:none; flex:none; }
+  .play.on { background:var(--play); }
+  .pos { font:12px ui-monospace, monospace; min-width:112px; color:var(--mute); }
+  .fld { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+  .fld > span.l { color:var(--mute); font-size:12px; }
+  .swp { display:flex; gap:3px; } .swp button { font-size:11px; padding:0 6px; } .swp button.on { background:var(--sel); border-color:var(--accent); }
+  .loopro { white-space:nowrap; font-size:13px; }
+  .loopro button { padding:0 5px; font-size:11px; }
+  .modeind { font:600 12px ui-monospace, monospace; padding:2px 8px; border-radius:4px; background:#dcfce7; color:#166534; white-space:nowrap; }
+  .modeind.normal { background:#e0e7ff; color:#3730a3; }
+  .namein { font:600 17px system-ui; border:1px solid transparent; background:transparent; padding:2px 6px; border-radius:6px; min-width:120px; }
+  .namein:hover, .namein:focus { border-color:var(--line); background:#fff; }
+
+  .strip { display:flex; flex-wrap:wrap; gap:8px; align-content:flex-start; }
+  .cbar { display:flex; gap:3px; border:1px solid var(--line); border-radius:8px; padding:3px 4px; background:#fff; align-items:center; }
+  .cbar.inloop { background:var(--loop); }
+  .cbar { position:relative; } .delbar { position:absolute; right:-7px; top:-8px; width:18px; height:18px; padding:0; border-radius:50%; font-size:10px; display:none; color:#b91c1c; }
+  .cbar:hover .delbar { display:block; }
+  .cbar .bn { font:11px ui-monospace, monospace; color:var(--mute); width:18px; text-align:right; margin-right:2px; }
+  .cbeat { width:40px; height:36px; border:1px solid #d6d3d1; border-radius:6px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; font:10px ui-monospace, monospace; position:relative; background:#fff; line-height:1.1; }
+  .cbeat b { font-size:14px; }
+  .cbeat.cur { outline:3px solid var(--accent); outline-offset:-2px; }
+  .cbeat .tie { position:absolute; top:-8px; left:-8px; font-size:14px; color:var(--accent); }
+  .notation .cbeat { position:absolute; height:34px; }
+
+  .pal { display:flex; flex-direction:column; gap:5px; }
+  .pal .row { display:flex; gap:5px; }
+  .pal .row.r1 { padding-left:18px; } .pal .row.r2 { padding-left:36px; }
+  .fig { border:1px solid var(--line); border-radius:7px; background:#fff; cursor:pointer; text-align:center; position:relative; padding:0; }
+  .fig:hover { border-color:var(--accent); }
+  .fig.on { border-color:var(--accent); background:var(--sel); }
+  .fig .k { position:absolute; left:3px; top:1px; font:600 11px ui-monospace, monospace; color:var(--mute); }
+  .fig .mini { overflow:hidden; pointer-events:none; }
+  .pal.tiles .fig { width:74px; height:52px; }
+  .pal.tiles .fig .p { display:none; }
+  .pal.tiles .fig .mini { height:52px; } .pal.tiles .fig .mini svg { transform:scale(.5); transform-origin:2px -4px; }
+  .pal.compact .fig { width:44px; height:34px; } .pal.compact .fig .mini { display:none; }
+  .pal.compact .fig .k { position:static; display:block; font-size:12px; color:var(--ink); }
+  .pal.compact .fig .p { font:9px ui-monospace, monospace; color:var(--mute); }
+  .pal.compact .row.r1 { padding-left:12px; } .pal.compact .row.r2 { padding-left:24px; }
+  .pal .fig.wide { width:auto; padding:0 10px; }
+  .pal.tiles .fig.wide .k { position:static; display:block; margin-top:8px; }
+
+  .legend { font-size:12px; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:8px 10px; columns:2; column-gap:20px; }
+  .legend div { break-inside:avoid; }
+  .legend b { font-family:ui-monospace, monospace; }
+
+  .lib-head { display:flex; flex-direction:column; gap:6px; }
+  .lib-head input { width:100%; padding:4px 8px; border:1px solid #d6d3d1; border-radius:6px; }
+  .lib-acts { display:flex; flex-wrap:wrap; gap:4px; }
+  .lib-acts button { font-size:12px; padding:1px 7px; }
+  .lib-items { overflow:auto; }
+  .li { display:flex; gap:6px; align-items:center; padding:5px 6px; border-radius:6px; cursor:pointer; }
+  .li:hover { background:#f5f5f4; }
+  .li.open { background:var(--sel); }
+  .li .nm { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .li .meta { font-size:11px; color:var(--mute); white-space:nowrap; }
+  table.libt { width:100%; border-collapse:collapse; }
+  table.libt th { text-align:left; font-size:11px; text-transform:uppercase; color:var(--mute); padding:6px 8px; border-bottom:1px solid var(--line); }
+  table.libt td { padding:8px; border-bottom:1px solid var(--line); cursor:pointer; }
+  table.libt tr:hover td { background:#fafaf9; }
+  table.libt tr.open td { background:var(--sel); }
+
+  .toast { position:fixed; top:14px; left:50%; transform:translateX(-50%); background:#111827; color:#fff; padding:8px 14px; border-radius:8px; z-index:99; font-size:13px; }
+
+  /* ===== Variant A: workstation ===== */
+  .va { display:grid; grid-template-columns:230px 1fr 250px; height:100vh; }
+  .va-lib { border-right:1px solid var(--line); background:#fafaf9; padding:12px 10px; display:flex; flex-direction:column; gap:8px; min-height:0; }
+  .va-lib .lib-items { flex:1; }
+  .va-main { display:flex; flex-direction:column; min-width:0; min-height:0; }
+  .va-top { display:flex; align-items:center; gap:14px; padding:8px 16px; border-bottom:1px solid var(--line); background:#fff; flex-wrap:wrap; }
+  .va-score { flex:1; overflow:auto; padding:10px 16px; background:#fff; min-height:0; }
+  .va-edit { border-top:1px solid var(--line); padding:8px 16px 70px; background:#fafaf9; display:flex; flex-direction:column; gap:8px; max-height:52vh; overflow:auto; }
+  .va-edit .hd { display:flex; gap:10px; align-items:center; }
+  .va-set { border-left:1px solid var(--line); background:#fafaf9; padding:12px; display:flex; flex-direction:column; gap:14px; overflow:auto; }
+  .va-set .grp { display:flex; flex-direction:column; gap:6px; }
+  .va-set .fld { justify-content:space-between; }
+  .va-set input[type=range] { width:120px; }
+
+  /* ===== Variant B: practice / edit ===== */
+  .vb { display:flex; flex-direction:column; height:100vh; }
+  .vb-top { display:flex; align-items:center; gap:12px; padding:8px 14px; background:#fff; border-bottom:1px solid var(--line); }
+  .vb-tabs { display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-left:auto; }
+  .vb-tabs button { border:none; border-radius:0; padding:5px 16px; }
+  .vb-tabs button.on { background:var(--ink); color:#fff; }
+  .vb-score { flex:1; overflow:auto; padding:20px 28px; background:#fff; min-height:0; }
+  .vb-dock { border-top:1px solid var(--line); background:#fafaf9; padding:10px 18px 64px; display:flex; flex-wrap:wrap; align-items:center; gap:10px 24px; }
+  .vb-dock .sep { width:1px; height:28px; background:var(--line); }
+  .vb-dock input[type=range] { width:90px; }
+  .vb-mirror { height:34vh; overflow:auto; padding:8px 20px; background:#fff; border-bottom:1px solid var(--line); }
+  .vb-editor { flex:1; display:grid; grid-template-columns:1fr auto; gap:14px; padding:12px 20px 70px; overflow:auto; min-height:0; }
+  .vb-editor .left { display:flex; flex-direction:column; gap:10px; min-width:0; }
+  .vb-drawer-bg { position:fixed; inset:0; background:rgba(0,0,0,.25); z-index:20; }
+  .vb-drawer { position:fixed; left:0; top:0; bottom:0; width:340px; background:#fff; z-index:21; padding:14px; display:flex; flex-direction:column; gap:8px; box-shadow:4px 0 24px rgba(0,0,0,.15); }
+  .vb-drawer .lib-items { flex:1; }
+
+  /* ===== Variant C: score first ===== */
+  .vc { display:flex; flex-direction:column; height:100vh; }
+  .vc-top { display:flex; align-items:center; gap:10px; padding:6px 14px; background:#fff; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .pop { position:relative; }
+  .pop summary { list-style:none; cursor:pointer; border:1px solid var(--line); border-radius:6px; padding:3px 9px; font-size:13px; white-space:nowrap; background:#fff; }
+  .pop summary::-webkit-details-marker { display:none; }
+  .pop[open] summary { border-color:var(--accent); }
+  .pop .body { position:absolute; top:calc(100% + 6px); left:0; background:#fff; border:1px solid var(--line); border-radius:8px; padding:10px 12px; box-shadow:0 8px 24px rgba(0,0,0,.12); z-index:15; display:flex; flex-direction:column; gap:8px; min-width:230px; }
+  .pop .body .fld { justify-content:space-between; }
+  .vc-score { flex:1; overflow:auto; padding:14px 22px; background:#fff; min-height:0; }
+  .vc-pal { position:fixed; left:50%; bottom:62px; transform:translateX(-50%); background:#fafaf9; border:1px solid var(--line); border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,.15); padding:8px 10px; z-index:10; display:flex; gap:12px; align-items:flex-start; }
+  .vc-lib { flex:1; overflow:auto; padding:20px 40px 80px; background:#fff; }
+  .vc-lib .lib-head { flex-direction:row; align-items:center; margin-bottom:10px; }
+  .vc-lib .lib-head input { max-width:320px; }
+
+  /* ===== Variant D: side by side ===== */
+  .vd { display:flex; flex-direction:column; height:100vh; }
+  .vd-top { display:flex; align-items:center; gap:12px; padding:6px 14px; background:#fff; border-bottom:1px solid var(--line); }
+  .vd-switch { font:600 16px system-ui; border:1px solid var(--line); border-radius:8px; padding:4px 12px; background:#fff; max-width:420px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .vd-body { flex:1; display:grid; grid-template-columns:1fr 400px; min-height:0; }
+  .vd-left { display:flex; flex-direction:column; min-width:0; min-height:0; border-right:1px solid var(--line); }
+  .vd-trans { display:flex; align-items:center; gap:14px; padding:8px 16px; border-bottom:1px solid var(--line); background:#fafaf9; flex-wrap:wrap; }
+  .vd-score { flex:1; overflow:auto; padding:10px 16px 70px; background:#fff; min-height:0; }
+  .vd-right { overflow:auto; padding:10px 12px 70px; display:flex; flex-direction:column; gap:12px; background:#fafaf9; }
+  .vd-right .strip { flex-direction:column; flex-wrap:nowrap; }
+  .vd-right details { background:#fff; border:1px solid var(--line); border-radius:8px; padding:6px 10px; }
+  .vd-right details summary { cursor:pointer; font-size:13px; font-weight:600; }
+  .vd-right details .body { display:flex; flex-direction:column; gap:7px; padding:8px 0 4px; }
+  .vd-right details .fld { justify-content:space-between; }
+  .vd-qo-bg { position:fixed; inset:0; background:rgba(0,0,0,.2); z-index:20; }
+  .vd-qo { position:fixed; top:70px; left:50%; transform:translateX(-50%); width:520px; background:#fff; border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.25); z-index:21; padding:10px; display:flex; flex-direction:column; gap:6px; max-height:70vh; }
+  .vd-qo > input { font-size:16px; padding:8px 10px; border:1px solid #d6d3d1; border-radius:6px; }
+  .vd-qo .lib-items { max-height:50vh; }
+  .vd-qo .li.hi { outline:2px solid var(--accent); }
+
+  /* floating prototype bar (prototype chrome, not part of any design) */
+  #switcher { position:fixed; left:50%; bottom:12px; transform:translateX(-50%); display:flex; align-items:center; gap:6px; background:#111827; color:#fff; border-radius:99px; padding:5px 8px; box-shadow:0 6px 24px rgba(0,0,0,.3); z-index:50; font-size:12px; white-space:nowrap; }
+  #switcher button { background:#374151; color:#fff; border:none; border-radius:99px; min-width:28px; height:28px; padding:0 8px; }
+  #switcher select { background:#374151; color:#fff; border:none; border-radius:6px; font-size:12px; padding:3px; }
+  #vlabel { min-width:170px; text-align:center; }
+  #switcher .badge { background:#dc2626; border-radius:99px; padding:1px 7px; font-weight:700; font-size:10px; }
+  #statepanel { position:fixed; right:12px; bottom:58px; width:420px; max-height:60vh; overflow:auto; background:#111827; color:#e5e7eb; font:11px/1.45 ui-monospace, monospace; white-space:pre-wrap; padding:10px; border-radius:8px; z-index:50; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="switcher">
+  <span class="badge">PROTOTYPE</span>
+  <button id="prev" title="Previous layout (Alt+←)">←</button><span id="vlabel"></span><button id="next" title="Next layout (Alt+→)">→</button>
+  <label>Wrap <select id="wrap"><option value="4">4 bars/line</option><option value="fit">fit width</option><option value="2">2 bars/line</option></select></label>
+  <button id="statebtn" title="Show the state">state</button>
+  <span id="vp" style="color:#9ca3af"></span>
+</div>
+<pre id="statepanel" hidden></pre>
+<script>
+'use strict';
+const VF = VexFlow;
+const TPB = 12, BAR = 48; // 12 ticks per beat: sixteenth 3, triplet eighth 4
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+
+// ---------- model (from the grid editor prototype) ----------
+let uid = 1;
+const mk = (t, o = {}) => ({ id: uid++, t, rest: !!o.rest, tie: !!o.tie, trip: !!o.trip, ov: o.ov || null });
+const clone = bars => bars.map(b => ({ items: b.items.map(i => ({ ...i })), subs: [...b.subs] }));
+const emptyBar = () => ({ items: [0, 1, 2, 3].map(() => mk(12, { rest: true })), subs: [2, 2, 2, 2] });
+function flatten(bars) {
+  const out = []; let prev = null;
+  bars.forEach((b, bi) => { let p = 0; b.items.forEach((it, ii) => {
+    out.push({ it, bi, ii, start: p, cont: !!(prev && prev.tie && !prev.rest && !it.rest) });
+    prev = it; p += it.t; }); });
+  return out;
+}
+const barTicks = b => b.items.reduce((s, i) => s + i.t, 0);
+function sticking(ex) {
+  const bars = ex.bars;
+  const res = new Map(); const fl = flatten(bars); const other = ex.lead === 'R' ? 'L' : 'R';
+  const struck = fl.filter(f => !f.it.rest && !f.cont);
+  if (ex.mode === 'off') return res;
+  if (ex.mode === 'alternate') { struck.forEach((f, i) => res.set(f.it.id, { hand: f.it.ov || (i % 2 ? other : ex.lead), ov: !!f.it.ov })); return res; }
+  let run = 0, prevTrip = false;
+  bars.forEach((b, bi) => {
+    for (let beat = 0; beat < 4; beat++) {
+      const inBeat = fl.filter(f => f.bi === bi && Math.floor(f.start / TPB) === beat);
+      const trip = inBeat.some(f => f.it.trip);
+      if (trip) { if (!prevTrip) run = 0; inBeat.forEach(f => { const k = run + (f.start % TPB) / 4; f.hand = k % 2 ? other : ex.lead; }); run += 3; prevTrip = true; }
+      else { const offs = inBeat.map(f => f.start % TPB); const step = offs.some(o => o % 6) ? 3 : offs.some(o => o === 6) ? 6 : 12;
+        inBeat.forEach(f => { f.hand = ((f.start % TPB) / step) % 2 ? other : ex.lead; }); prevTrip = false; }
+    }
+  });
+  struck.forEach(f => res.set(f.it.id, { hand: f.it.ov || f.hand, ov: !!f.it.ov }));
+  return res;
+}
+function tok(it) {
+  const base = it.trip ? { 8: 'q', 4: 'e' }[it.t] : { 18: 'q.', 12: 'q', 9: 'e.', 6: 'e', 3: 's' }[it.t];
+  return (it.rest ? 'r' : '') + base + (it.ov ? it.ov : '') + (it.tie && !it.rest ? '~' : '');
+}
+function barText(b) {
+  const out = []; let p = 0, grp = null;
+  b.items.forEach(it => {
+    if (it.trip) { if (!grp || Math.floor(p / TPB) !== grp.beat) { grp = { beat: Math.floor(p / TPB), toks: [] }; out.push(grp); } grp.toks.push(tok(it)); }
+    else { grp = null; out.push(tok(it)); }
+    p += it.t;
+  });
+  return out.map(x => typeof x === 'string' ? x : '[' + x.toks.join(' ') + ']').join(' ');
+}
+const toText = bars => bars.map(barText).join(' | ');
+function parseText(src) { // samples only; assumes valid input
+  const bars = []; let cur = { items: [], subs: [2, 2, 2, 2] }; let inTrip = false;
+  for (const s of src.match(/\||\[|\]|[^\s|\[\]]+/g)) {
+    if (s === '|') { bars.push(cur); cur = { items: [], subs: [2, 2, 2, 2] }; continue; }
+    if (s === '[') { inTrip = true; continue; } if (s === ']') { inTrip = false; continue; }
+    const t = /^(r?)([qes])(\.?)(~?)$/.exec(s); const rest = !!t[1], d = t[2], dot = !!t[3], tie = !!t[4];
+    const ticks = inTrip ? (d === 'q' ? 8 : 4) : { q: 12, e: 6, s: 3 }[d] * (dot ? 1.5 : 1);
+    cur.items.push(mk(ticks, { rest, tie, trip: inTrip }));
+  }
+  bars.push(cur); return bars;
+}
+function toCells(bars) {
+  const fl = flatten(bars);
+  return bars.map((b, bi) => {
+    const mine = fl.filter(f => f.bi === bi);
+    return [0, 1, 2, 3].map(beat => {
+      const lo = beat * TPB, hi = lo + TPB;
+      const covering = c => mine.find(f => f.start <= c && c < f.start + f.it.t);
+      const starts = mine.filter(f => f.start >= lo && f.start < hi);
+      const trip = starts.some(f => f.it.trip) || !!(covering(lo) && covering(lo).it.trip);
+      const need16 = starts.some(f => f.start % 6);
+      const sub = trip ? 3 : need16 || b.subs[beat] === 4 ? 4 : 2;
+      const len = TPB / sub, st = [], ov = [];
+      for (let k = 0; k < sub; k++) {
+        const c = lo + k * len, f = covering(c);
+        if (!f || f.it.rest) { st.push('.'); ov.push(null); }
+        else if (f.start === c && !f.cont) { st.push('x'); ov.push(f.it.ov); }
+        else { st.push('-'); ov.push(null); }
+      }
+      return { sub, st, ov };
+    });
+  });
+}
+function okNote(p, L) { const o = p % TPB; if (L === 18 || L === 12) return p % 6 === 0; if (L === 9) return o === 0 || o === 3; if (L === 6) return p % 6 === 0 || o === 3; return true; }
+function okRest(p, L) { const o = p % TPB; if (L === 12) return o === 0; if (L === 9) return o === 0 || o === 3; if (L === 6) return o === 0 || o === 6 || o === 3; return true; }
+function spell(p, end, rest, trip) {
+  const out = [];
+  while (p < end) { let L;
+    if (trip) L = (p % TPB === 0 || p % TPB === 4) && p + 8 <= end ? 8 : 4;
+    else L = [18, 12, 9, 6, 3].find(L => p + L <= end && (rest ? okRest(p, L) : okNote(p, L)));
+    out.push(L); p += L; }
+  return out;
+}
+function fromCells(barsCells) {
+  const cells = []; const tripBeat = [];
+  barsCells.forEach((bc, bi) => bc.forEach((beat, k) => {
+    const g0 = bi * BAR + k * TPB;
+    const trip = beat.sub === 3 && !(beat.st[1] === '-' && beat.st[2] === '-') && !beat.st.every(s => s === '.');
+    tripBeat[g0 / TPB] = trip;
+    beat.st.forEach((s, j) => cells.push({ g: g0 + j * TPB / beat.sub, len: TPB / beat.sub, s, ov: beat.ov[j] }));
+  }));
+  const segs = []; let cur = null;
+  cells.forEach(c => {
+    if (c.s === 'x') { cur = { note: true, s: c.g, e: c.g + c.len, ov: c.ov }; segs.push(cur); }
+    else if (c.s === '-' && cur && cur.note) cur.e += c.len;
+    else if (cur && !cur.note) cur.e += c.len;
+    else { cur = { note: false, s: c.g, e: c.g + c.len }; segs.push(cur); }
+  });
+  const bars = barsCells.map(bc => ({ items: [], subs: bc.map(b => b.sub) }));
+  segs.forEach(sg => {
+    const cuts = [sg.s];
+    for (let b = Math.floor(sg.s / TPB) * TPB + TPB; b < sg.e; b += TPB) if (!sg.note || b % BAR === 0 || tripBeat[b / TPB] || tripBeat[b / TPB - 1]) cuts.push(b);
+    cuts.push(sg.e);
+    const pieces = [];
+    for (let i = 0; i < cuts.length - 1; i++) { const trip = !!tripBeat[Math.floor(cuts[i] / TPB)];
+      spell(cuts[i], cuts[i + 1], !sg.note, trip).reduce((p, L) => { pieces.push({ p, L, trip }); return p + L; }, cuts[i]); }
+    pieces.forEach((pc, i) => bars[Math.floor(pc.p / BAR)].items.push(mk(pc.L, { rest: !sg.note, trip: pc.trip, tie: sg.note && i < pieces.length - 1, ov: i === 0 && sg.note ? sg.ov : null })));
+  });
+  return bars;
+}
+
+// ---------- beat figures (keys from the Beat figure palette ticket) ----------
+const FIGS = [
+  ['1', 'x...'], ['2', 'x.x.'], ['3', '..x.'], ['4', 'xxxx'], ['5', 'x.xx'], ['6', 'xxx.'], ['7', 'x..x'], ['8', 'xx.x'], ['9', '.xxx'], ['0', '..xx'],
+  ['a', 'xxx'], ['s', 'x.x'], ['d', 'xx.'], ['f', '.xx'], ['g', '.x.'], ['h', '..x'],
+  ['z', '.x..'], ['x', '...x'], ['c', '.xx.'], ['v', '.x.x'], ['b', 'xx..'],
+].map(([k, p], i) => ({ k, p, row: i < 10 ? 0 : i < 16 ? 1 : 2 }));
+const REST = { k: ' ', p: '....' };
+function figToCells(p, tie) { let seen = false; const st = [...p].map(ch => { if (ch === 'x') { seen = true; return 'x'; } return seen ? '-' : '.'; }); if (tie && st[0] === 'x') st[0] = '-'; return { sub: st.length, st, ov: st.map(() => null) }; }
+function figOfBeat(b) {
+  const st = b.sub === 2 ? [b.st[0], b.st[0] === '.' ? '.' : '-', b.st[1], b.st[1] === '.' ? '.' : '-'] : [...b.st];
+  const tie = st[0] === '-'; const p = st.map((c, i) => c === 'x' || (i === 0 && tie) ? 'x' : '.').join('');
+  return { fig: p === '....' ? REST : FIGS.find(f => f.p === p), p, tie };
+}
+
+// ---------- library (in memory) ----------
+const GROOVES = [['off', 'Off'], ['jazz', 'Jazz ride + hi-hat 2 & 4'], ['jazzbd', 'Jazz ride + HH 2 & 4 + feathered BD'], ['hh8', 'Straight eighths on hi-hat']];
+const L1 = 'q e q e q | re e q q. e | q. q. q | e q e re e q';
+const L2 = 'e q e q~ e e | e. s e e q rq | e. s e. s q e e~ | e q e e e q';
+const L3 = '[e e e] [e e e] q [q e] | [e re e] q e e [e e e] | [e q] [e q] q q | [e e e] e e [e e e] q';
+const SEED = [
+  ['Syncopation p.37 #1–2', L1 + ' | ' + L2, 88, 'jazz'],
+  ['Syncopation p.37 #1', L1, 80, 'off'],
+  ['Syncopation p.37 #2', L2, 72, 'jazz'],
+  ['Syncopation p.38 #5 (triplets)', L3, 96, 'jazz'],
+  ['Long line (12 bars)', L1 + ' | ' + L3 + ' | ' + L2, 100, 'jazzbd'],
+  ['Eighths / sixteenths warm-up', 'e e e e e e e e | s s s s s s s s s s s s s s s s | e e e e e e e e | s s s s s s s s s s s s s s s s', 120, 'hh8'],
+  ['Syncopation p.10 #3', 'q q q q | e e q e e q | q rq q rq | e e e e q q', 90, 'off'],
+];
+let nextEx = 1;
+function newEx(name, bars, o = {}) {
+  return { id: 'ex' + nextEx++, name, bars, mode: 'natural', lead: 'R', voice: 'snare', bpm: o.bpm || 80, loop: null, groove: o.groove || 'off', swing: 66.7, opened: o.opened || Date.now(), fresh: !!o.fresh };
+}
+const lib = SEED.map(([n, s, bpm, g], i) => newEx(n, parseText(s), { bpm, groove: g, opened: Date.now() - i * 3600e3 * (i + 2) }));
+const vol = { click: 70, ex: 70, groove: 80, exMute: false };
+const ui = { countIn: true, vim: true, mode: 'insert', legend: false, cur: { bar: 0, beat: 0 }, filter: '', checked: new Set(), wrap: '4' };
+let ex = lib[0];
+let history = [];
+
+function commit(bars) {
+  history.push(clone(ex.bars)); if (history.length > 200) history.shift();
+  ex.bars = bars; ex.fresh = false;
+  if (ex.loop) ex.loop = [Math.min(ex.loop[0], bars.length - 1), Math.min(ex.loop[1], bars.length - 1)];
+  renderScore();
+}
+function undo() { if (history.length) { ex.bars = history.pop(); ui.cur.bar = Math.min(ui.cur.bar, ex.bars.length - 1); renderScore(); } }
+const isBlank = e => e.fresh && e.name === 'Untitled';
+function openEx(id) {
+  if (id === ex.id) return;
+  stop();
+  const prev = ex; const nx = lib.find(e => e.id === id); if (!nx) return;
+  if (isBlank(prev)) { lib.splice(lib.indexOf(prev), 1); toast('Left an unchanged new exercise, so it was discarded'); }
+  ex = nx; ex.opened = Date.now(); history = []; ui.cur = { bar: 0, beat: 0 };
+  renderAll();
+}
+function libAction(act, arg) {
+  if (act === 'new') { const e = newEx('Untitled', [emptyBar()], { fresh: true }); lib.push(e); openEx(e.id); ui.mode = 'insert'; renderAll(); return; }
+  if (act === 'dup') { const e = newEx(ex.name + ' (copy)', clone(ex.bars), { bpm: ex.bpm, groove: ex.groove }); Object.assign(e, { mode: ex.mode, lead: ex.lead, voice: ex.voice, swing: ex.swing, loop: ex.loop }); lib.push(e); openEx(e.id); toast('Duplicated'); return; }
+  if (act === 'rename') { const e = lib.find(e => e.id === arg); const n = prompt('Rename exercise', e.name); if (n != null && n.trim()) { e.name = n.trim(); e.fresh = false; renderAll(); } return; }
+  if (act === 'exportsel') { const n = ui.checked.size; if (!n) return toast('Tick some exercises first'); return toast(`Would download ${n === 1 ? fileName(lib.find(e => ui.checked.has(e.id)).name) : 'drum-exercises-2026-10-06.json'} (${n} exercise${n > 1 ? 's' : ''})`); }
+  if (act === 'exportall') return toast(`Would download drum-exercises-2026-10-06.json (${lib.length} exercises)`);
+  if (act === 'import') return toast('Would open a file picker, then ask once about id conflicts (Replace / Keep both / Skip)');
+  if (act === 'delsel' || act === 'del') {
+    const ids = act === 'del' ? [ex.id] : [...ui.checked]; if (!ids.length) return toast('Tick some exercises first');
+    if (!confirm(`Delete ${ids.length} exercise${ids.length > 1 ? 's' : ''}? This can't be undone.`)) return;
+    ids.forEach(id => { const i = lib.findIndex(e => e.id === id); if (i >= 0) lib.splice(i, 1); ui.checked.delete(id); });
+    if (!lib.includes(ex)) { stop(); const nx = [...lib].sort((a, b) => b.opened - a.opened)[0]; ex = nx || newEx('Untitled', [emptyBar()], { fresh: true }); if (!nx) lib.push(ex); history = []; ui.cur = { bar: 0, beat: 0 }; }
+    renderAll();
+  }
+}
+const fileName = n => n.replace(/[\\/:*?"<>|]/g, '') + '.json';
+const launchRank = new Map([...lib].sort((a, b) => b.opened - a.opened).map((e, i) => [e.id, i]));
+const rank = e => launchRank.has(e.id) ? launchRank.get(e.id) : -e.opened; // order fixed at launch; new ones on top
+function sortedLib() { const f = ui.filter.toLowerCase(); return [...lib].filter(e => e.name.toLowerCase().includes(f)).sort((a, b) => rank(a) - rank(b)); }
+function ago(t) { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' d ago'; }
+
+// ---------- shared widgets ----------
+const W = {
+  play: () => `<button class="play" data-act="play" title="Play / stop (Ctrl+Space)"><span data-show="playicon">▶</span></button>`,
+  pos: () => `<span class="pos js-pos">stopped</span>`,
+  bpm: (slider = true) => `<label class="fld"><span class="l">BPM</span><input type="number" min="30" max="300" data-set="bpm">${slider ? '<input type="range" min="30" max="300" data-set="bpm" style="width:110px">' : ''}</label>`,
+  countIn: () => `<label class="fld"><input type="checkbox" data-set="countIn"> Count-in</label>`,
+  loop: () => `<span class="loopro"><span class="mute">Loop</span> <b data-show="loop"></b> <button data-act="loopclear" title="Loop the whole exercise">all</button></span>`,
+  groove: () => `<label class="fld"><span class="l">Groove</span><select data-set="groove">${GROOVES.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></label>`,
+  swing: () => `<label class="fld"><span class="l">Swing</span><input type="range" min="50" max="75" step="0.1" data-set="swing" style="width:100px"><span data-show="swing" style="font:12px ui-monospace;width:44px"></span></label><span class="swp">${[['light', 58], ['medium', 62], ['triplet', 66.7], ['dotted', 75]].map(([n, v]) => `<button data-swingp="${v}">${n}</button>`).join('')}</span>`,
+  vols: () => ['click', 'ex', 'groove'].map(k => `<label class="fld"><span class="l">${{ click: 'Click', ex: 'Exercise', groove: 'Groove' }[k]}</span><input type="range" min="0" max="100" data-set="vol.${k}" style="width:100px">${k === 'ex' ? '<label title="Mute the exercise"><input type="checkbox" data-set="exMute">mute</label>' : ''}</label>`).join(''),
+  sticking: () => `<label class="fld"><span class="l">Sticking</span><select data-set="mode"><option value="natural">natural</option><option value="alternate">alternate</option><option value="off">off</option></select></label><label class="fld"><span class="l">Lead hand</span><select data-set="lead"><option>R</option><option>L</option></select></label>`,
+  voice: () => `<label class="fld"><span class="l">Voice</span><select data-set="voice"><option value="snare">snare</option><option value="bd">bass drum</option></select></label>`,
+  name: () => `<input class="namein" data-set="name" title="Rename">`,
+  modeInd: () => `<span class="modeind js-mode"></span>`,
+  legend: () => `<div class="legend js-legend" hidden></div>`,
+  strip: () => `<div class="strip js-strip"></div>`,
+  palette: (style) => `<div class="pal ${style} js-pal"></div>`,
+  libHead: () => `<div class="lib-head"><input placeholder="Filter by name" data-libfilter><div class="lib-acts"><button data-lib="new">New</button><button data-lib="dup">Duplicate</button><button data-lib="import">Import…</button><button data-lib="exportsel">Export selected</button><button data-lib="exportall">Export all</button><button data-lib="delsel">Delete selected</button></div></div>`,
+  libItems: (style = 'list') => `<div class="lib-items js-libitems" data-style="${style}"></div>`,
+};
+function libItemsHTML(style) {
+  const L = sortedLib();
+  if (style === 'table') return `<table class="libt"><tr><th style="width:30px"></th><th>Name</th><th>Bars</th><th>BPM</th><th>Groove</th><th>Last opened</th><th></th></tr>${L.map(e => `<tr class="${e.id === ex.id ? 'open' : ''}" data-open="${e.id}"><td><input type="checkbox" data-check="${e.id}" ${ui.checked.has(e.id) ? 'checked' : ''}></td><td>${esc(e.name)}</td><td>${e.bars.length}</td><td>${e.bpm}</td><td>${GROOVES.find(g => g[0] === e.groove)[1]}</td><td class="mute">${ago(e.opened)}</td><td><button data-lib="rename" data-arg="${e.id}">Rename</button></td></tr>`).join('')}</table>`;
+  return L.map((e, i) => `<div class="li ${e.id === ex.id ? 'open' : ''}" data-open="${e.id}" data-i="${i}" title="Double-click to rename"><input type="checkbox" data-check="${e.id}" ${ui.checked.has(e.id) ? 'checked' : ''}><span class="nm">${esc(e.name)}</span><span class="meta">${ago(e.opened)}</span></div>`).join('') || '<div class="mute" style="padding:6px">No matches</div>';
+}
+
+// ---------- notation view (VexFlow): exercise voice stems down, groove layer stems up ----------
+const noteEls = new Map(); let playingId = null;
+const GROOVE_BARS = {
+  jazz: [['q', ['f/5/x2']], ['8', ['f/5/x2', 'd/4/x2']], ['8', ['f/5/x2']], ['q', ['f/5/x2']], ['8', ['f/5/x2', 'd/4/x2']], ['8', ['f/5/x2']]],
+  jazzbd: [['q', ['f/5/x2', 'f/4']], ['8', ['f/5/x2', 'd/4/x2', 'f/4']], ['8', ['f/5/x2']], ['q', ['f/5/x2', 'f/4']], ['8', ['f/5/x2', 'd/4/x2', 'f/4']], ['8', ['f/5/x2']]],
+  hh8: Array.from({ length: 8 }, () => ['8', ['g/5/x2']]),
+};
+function renderNotation(el, o = {}) {
+  const { Renderer, Stave, StaveNote, Voice, Formatter, Beam, Tuplet, StaveTie, Dot, Annotation, Fraction } = VF;
+  const Wpx = el.clientWidth; if (!Wpx) return;
+  el.innerHTML = '';
+  const s = o.scale || 1, Wl = Wpx / s, bars = ex.bars, groove = ex.groove !== 'off';
+  const clefW = 70, avail = Wl - 20 - clefW;
+  const perRow = ui.wrap === 'fit' ? Math.max(1, Math.min(bars.length, Math.floor(avail / 220))) : Math.max(1, Math.min(+ui.wrap, Math.floor(avail / 120)));
+  const barW = Math.floor(avail / perRow);
+  const top = groove ? 22 : 8, rowH = 128 + top + (o.boxes ? 46 : 0);
+  const rows = Math.ceil(bars.length / perRow);
+  const r = new Renderer(el, Renderer.Backends.SVG); r.resize(Wpx, (rows * rowH + 8) * s);
+  const ctx = r.getContext(); ctx.scale(s, s);
+  const st = sticking(ex), fl = flatten(bars);
+  const cells = o.boxes ? toCells(bars) : null;
+  const loop = ex.loop, overlay = [];
+  const all = [];
+  if (o.track) noteEls.clear();
+  bars.forEach((bar, bi) => {
+    const row = Math.floor(bi / perRow), col = bi % perRow, first = col === 0;
+    const x = 10 + (first ? 0 : clefW + col * barW), w = barW + (first ? clefW : 0), y = row * rowH + top;
+    if (loop && bi >= loop[0] && bi <= loop[1]) { ctx.save(); ctx.setFillStyle('#fef3c7'); ctx.fillRect(x, y + 12, w, 100); ctx.restore(); }
+    if (o.cursor && ui.cur.bar === bi) { ctx.save(); ctx.setFillStyle('#eff6ff'); ctx.fillRect(x, y + 30, w, 60); ctx.restore(); }
+    const stave = new Stave(x, y, w);
+    if (first) stave.addClef('percussion');
+    if (bi === 0) stave.addTimeSignature('4/4');
+    stave.setContext(ctx).draw();
+    const key = ex.voice === 'bd' ? 'f/4' : 'c/5';
+    const notes = bar.items.map(it => {
+      const d = (it.trip ? { 8: 'q', 4: '8' } : { 18: 'qd', 12: 'q', 9: '8d', 6: '8', 3: '16' })[it.t];
+      const n = new StaveNote({ keys: [it.rest ? (groove ? 'g/4' : 'b/4') : key], duration: d + (it.rest ? 'r' : ''), stemDirection: -1, clef: 'percussion' });
+      if (d.endsWith('d')) Dot.buildAndAttach([n], { all: true });
+      const sk = st.get(it.id);
+      if (sk) { const a = new Annotation(sk.hand).setVerticalJustification(Annotation.VerticalJustify.BOTTOM); if (sk.ov) a.setStyle({ fillStyle: '#c2410c' }); n.addModifier(a, 0); }
+      if (o.cursor && o.sel && o.sel.has(it.id)) n.setStyle({ fillStyle: '#2563eb', strokeStyle: '#2563eb' });
+      all.push({ it, n, row });
+      return n;
+    });
+    const tuplets = []; let p = 0, grp = null;
+    bar.items.forEach((it, i) => { if (it.trip) { const b = Math.floor(p / TPB); if (!grp || grp.b !== b) { grp = { b, ns: [] }; tuplets.push(grp); } grp.ns.push(notes[i]); } else grp = null; p += it.t; });
+    const tups = tuplets.map(g => new Tuplet(g.ns, { numNotes: 3, notesOccupied: 2, location: 1, bracketed: g.ns.some(n => n.isRest()) || g.ns.length < 3 }));
+    const voice = new Voice({ numBeats: 4, beatValue: 4 }).setStrict(false).addTickables(notes);
+    const beams = Beam.generateBeams(notes, { groups: [new Fraction(1, 4)], stemDirection: -1 });
+    tups.forEach(t => t.setTupletLocation(1));
+    const voices = [voice]; let gBeams = [];
+    if (groove) {
+      const gn = GROOVE_BARS[ex.groove].map(([d, keys]) => new StaveNote({ keys, duration: d, stemDirection: 1, clef: 'percussion' }));
+      const gv = new Voice({ numBeats: 4, beatValue: 4 }).setStrict(false).addTickables(gn);
+      gBeams = Beam.generateBeams(gn, { groups: [new Fraction(1, 4)], stemDirection: 1 });
+      voices.push(gv);
+    }
+    new Formatter().joinVoices(voices).format(voices, Math.max(30, w - (stave.getNoteStartX() - x) - 18));
+    voices.forEach(v => v.draw(ctx, stave));
+    beams.concat(gBeams).forEach(b => b.setContext(ctx).draw());
+    tups.forEach(t => t.setContext(ctx).draw());
+    // overlays: bar number (click = loop this bar, shift-click = extend), and beat boxes under the staff (variant C)
+    const inLoop = loop && bi >= loop[0] && bi <= loop[1];
+    overlay.push(`<button class="barno ${inLoop ? 'inloop' : ''}" data-loopbar="${bi}" title="Click: loop this bar · Shift+click: extend the loop" style="left:${(x + (first ? 2 : 2)) * s}px;top:${(y + 6) * s}px">${bi + 1}</button>`);
+    if (o.boxes) {
+      const nx = stave.getNoteStartX(), nw = (stave.getNoteEndX() - nx) / 4;
+      cells[bi].forEach((b, k) => { const fb = figOfBeat(b); const c = ui.cur.bar === bi && ui.cur.beat === k;
+        overlay.push(`<div class="cbeat ${c ? 'cur' : ''}" data-c="${bi},${k}" style="left:${(nx + k * nw + 2) * s}px;top:${(y + 122) * s}px;width:${(nw - 4) * s}px">${fb.tie ? '<span class="tie">⌒</span>' : ''}<b>${fb.fig ? (fb.fig === REST ? '␣' : fb.fig.k.toUpperCase()) : '?'}</b></div>`); });
+    }
+  });
+  all.forEach((a, i) => {
+    if (!a.it.tie || a.it.rest) return; const b = all[i + 1]; if (!b || b.it.rest) return;
+    if (a.row === b.row) new StaveTie({ firstNote: a.n, lastNote: b.n, firstIndexes: [0], lastIndexes: [0] }).setContext(ctx).draw();
+    else { new StaveTie({ firstNote: a.n, lastNote: null, firstIndexes: [0], lastIndexes: [0] }).setContext(ctx).draw(); new StaveTie({ firstNote: null, lastNote: b.n, firstIndexes: [0], lastIndexes: [0] }).setContext(ctx).draw(); }
+  });
+  all.forEach(({ it, n }) => { const g = n.getSVGElement(); if (!g) return;
+    if (!noteEls.has(it.id)) noteEls.set(it.id, []); noteEls.get(it.id).push(g);
+    if (it.id === playingId) g.classList.add('playing');
+    g.addEventListener('mousedown', e => { e.preventDefault(); const f = fl.find(f => f.it.id === it.id); if (f) { ui.cur = { bar: f.bi, beat: Math.floor(f.start / TPB) }; renderScore(); } }); });
+  el.insertAdjacentHTML('beforeend', overlay.join(''));
+}
+const miniCache = {};
+function miniSVG(p) {
+  if (miniCache[p]) return miniCache[p];
+  const { Renderer, Stave, StaveNote, Voice, Formatter, Beam, Tuplet, Dot, Fraction } = VF;
+  const d = document.createElement('div'); document.body.appendChild(d);
+  const r = new Renderer(d, Renderer.Backends.SVG); r.resize(150, 110); const ctx = r.getContext();
+  const stave = new Stave(0, 0, 146); stave.setContext(ctx).draw();
+  const bar = fromCells([[figToCells(p, false), figToCells('....'), figToCells('....'), figToCells('....')]])[0];
+  const items = []; let t = 0; for (const it of bar.items) { if (t >= TPB) break; items.push(it); t += it.t; }
+  const notes = items.map(it => { const dd = (it.trip ? { 8: 'q', 4: '8' } : { 18: 'qd', 12: 'q', 9: '8d', 6: '8', 3: '16' })[it.t]; const n = new StaveNote({ keys: [it.rest ? 'b/4' : 'c/5'], duration: dd + (it.rest ? 'r' : ''), stemDirection: -1, clef: 'percussion' }); if (dd.endsWith('d')) Dot.buildAndAttach([n], { all: true }); return n; });
+  const v = new Voice({ numBeats: 1, beatValue: 4 }).setStrict(false).addTickables(notes);
+  const beams = Beam.generateBeams(notes, { groups: [new Fraction(1, 4)], stemDirection: -1 });
+  const tup = items[0] && items[0].trip ? new Tuplet(notes, { numNotes: 3, notesOccupied: 2, location: 1, bracketed: notes.some(n => n.isRest()) || notes.length < 3 }) : null;
+  if (tup) tup.setTupletLocation(1);
+  new Formatter().joinVoices([v]).format([v], 110); v.draw(ctx, stave); beams.forEach(b => b.setContext(ctx).draw()); if (tup) tup.setContext(ctx).draw();
+  miniCache[p] = d.innerHTML; d.remove(); return miniCache[p];
+}
+
+// ---------- render ----------
+function renderScore() {
+  const fl = flatten(ex.bars);
+  const sel = new Set(fl.filter(f => f.bi === ui.cur.bar && Math.floor(f.start / TPB) === ui.cur.beat).map(f => f.it.id));
+  $$('.js-score').forEach((el, i) => renderNotation(el, { scale: +(el.dataset.scale || 1), boxes: el.dataset.boxes === '1', cursor: el.dataset.cursor !== '0', sel, track: i === 0 }));
+  const cells = toCells(ex.bars);
+  $$('.js-strip').forEach(el => {
+    el.innerHTML = cells.map((bc, bi) => `<div class="cbar ${ex.loop && bi >= ex.loop[0] && bi <= ex.loop[1] ? 'inloop' : ''}"><span class="bn">${bi + 1}</span><button class="delbar" data-delbar="${bi}" title="Delete bar (Ctrl+Backspace)">✕</button>${bc.map((b, k) => { const fb = figOfBeat(b);
+      return `<div class="cbeat ${bi === ui.cur.bar && k === ui.cur.beat ? 'cur' : ''}" data-c="${bi},${k}">${fb.tie ? '<span class="tie">⌒</span>' : ''}<b>${fb.fig ? (fb.fig === REST ? '␣' : fb.fig.k.toUpperCase()) : '?'}</b><span>${fb.p}</span></div>`; }).join('')}</div>`).join('');
+    const c = el.querySelector('.cur'); if (c && el.dataset.scrollcur) c.scrollIntoView({ block: 'nearest' });
+  });
+  const curFig = figOfBeat(cells[ui.cur.bar][ui.cur.beat]);
+  $$('.js-pal').forEach(el => {
+    if (!el.dataset.built) {
+      const tile = f => `<button class="fig" data-fig="${f.k}" title="${f.p}"><span class="k">${f.k.toUpperCase()}</span><div class="mini">${miniSVG(f.p)}</div><div class="p">${f.p}</div></button>`;
+      el.innerHTML = [0, 1, 2].map(r => `<div class="row r${r}">${FIGS.filter(f => f.row === r).map(tile).join('')}</div>`).join('') +
+        `<div class="row r2"><button class="fig wide" data-fig=" "><span class="k">Space · rest</span></button><button class="fig wide" data-key="t"><span class="k">T · tie</span></button><button class="fig wide" data-key="?"><span class="k">? · keys</span></button></div>`;
+      el.dataset.built = 1;
+    }
+    el.querySelectorAll('[data-fig]').forEach(b => b.classList.toggle('on', !!curFig.fig && curFig.fig.k === b.dataset.fig));
+  });
+  $$('.js-mode').forEach(el => { el.hidden = !ui.vim; el.textContent = ui.mode === 'insert' ? '-- INSERT --' : '-- NORMAL --'; el.classList.toggle('normal', ui.mode === 'normal'); });
+  $$('.js-legend').forEach(el => { el.hidden = !ui.legend; el.innerHTML = legendHTML(); });
+  syncControls();
+  if (active && active.afterScore) active.afterScore();
+  renderState();
+}
+function legendHTML() {
+  const both = '<div><b>← →</b> beat · <b>↑ ↓</b> bar</div><div><b>Backspace</b> rest + back · <b>Del</b> rest</div><div><b>Ctrl+Enter</b> add bar · <b>Ctrl+D</b> duplicate bar</div><div><b>Ctrl+Backspace</b> delete bar</div><div><b>Ctrl+Z</b> undo · <b>Ctrl+Space</b> play/stop</div><div><b>Esc</b> Normal mode · <b>?</b> this legend</div>';
+  return ui.mode === 'insert'
+    ? `<div><b>1–0, A–H, Z–B</b> enter figure + advance</div><div><b>Space</b> rest beat · <b>T</b> tie into beat</div>${both}`
+    : `<div><b>i a</b> Insert mode</div><div><b>h l</b> beat · <b>w b</b> bar</div><div><b>x</b> beat → rest · <b>dd</b> delete bar</div><div><b>0 $</b> bar start/end · <b>gg G</b> first/last bar</div>${both}`;
+}
+function renderLib() {
+  $$('.js-libitems').forEach(el => { el.innerHTML = libItemsHTML(el.dataset.style); });
+  $$('[data-libfilter]').forEach(el => { if (el !== document.activeElement) el.value = ui.filter; });
+}
+function renderAll() { if (active && active.rebuild) active.rebuild(); renderLib(); renderScore(); }
+function get(k) {
+  if (k.startsWith('vol.')) return vol[k.slice(4)];
+  if (k === 'vim') return ui.vim;
+  if (k === 'exMute') return vol.exMute; if (k === 'countIn') return ui.countIn;
+  return ex[k];
+}
+function syncControls() {
+  $$('[data-set]').forEach(el => { if (el === document.activeElement && el.type !== 'checkbox' && el.type !== 'range') return; const v = get(el.dataset.set); if (el.type === 'checkbox') el.checked = !!v; else el.value = v; });
+  const shows = { loop: ex.loop ? (ex.loop[0] === ex.loop[1] ? `bar ${ex.loop[0] + 1}` : `bars ${ex.loop[0] + 1}–${ex.loop[1] + 1}`) : 'whole exercise', swing: ex.swing.toFixed(1) + '%', playicon: player.on ? '■' : '▶', groove: GROOVES.find(g => g[0] === ex.groove)[1], name: ex.name, sticking: `${ex.mode}, lead ${ex.lead}` };
+  $$('[data-show]').forEach(el => { el.textContent = shows[el.dataset.show]; });
+  $$('[data-swingp]').forEach(el => el.classList.toggle('on', +el.dataset.swingp === ex.swing));
+  $$('[data-act=play]').forEach(el => el.classList.toggle('on', player.on));
+}
+function set(k, v, el) {
+  if (k.startsWith('vol.')) vol[k.slice(4)] = +v;
+  else if (k === 'exMute') vol.exMute = v;
+  else if (k === 'countIn') ui.countIn = v;
+  else if (k === 'vim') { ui.vim = v; if (!v) ui.mode = 'insert'; renderScore(); return; }
+  else if (k === 'name') { ex.name = v; ex.fresh = false; renderLib(); }
+  else { ex[k] = ['bpm', 'swing'].includes(k) ? +v : v; ex.fresh = false; }
+  if (['groove', 'mode', 'lead', 'voice'].includes(k)) renderScore(); else { syncControls(); renderState(); }
+  if (player.on && ['bpm', 'groove', 'voice', 'swing'].includes(k)) { clearTimeout(set.t); set.t = setTimeout(() => { stop(); play(); }, 250); }
+}
+function renderState() {
+  if ($('#statepanel').hidden) return;
+  const { bars, ...rest } = ex;
+  $('#statepanel').textContent = `variant ${active && active.def.key} · viewport ${innerWidth}×${innerHeight}\n\nexercise ${JSON.stringify(rest, null, 1)}\nbars: ${toText(bars)}\n\nui ${JSON.stringify({ ...ui, checked: [...ui.checked] })}\nvolumes ${JSON.stringify(vol)}\nplaying ${player.on}`;
+}
+let toastT; function toast(m) { let t = $('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); } t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2600); }
+
+// ---------- editor ----------
+function advance(grow) {
+  if (ui.cur.beat < 3) ui.cur.beat++;
+  else if (ui.cur.bar < ex.bars.length - 1) ui.cur = { bar: ui.cur.bar + 1, beat: 0 };
+  else if (grow) { const b = clone(ex.bars); b.push(emptyBar()); ex.bars = b; ui.cur = { bar: ui.cur.bar + 1, beat: 0 }; }
+}
+function back() { if (ui.cur.beat > 0) ui.cur.beat--; else if (ui.cur.bar > 0) ui.cur = { bar: ui.cur.bar - 1, beat: 3 }; }
+function putFig(p) {
+  const cells = toCells(ex.bars); const old = figOfBeat(cells[ui.cur.bar][ui.cur.beat]);
+  cells[ui.cur.bar][ui.cur.beat] = figToCells(p, old.tie && p[0] === 'x');
+  history.push(clone(ex.bars)); ex.bars = fromCells(cells); ex.fresh = false; advance(true); renderScore();
+}
+function toggleTie() {
+  const cells = toCells(ex.bars); const fb = figOfBeat(cells[ui.cur.bar][ui.cur.beat]);
+  const pi = ui.cur.beat > 0 ? cells[ui.cur.bar][ui.cur.beat - 1] : ui.cur.bar > 0 ? cells[ui.cur.bar - 1][3] : null;
+  if (!pi || pi.st[pi.st.length - 1] === '.' || fb.p[0] !== 'x') return toast('Nothing to tie: the beat must start with a hit and the previous beat end with a note');
+  cells[ui.cur.bar][ui.cur.beat] = figToCells(fb.p, !fb.tie); commit(fromCells(cells));
+}
+function barAct(act) {
+  const bars = clone(ex.bars), bi = ui.cur.bar;
+  if (act === 'dup') { bars.splice(bi + 1, 0, { items: bars[bi].items.map(i => mk(i.t, { ...i, tie: false })), subs: [...bars[bi].subs] }); ui.cur = { bar: bi + 1, beat: 0 }; }
+  if (act === 'del') { if (bars.length === 1) return toast('An exercise keeps at least one bar'); bars.splice(bi, 1); ui.cur = { bar: Math.min(bi, bars.length - 1), beat: 0 }; }
+  if (act === 'ins') { bars.splice(bi + 1, 0, emptyBar()); ui.cur = { bar: bi + 1, beat: 0 }; }
+  const fl = flatten(bars); fl.forEach((f, i) => { if (f.it.tie && (!fl[i + 1] || fl[i + 1].it.rest)) f.it.tie = false; });
+  commit(bars);
+}
+let pendingG = false, pendingD = false;
+function editorKey(e) {
+  const k = e.key, ctrl = e.ctrlKey || e.metaKey;
+  if (ctrl && k.toLowerCase() === 'd') { barAct('dup'); return true; }
+  if (ctrl && k === 'Enter') { barAct('ins'); return true; }
+  if (ctrl && k === 'Backspace') { barAct('del'); return true; }
+  if (ctrl || e.altKey) return false;
+  if (k === '?') { ui.legend = !ui.legend; renderScore(); return true; }
+  if (k === 'Escape') { if (ui.vim) { ui.mode = 'normal'; renderScore(); } return true; }
+  if (k === 'ArrowRight') { advance(false); renderScore(); return true; }
+  if (k === 'ArrowLeft') { back(); renderScore(); return true; }
+  if (k === 'ArrowDown') { ui.cur.bar = Math.min(ex.bars.length - 1, ui.cur.bar + 1); renderScore(); return true; }
+  if (k === 'ArrowUp') { ui.cur.bar = Math.max(0, ui.cur.bar - 1); renderScore(); return true; }
+  if (k === 'Backspace' || k === 'Delete') { const cells = toCells(ex.bars); cells[ui.cur.bar][ui.cur.beat] = figToCells('....'); if (k === 'Backspace') back(); commit(fromCells(cells)); return true; }
+  if (ui.mode === 'insert') {
+    if (k === ' ') { putFig('....'); return true; }
+    if (k === 't' || k === 'T') { toggleTie(); return true; }
+    const f = FIGS.find(f => f.k === k.toLowerCase()); if (f) { putFig(f.p); return true; }
+    return false;
+  }
+  // normal mode (a subset)
+  if (k === 'i' || k === 'a') { ui.mode = 'insert'; renderScore(); return true; }
+  if (k === 'h') { back(); renderScore(); return true; }
+  if (k === 'l') { advance(false); renderScore(); return true; }
+  if (k === 'w') { ui.cur = { bar: Math.min(ex.bars.length - 1, ui.cur.bar + 1), beat: 0 }; renderScore(); return true; }
+  if (k === 'b') { ui.cur = { bar: Math.max(0, ui.cur.bar - (ui.cur.beat ? 0 : 1)), beat: 0 }; renderScore(); return true; }
+  if (k === '0') { ui.cur.beat = 0; renderScore(); return true; }
+  if (k === '$') { ui.cur.beat = 3; renderScore(); return true; }
+  if (k === 'G') { ui.cur = { bar: ex.bars.length - 1, beat: 0 }; renderScore(); return true; }
+  if (k === 'g') { if (pendingG) { ui.cur = { bar: 0, beat: 0 }; renderScore(); } pendingG = !pendingG; return true; }
+  if (k === 'd') { if (pendingD) barAct('del'); pendingD = !pendingD; return true; }
+  if (k === 'x') { const cells = toCells(ex.bars); cells[ui.cur.bar][ui.cur.beat] = figToCells('....'); commit(fromCells(cells)); return true; }
+  return false;
+}
+
+// ---------- playback (rough: synth sounds, setInterval lookahead) ----------
+const player = { on: false };
+let actx = null, noiseBuf = null;
+function audio() {
+  if (!actx) { actx = new AudioContext(); noiseBuf = actx.createBuffer(1, actx.sampleRate, actx.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+  return actx;
+}
+const lvl = v => Math.pow(v / 100, 2);
+function env(t, g0, dur) { const g = actx.createGain(); g.gain.setValueAtTime(g0, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); g.connect(actx.destination); return g; }
+function noise(t, type, freq, g0, dur) { const s = actx.createBufferSource(); s.buffer = noiseBuf; const f = actx.createBiquadFilter(); f.type = type; f.frequency.value = freq; s.connect(f); f.connect(env(t, g0, dur)); s.start(t); s.stop(t + dur); }
+function tone(t, f0, f1, g0, dur) { const o = actx.createOscillator(); o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur); o.connect(env(t, g0, dur)); o.start(t); o.stop(t + dur); }
+function sound(inst, t, g) {
+  if (g <= 0) return;
+  if (inst === 'click') tone(t, 1100, 1100, g * 0.5, 0.03);
+  if (inst === 'clickA') tone(t, 1700, 1700, g * 0.6, 0.035);
+  if (inst === 'snare') { noise(t, 'bandpass', 1900, g * 1.2, 0.13); tone(t, 220, 160, g * 0.4, 0.06); }
+  if (inst === 'bd') tone(t, 130, 45, g * 1.2, 0.25);
+  if (inst === 'ride') noise(t, 'highpass', 6000, g * 0.35, 0.35);
+  if (inst === 'hhf') noise(t, 'highpass', 7500, g * 0.35, 0.05);
+  if (inst === 'hhc') noise(t, 'highpass', 7500, g * 0.4, 0.06);
+}
+const GROOVE_HITS = {
+  jazz: [[0, 'ride'], [12, 'ride'], [12, 'hhf'], [18, 'ride'], [24, 'ride'], [36, 'ride'], [36, 'hhf'], [42, 'ride']],
+  hh8: [0, 6, 12, 18, 24, 30, 36, 42].map(t => [t, 'hhc']),
+};
+GROOVE_HITS.jazzbd = GROOVE_HITS.jazz.concat([0, 12, 24, 36].map(t => [t, 'bd']));
+function play() {
+  audio(); actx.resume();
+  const [a, b] = ex.loop || [0, ex.bars.length - 1], nb = b - a + 1;
+  const evs = [];
+  flatten(ex.bars).forEach(f => { if (f.bi >= a && f.bi <= b && !f.it.rest && !f.cont) evs.push({ t: (f.bi - a) * BAR + f.start, kind: 'ex', id: f.it.id, trip: f.it.trip }); });
+  for (let i = 0; i < nb * 4; i++) evs.push({ t: i * TPB, kind: i % 4 ? 'click' : 'clickA' });
+  if (ex.groove !== 'off') for (let i = 0; i < nb; i++) GROOVE_HITS[ex.groove].forEach(([t, inst]) => evs.push({ t: i * BAR + t, kind: 'groove', inst }));
+  evs.sort((x, y) => x.t - y.t);
+  const bps = ex.bpm / 60, S = 0.5 + (ex.swing / 100 - 0.5) * Math.max(0, Math.min(1, (320 - ex.bpm) / 200));
+  const warp = o => o <= 6 ? (o / 6) * S : S + ((o - 6) / 6) * (1 - S);
+  const cnt = ui.countIn ? 4 : 0, T0 = actx.currentTime + 0.12;
+  for (let i = 0; i < cnt; i++) sound(i ? 'click' : 'clickA', T0 + i / bps, lvl(vol.click));
+  const timeOf = (cyc, ev) => T0 + (cnt + cyc * nb * 4 + Math.floor(ev.t / TPB) + (ev.trip ? (ev.t % TPB) / TPB : warp(ev.t % TPB))) / bps;
+  let cyc = 0, idx = 0; const hl = [];
+  Object.assign(player, { on: true, a, nb, T0, cnt, bps });
+  player.timer = setInterval(() => {
+    const until = actx.currentTime + 0.15;
+    while (true) {
+      if (idx >= evs.length) { cyc++; idx = 0; }
+      const ev = evs[idx], t = timeOf(cyc, ev); if (t > until) break;
+      if (ev.kind === 'ex') { sound(ex.voice === 'bd' ? 'bd' : 'snare', t, vol.exMute ? 0 : lvl(vol.ex)); hl.push({ t, id: ev.id }); }
+      else if (ev.kind === 'groove') sound(ev.inst, t, lvl(vol.groove));
+      else sound(ev.kind, t, lvl(vol.click));
+      idx++;
+    }
+  }, 25);
+  const frame = () => {
+    if (!player.on) return;
+    const now = actx.currentTime; let id = playingId;
+    while (hl.length && hl[0].t <= now) id = hl.shift().id;
+    if (id !== playingId) { (noteEls.get(playingId) || []).forEach(g => g.classList.remove('playing')); playingId = id; (noteEls.get(id) || []).forEach(g => g.classList.add('playing')); if (active && active.follow) active.follow(id); }
+    const beats = (now - T0) * bps - cnt;
+    const txt = beats < -cnt ? '…' : beats < 0 ? `count-in ${Math.floor(beats + cnt) + 1}` : `bar ${a + Math.floor((beats % (nb * 4)) / 4) + 1} · beat ${Math.floor(beats % 4) + 1}`;
+    $$('.js-pos').forEach(el => el.textContent = txt);
+    player.raf = requestAnimationFrame(frame);
+  };
+  player.raf = requestAnimationFrame(frame);
+  syncControls();
+}
+function stop() {
+  if (!player.on) return;
+  player.on = false; clearInterval(player.timer); cancelAnimationFrame(player.raf);
+  (noteEls.get(playingId) || []).forEach(g => g.classList.remove('playing')); playingId = null;
+  $$('.js-pos').forEach(el => el.textContent = 'stopped'); syncControls();
+}
+const toggle = () => player.on ? stop() : play();
+function followScroll(scroller, id) { // keep the playing note's line in view
+  const g = (noteEls.get(id) || [])[0]; if (!g || !scroller) return;
+  const r = g.getBoundingClientRect(), s = scroller.getBoundingClientRect();
+  if (r.top < s.top + 20 || r.bottom > s.bottom - 20) scroller.scrollBy({ top: r.top - s.top - 40, behavior: 'smooth' });
+}
+
+// ---------- variants ----------
+const app = $('#app');
+const VARIANTS = [
+  { key: 'A', name: 'Workstation (stacked)', make: makeA },
+  { key: 'B', name: 'Practice / Edit modes', make: makeB },
+  { key: 'C', name: 'Score first', make: makeC },
+  { key: 'D', name: 'Side by side', make: makeD },
+];
+let active = null;
+
+// A: three columns. Library always visible; notation over editor; every setting visible on the right.
+function makeA() {
+  app.innerHTML = `<div class="va">
+    <aside class="va-lib"><h3>Exercises</h3>${W.libHead()}${W.libItems()}</aside>
+    <section class="va-main">
+      <header class="va-top">${W.name()}${W.play()}${W.pos()}${W.bpm()}${W.countIn()}${W.loop()}</header>
+      <div class="va-score"><div class="notation js-score"></div></div>
+      <div class="va-edit"><div class="hd">${W.modeInd()}<span class="mute" style="font-size:12px">Click a bar number in the notation to loop it · <kbd>?</kbd> keys</span></div>${W.legend()}${W.strip()}${W.palette('tiles')}</div>
+    </section>
+    <aside class="va-set">
+      <div class="grp"><h3>Groove</h3>${W.groove()}${W.swing()}</div>
+      <div class="grp"><h3>Sticking</h3>${W.sticking()}</div>
+      <div class="grp"><h3>Exercise</h3>${W.voice()}</div>
+      <div class="grp"><h3>Editor</h3><label class="fld"><input type="checkbox" data-set="vim"> Vim keys (Normal mode on Esc)</label></div>
+      <div class="grp"><h3>Volume</h3>${W.vols()}</div>
+    </aside></div>`;
+  $('.va-set select[data-set=groove]').style.width = '150px';
+  return { editing: () => true, follow: id => followScroll($('.va-score'), id) };
+}
+
+// B: Practice mode = big notation + bottom dock; Edit mode = small mirror + big editor. Library in a drawer.
+function makeB() {
+  const st = makeB.st || (makeB.st = { tab: 'practice', drawer: false });
+  function build() {
+    const top = `<header class="vb-top"><button data-act="drawer" title="Library (Ctrl+O)">☰ Library</button>${W.name()}
+      ${st.tab === 'edit' ? W.play() + W.pos() + W.bpm(false) : ''}
+      <div class="vb-tabs"><button data-act="tab" data-tab="practice" class="${st.tab === 'practice' ? 'on' : ''}">Practice</button><button data-act="tab" data-tab="edit" class="${st.tab === 'edit' ? 'on' : ''}">Edit</button></div>
+      <span class="mute" style="font-size:12px">${st.tab === 'practice' ? '<kbd>E</kbd> edit' : '<kbd>Ctrl</kbd>+<kbd>E</kbd> practice'}</span></header>`;
+    const body = st.tab === 'practice'
+      ? `<div class="vb-score"><div class="notation js-score" data-scale="1.3" data-cursor="0"></div></div>
+         <footer class="vb-dock">${W.play()}${W.pos()}${W.bpm()}${W.countIn()}${W.loop()}<span class="sep"></span>${W.groove()}${W.swing()}<span class="sep"></span>${W.vols()}<span class="sep"></span>${W.sticking()}${W.voice()}</footer>`
+      : `<div class="vb-mirror"><div class="notation js-score" data-scale="0.85"></div></div>
+         <div class="vb-editor"><div class="left"><div style="display:flex;gap:10px;align-items:center">${W.modeInd()}${W.sticking()}${W.voice()}</div>${W.strip()}${W.legend()}</div><div>${W.palette('tiles')}</div></div>`;
+    const drawer = st.drawer ? `<div class="vb-drawer-bg" data-act="drawer"></div><aside class="vb-drawer"><h3>Exercises</h3>${W.libHead()}${W.libItems()}</aside>` : '';
+    app.innerHTML = `<div class="vb">${top}${body}</div>${drawer}`;
+    if (st.drawer) setTimeout(() => $('[data-libfilter]') && $('[data-libfilter]').focus());
+  }
+  build();
+  return {
+    rebuild: build, editing: () => st.tab === 'edit' && !st.drawer,
+    act: (a, el) => {
+      if (a === 'tab') { st.tab = el.dataset.tab; renderAll(); return true; }
+      if (a === 'drawer') { st.drawer = !st.drawer; renderAll(); return true; }
+      if (a === 'opened') { st.drawer = false; renderAll(); return true; }
+    },
+    key: e => {
+      const k = e.key.toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && k === 'o') { st.drawer = !st.drawer; renderAll(); return true; }
+      if ((e.ctrlKey || e.metaKey) && k === 'e') { st.tab = st.tab === 'edit' ? 'practice' : 'edit'; renderAll(); return true; }
+      if (st.drawer && k === 'escape') { st.drawer = false; renderAll(); return true; }
+      if (st.tab === 'practice' && !e.ctrlKey && (k === 'e' || k === 'i')) { st.tab = 'edit'; renderAll(); return true; }
+      return false;
+    },
+    follow: id => followScroll($('.vb-score') || $('.vb-mirror'), id),
+  };
+}
+
+// C: the notation is the editor (beat boxes under each bar); palette floats up only in Insert mode;
+// settings in header pop-overs; the library is a separate screen.
+function makeC() {
+  const st = makeC.st || (makeC.st = { screen: 'ex', pin: false });
+  function build() {
+    if (st.screen === 'lib') {
+      app.innerHTML = `<div class="vc"><header class="vc-top"><b style="font-size:17px">Exercises</b><span class="mute">${lib.length} on this device</span>${st.from ? `<button data-act="back" style="margin-left:auto">Back to “${esc(ex.name)}” <kbd>Esc</kbd></button>` : ''}</header>
+        <div class="vc-lib">${W.libHead()}${W.libItems('table')}</div></div>`;
+      return;
+    }
+    app.innerHTML = `<div class="vc">
+      <header class="vc-top"><button data-act="libscreen" title="All exercises (Ctrl+L)">← Exercises</button>${W.name()}
+        ${W.play()}${W.pos()}${W.bpm(false)}${W.countIn()}${W.loop()}
+        <details class="pop"><summary>Groove: <span data-show="groove"></span> ▾</summary><div class="body">${W.groove()}${W.swing()}</div></details>
+        <details class="pop"><summary>Sticking: <span data-show="sticking"></span> ▾</summary><div class="body">${W.sticking()}${W.voice()}</div></details>
+        <details class="pop"><summary>Volume ▾</summary><div class="body">${W.vols()}</div></details>
+        <span style="margin-left:auto">${W.modeInd()}</span></header>
+      <div class="vc-score"><div class="notation js-score" data-boxes="1"></div><div style="height:240px"></div></div>
+      <div class="vc-pal" hidden>${W.palette('tiles')}<div style="display:flex;flex-direction:column;gap:6px;width:250px">${W.legend()}<label style="font-size:12px" class="mute"><input type="checkbox" data-act="pin" ${st.pin ? 'checked' : ''}> keep palette open in Normal mode</label><span class="mute" style="font-size:12px"><kbd>Esc</kbd> hides it (Normal mode) · <kbd>i</kbd> brings it back</span></div></div></div>`;
+  }
+  build();
+  return {
+    rebuild: build, editing: () => st.screen === 'ex',
+    afterScore: () => { const p = $('.vc-pal'); if (p) p.hidden = !(ui.mode === 'insert' || st.pin); },
+    act: (a, el) => {
+      if (a === 'libscreen') { st.screen = 'lib'; st.from = true; stop(); renderAll(); return true; }
+      if (a === 'back' || a === 'opened') { st.screen = 'ex'; renderAll(); return true; }
+      if (a === 'pin') { st.pin = el.checked; renderScore(); return true; }
+    },
+    key: e => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'l') { st.screen = st.screen === 'lib' ? 'ex' : 'lib'; st.from = true; renderAll(); return true; }
+      if (st.screen === 'lib' && e.key === 'Escape') { st.screen = 'ex'; renderAll(); return true; }
+      return false;
+    },
+    follow: id => followScroll($('.vc-score'), id),
+  };
+}
+
+// D: notation left, editor + settings right. Library by quick-open (Ctrl+P) on the name; management in the same box.
+function makeD() {
+  const st = makeD.st || (makeD.st = { qo: false, hi: 0 });
+  function build() {
+    app.innerHTML = `<div class="vd">
+      <header class="vd-top"><button class="vd-switch" data-act="qo" title="Switch exercise (Ctrl+P)"><span data-show="name"></span> ▾</button><span class="mute" style="font-size:12px"><kbd>Ctrl</kbd>+<kbd>P</kbd> switch · rename in the box on the right</span><span style="margin-left:auto">${W.modeInd()}</span></header>
+      <div class="vd-body">
+        <section class="vd-left"><div class="vd-trans">${W.play()}${W.pos()}${W.bpm()}${W.countIn()}${W.loop()}</div><div class="vd-score"><div class="notation js-score"></div></div></section>
+        <aside class="vd-right">
+          <div style="display:flex;gap:6px;align-items:center"><span class="mute" style="font-size:12px">Name</span>${W.name()}</div>
+          <div><h3>Bars</h3><div class="strip js-strip" data-scrollcur="1" style="max-height:30vh;overflow:auto"></div></div>
+          ${W.palette('compact')}${W.legend()}
+          <details open><summary>Groove</summary><div class="body">${W.groove()}${W.swing()}</div></details>
+          <details><summary>Sticking & voice</summary><div class="body">${W.sticking()}${W.voice()}</div></details>
+          <details><summary>Volume</summary><div class="body">${W.vols()}</div></details>
+        </aside></div></div>
+      ${st.qo ? `<div class="vd-qo-bg" data-act="qo"></div><div class="vd-qo"><input placeholder="Type to filter exercises · ↑↓ Enter" data-libfilter data-qo="1">${W.libItems()}<div class="lib-acts" style="border-top:1px solid var(--line);padding-top:6px"><button data-lib="new">New</button><button data-lib="dup">Duplicate current</button><button data-lib="import">Import…</button><button data-lib="exportsel">Export selected</button><button data-lib="exportall">Export all</button><button data-lib="delsel">Delete selected</button></div></div>` : ''}`;
+    $('.vd-right select[data-set=groove]').style.width = '200px';
+    if (st.qo) setTimeout(() => { const i = $('[data-qo]'); if (i) { i.value = ui.filter; i.focus(); } });
+  }
+  build();
+  const hi = () => { $$('.vd-qo .li').forEach((el, i) => el.classList.toggle('hi', i === st.hi)); };
+  return {
+    rebuild: build, editing: () => !st.qo,
+    afterScore: () => st.qo && hi(),
+    act: a => {
+      if (a === 'qo') { st.qo = !st.qo; st.hi = 0; ui.filter = ''; renderAll(); return true; }
+      if (a === 'opened') { st.qo = false; ui.filter = ''; renderAll(); return true; }
+    },
+    key: e => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') { st.qo = !st.qo; st.hi = 0; ui.filter = ''; renderAll(); return true; }
+      if (!st.qo) return false;
+      const n = sortedLib().length;
+      if (e.key === 'Escape') { st.qo = false; ui.filter = ''; renderAll(); return true; }
+      if (e.key === 'ArrowDown') { st.hi = Math.min(n - 1, st.hi + 1); hi(); return true; }
+      if (e.key === 'ArrowUp') { st.hi = Math.max(0, st.hi - 1); hi(); return true; }
+      if (e.key === 'Enter') { const t = sortedLib()[st.hi]; if (t) { openEx(t.id); st.qo = false; ui.filter = ''; renderAll(); } return true; }
+      return false;
+    },
+    keyInField: true,
+    afterFilter: () => { st.hi = 0; hi(); },
+    follow: id => followScroll($('.vd-score'), id),
+  };
+}
+
+// ---------- events ----------
+document.addEventListener('input', e => {
+  const el = e.target;
+  if (el.dataset.set) set(el.dataset.set, el.type === 'checkbox' ? el.checked : el.value, el);
+  if (el.matches('[data-libfilter]')) { ui.filter = el.value; renderLib(); active.afterFilter && active.afterFilter(); }
+});
+document.addEventListener('change', e => { if (e.target.matches('select[data-set]')) e.target.blur(); if (e.target.dataset.check) { const id = e.target.dataset.check; e.target.checked ? ui.checked.add(id) : ui.checked.delete(id); renderState(); } });
+document.addEventListener('click', e => {
+  const t = e.target;
+  if (t.matches('[data-check]')) { e.stopPropagation(); return; }
+  const actEl = t.closest('[data-act]');
+  if (actEl) { const a = actEl.dataset.act;
+    if (active.act && active.act(a, actEl)) return;
+    if (a === 'play') { toggle(); actEl.blur(); return; }
+    if (a === 'loopclear') { ex.loop = null; renderScore(); if (player.on) { stop(); play(); } return; }
+  }
+  const sp = t.closest('[data-swingp]'); if (sp) { set('swing', sp.dataset.swingp); return; }
+  const db = t.closest('[data-delbar]'); if (db) { ui.cur = { bar: +db.dataset.delbar, beat: 0 }; barAct('del'); return; }
+  const lb = t.closest('[data-loopbar]');
+  if (lb) { const bi = +lb.dataset.loopbar;
+    if (e.shiftKey && ex.loop) ex.loop = [Math.min(ex.loop[0], bi), Math.max(ex.loop[1], bi)];
+    else ex.loop = ex.loop && ex.loop[0] === bi && ex.loop[1] === bi ? null : [bi, bi];
+    renderScore(); if (player.on) { stop(); play(); } return; }
+  const c = t.closest('[data-c]');
+  if (c) { const [bar, beat] = c.dataset.c.split(',').map(Number); ui.cur = { bar, beat }; renderScore(); return; }
+  const fig = t.closest('[data-fig]');
+  if (fig) { const k = fig.dataset.fig; putFig(k === ' ' ? '....' : FIGS.find(f => f.k === k).p); fig.blur(); return; }
+  const key = t.closest('[data-key]');
+  if (key) { key.dataset.key === 't' ? toggleTie() : (ui.legend = !ui.legend, renderScore()); key.blur(); return; }
+  const lb2 = t.closest('[data-lib]');
+  if (lb2) { libAction(lb2.dataset.lib, lb2.dataset.arg); return; }
+  const op = t.closest('[data-open]');
+  if (op) { openEx(op.dataset.open); active.act && active.act('opened'); return; }
+});
+document.addEventListener('dblclick', e => { const li = e.target.closest('.li[data-open]'); if (li) libAction('rename', li.dataset.open); });
+document.addEventListener('keydown', e => {
+  if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { cycle(e.key === 'ArrowLeft' ? -1 : 1); e.preventDefault(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.code === 'Space') { toggle(); e.preventDefault(); return; }
+  const inField = !!e.target.matches && e.target.matches('input:not([type=checkbox]):not([type=range]), textarea, select');
+  if (active.key && (!inField || active.keyInField) && active.key(e)) { e.preventDefault(); return; }
+  if (inField) { if (e.key === 'Escape' || e.key === 'Enter') e.target.blur(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { undo(); e.preventDefault(); return; }
+  if (active.editing() && editorKey(e)) e.preventDefault();
+});
+
+// ---------- prototype shell ----------
+function setVariant(key) {
+  const i = Math.max(0, VARIANTS.findIndex(v => v.key === key)), v = VARIANTS[i];
+  const u = new URL(location.href); u.searchParams.set('variant', v.key); window.history.replaceState(null, '', u);
+  $('#vlabel').textContent = `${v.key} · ${v.name}  (${i + 1}/${VARIANTS.length})`;
+  active = { def: v }; Object.assign(active, v.make(), { def: v }); renderAll();
+}
+function cycle(d) { const i = VARIANTS.findIndex(v => v.key === active.def.key); setVariant(VARIANTS[(i + d + VARIANTS.length) % VARIANTS.length].key); }
+$('#prev').onclick = () => cycle(-1); $('#next').onclick = () => cycle(1);
+$('#wrap').onchange = e => { ui.wrap = e.target.value; e.target.blur(); renderScore(); };
+$('#statebtn').onclick = () => { $('#statepanel').hidden = !$('#statepanel').hidden; renderState(); };
+const showVp = () => $('#vp').textContent = `${innerWidth}×${innerHeight}`;
+let rz; window.addEventListener('resize', () => { showVp(); clearTimeout(rz); rz = setTimeout(renderScore, 150); });
+
+VF.loadFonts('Bravura', 'Academico').then(() => {
+  VF.setFonts('Bravura', 'Academico');
+  const q = new URLSearchParams(location.search);
+  if (q.get('wrap')) { ui.wrap = q.get('wrap'); $('#wrap').value = ui.wrap; }
+  showVp(); setVariant(q.get('variant') || 'A');
+});
+</script>
+</body>
+</html>

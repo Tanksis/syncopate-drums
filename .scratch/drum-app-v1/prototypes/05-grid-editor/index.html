@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE · Grid editor interaction</title>
+<!--
+  PROTOTYPE, throwaway. Ticket: .scratch/drum-app-v1/issues/05-grid-editor-interaction.md
+  Three radically different ways to enter a Syncopation-style line, switchable via ?variant=A|B|C
+  and the floating bar at the bottom (Alt+← / Alt+→; plain arrows belong to the editors).
+    A  Step grid      mouse-first drum-machine grid, per-beat 8ths / 16ths / triplets, drag to hold
+    B  Typed line     keyboard-first shorthand text ("q e q e q | ..."), whole line typed
+    C  Beat figures   pick one figure per beat from a palette (one key per beat), tie toggle
+  All three edit the same in-memory exercise, so you can enter in one and inspect in another.
+  The notation view (VexFlow 5, vexflow.js next to this file) mirrors every edit; click a note in
+  it to cycle its sticking override (auto → R → L → auto). Nothing is saved.
+-->
+<script src="vexflow.js"></script>
+<style>
+  :root { --accent:#2563eb; --bg:#fafaf9; --card:#fff; --ink:#1c1917; --mute:#78716c; --line:#e7e5e4; --ov:#c2410c; --sel:#dbeafe; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui, sans-serif; }
+  main { max-width:1180px; margin:0 auto; padding:16px 16px 90px; }
+  h1 { font-size:20px; margin:0; }
+  h2 { font-size:13px; margin:0 0 8px; text-transform:uppercase; letter-spacing:.04em; color:var(--mute); }
+  .badge { display:inline-block; background:#fee2e2; color:#991b1b; font-size:11px; font-weight:600; padding:2px 8px; border-radius:99px; }
+  .top { display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center; margin:8px 0 4px; }
+  .top label { color:#44403c; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-top:12px; }
+  button { font:inherit; border:1px solid var(--line); background:#fff; border-radius:6px; padding:4px 10px; cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  button.on { background:var(--sel); border-color:var(--accent); }
+  select { font:inherit; padding:3px 5px; }
+  kbd { font:12px ui-monospace, monospace; background:#f5f5f4; border:1px solid #d6d3d1; border-bottom-width:2px; border-radius:4px; padding:0 4px; }
+  .hint { color:var(--mute); font-size:13px; }
+  .notation svg { display:block; }
+  .notation .vf-stavenote { cursor:pointer; }
+  .state { font:13px ui-monospace, monospace; white-space:pre-wrap; color:#44403c; }
+  .err { color:#b91c1c; }
+  .ok { color:#15803d; }
+  .baractions { display:flex; gap:4px; }
+  .baractions button { padding:0 6px; font-size:12px; }
+
+  /* Variant A: step grid */
+  .gridwrap { display:flex; flex-wrap:wrap; gap:14px; outline:none; }
+  .gbar { border:1px solid var(--line); border-radius:8px; padding:6px; background:#fff; }
+  .gbar.cur { border-color:var(--accent); }
+  .gbar .hd { display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--mute); margin-bottom:4px; gap:8px; }
+  .gbeats { display:flex; gap:6px; }
+  .gbeat { display:flex; flex-direction:column; gap:2px; }
+  .gbeat .sub { font-size:11px; padding:0 4px; border-radius:4px; }
+  .gcells, .gstick { display:flex; width:104px; }
+  .gcell { flex:1; height:34px; border:1px solid #d6d3d1; margin-right:-1px; background:#fff; position:relative; user-select:none; cursor:pointer; }
+  .gcell:first-child { border-radius:5px 0 0 5px; } .gcell:last-child { border-radius:0 5px 5px 0; margin-right:0; }
+  .gcell.x { background:#1c1917; }
+  .gcell.h { background:#a8a29e; }
+  .gcell.h::before { content:""; position:absolute; left:-2px; right:0; top:14px; height:4px; background:#1c1917; }
+  .gcell.cursor { outline:3px solid var(--accent); outline-offset:-3px; z-index:1; }
+  .gcell.trip { background-image:linear-gradient(#ede9fe,#ede9fe); }
+  .gcell.trip.x { background:#5b21b6; } .gcell.trip.h { background:#c4b5fd; }
+  .gstick span { flex:1; text-align:center; font:600 12px ui-monospace, monospace; height:16px; cursor:pointer; color:#57534e; }
+  .gstick span.ov { color:var(--ov); text-decoration:underline; }
+  .addbar { align-self:center; }
+
+  /* Variant B: typed line */
+  .bcols { display:grid; grid-template-columns:1fr 330px; gap:12px; }
+  @media (max-width:900px){ .bcols { grid-template-columns:1fr; } }
+  textarea { width:100%; min-height:120px; font:17px/1.6 ui-monospace, monospace; padding:10px; border:1px solid #d6d3d1; border-radius:8px; resize:vertical; }
+  table.cheat { border-collapse:collapse; font-size:13px; }
+  table.cheat td { padding:2px 8px 2px 0; vertical-align:top; }
+  table.cheat td:first-child { font-family:ui-monospace, monospace; white-space:nowrap; color:var(--accent); }
+
+  /* Variant C: beat figures */
+  .strip { display:flex; flex-wrap:wrap; gap:12px; margin-top:6px; }
+  .cbar { display:flex; gap:3px; border:1px solid var(--line); border-radius:8px; padding:4px; background:#fff; align-items:center; }
+  .cbeat { width:54px; height:42px; border:1px solid #d6d3d1; border-radius:6px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; font:12px ui-monospace, monospace; position:relative; }
+  .cbeat b { font-size:15px; }
+  .cbeat.cur { outline:3px solid var(--accent); outline-offset:-2px; }
+  .cbeat .tie { position:absolute; top:-9px; left:-10px; font-size:16px; color:var(--accent); }
+  .palette { display:grid; grid-template-columns:repeat(auto-fill, minmax(96px,1fr)); gap:8px; }
+  .fig { border:1px solid var(--line); border-radius:8px; background:#fff; padding:2px 4px 4px; cursor:pointer; text-align:center; }
+  .fig:hover { border-color:var(--accent); }
+  .fig .mini { height:62px; overflow:hidden; }
+  .fig .mini svg { transform:scale(.62); transform-origin:0 0; }
+  .fig .k { font-size:12px; color:var(--mute); }
+
+  /* floating variant switcher (prototype chrome, not part of the design) */
+  #switcher { position:fixed; left:50%; bottom:16px; transform:translateX(-50%); display:flex; align-items:center; gap:6px; background:#111827; color:#fff; border-radius:99px; padding:6px 8px; box-shadow:0 6px 24px rgba(0,0,0,.25); z-index:50; font-size:13px; }
+  #switcher button { background:#374151; color:#fff; border:none; border-radius:99px; width:30px; height:30px; padding:0; }
+  #switcher span { min-width:220px; text-align:center; }
+</style>
+</head>
+<body>
+<main>
+  <div class="badge">PROTOTYPE · throwaway</div>
+  <h1>Grid editor interaction</h1>
+  <div class="top">
+    <label>Load line <select id="sample">
+      <option value="">…</option>
+      <option value="0">Line 1: eighths, quarters, dotted quarters</option>
+      <option value="1">Line 2: sixteenths, ties (incl. across a bar line)</option>
+      <option value="2">Line 3: eighth-note triplets</option>
+      <option value="3">Empty (4 bars of rest)</option>
+    </select></label>
+    <label>Sticking <select id="mode"><option value="natural">natural</option><option value="alternate">alternate</option></select></label>
+    <label>Lead hand <select id="lead"><option>R</option><option>L</option></select></label>
+    <button id="undo">Undo <kbd>Ctrl</kbd>+<kbd>Z</kbd></button>
+    <span class="hint">Click a note in the notation to cycle its sticking override (auto → R → L → auto); overrides show in orange.</span>
+  </div>
+  <div id="variant"></div>
+  <div class="card">
+    <h2>State (the exercise model, written in variant B's shorthand)</h2>
+    <div id="state" class="state"></div>
+  </div>
+</main>
+<div id="switcher"><button id="prev" title="Previous variant (Alt+←)">←</button><span id="vlabel"></span><button id="next" title="Next variant (Alt+→)">→</button></div>
+
+<script>
+'use strict';
+const VF = VexFlow;
+const TPB = 12, BAR = 48; // 12 ticks per beat: sixteenth 3, triplet eighth 4
+
+// ---------- model ----------
+// exercise: { bars: [{ items:[item], subs:[2|4|3 grid prefs per beat, used by variant A] }], mode, lead }
+// item: { id, t (ticks), rest, tie (tied to next), trip (in a triplet group), ov ('R'|'L'|null) }
+let uid = 1;
+const mk = (t, o = {}) => ({ id: uid++, t, rest: !!o.rest, tie: !!o.tie, trip: !!o.trip, ov: o.ov || null });
+const ex = { bars: [], mode: 'natural', lead: 'R' };
+const history = [];
+const clone = bars => bars.map(b => ({ items: b.items.map(i => ({ ...i })), subs: [...b.subs] }));
+function commit(bars, opts = {}) {
+  history.push(clone(ex.bars)); if (history.length > 200) history.shift();
+  ex.bars = bars; render(opts);
+}
+function undo() { if (history.length) { ex.bars = history.pop(); render(); } }
+
+function flatten(bars) { // items with bar, start-in-bar, cont (is a tied continuation)
+  const out = []; let prev = null;
+  bars.forEach((b, bi) => { let p = 0; b.items.forEach((it, ii) => {
+    out.push({ it, bi, ii, start: p, g: bi * BAR + p, cont: !!(prev && prev.tie && !prev.rest && !it.rest) });
+    prev = it; p += it.t; }); });
+  return out;
+}
+const barTicks = b => b.items.reduce((s, i) => s + i.t, 0);
+
+// ---------- sticking (rules from the Exercise data model ticket) ----------
+function sticking(bars) {
+  const res = new Map(); const fl = flatten(bars); const other = ex.lead === 'R' ? 'L' : 'R';
+  const struck = fl.filter(f => !f.it.rest && !f.cont);
+  if (ex.mode === 'alternate') {
+    struck.forEach((f, i) => res.set(f.it.id, { hand: f.it.ov || (i % 2 ? other : ex.lead), ov: !!f.it.ov }));
+    return res;
+  }
+  let run = 0, prevTrip = false;
+  bars.forEach((b, bi) => {
+    for (let beat = 0; beat < 4; beat++) {
+      const inBeat = fl.filter(f => f.bi === bi && Math.floor(f.start / TPB) === beat);
+      const trip = inBeat.some(f => f.it.trip);
+      if (trip) {
+        if (!prevTrip) run = 0;
+        inBeat.forEach(f => { const k = run + (f.start % TPB) / 4; f.hand = k % 2 ? other : ex.lead; });
+        run += 3; prevTrip = true;
+      } else {
+        const offs = inBeat.map(f => f.start % TPB);
+        const step = offs.some(o => o % 6) ? 3 : offs.some(o => o === 6) ? 6 : 12;
+        inBeat.forEach(f => { f.hand = ((f.start % TPB) / step) % 2 ? other : ex.lead; });
+        prevTrip = false;
+      }
+    }
+  });
+  struck.forEach(f => res.set(f.it.id, { hand: f.it.ov || f.hand, ov: !!f.it.ov }));
+  return res;
+}
+
+// ---------- shorthand text (variant B, and the state readout) ----------
+function tok(it) {
+  const base = it.trip ? { 8: 'q', 4: 'e' }[it.t] : { 18: 'q.', 12: 'q', 9: 'e.', 6: 'e', 3: 's' }[it.t];
+  return (it.rest ? 'r' : '') + base + (it.ov ? it.ov : '') + (it.tie && !it.rest ? '~' : '');
+}
+function barText(b) {
+  const out = []; let p = 0, grp = null;
+  b.items.forEach(it => {
+    if (it.trip) { if (!grp || Math.floor(p / TPB) !== grp.beat) { grp = { beat: Math.floor(p / TPB), toks: [] }; out.push(grp); } grp.toks.push(tok(it)); }
+    else { grp = null; out.push(tok(it)); }
+    p += it.t;
+  });
+  return out.map(x => typeof x === 'string' ? x : '[' + x.toks.join(' ') + ']').join(' ');
+}
+function toText(bars) {
+  return bars.map((b, i) => barText(b) + (i < bars.length - 1 ? (i % 4 === 3 ? ' |\n' : ' | ') : '')).join('');
+}
+// returns { bars:[{items, subs, err}], tokens:[{from,to,bar,idx}], ok }
+function parseText(src) {
+  const bars = []; const tokens = []; let ok = true;
+  const re = /\||\[|\]|[^\s|\[\]]+/g; let m; let cur = { items: [], subs: [2, 2, 2, 2], err: null }; let inTrip = false, tripStart = 0;
+  const pos = () => barTicks(cur);
+  const fail = msg => { if (!cur.err) cur.err = msg; ok = false; };
+  const endBar = () => {
+    if (inTrip) { fail('unclosed [ ]'); inTrip = false; }
+    const t = pos(); if (t !== BAR) fail(`has ${t / TPB} beats, needs 4`);
+    bars.push(cur); cur = { items: [], subs: [2, 2, 2, 2], err: null };
+  };
+  while ((m = re.exec(src))) {
+    const s = m[0];
+    if (s === '|') { endBar(); continue; }
+    if (s === '[') { if (inTrip) fail('nested ['); if (pos() % TPB) fail('a triplet must start on a beat'); inTrip = true; tripStart = pos(); continue; }
+    if (s === ']') { if (!inTrip) fail('] without ['); else if (pos() - tripStart !== TPB) fail('a triplet group must fill one beat'); inTrip = false; continue; }
+    if (s === '%') { const prev = bars[bars.length - 1]; if (!prev) fail('% needs a bar before it'); else prev.items.forEach(i => cur.items.push(mk(i.t, { ...i, ov: null }))); continue; }
+    const t = /^(r?)([qes])(\.?)([RL]?)(~?)([RL]?)$/.exec(s);
+    if (!t) { fail(`can't read "${s}"`); continue; }
+    const rest = !!t[1], d = t[2], dot = !!t[3], ov = t[4] || t[6] || null, tie = !!t[5];
+    let ticks;
+    if (inTrip) { if (d === 's' || dot) { fail(`"${s}" can't go in a triplet`); continue; } ticks = d === 'q' ? 8 : 4; }
+    else ticks = { q: 12, e: 6, s: 3 }[d] * (dot ? 1.5 : 1);
+    if (!Number.isInteger(ticks)) { fail(`"${s}" isn't allowed`); continue; }
+    if (rest && (tie || ov)) fail(`a rest can't be tied or stuck`);
+    tokens.push({ from: m.index, to: m.index + s.length, bar: bars.length, idx: cur.items.length });
+    cur.items.push(mk(ticks, { rest, tie: tie && !rest, trip: inTrip, ov: rest ? null : ov }));
+  }
+  if (cur.items.length || bars.length === 0) endBar();
+  const fl = flatten(bars);
+  fl.forEach((f, i) => { if (f.it.tie) { const n = fl[i + 1]; if (!n) { ok = false; bars[f.bi].err ||= 'the last note can\'t be tied forward'; } else if (n.it.rest) { ok = false; bars[f.bi].err ||= 'a tie must go to a note'; } } });
+  return { bars, tokens, ok };
+}
+
+// ---------- grid cells <-> model (variants A and C) ----------
+// cells per beat: { sub, st:['x'|'-'|'.'], ov:[...] }  x = hit, - = held (note continues), . = rest
+function toCells(bars) {
+  const fl = flatten(bars);
+  return bars.map((b, bi) => {
+    const mine = fl.filter(f => f.bi === bi);
+    return [0, 1, 2, 3].map(beat => {
+      const lo = beat * TPB, hi = lo + TPB;
+      const covering = c => mine.find(f => f.start <= c && c < f.start + f.it.t);
+      const starts = mine.filter(f => f.start >= lo && f.start < hi);
+      const trip = starts.some(f => f.it.trip) || !!(covering(lo) && covering(lo).it.trip);
+      const need16 = starts.some(f => f.start % 6);
+      const pref = b.subs[beat];
+      const sub = trip ? 3 : need16 ? 4 : pref === 4 ? 4 : pref === 3 && starts.every(f => f.start % 12 === 0) ? 3 : 2;
+      const len = TPB / sub, st = [], ov = [];
+      for (let k = 0; k < sub; k++) {
+        const c = lo + k * len, f = covering(c);
+        if (!f || f.it.rest) { st.push('.'); ov.push(null); }
+        else if (f.start === c && !f.cont) { st.push('x'); ov.push(f.it.ov); }
+        else { st.push('-'); ov.push(null); }
+      }
+      return { sub, st, ov };
+    });
+  });
+}
+function okNote(p, L) {
+  const o = p % TPB;
+  if (L === 18 || L === 12) return p % 6 === 0;
+  if (L === 9) return o === 0 || o === 3;
+  if (L === 6) return p % 6 === 0 || o === 3;
+  return true;
+}
+function okRest(p, L) { const o = p % TPB; if (L === 12) return o === 0; if (L === 9) return o === 0 || o === 3; if (L === 6) return o === 0 || o === 6 || o === 3; return true; }
+function spell(p, end, rest, trip) {
+  const out = [];
+  while (p < end) {
+    let L;
+    if (trip) L = (p % TPB === 0 || p % TPB === 4) && p + 8 <= end ? 8 : 4;
+    else L = [18, 12, 9, 6, 3].find(L => p + L <= end && (rest ? okRest(p, L) : okNote(p, L)));
+    out.push(L); p += L;
+  }
+  return out;
+}
+// barsCells: [bar][beat] = {sub, st, ov}; returns new bars
+function fromCells(barsCells, beatsPerBar = 4, autoRing = false) {
+  const barLen = beatsPerBar * TPB;
+  const cells = []; const tripBeat = [];
+  barsCells.forEach((bc, bi) => bc.forEach((beat, k) => {
+    const g0 = bi * barLen + k * TPB;
+    // a triplet beat with no inner boundary is just a quarter (or quarter rest)
+    let trip = beat.sub === 3 && !(beat.st[1] === '-' && beat.st[2] === '-') && !(beat.st.every(s => s === '.'));
+    tripBeat[g0 / TPB] = trip;
+    beat.st.forEach((s, j) => cells.push({ g: g0 + j * TPB / beat.sub, len: TPB / beat.sub, s, ov: beat.ov[j] }));
+  }));
+  if (autoRing) { let seen = false; cells.forEach(c => { if (c.s === 'x') seen = true; else if (c.s === '.' && seen) c.s = '-'; }); }
+  const segs = []; let cur = null;
+  cells.forEach(c => {
+    if (c.s === 'x') { cur = { note: true, s: c.g, e: c.g + c.len, ov: c.ov }; segs.push(cur); }
+    else if (c.s === '-' && cur && cur.note) cur.e += c.len;
+    else if (cur && !cur.note) cur.e += c.len;
+    else { cur = { note: false, s: c.g, e: c.g + c.len }; segs.push(cur); }
+  });
+  const bars = barsCells.map(bc => ({ items: [], subs: bc.map(b => b.sub) }));
+  segs.forEach(sg => {
+    const cuts = [sg.s];
+    for (let b = Math.floor(sg.s / TPB) * TPB + TPB; b < sg.e; b += TPB) {
+      if (!sg.note || b % barLen === 0 || tripBeat[b / TPB] || tripBeat[b / TPB - 1]) cuts.push(b);
+    }
+    cuts.push(sg.e);
+    const pieces = [];
+    for (let i = 0; i < cuts.length - 1; i++) {
+      const trip = !!tripBeat[Math.floor(cuts[i] / TPB)];
+      spell(cuts[i], cuts[i + 1], !sg.note, trip).reduce((p, L) => { pieces.push({ p, L, trip }); return p + L; }, cuts[i]);
+    }
+    pieces.forEach((pc, i) => bars[Math.floor(pc.p / barLen)].items.push(mk(pc.L, { rest: !sg.note, trip: pc.trip, tie: sg.note && i < pieces.length - 1, ov: i === 0 && sg.note ? sg.ov : null })));
+  });
+  return bars;
+}
+const emptyBar = () => ({ items: [0, 1, 2, 3].map(() => mk(12, { rest: true })), subs: [2, 2, 2, 2] });
+
+// ---------- notation view (VexFlow) ----------
+function renderNotation(el, bars, o = {}) {
+  el.innerHTML = '';
+  const { Renderer, Stave, StaveNote, Voice, Formatter, Beam, Tuplet, StaveTie, Dot, Annotation, Fraction } = VF;
+  const mini = !!o.mini, beats = o.beats || 4;
+  const W = o.width || el.clientWidth || 1000;
+  const clefW = mini ? 0 : 70;
+  const perRow = o.perRow || Math.max(1, Math.min(4, Math.floor((W - 20 - clefW) / 210)));
+  const barW = mini ? W - 4 : Math.floor((W - 20 - clefW) / perRow);
+  const rowH = mini ? 100 : 135;
+  const rows = Math.max(1, Math.ceil(bars.length / perRow));
+  const r = new Renderer(el, Renderer.Backends.SVG); r.resize(W, rows * rowH + 10);
+  const ctx = r.getContext();
+  const st = o.hideSticking ? new Map() : sticking(bars);
+  const fl = flatten(bars); const contOf = new Map(fl.map(f => [f.it.id, f.cont]));
+  const all = [];
+  bars.forEach((bar, bi) => {
+    const row = Math.floor(bi / perRow), col = bi % perRow, first = col === 0 && !mini;
+    const x = mini ? 0 : 10 + (col === 0 ? 0 : clefW + col * barW), w = barW + (first ? clefW : 0), y = row * rowH + (mini ? -10 : 5);
+    if (o.curBar === bi) { ctx.save(); ctx.setFillStyle('#eff6ff'); ctx.fillRect(x, y + 20, w, 90); ctx.restore(); }
+    const stave = new Stave(x, y, w);
+    if (first) stave.addClef('percussion');
+    if (bi === 0 && !mini) stave.addTimeSignature('4/4');
+    stave.setContext(ctx).draw();
+    if (!bar.items.length) return;
+    const notes = bar.items.map(it => {
+      const d = (it.trip ? { 8: 'q', 4: '8' } : { 18: 'qd', 12: 'q', 9: '8d', 6: '8', 3: '16' })[it.t];
+      const n = new StaveNote({ keys: [it.rest ? 'b/4' : 'c/5'], duration: d + (it.rest ? 'r' : ''), stemDirection: -1, clef: 'percussion' });
+      if (d.endsWith('d')) Dot.buildAndAttach([n], { all: true });
+      const s = st.get(it.id);
+      if (s) { const a = new Annotation(s.hand).setVerticalJustification(Annotation.VerticalJustify.BOTTOM); if (s.ov) a.setStyle({ fillStyle: '#c2410c' }); n.addModifier(a, 0); }
+      if (o.sel && o.sel.has(it.id)) n.setStyle({ fillStyle: '#2563eb', strokeStyle: '#2563eb' });
+      all.push({ it, n, row });
+      return n;
+    });
+    const tuplets = []; let p = 0, grp = null;
+    bar.items.forEach((it, i) => {
+      if (it.trip) { const b = Math.floor(p / TPB); if (!grp || grp.b !== b) { grp = { b, ns: [] }; tuplets.push(grp); } grp.ns.push(notes[i]); } else grp = null;
+      p += it.t;
+    });
+    const tups = tuplets.map(g => new Tuplet(g.ns, { numNotes: 3, notesOccupied: 2, location: 1, bracketed: g.ns.some(n => n.isRest()) || g.ns.length < 3 }));
+    const voice = new Voice({ numBeats: beats, beatValue: 4 }).setStrict(false).addTickables(notes);
+    const beams = Beam.generateBeams(notes, { groups: [new Fraction(1, 4)], stemDirection: -1 });
+    tups.forEach(t => t.setTupletLocation(1)); // generateBeams moves them to the stem side, onto the sticking
+    new Formatter().joinVoices([voice]).format([voice], Math.max(30, w - (stave.getNoteStartX() - x) - 18));
+    voice.draw(ctx, stave);
+    beams.forEach(b => b.setContext(ctx).draw());
+    tups.forEach(t => t.setContext(ctx).draw());
+  });
+  all.forEach((a, i) => {
+    if (!a.it.tie || a.it.rest) return; const b = all[i + 1]; if (!b || b.it.rest) return;
+    if (a.row === b.row) new StaveTie({ firstNote: a.n, lastNote: b.n, firstIndexes: [0], lastIndexes: [0] }).setContext(ctx).draw();
+    else { new StaveTie({ firstNote: a.n, lastNote: null, firstIndexes: [0], lastIndexes: [0] }).setContext(ctx).draw(); new StaveTie({ firstNote: null, lastNote: b.n, firstIndexes: [0], lastIndexes: [0] }).setContext(ctx).draw(); }
+  });
+  if (o.onNoteClick) all.forEach(({ it, n }) => { const g = n.getSVGElement(); if (g) g.addEventListener('mousedown', e => { e.preventDefault(); o.onNoteClick(it); }); });
+}
+function cycleOverride(it) {
+  if (it.rest) return;
+  const bars = clone(ex.bars);
+  const t = bars.flatMap(b => b.items).find(i => i.id === it.id); if (!t) return;
+  const fl = flatten(ex.bars); const f = fl.find(f => f.it.id === it.id); if (f && f.cont) return;
+  t.ov = t.ov === null ? 'R' : t.ov === 'R' ? 'L' : null;
+  commit(bars);
+}
+
+// ---------- samples (Syncopation-style lines, written for this prototype) ----------
+const SAMPLES = [
+  'q e q e q | re e q q. e | q. q. q | e q e re e q',
+  'e q e q~ e e | e. s e e q rq | e. s e. s q e e~ | e q e e e q',
+  '[e e e] [e e e] q [q e] | [e re e] q e e [e e e] | [e q] [e q] q q | [e e e] e e [e e e] q',
+  'rq rq rq rq | rq rq rq rq | rq rq rq rq | rq rq rq rq',
+];
+function loadSample(i) { const p = parseText(SAMPLES[i]); p.bars.forEach(b => delete b.err); commit(p.bars.map(b => ({ items: b.items, subs: [2, 2, 2, 2] }))); }
+
+// ---------- variants ----------
+const VARIANTS = [
+  { key: 'A', name: 'Step grid', make: makeA },
+  { key: 'B', name: 'Typed line', make: makeB },
+  { key: 'C', name: 'Beat figures', make: makeC },
+];
+let active = null;
+const $ = s => document.querySelector(s);
+const vroot = $('#variant');
+function barActions(bi, extra = '') {
+  return `<span class="baractions">${extra}<button data-act="dup" data-bar="${bi}" title="Duplicate bar (Ctrl+D)">⧉</button><button data-act="ins" data-bar="${bi}" title="Insert empty bar after">＋</button><button data-act="del" data-bar="${bi}" title="Delete bar">✕</button></span>`;
+}
+function barAction(act, bi) {
+  const bars = clone(ex.bars);
+  if (act === 'dup') bars.splice(bi + 1, 0, { items: bars[bi].items.map(i => mk(i.t, { ...i, tie: i.tie && !(bi === bars.length - 1) })), subs: [...bars[bi].subs] });
+  if (act === 'ins') bars.splice(bi + 1, 0, emptyBar());
+  if (act === 'del') { if (bars.length === 1) return; bars.splice(bi, 1); }
+  // a tie pointing at a rest or past the end is dropped
+  const fl = flatten(bars); fl.forEach((f, i) => { if (f.it.tie && (!fl[i + 1] || fl[i + 1].it.rest)) f.it.tie = false; });
+  commit(bars, { bar: act === 'del' ? Math.max(0, bi - 1) : bi + 1 });
+}
+vroot.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b) barAction(b.dataset.act, +b.dataset.bar); });
+
+// ===== Variant A: step grid =====
+function makeA() {
+  let cur = { bar: 0, beat: 0, cell: 0 }; let autoRing = false; let drag = null;
+  vroot.innerHTML = `
+    <div class="card"><h2>Notation view</h2><div class="notation" id="nv"></div></div>
+    <div class="card">
+      <h2>Step grid</h2>
+      <div class="hint" style="margin-bottom:8px">
+        <b>Mouse:</b> click an empty cell for a hit; <b>drag right</b> from it to hold the note (quarters, dotted notes; drag past a bar line for a tie). Click a hit to remove it; click a held cell to cut the note there.
+        Beat header cycles <b>8ths → 16ths → triplets</b>. Click a letter under a hit to cycle its sticking override.<br>
+        <b>Keys:</b> <kbd>←</kbd><kbd>→</kbd> move, <kbd>↑</kbd><kbd>↓</kbd> bar, <kbd>Space</kbd>/<kbd>X</kbd> hit on/off, <kbd>-</kbd> hold (extend the previous note to here), <kbd>.</kbd>/<kbd>Del</kbd> rest,
+        <kbd>2</kbd> <kbd>4</kbd> <kbd>3</kbd> grid for this beat, <kbd>R</kbd>/<kbd>L</kbd> override, <kbd>Ctrl</kbd>+<kbd>D</kbd> duplicate bar, <kbd>Ctrl</kbd>+<kbd>Enter</kbd> add bar.
+        <label style="margin-left:10px"><input type="checkbox" id="ring"> Experiment: notes ring until the next hit (no rests after the first hit)</label>
+      </div>
+      <div class="gridwrap" id="grid" tabindex="0"></div>
+    </div>`;
+  const grid = $('#grid'); grid.focus();
+  $('#ring').onchange = e => { autoRing = e.target.checked; apply(toCells(ex.bars)); };
+  const cellsNow = () => toCells(ex.bars);
+  const apply = (cells, focusTo) => { const nb = fromCells(cells, 4, autoRing); if (focusTo) cur = focusTo; commit(nb); };
+  function clampCur(cells) {
+    cur.bar = Math.max(0, Math.min(cells.length - 1, cur.bar));
+    const s = cells[cur.bar][cur.beat].sub; cur.cell = Math.min(cur.cell, s - 1);
+  }
+  function linear(cells) { const L = []; cells.forEach((bc, bi) => bc.forEach((b, k) => b.st.forEach((_, j) => L.push({ bar: bi, beat: k, cell: j })))); return L; }
+  const idxOf = (L, c) => L.findIndex(x => x.bar === c.bar && x.beat === c.beat && x.cell === c.cell);
+  function setHit(cells, c, on) {
+    const b = cells[c.bar][c.beat]; b.st[c.cell] = on ? 'x' : '.'; b.ov[c.cell] = null;
+    if (!on) { const L = linear(cells); for (let i = idxOf(L, c) + 1; i < L.length; i++) { const d = L[i], bb = cells[d.bar][d.beat]; if (bb.st[d.cell] !== '-') break; bb.st[d.cell] = '.'; } }
+  }
+  function holdTo(cells, from, to) { // make every cell after `from` up to `to` a hold
+    const L = linear(cells); const a = idxOf(L, from), z = idxOf(L, to);
+    for (let i = a + 1; i <= z; i++) { const d = L[i]; cells[d.bar][d.beat].st[d.cell] = '-'; cells[d.bar][d.beat].ov[d.cell] = null; }
+    for (let i = z + 1; i < L.length; i++) { const d = L[i], bb = cells[d.bar][d.beat]; if (bb.st[d.cell] !== '-') break; bb.st[d.cell] = '.'; }
+  }
+  function cutAt(cells, c) { setHit(cells, c, false); }
+  function setSub(cells, c, sub) {
+    const b = cells[c.bar][c.beat]; if (b.sub === sub) return;
+    const first = b.st[0], fov = b.ov[0];
+    let st;
+    if (b.sub === 2 && sub === 4) st = [b.st[0], b.st[0] === '.' ? '.' : '-', b.st[1], b.st[1] === '.' ? '.' : '-'];
+    else if (b.sub === 4 && sub === 2) st = [b.st[0], b.st[2] === 'x' ? 'x' : b.st[2] === '-' || b.st[1] === '-' ? (b.st[0] === '.' && b.st[1] !== 'x' ? '.' : '-') : b.st[2]];
+    else st = Array.from({ length: sub }, (_, j) => j === 0 ? first : first === '.' ? '.' : '-');
+    b.sub = sub; b.st = st; b.ov = st.map((_, j) => j === 0 ? fov : null);
+    cur.cell = 0;
+  }
+  function findNoteStart(cells, c) { const L = linear(cells); for (let i = idxOf(L, c); i >= 0; i--) { const d = L[i], s = cells[d.bar][d.beat].st[d.cell]; if (s === 'x') return d; if (s === '.') return null; } return null; }
+  function setOv(cells, c, h) { const s = findNoteStart(cells, c); if (!s) return; const b = cells[s.bar][s.beat]; b.ov[s.cell] = b.ov[s.cell] === h ? null : h; }
+  function cycleOvCell(cells, c) { const b = cells[c.bar][c.beat]; const o = b.ov[c.cell]; b.ov[c.cell] = o === null ? 'R' : o === 'R' ? 'L' : null; }
+
+  grid.addEventListener('mousedown', e => {
+    const sp = e.target.closest('.gstick span');
+    if (sp) { const c = JSON.parse(sp.dataset.c); const cells = cellsNow(); if (cells[c.bar][c.beat].st[c.cell] === 'x') { cycleOvCell(cells, c); cur = c; apply(cells); } e.preventDefault(); return; }
+    const sub = e.target.closest('.sub');
+    if (sub) { const c = JSON.parse(sub.dataset.c); const cells = cellsNow(); const s = cells[c.bar][c.beat].sub; setSub(cells, c, s === 2 ? 4 : s === 4 ? 3 : 2); cur = { ...c, cell: 0 }; apply(cells); e.preventDefault(); return; }
+    const el = e.target.closest('.gcell'); if (!el) return; e.preventDefault(); grid.focus();
+    const c = JSON.parse(el.dataset.c); const cells = cellsNow(); const s = cells[c.bar][c.beat].st[c.cell];
+    if (s === '.') { setHit(cells, c, true); cur = c; drag = { from: c, moved: false }; apply(cells); }
+    else if (s === 'x') { cur = c; drag = { from: c, moved: false, removeOnUp: true }; renderA(); }
+    else { cutAt(cells, c); cur = c; apply(cells); }
+  });
+  grid.addEventListener('mouseover', e => {
+    if (!drag || !(e.buttons & 1)) return; const el = e.target.closest('.gcell'); if (!el) return;
+    const c = JSON.parse(el.dataset.c); const cells = cellsNow(); const L = linear(cells);
+    if (idxOf(L, c) <= idxOf(L, drag.from)) return;
+    drag.moved = true; holdTo(cells, drag.from, c); cur = c; apply(cells);
+  });
+  window.onmouseup = () => { if (drag && drag.removeOnUp && !drag.moved) { const cells = cellsNow(); setHit(cells, drag.from, false); apply(cells); } drag = null; };
+
+  active.key = e => {
+    const cells = cellsNow(); clampCur(cells); const L = linear(cells); let i = idxOf(L, cur);
+    const k = e.key;
+    if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === 'd') { barAction('dup', cur.bar); return true; }
+    if ((e.ctrlKey || e.metaKey) && k === 'Enter') { barAction('ins', cur.bar); cur = { bar: cur.bar + 1, beat: 0, cell: 0 }; render(); return true; }
+    if (e.ctrlKey || e.metaKey || e.altKey) return false;
+    if (k === 'ArrowRight') { cur = L[Math.min(L.length - 1, i + 1)]; renderA(); return true; }
+    if (k === 'ArrowLeft') { cur = L[Math.max(0, i - 1)]; renderA(); return true; }
+    if (k === 'ArrowDown') { cur = { bar: Math.min(cells.length - 1, cur.bar + 1), beat: cur.beat, cell: 0 }; renderA(); return true; }
+    if (k === 'ArrowUp') { cur = { bar: Math.max(0, cur.bar - 1), beat: cur.beat, cell: 0 }; renderA(); return true; }
+    const st = cells[cur.bar][cur.beat].st[cur.cell];
+    const adv = () => L[Math.min(L.length - 1, i + 1)];
+    if (k === ' ' || k === 'x' || k === 'X') { setHit(cells, cur, st !== 'x'); const nx = adv(); apply(cells, nx); return true; }
+    if (k === '-') { const s = findNoteStart(cells, L[Math.max(0, i - 1)]) || (st === 'x' ? cur : null); if (s && idxOf(L, s) < i) holdTo(cells, s, cur); apply(cells, adv()); return true; }
+    if (k === '.' || k === 'Delete' || k === 'Backspace') { if (st === 'x') setHit(cells, cur, false); else if (st === '-') cutAt(cells, cur); apply(cells, k === 'Backspace' ? L[Math.max(0, i - 1)] : adv()); return true; }
+    if (k === '2' || k === '3' || k === '4') { setSub(cells, cur, +k); apply(cells); return true; }
+    if (k === 'r' || k === 'R' || k === 'l' || k === 'L') { setOv(cells, cur, k.toUpperCase()); apply(cells); return true; }
+    return false;
+  };
+
+  function renderA() {
+    const cells = cellsNow(); clampCur(cells);
+    const covering = flatten(ex.bars).find(f => f.bi === cur.bar && f.start <= cur.beat * TPB + cur.cell * TPB / cells[cur.bar][cur.beat].sub && cur.beat * TPB + cur.cell * TPB / cells[cur.bar][cur.beat].sub < f.start + f.it.t);
+    renderNotation($('#nv'), ex.bars, { sel: new Set(covering ? [covering.it.id] : []), curBar: cur.bar, onNoteClick: cycleOverride });
+    const stick = sticking(ex.bars); const fl = flatten(ex.bars);
+    const handAt = (bi, g) => { const f = fl.find(f => f.bi === bi && f.start === g && !f.cont && !f.it.rest); return f ? stick.get(f.it.id) : null; };
+    grid.innerHTML = cells.map((bc, bi) => `
+      <div class="gbar ${bi === cur.bar ? 'cur' : ''}">
+        <div class="hd"><span>Bar ${bi + 1}</span>${barActions(bi)}</div>
+        <div class="gbeats">${bc.map((b, k) => `
+          <div class="gbeat">
+            <button class="sub ${b.sub === 3 ? 'on' : ''}" data-c='${JSON.stringify({ bar: bi, beat: k, cell: 0 })}' title="Cycle grid for this beat">${k + 1}: ${b.sub === 2 ? '8ths' : b.sub === 4 ? '16ths' : 'triplets'}</button>
+            <div class="gcells">${b.st.map((s, j) => { const c = { bar: bi, beat: k, cell: j }; const isCur = bi === cur.bar && k === cur.beat && j === cur.cell;
+              return `<div class="gcell ${s === 'x' ? 'x' : s === '-' ? 'h' : ''} ${b.sub === 3 ? 'trip' : ''} ${isCur ? 'cursor' : ''}" data-c='${JSON.stringify(c)}'></div>`; }).join('')}</div>
+            <div class="gstick">${b.st.map((s, j) => { const h = s === 'x' ? handAt(bi, k * TPB + j * TPB / b.sub) : null;
+              return `<span class="${h && h.ov ? 'ov' : ''}" data-c='${JSON.stringify({ bar: bi, beat: k, cell: j })}'>${h ? h.hand : ''}</span>`; }).join('')}</div>
+          </div>`).join('')}</div>
+      </div>`).join('') + `<button class="addbar" data-act="ins" data-bar="${cells.length - 1}">＋ bar</button>`;
+  }
+  return { render: o => { if (o && o.bar !== undefined) cur = { bar: o.bar, beat: 0, cell: 0 }; renderA(); } };
+}
+
+// ===== Variant B: typed line =====
+function makeB() {
+  vroot.innerHTML = `
+    <div class="bcols">
+      <div class="card">
+        <h2>Type the line</h2>
+        <textarea id="txt" spellcheck="false" autocomplete="off"></textarea>
+        <div id="berr" class="hint"></div>
+      </div>
+      <div class="card"><h2>Shorthand</h2>
+        <table class="cheat">
+          <tr><td>q e s</td><td>quarter, eighth, sixteenth note</td></tr>
+          <tr><td>q. e.</td><td>dotted</td></tr>
+          <tr><td>rq re rs re.</td><td>rests</td></tr>
+          <tr><td>q~</td><td>tie to the next note (also across <code>|</code>)</td></tr>
+          <tr><td>[e e e]</td><td>triplet group, one beat: <code>[q e] [e q] [e re e]</code></td></tr>
+          <tr><td>eR eL</td><td>sticking override on that note</td></tr>
+          <tr><td>|</td><td>bar line (new lines are just spacing)</td></tr>
+          <tr><td>%</td><td>repeat the previous bar</td></tr>
+        </table>
+        <p class="hint">The note under the text cursor is blue in the notation. A bar that doesn't add up to 4 beats is drawn as typed and flagged; the exercise only updates once every bar is valid.</p>
+      </div>
+    </div>
+    <div class="card"><h2>Notation view</h2><div class="notation" id="nv"></div></div>`;
+  const ta = $('#txt'); let parsed = null;
+  ta.value = toText(ex.bars); ta.focus();
+  function draw() {
+    parsed = parseText(ta.value);
+    const caret = ta.selectionStart;
+    const t = parsed.tokens.find(t => caret >= t.from && caret <= t.to) || [...parsed.tokens].reverse().find(t => t.to <= caret);
+    const sel = new Set(); let curBar;
+    if (t && parsed.bars[t.bar] && parsed.bars[t.bar].items[t.idx]) { sel.add(parsed.bars[t.bar].items[t.idx].id); curBar = t.bar; }
+    const showBars = parsed.ok ? ex.bars : parsed.bars;
+    if (parsed.ok) { // map the caret token onto the committed ids
+      if (t && ex.bars[t.bar] && ex.bars[t.bar].items[t.idx]) { sel.clear(); sel.add(ex.bars[t.bar].items[t.idx].id); }
+    }
+    renderNotation($('#nv'), showBars, { sel, curBar, onNoteClick: it => { if (parsed.ok) cycleOverride(it); } });
+    const errs = parsed.bars.map((b, i) => b.err ? `<div class="err">Bar ${i + 1}: ${b.err}</div>` : '').join('');
+    $('#berr').innerHTML = errs || `<span class="ok">${parsed.bars.length} bars, all valid</span>`;
+  }
+  ta.addEventListener('input', () => {
+    const p = parseText(ta.value);
+    if (p.ok) { history.push(clone(ex.bars)); ex.bars = p.bars.map(b => ({ items: b.items, subs: [2, 2, 2, 2] })); renderState(); }
+    draw();
+  });
+  ['keyup', 'click', 'select'].forEach(ev => ta.addEventListener(ev, draw));
+  active.key = e => false;
+  return { render: () => { if (document.activeElement !== ta || !parsed || parsed.ok) { const pos = ta.selectionStart; const txt = toText(ex.bars); if (ta.value !== txt && document.activeElement !== ta) ta.value = txt; else if (ta.value !== txt && parseText(ta.value).ok) { ta.value = txt; ta.selectionStart = ta.selectionEnd = Math.min(pos, txt.length); } } draw(); } };
+}
+
+// ===== Variant C: beat figures =====
+const FIGS = [
+  { k: '1', p: 'x---' }, { k: '2', p: 'x-x-' }, { k: '3', p: '..x-' }, { k: '4', p: 'x-..' }, { k: '5', p: '....' },
+  { k: '6', p: 'x--x' }, { k: '7', p: 'xx--' }, { k: '8', p: 'xxxx' }, { k: '9', p: 'x-xx' }, { k: '0', p: 'xxx-' },
+  { k: 'a', p: 'xxx' }, { k: 's', p: 'x-x' }, { k: 'd', p: 'xx-' }, { k: 'f', p: 'x.x' }, { k: 'g', p: '.xx' }, { k: 'h', p: 'xx.' },
+];
+function figOfBeat(b) { // cells of one beat -> {fig, tie}
+  let st = b.sub === 2 ? [b.st[0], b.st[0] === '.' ? '.' : '-', b.st[1], b.st[1] === '.' ? '.' : '-'] : [...b.st];
+  const tie = st[0] === '-'; if (tie) st[0] = 'x';
+  const p = st.join(''); return { fig: FIGS.find(f => f.p === p), p, tie };
+}
+function makeC() {
+  let cur = { bar: 0, beat: 0 };
+  vroot.innerHTML = `
+    <div class="card"><h2>Notation view</h2><div class="notation" id="nv"></div>
+      <div class="strip" id="strip"></div>
+      <div class="hint" style="margin-top:8px"><b>Keys:</b> pick a figure for the blue beat (it moves on by itself, so a bar is four keys). <kbd>T</kbd> toggles a tie into the beat
+      (the previous note holds through its first note: <i>e.g.</i> <kbd>2</kbd> then <kbd>T</kbd><kbd>2</kbd> gives ♪ ♩ ♪ across beats 1–2). <kbd>←</kbd><kbd>→</kbd> move, <kbd>Backspace</kbd> rest & back,
+      <kbd>Ctrl</kbd>+<kbd>D</kbd> duplicate bar, <kbd>Ctrl</kbd>+<kbd>Enter</kbd> add bar. Click a beat box or a note to move there.</div>
+    </div>
+    <div class="card"><h2>Figures</h2><div class="palette" id="pal"></div></div>`;
+  // palette with mini notation
+  const pal = $('#pal');
+  FIGS.forEach(f => {
+    const d = document.createElement('div'); d.className = 'fig'; d.dataset.k = f.k;
+    d.innerHTML = `<div class="mini"></div><div class="k"><kbd>${f.k.toUpperCase()}</kbd> <span style="font-family:ui-monospace">${f.p}</span></div>`;
+    pal.appendChild(d);
+    const sub = f.p.length; const beat = { sub, st: f.p.split(''), ov: f.p.split('').map(() => null) };
+    const bars = fromCells([[beat]], 1);
+    renderNotation(d.querySelector('.mini'), bars, { mini: true, beats: 1, width: 150, hideSticking: true });
+  });
+  pal.addEventListener('mousedown', e => { const f = e.target.closest('.fig'); if (f) { e.preventDefault(); put(FIGS.find(x => x.k === f.dataset.k)); } });
+  const strip = $('#strip');
+  strip.addEventListener('mousedown', e => { const b = e.target.closest('.cbeat'); if (b) { e.preventDefault(); cur = JSON.parse(b.dataset.c); renderC(); } });
+  function setBeat(cells, c, pattern, tie) {
+    const st = pattern.split(''); if (tie && st[0] === 'x') st[0] = '-';
+    const old = cells[c.bar][c.beat];
+    cells[c.bar][c.beat] = { sub: st.length, st, ov: st.map((s, j) => j === 0 && old.sub === st.length && old.st[0] === 'x' && s === 'x' ? old.ov[0] : null) };
+  }
+  function next() { if (cur.beat < 3) cur.beat++; else if (cur.bar < ex.bars.length - 1) cur = { bar: cur.bar + 1, beat: 0 }; }
+  function put(f) { const cells = toCells(ex.bars); const tie = figOfBeat(cells[cur.bar][cur.beat]).tie; setBeat(cells, cur, f.p, tie && f.p[0] === 'x'); const nb = fromCells(cells); next(); commit(nb); }
+  active.key = e => {
+    const k = e.key;
+    if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === 'd') { barAction('dup', cur.bar); return true; }
+    if ((e.ctrlKey || e.metaKey) && k === 'Enter') { barAction('ins', cur.bar); cur = { bar: cur.bar + 1, beat: 0 }; render(); return true; }
+    if (e.ctrlKey || e.metaKey || e.altKey) return false;
+    if (k === 'ArrowRight') { next(); renderC(); return true; }
+    if (k === 'ArrowLeft') { if (cur.beat > 0) cur.beat--; else if (cur.bar > 0) cur = { bar: cur.bar - 1, beat: 3 }; renderC(); return true; }
+    if (k === 'ArrowDown') { cur.bar = Math.min(ex.bars.length - 1, cur.bar + 1); renderC(); return true; }
+    if (k === 'ArrowUp') { cur.bar = Math.max(0, cur.bar - 1); renderC(); return true; }
+    const f = FIGS.find(f => f.k === k.toLowerCase()); if (f) { put(f); return true; }
+    if (k === 't' || k === 'T') {
+      const cells = toCells(ex.bars); const fb = figOfBeat(cells[cur.bar][cur.beat]);
+      const pi = cur.beat > 0 ? cells[cur.bar][cur.beat - 1] : cur.bar > 0 ? cells[cur.bar - 1][3] : null;
+      if (!pi || pi.st[pi.st.length - 1] === '.' || fb.p[0] !== 'x') return true; // nothing to tie from / to
+      setBeat(cells, cur, fb.p, !fb.tie); commit(fromCells(cells)); return true;
+    }
+    if (k === 'Backspace' || k === 'Delete') { const cells = toCells(ex.bars); setBeat(cells, cur, '....', false); const nb = fromCells(cells); if (k === 'Backspace') { if (cur.beat > 0) cur.beat--; else if (cur.bar > 0) cur = { bar: cur.bar - 1, beat: 3 }; } commit(nb); return true; }
+    return false;
+  };
+  function renderC() {
+    cur.bar = Math.min(cur.bar, ex.bars.length - 1);
+    const fl = flatten(ex.bars);
+    const sel = new Set(fl.filter(f => f.bi === cur.bar && Math.floor(f.start / TPB) === cur.beat).map(f => f.it.id));
+    renderNotation($('#nv'), ex.bars, { sel, curBar: cur.bar, onNoteClick: it => { const f = fl.find(f => f.it.id === it.id); if (f.bi === cur.bar && Math.floor(f.start / TPB) === cur.beat) cycleOverride(it); else { cur = { bar: f.bi, beat: Math.floor(f.start / TPB) }; renderC(); } } });
+    const cells = toCells(ex.bars);
+    strip.innerHTML = cells.map((bc, bi) => `<div class="cbar"><span class="hint" style="font-size:11px;width:34px">Bar ${bi + 1}</span>${bc.map((b, k) => {
+      const fb = figOfBeat(b); return `<div class="cbeat ${bi === cur.bar && k === cur.beat ? 'cur' : ''}" data-c='${JSON.stringify({ bar: bi, beat: k })}'>${fb.tie ? '<span class="tie">⌒</span>' : ''}<b>${fb.fig ? fb.fig.k.toUpperCase() : '?'}</b><span>${fb.p}</span></div>`; }).join('')}${barActions(bi)}</div>`).join('') + `<button data-act="ins" data-bar="${cells.length - 1}">＋ bar</button>`;
+    pal.querySelectorAll('.fig').forEach(el => { const fb = figOfBeat(cells[cur.bar][cur.beat]); el.classList.toggle('on', !!fb.fig && fb.fig.k === el.dataset.k); el.style.borderColor = fb.fig && fb.fig.k === el.dataset.k ? 'var(--accent)' : ''; });
+  }
+  return { render: o => { if (o && o.bar !== undefined) cur = { bar: o.bar, beat: 0 }; renderC(); } };
+}
+
+// ---------- shell ----------
+function renderState() {
+  const p = parseText(toText(ex.bars));
+  $('#state').innerHTML = toText(ex.bars).replace(/&/g, '&amp;').replace(/</g, '&lt;') + '\n' +
+    (p.ok ? '<span class="ok">valid</span>' : '<span class="err">' + p.bars.map((b, i) => b.err ? `bar ${i + 1}: ${b.err}` : '').filter(Boolean).join('; ') + '</span>') +
+    `  ·  ${ex.bars.length} bars  ·  sticking ${ex.mode}, lead ${ex.lead}`;
+}
+function render(o) { renderState(); if (active) active.view.render(o); }
+function setVariant(key) {
+  const i = Math.max(0, VARIANTS.findIndex(v => v.key === key)); const v = VARIANTS[i];
+  const u = new URL(location.href); u.searchParams.set('variant', v.key); history.replaceState && window.history.replaceState(null, '', u);
+  $('#vlabel').textContent = `${v.key} (${v.name})  ·  ${i + 1}/${VARIANTS.length}`;
+  active = { key: () => false, def: v }; active.view = v.make(); render();
+}
+function cycle(d) { const i = VARIANTS.findIndex(v => v.key === active.def.key); setVariant(VARIANTS[(i + d + VARIANTS.length) % VARIANTS.length].key); }
+$('#prev').onclick = () => cycle(-1); $('#next').onclick = () => cycle(1);
+$('#sample').onchange = e => { if (e.target.value !== '') loadSample(+e.target.value); e.target.value = ''; e.target.blur(); };
+$('#mode').onchange = e => { ex.mode = e.target.value; render(); e.target.blur(); };
+$('#lead').onchange = e => { ex.lead = e.target.value; render(); e.target.blur(); };
+$('#undo').onclick = undo;
+document.addEventListener('keydown', e => {
+  if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { cycle(e.key === 'ArrowLeft' ? -1 : 1); e.preventDefault(); return; }
+  const inField = e.target.matches('input, textarea, select, [contenteditable]');
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !inField) { undo(); e.preventDefault(); return; }
+  if (inField) return;
+  if (active && active.key(e)) e.preventDefault();
+});
+let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => render(), 150); });
+
+VF.loadFonts('Bravura', 'Academico').then(() => {
+  VF.setFonts('Bravura', 'Academico');
+  const p = parseText(SAMPLES[+(new URLSearchParams(location.search).get('sample') || 0)] || SAMPLES[0]); ex.bars = p.bars.map(b => ({ items: b.items, subs: [2, 2, 2, 2] }));
+  setVariant(new URLSearchParams(location.search).get('variant') || 'A');
+});
+</script>
+</body>
+</html>
