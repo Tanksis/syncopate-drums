@@ -28,6 +28,9 @@ The span of bars within an exercise that repeats during practice; the whole exer
 **Practice settings**:
 How an exercise is practiced rather than what it contains: BPM, loop range, groove preset and swing amount. Remembered per exercise.
 
+**Device settings**:
+How the app is set up on this computer rather than how an exercise is practiced: volumes, the exercise mute, the count-in toggle and vim keys. Kept per device and never exported.
+
 **Voice**:
 The drum an exercise's notes are played on (snare by default, or bass drum).
 

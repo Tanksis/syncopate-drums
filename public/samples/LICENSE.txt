@@ -1,0 +1,6 @@
+These drum samples are from Virtuosity Drums by Versilian Studios and Karoryfer,
+overhead microphone position, unedited:
+https://github.com/sfzinstruments/virtuosity_drums
+
+They are dedicated to the public domain under CC0 1.0 Universal:
+https://creativecommons.org/publicdomain/zero/1.0/
