@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { MAX_BPM, MIN_BPM } from '@/core'
 import { togglePlayback } from './transport'
@@ -32,6 +32,8 @@ function BpmControl() {
   // more digits could still follow (typing 300 shouldn't play at 30 on the way); Enter or
   // leaving the box applies whatever is there.
   const [draft, setDraft] = useState<string | null>(null)
+  // A pointer drag on the slider saves once it ends; arrow keys on it save at once.
+  const dragging = useRef(false)
 
   const type = (text: string) => {
     setDraft(text)
@@ -63,9 +65,14 @@ function BpmControl() {
         min={MIN_BPM}
         max={MAX_BPM}
         value={bpm}
-        onChange={(e) => setBpm(Number(e.target.value))}
-        // Hand the keyboard back to the editor once a drag ends.
-        onPointerUp={(e) => e.currentTarget.blur()}
+        onChange={(e) => setBpm(Number(e.target.value), { dragging: dragging.current })}
+        onPointerDown={() => (dragging.current = true)}
+        // Once a drag ends, save the tempo it settled on and hand the keyboard back to the editor.
+        onPointerUp={(e) => {
+          dragging.current = false
+          setBpm(Number(e.currentTarget.value))
+          e.currentTarget.blur()
+        }}
         className="w-36 accent-accent"
       />
     </label>

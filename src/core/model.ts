@@ -74,6 +74,15 @@ export interface Exercise {
   lastOpened: number
 }
 
+/** Settings kept per device rather than per exercise, and never exported. */
+export interface DeviceSettings {
+  countIn: boolean
+  /** The exercise open when the app was last used, reopened at launch. */
+  lastOpenedId: string | null
+}
+
+export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = { countIn: true, lastOpenedId: null }
+
 const BASE_TICKS: Record<Duration, number> = { quarter: 12, eighth: 6, sixteenth: 3 }
 
 /** How many ticks an item lasts. */

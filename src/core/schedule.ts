@@ -2,14 +2,9 @@
 // Musical position (bar, tick) is the source of truth. Each call converts ticks to seconds from
 // the position it is given, at the BPM it is given, so a tempo change only affects what comes next.
 
-import type { Exercise, PracticeSettings, Voice } from './model'
+import type { DeviceSettings, Exercise, PracticeSettings, Voice } from './model'
 import { TICKS_PER_BAR, TICKS_PER_BEAT } from './model'
 import { placeItems } from './speller'
-
-/** Settings kept per device rather than per exercise. */
-export interface DeviceSettings {
-  countIn: boolean
-}
 
 /** A place in the playback: bar index (negative during the count-in) and tick within the bar. */
 export interface PlayPosition {
