@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { EditorState, KeyPress } from './index'
+import type { EditorState, ExerciseSettings, KeyPress } from './index'
 import { applyEdit, beatViews, commandForKey, newEditorState, newExercise, withBpm } from './index'
 
 const press = (key: string, mods: Partial<KeyPress> = {}): KeyPress => ({
@@ -367,5 +367,28 @@ describe('undo and redo', () => {
     expect(keys(state, redo).exercise).toBe(state.exercise)
     const fresh = newEditorState(newExercise({ id: 'e1', now: 0 }))
     expect(keys(fresh, undo).exercise).toBe(fresh.exercise)
+  })
+})
+
+describe('sticking and voice settings', () => {
+  const set = (state: EditorState, settings: Partial<ExerciseSettings>) =>
+    applyEdit(state, { type: 'setExerciseSettings', settings })
+
+  it('change the exercise, each as one undoable step', () => {
+    const start = type(['1', '2'])
+    const edited = set(set(set(start, { sticking: 'alternate' }), { leadHand: 'L' }), { voice: 'bass' })
+    expect(edited.exercise).toMatchObject({ sticking: 'alternate', leadHand: 'L', voice: 'bass' })
+    expect(edited.exercise.bars).toBe(start.exercise.bars)
+
+    const undone = keys(edited, ctrl('z'))
+    expect(undone.exercise).toMatchObject({ sticking: 'alternate', leadHand: 'L', voice: 'snare' })
+    expect(keys(undone, ctrl('z'), ctrl('z')).exercise).toMatchObject({ sticking: 'natural', leadHand: 'R' })
+    expect(keys(undone, ctrl('z'), ctrl('z'), ctrl('z')).exercise.bars).not.toBe(start.exercise.bars)
+    expect(keys(undone, ctrl('Z', { shiftKey: true })).exercise.voice).toBe('bass')
+  })
+
+  it('setting what is already set is not a change', () => {
+    const state = type(['1'])
+    expect(set(state, { sticking: 'natural' })).toBe(state)
   })
 })
