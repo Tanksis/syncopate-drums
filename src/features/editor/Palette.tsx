@@ -42,7 +42,7 @@ export function Palette() {
   return (
     <div aria-label="Beat figure palette" className="flex flex-col gap-1.5">
       <div className="flex gap-1.5">{FIGURES.filter((f) => f.row === 0).map((f) => tile(f))}</div>
-      {/* Row 1, the home row, holds the triplet figures (a later ticket). */}
+      <div className="flex gap-1.5 pl-5">{FIGURES.filter((f) => f.row === 1).map((f) => tile(f))}</div>
       <div className="flex gap-1.5 pl-9">
         {FIGURES.filter((f) => f.row === 2).map((f) => tile(f))}
         {tile(REST_FIGURE, true)}

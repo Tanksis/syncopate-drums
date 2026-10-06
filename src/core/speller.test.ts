@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest'
 import type { Bar, Item } from './index'
 import { FIGURES, REST_FIGURE, TICKS_PER_BAR, beatViews, itemTicks, restBar, setBeat } from './index'
 
-/** A bar in shorthand: q e s for note values, `.` for a dot, r for a rest, ~ for a tie. */
+/** A bar in shorthand: q e s for note values, `.` for a dot, 3 for a triplet, r for a rest, ~ for a tie. */
 function text(bars: Bar[]): string {
-  const value = (i: Item) => ({ quarter: 'q', eighth: 'e', sixteenth: 's' })[i.duration] + (i.dotted ? '.' : '')
+  const value = (i: Item) =>
+    ({ quarter: 'q', eighth: 'e', sixteenth: 's' })[i.duration] + (i.dotted ? '.' : '') + (i.triplet ? '3' : '')
   return bars
     .map((bar) =>
       bar.items
@@ -40,6 +41,22 @@ describe('the auto-speller', () => {
     expect(text(bar(figure.hits))).toBe(`${spelled} rq rq rq`)
   })
 
+  it.each([
+    ['a', 'e3 e3 e3'],
+    ['s', 'q3 e3'],
+    ['d', 'e3 q3'],
+    ['f', 're3 e3 e3'],
+    ['g', 're3 q3'],
+    ['h', 'rq3 e3'],
+  ])('spells triplet figure %s as %s, a one-beat triplet group', (key, spelled) => {
+    const figure = FIGURES.find((f) => f.key === key)!
+    expect(text(bar(figure.hits))).toBe(`${spelled} rq rq rq`)
+  })
+
+  it('spells triplet beats next to straight beats in the same bar', () => {
+    expect(text(bar('x...', 'x.x', '.xxx', 'xxx'))).toBe('q q3 e3 rs s s s e3 e3 e3')
+  })
+
   it('spells a rest beat as a quarter rest, never merging rests across beats', () => {
     expect(text(bar('x...', '....', '....', 'x.x.'))).toBe('q rq rq e e')
   })
@@ -64,6 +81,15 @@ describe('beat views', () => {
       views[0].forEach((v, b) => b !== beat && expect(v.hits).toBe(before[0][b].hits))
     },
   )
+
+  it.each(FIGURES.map((f) => [f.key, f] as const))('round-trip figure %j between triplet beats', (_, figure) => {
+    const bars = setBeat(bar('xxx', 'x.x', '..x', '.xx'), 0, 1, figure.hits)
+    expect(beatViews(bars)[0].map((v) => v.hits)).toEqual(['xxx', figure.hits, '..x', '.xx'])
+  })
+
+  it('turns a triplet beat back into a straight one', () => {
+    expect(text(setBeat(bar('xxx'), 0, 0, 'x.x.'))).toBe('e e rq rq rq')
+  })
 
   it('reads a new bar of rests as four rest beats', () => {
     expect(beatViews([restBar()])[0].map((v) => v.figure)).toEqual([REST_FIGURE, REST_FIGURE, REST_FIGURE, REST_FIGURE])
