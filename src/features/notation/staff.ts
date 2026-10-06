@@ -3,8 +3,8 @@
 // short last line keeps the bar width and stays left aligned.
 
 import { Beam, Dot, Formatter, Fraction, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
-import type { Cursor, Exercise, Item, PlacedItem } from '@/core'
-import { TICKS_PER_BEAT, placeItems, restBar, setBeat } from '@/core'
+import type { Cursor, Exercise, Hand, Item, PlacedItem, Voice as DrumVoice } from '@/core'
+import { TICKS_PER_BEAT, placeItems, restBar, setBeat, sticking } from '@/core'
 
 // Mirrors the accent and a light tint of it from the design tokens in styles/index.css.
 const CURSOR_COLOUR = '#2563eb'
@@ -15,7 +15,6 @@ const MIN_BAR_WIDTH = 190
 /** Room for the clef (and, on the first line, the time signature) before the first bar's notes. */
 const CLEF_WIDTH = 70
 const MARGIN = 10
-const LINE_HEIGHT = 110
 const STAVE_TOP = 10
 
 /** The SVG is drawn in Bravura and Academico, which VexFlow loads as web fonts. */
@@ -29,9 +28,25 @@ function vexDuration(item: Item): string {
   return base + (item.dotted ? 'd' : '') + (item.kind === 'rest' ? 'r' : '')
 }
 
-function staveNote(item: Item, highlight: boolean): StaveNote {
+/** Where each voice's notes sit on the percussion staff: snare on the third space, bass drum on the first. */
+const VOICE_KEY: Record<DrumVoice, string> = { snare: 'c/5', bass: 'f/4' }
+/** The same, as a stave line counted down from the top line. */
+const VOICE_LINE: Record<DrumVoice, number> = { snare: 1.5, bass: 3.5 }
+/** Stave lines from a notehead down past its stem and a tuplet's "3" to the sticking row. */
+const HAND_ROW_DROP = 8
+/** Stave lines a stave leaves above its top line, for the bar number. */
+const SPACE_ABOVE_STAVE = 4
+const STAVE_LINE_GAP = 10
+
+/** The stave line the sticking is printed on, one row for the whole line so the hands read across. */
+const handRowLine = (voice: DrumVoice) => VOICE_LINE[voice] + HAND_ROW_DROP
+
+/** Each line of music is tall enough for the sticking row under the voice's stems and tuplets. */
+const lineHeight = (voice: DrumVoice) => (SPACE_ABOVE_STAVE + handRowLine(voice) + 1) * STAVE_LINE_GAP
+
+function staveNote(item: Item, highlight: boolean, voice: DrumVoice = 'snare'): StaveNote {
   const note = new StaveNote({
-    keys: [item.kind === 'rest' ? 'b/4' : 'c/5'],
+    keys: [item.kind === 'rest' ? 'b/4' : VOICE_KEY[voice]],
     duration: vexDuration(item),
     stemDirection: -1,
     clef: 'percussion',
@@ -88,11 +103,13 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   const barsPerLine = Math.max(1, Math.min(BARS_PER_LINE, Math.floor(available / MIN_BAR_WIDTH)))
   const barWidth = Math.floor(available / barsPerLine)
   const lines = Math.ceil(bars.length / barsPerLine)
+  const height = lineHeight(exercise.voice)
 
   const renderer = new Renderer(el as HTMLDivElement, Renderer.Backends.SVG)
-  renderer.resize(width, lines * LINE_HEIGHT + STAVE_TOP)
+  renderer.resize(width, lines * height + STAVE_TOP)
   const ctx = renderer.getContext()
   const placed = placeItems(bars)
+  const hands = new Map(sticking(exercise).map((n) => [n.noteId, n.shown]))
   // Every drawn note in exercise order, with its line, for drawing the ties once all bars are formatted.
   const drawn: { note: StaveNote; line: number }[] = []
 
@@ -101,7 +118,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
     const column = b % barsPerLine
     const x = MARGIN + (column === 0 ? 0 : CLEF_WIDTH + column * barWidth)
     const w = barWidth + (column === 0 ? CLEF_WIDTH : 0)
-    const y = STAVE_TOP + line * LINE_HEIGHT
+    const y = STAVE_TOP + line * height
 
     const stave = new Stave(x, y, w).setMeasure(b + 1)
     if (column === 0) stave.addClef('percussion')
@@ -116,7 +133,11 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
 
     const inBar = placed.filter((p) => p.bar === b)
     const notes = inBar.map((p) =>
-      staveNote(p.item, b === cursor.bar && Math.floor(p.start / TICKS_PER_BEAT) === cursor.beat),
+      staveNote(
+        p.item,
+        b === cursor.bar && Math.floor(p.start / TICKS_PER_BEAT) === cursor.beat,
+        exercise.voice,
+      ),
     )
     drawNotes(stave, inBar, notes, 4, Math.max(30, x + w - stave.getNoteStartX() - 18))
     notes.forEach((note, i) => {
@@ -126,6 +147,8 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
       svg?.setAttribute('data-beat', String(Math.floor(inBar[i].start / TICKS_PER_BEAT)))
       svg?.classList.add('cursor-pointer')
       drawn.push({ note, line })
+      const hand = hands.get(`${b}:${inBar[i].start}`)
+      if (hand) drawHand(stave, note, hand, handRowLine(exercise.voice))
     })
   })
 
@@ -144,8 +167,18 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
     ties.forEach((tie) => tie.setContext(ctx).draw())
   })
 
-  const top = Math.floor(cursor.bar / barsPerLine) * LINE_HEIGHT
-  return { top, bottom: top + LINE_HEIGHT + STAVE_TOP }
+  const top = Math.floor(cursor.bar / barsPerLine) * height
+  return { top, bottom: top + height + STAVE_TOP }
+}
+
+/** Prints R or L centred under a note, on the given stave line. */
+function drawHand(stave: Stave, note: StaveNote, hand: Hand, line: number) {
+  const ctx = stave.checkContext()
+  ctx.save()
+  ctx.setFont('Academico', 12, 'bold')
+  const x = (note.getNoteHeadBeginX() + note.getNoteHeadEndX()) / 2 - ctx.measureText(hand).width / 2
+  ctx.fillText(hand, x, stave.getYForLine(line))
+  ctx.restore()
 }
 
 /** The second half of a tie split by a line break: it starts back by the clef, not at the note. */

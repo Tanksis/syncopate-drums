@@ -2,7 +2,7 @@
 // turns a key press into a command, so the UI only dispatches.
 
 import { FIGURES, REST_FIGURE } from './figures'
-import type { Bar, Exercise } from './model'
+import type { Bar, Exercise, Hand, StickingMode, Voice } from './model'
 import { BEATS_PER_BAR, restBar } from './model'
 import { beatViews, setBeat, toggleCutShort, toggleTie } from './speller'
 
@@ -26,9 +26,17 @@ export interface EditorState {
   history: History
 }
 
-/** The bars and cursor as they were before a change, to go back to. */
+/** The exercise settings that are edited like its notes: every change to them can be undone. */
+export interface ExerciseSettings {
+  sticking: StickingMode
+  leadHand: Hand
+  voice: Voice
+}
+
+/** The bars, settings and cursor as they were before a change, to go back to. */
 interface Snapshot {
   bars: Bar[]
+  settings: ExerciseSettings
   cursor: Cursor
 }
 
@@ -61,6 +69,7 @@ export type EditCommand =
   | { type: 'copyBars' }
   /** Pastes the copied bars over the bars from the cursor bar on, growing the exercise if needed. */
   | { type: 'pasteBars' }
+  | { type: 'setExerciseSettings'; settings: Partial<ExerciseSettings> }
   | { type: 'undo' }
   | { type: 'redo' }
 
@@ -84,7 +93,7 @@ export function applyEdit(state: EditorState, command: EditCommand): EditorState
   // Copying keeps the selection; any other command ends it, once it has had the chance to act on it.
   const edited = edit(state, command)
   const next = command.type === 'copyBars' ? edited : clearSelection(edited)
-  if (next.exercise.bars === state.exercise.bars) return next
+  if (next.exercise.bars === state.exercise.bars && sameSettings(next.exercise, state.exercise)) return next
   const undo = [...state.history.undo, snapshot(state)].slice(-UNDO_LIMIT)
   return { ...next, history: { undo, redo: [] } }
 }
@@ -94,8 +103,12 @@ function clearSelection(state: EditorState): EditorState {
 }
 
 function snapshot(state: EditorState): Snapshot {
-  return { bars: state.exercise.bars, cursor: state.cursor }
+  const { bars, sticking, leadHand, voice } = state.exercise
+  return { bars, settings: { sticking, leadHand, voice }, cursor: state.cursor }
 }
+
+const sameSettings = (a: ExerciseSettings, b: ExerciseSettings) =>
+  a.sticking === b.sticking && a.leadHand === b.leadHand && a.voice === b.voice
 
 /** Goes back a change (undo) or forward again (redo), restoring the bars and the cursor. */
 function travel(state: EditorState, direction: 'undo' | 'redo'): EditorState {
@@ -106,7 +119,8 @@ function travel(state: EditorState, direction: 'undo' | 'redo'): EditorState {
     direction === 'undo'
       ? { undo: undo.slice(0, -1), redo: [...redo, snapshot(state)] }
       : { undo: [...undo, snapshot(state)], redo: redo.slice(0, -1) }
-  return { ...withBars(state, target.bars), cursor: target.cursor, history }
+  const exercise = { ...state.exercise, bars: target.bars, ...target.settings }
+  return { ...state, exercise, cursor: target.cursor, history }
 }
 
 function edit(
@@ -178,6 +192,10 @@ function edit(
     }
     case 'moveTo':
       return moveTo(state, command.bar, command.beat)
+    case 'setExerciseSettings': {
+      const exercise = { ...state.exercise, ...command.settings }
+      return sameSettings(exercise, state.exercise) ? state : { ...state, exercise }
+    }
     case 'jump':
       return command.to === 'start'
         ? moveTo(state, 0, 0)
