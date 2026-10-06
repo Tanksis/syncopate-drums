@@ -10,4 +10,5 @@
 - [ ] The page shows the three empty columns of layout A at laptop width
 - [ ] The exercise core is its own module with no React, DOM, Web Audio or IndexedDB imports, and has at least one passing Vitest test
 - [ ] The Actions workflow runs Vitest on every push to `main` and deploys only if it passes; a deliberately failing test blocks the deploy
+- [ ] The same Vitest check runs on every pull request into `main` (without deploying), so PRs can't merge red, per the [branching ADR](../../../docs/adr/0001-branching-and-releases.md)
 - [ ] Every dependency is MIT or CC0

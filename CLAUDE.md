@@ -1,5 +1,9 @@
 # Syncopate!
 
+## Branching
+
+GitHub Flow: `main` always deploys; work on `feature/<NN>-<slug>` (ticket number), `fix/`, `chore/` or `docs/` branches and squash-merge by PR once Vitest passes. Releases are `vX.Y.Z` tags on `main`. See `docs/adr/0001-branching-and-releases.md`.
+
 ## Agent skills
 
 ### Issue tracker
