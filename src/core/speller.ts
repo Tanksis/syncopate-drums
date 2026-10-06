@@ -2,7 +2,7 @@
 // back by re-spelling the bars. The drummer never chooses note values, rests, dots or ties.
 
 import type { Figure } from './figures'
-import { figureOfHits } from './figures'
+import { figureOfHits, isTripletHits } from './figures'
 import type { Bar, Hand, Item } from './model'
 import { BEATS_PER_BAR, TICKS_PER_BAR, TICKS_PER_BEAT, itemTicks } from './model'
 
@@ -51,7 +51,10 @@ function toTimeline(bars: readonly Bar[]): Timeline {
   const triplet = Array.from({ length: bars.length * BEATS_PER_BAR }, () => false)
   const placed = placeItems(bars)
   const at = (p: PlacedItem) => p.bar * TICKS_PER_BAR + p.start
-  for (const p of placed) if (p.item.triplet) triplet[Math.floor(at(p) / TICKS_PER_BEAT)] = true
+  // A triplet group of rests alone is just a rest beat.
+  for (const p of placed) {
+    if (p.item.triplet && p.item.kind === 'note') triplet[Math.floor(at(p) / TICKS_PER_BEAT)] = true
+  }
   let i = 0
   for (let tick = 0; tick < bars.length * TICKS_PER_BAR; tick++) {
     while (i + 1 < placed.length && at(placed[i + 1]) <= tick) i++
@@ -121,9 +124,10 @@ function fromTimeline({ cells, triplet }: Timeline): Bar[] {
   })
 
   const tripletAt = (tick: number) => triplet[Math.floor(tick / TICKS_PER_BEAT)] ?? false
-  // A note is cut at bar lines (and tied across) and at a triplet group's edges; a rest at every beat.
+  // A note is cut at bar lines (and tied across) and at a triplet group's edges, where this beat or
+  // the one before it is a triplet group; a rest at every beat.
   const cutsAt = (beatStart: number, note: boolean) =>
-    !note || beatStart % TICKS_PER_BAR === 0 || tripletAt(beatStart) || tripletAt(beatStart - 1)
+    !note || beatStart % TICKS_PER_BAR === 0 || tripletAt(beatStart) || tripletAt(beatStart - TICKS_PER_BEAT)
 
   const bars: Bar[] = Array.from({ length: cells.length / TICKS_PER_BAR }, () => ({ items: [] }))
   for (const seg of segments) {
@@ -184,7 +188,7 @@ export function setBeat(bars: readonly Bar[], bar: number, beat: number, hits: s
   const { cells } = timeline
   const index = bar * BEATS_PER_BAR + beat
   const first = index * TICKS_PER_BEAT
-  const triplet = hits.length === 3
+  const triplet = isTripletHits(hits)
   timeline.triplet[index] = triplet
   const hitTicks = new Set(slotTicks(triplet).filter((_, i) => hits[i] === 'x'))
   let sounding = false

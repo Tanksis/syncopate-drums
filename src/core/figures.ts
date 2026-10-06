@@ -18,7 +18,12 @@ export const FIGURES: readonly Figure[] = [
   ['6', 'xxx.'], ['7', 'x..x'], ['8', 'xx.x'], ['9', '.xxx'], ['0', '..xx'],
   ['a', 'xxx'], ['s', 'x.x'], ['d', 'xx.'], ['f', '.xx'], ['g', '.x.'], ['h', '..x'],
   ['z', '.x..'], ['x', '...x'], ['c', '.xx.'], ['v', '.x.x'], ['b', 'xx..'],
-].map(([key, hits]): Figure => ({ key, hits, row: /\d/.test(key) ? 0 : hits.length === 3 ? 1 : 2 }))
+].map(([key, hits]): Figure => ({ key, hits, row: /\d/.test(key) ? 0 : isTripletHits(hits) ? 1 : 2 }))
+
+/** Three characters, one per triplet eighth, make a triplet figure. */
+export function isTripletHits(hits: string): boolean {
+  return hits.length === 3
+}
 
 /** Space: a beat with no hits. */
 export const REST_FIGURE: Figure = { key: ' ', hits: '....', row: 2 }

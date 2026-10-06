@@ -91,6 +91,21 @@ describe('beat views', () => {
     expect(text(setBeat(bar('xxx'), 0, 0, 'x.x.'))).toBe('e e rq rq rq')
   })
 
+  it('reads a triplet group of rests as a rest beat', () => {
+    const rest: Item = { kind: 'rest', duration: 'eighth', dotted: false, triplet: true }
+    const bars: Bar[] = [{ items: [rest, rest, rest, ...restBar().items.slice(1)] }]
+    expect(beatViews(bars)[0][0].figure).toBe(REST_FIGURE)
+  })
+
+  it('writes triplet beats into a later bar and reads them back', () => {
+    const bars = setBeat(setBeat([restBar(), restBar()], 0, 3, 'x.x'), 1, 0, '.xx')
+    expect(text(bars)).toBe('rq rq rq q3 e3 | re3 e3 e3 rq rq rq')
+    expect(beatViews(bars).map((b) => b.map((v) => v.hits))).toEqual([
+      ['....', '....', '....', 'x.x'],
+      ['.xx', '....', '....', '....'],
+    ])
+  })
+
   it('reads a new bar of rests as four rest beats', () => {
     expect(beatViews([restBar()])[0].map((v) => v.figure)).toEqual([REST_FIGURE, REST_FIGURE, REST_FIGURE, REST_FIGURE])
   })
