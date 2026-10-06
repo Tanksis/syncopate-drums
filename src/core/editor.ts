@@ -2,7 +2,7 @@
 // turns a key press into a command, so the UI only dispatches.
 
 import { FIGURES, REST_FIGURE } from './figures'
-import type { Bar, Exercise, Hand, StickingMode, Voice } from './model'
+import type { Bar, Exercise } from './model'
 import { BEATS_PER_BAR, restBar } from './model'
 import { beatViews, setBeat, toggleCutShort, toggleTie } from './speller'
 
@@ -27,11 +27,9 @@ export interface EditorState {
 }
 
 /** The exercise settings that are edited like its notes: every change to them can be undone. */
-export interface ExerciseSettings {
-  sticking: StickingMode
-  leadHand: Hand
-  voice: Voice
-}
+export type ExerciseSettings = Pick<Exercise, 'sticking' | 'leadHand' | 'voice'>
+
+const SETTING_KEYS: readonly (keyof ExerciseSettings)[] = ['sticking', 'leadHand', 'voice']
 
 /** The bars, settings and cursor as they were before a change, to go back to. */
 interface Snapshot {
@@ -103,12 +101,12 @@ function clearSelection(state: EditorState): EditorState {
 }
 
 function snapshot(state: EditorState): Snapshot {
-  const { bars, sticking, leadHand, voice } = state.exercise
-  return { bars, settings: { sticking, leadHand, voice }, cursor: state.cursor }
+  const { exercise } = state
+  const settings = Object.fromEntries(SETTING_KEYS.map((k) => [k, exercise[k]])) as ExerciseSettings
+  return { bars: exercise.bars, settings, cursor: state.cursor }
 }
 
-const sameSettings = (a: ExerciseSettings, b: ExerciseSettings) =>
-  a.sticking === b.sticking && a.leadHand === b.leadHand && a.voice === b.voice
+const sameSettings = (a: ExerciseSettings, b: ExerciseSettings) => SETTING_KEYS.every((k) => a[k] === b[k])
 
 /** Goes back a change (undo) or forward again (redo), restoring the bars and the cursor. */
 function travel(state: EditorState, direction: 'undo' | 'redo'): EditorState {

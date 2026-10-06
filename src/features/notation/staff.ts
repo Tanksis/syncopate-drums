@@ -148,7 +148,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
       svg?.classList.add('cursor-pointer')
       drawn.push({ note, line })
       const hand = hands.get(`${b}:${inBar[i].start}`)
-      if (hand) drawHand(stave, note, hand, handRowLine(exercise.voice))
+      if (hand) drawHand(stave, note, hand, handRowLine(exercise.voice), `${b}:${inBar[i].start}`)
     })
   })
 
@@ -171,14 +171,17 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   return { top, bottom: top + height + STAVE_TOP }
 }
 
-/** Prints R or L centred under a note, on the given stave line. */
-function drawHand(stave: Stave, note: StaveNote, hand: Hand, line: number) {
+/** Prints R or L centred under a note, on the given stave line, in a group tagged with the note's id. */
+function drawHand(stave: Stave, note: StaveNote, hand: Hand, line: number, noteId: string) {
   const ctx = stave.checkContext()
+  const group: SVGGElement = ctx.openGroup('hand')
+  group.dataset.noteId = noteId
   ctx.save()
   ctx.setFont('Academico', 12, 'bold')
   const x = (note.getNoteHeadBeginX() + note.getNoteHeadEndX()) / 2 - ctx.measureText(hand).width / 2
   ctx.fillText(hand, x, stave.getYForLine(line))
   ctx.restore()
+  ctx.closeGroup()
 }
 
 /** The second half of a tie split by a line break: it starts back by the clef, not at the note. */

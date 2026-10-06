@@ -98,3 +98,12 @@ describe('overrides and hidden sticking', () => {
     ])
   })
 })
+
+describe('sticking over the whole exercise', () => {
+  it('is computed from bar 1 whatever the loop range', () => {
+    const ex = line(['x.x.', 'x...', 'x...', 'x...', 'x.x.'], { mode: 'alternate' })
+    const looped = { ...ex, practice: { ...ex.practice, loopRange: { first: 1, last: 1 } } }
+    expect(shown(looped)).toBe(shown(ex))
+    expect(shown(looped)).toBe('RLRLR' + 'LR')
+  })
+})

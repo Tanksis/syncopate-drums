@@ -53,7 +53,11 @@ function alternate(placed: readonly PlacedItem[], lead: Hand): Hand[] {
 function natural(placed: readonly PlacedItem[], lead: Hand): Hand[] {
   const beatOf = (p: PlacedItem) => p.bar * BEATS_PER_BAR + Math.floor(p.start / TICKS_PER_BEAT)
   const byBeat = new Map<number, number[]>()
-  placed.forEach((p, i) => byBeat.set(beatOf(p), [...(byBeat.get(beatOf(p)) ?? []), i]))
+  placed.forEach((p, i) => {
+    const indexes = byBeat.get(beatOf(p))
+    if (indexes) indexes.push(i)
+    else byBeat.set(beatOf(p), [i])
+  })
   const hands: Hand[] = placed.map(() => lead)
   /** Triplet slots already used by the run of triplet beats so far. */
   let run = 0
