@@ -20,7 +20,7 @@ export function App() {
           <h1 className="m-0 text-base font-bold">Syncopate!</h1>
           <ExerciseName />
           {!saving && (
-            <span className="font-semibold text-red-700" title="This browser blocked storage, or it failed to open">
+            <span className="font-semibold text-danger" title="This browser blocked storage, or it failed to open">
               Not saving: changes will be lost on reload
             </span>
           )}

@@ -1,9 +1,13 @@
 import type { MouseEvent } from 'react'
 import { useState } from 'react'
 import { useAppStore } from '@/app/store'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { NameInput } from '@/components/NameInput'
 import { PanelHeading } from '@/components/PanelHeading'
+import type { Exercise } from '@/core'
 import { filterByName } from '@/core'
+
+const exerciseCount = (list: unknown[]) => (list.length === 1 ? '1 exercise' : `${list.length} exercises`)
 
 // Buttons keep focus off themselves, so Space still enters a rest rather than clicking them again.
 const keepFocus = (e: MouseEvent) => e.preventDefault()
@@ -11,7 +15,10 @@ const keepFocus = (e: MouseEvent) => e.preventDefault()
 const buttonClass =
   'flex-1 cursor-pointer rounded-md border border-line bg-card px-2 py-1 font-semibold hover:border-accent'
 
-/** The exercise library: filter, New and Duplicate, and the list (click to open, double-click to rename). */
+/**
+ * The exercise library: filter, New, Duplicate and Delete, and the list (click to open, double-click
+ * to rename, tick to select). The selection stays through filtering and can be deleted together.
+ */
 export function LibrarySidebar() {
   const library = useAppStore((s) => s.library)
   const openId = useAppStore((s) => s.editor.exercise.id)
@@ -19,9 +26,22 @@ export function LibrarySidebar() {
   const createExercise = useAppStore((s) => s.createExercise)
   const duplicateOpenExercise = useAppStore((s) => s.duplicateOpenExercise)
   const renameExercise = useAppStore((s) => s.renameExercise)
+  const deleteExercises = useAppStore((s) => s.deleteExercises)
   const [filter, setFilter] = useState('')
   const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set())
+  /** The exercises waiting on the delete confirm, if it's showing. */
+  const [toDelete, setToDelete] = useState<Exercise[] | null>(null)
   const shown = filterByName(library, filter)
+  // Exercises discarded or deleted since they were ticked drop out here.
+  const selected = library.filter((e) => selectedIds.has(e.id))
+
+  const toggleSelected = (id: string) =>
+    setSelectedIds((ids) => {
+      const next = new Set(ids)
+      if (!next.delete(id)) next.add(id)
+      return next
+    })
 
   return (
     <aside
@@ -42,6 +62,15 @@ export function LibrarySidebar() {
         >
           Duplicate
         </button>
+        <button
+          type="button"
+          title="Delete the open exercise"
+          onMouseDown={keepFocus}
+          onClick={() => setToDelete(library.filter((e) => e.id === openId))}
+          className={buttonClass}
+        >
+          Delete
+        </button>
       </div>
       <input
         type="search"
@@ -51,9 +80,38 @@ export function LibrarySidebar() {
         onChange={(e) => setFilter(e.target.value)}
         className="rounded-md border border-line bg-card px-2 py-1 outline-none focus:border-accent"
       />
+      {selected.length > 0 && (
+        <div className="flex items-center gap-1.5 text-xs whitespace-nowrap">
+          <span className="flex-1 text-mute">{selected.length} selected</span>
+          <button
+            type="button"
+            onMouseDown={keepFocus}
+            onClick={() => setSelectedIds(new Set())}
+            className="cursor-pointer rounded-md border border-line bg-card px-1.5 py-1 hover:border-accent"
+          >
+            Clear
+          </button>
+          <button
+            type="button"
+            onMouseDown={keepFocus}
+            onClick={() => setToDelete(selected)}
+            className="cursor-pointer rounded-md border border-line bg-card px-1.5 py-1 font-semibold text-danger hover:border-danger"
+          >
+            Delete selected
+          </button>
+        </div>
+      )}
       <ul className="m-0 flex min-h-0 list-none flex-col overflow-auto p-0">
         {shown.map((exercise) => (
-          <li key={exercise.id}>
+          <li key={exercise.id} className="flex items-center gap-1 pl-1">
+            <input
+              type="checkbox"
+              aria-label={`Select ${exercise.name}`}
+              checked={selectedIds.has(exercise.id)}
+              onMouseDown={keepFocus}
+              onChange={() => toggleSelected(exercise.id)}
+              className="shrink-0 cursor-pointer accent-accent"
+            />
             {renamingId === exercise.id ? (
               <NameInput
                 name={exercise.name}
@@ -61,7 +119,7 @@ export function LibrarySidebar() {
                   if (name !== null) renameExercise(exercise.id, name)
                   setRenamingId(null)
                 }}
-                className="w-full py-1"
+                className="w-full flex-1 py-1"
               />
             ) : (
               <button
@@ -71,7 +129,7 @@ export function LibrarySidebar() {
                 onMouseDown={keepFocus}
                 onClick={() => openExercise(exercise.id)}
                 onDoubleClick={() => setRenamingId(exercise.id)}
-                className={`w-full cursor-pointer truncate rounded-md border-0 px-2 py-1 text-left ${
+                className={`min-w-0 flex-1 cursor-pointer truncate rounded-md border-0 px-2 py-1 text-left ${
                   exercise.id === openId ? 'bg-accent/10 font-semibold text-accent' : 'bg-transparent hover:bg-line'
                 }`}
               >
@@ -82,6 +140,21 @@ export function LibrarySidebar() {
         ))}
         {shown.length === 0 && <li className="px-2 py-1 text-mute">No exercises match.</li>}
       </ul>
+      {toDelete && (
+        <ConfirmDialog
+          title={toDelete.length === 1 ? `Delete “${toDelete[0].name}”?` : `Delete ${exerciseCount(toDelete)}?`}
+          confirmLabel={`Delete ${exerciseCount(toDelete)}`}
+          onConfirm={() => {
+            const ids = toDelete.map((e) => e.id)
+            deleteExercises(ids)
+            setSelectedIds((selected) => new Set([...selected].filter((id) => !ids.includes(id))))
+            setToDelete(null)
+          }}
+          onCancel={() => setToDelete(null)}
+        >
+          This can't be undone.
+        </ConfirmDialog>
+      )}
     </aside>
   )
 }

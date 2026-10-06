@@ -7,6 +7,7 @@ import {
   addedOnTop,
   applyEdit,
   duplicateExercise,
+  exerciseToOpenAfterDelete,
   exerciseToOpenAtLaunch,
   isUnchangedNew,
   launchListOrder,
@@ -38,6 +39,11 @@ interface AppState {
   duplicateOpenExercise: () => void
   /** Empty or blank names are ignored. */
   renameExercise: (id: string, name: string) => void
+  /**
+   * Deletes exercises for good. If the open one goes, the most recently opened one left opens, or a
+   * new Untitled one when none are left.
+   */
+  deleteExercises: (ids: string[]) => void
 }
 
 /** How long a slider must rest before its value is saved. */
@@ -62,19 +68,24 @@ function flushSave() {
   unsaved = null
 }
 
+/** Drops exercises from storage, with any save of theirs still pending, and returns the library without them. */
+function remove(ids: string[], library: Exercise[]): Exercise[] {
+  if (unsaved && ids.includes(unsaved.id)) {
+    clearTimeout(saveTimer)
+    unsaved = null
+  }
+  storage?.exercises.deleteMany(ids).catch((error) => console.error('Delete failed', error))
+  return library.filter((e) => !ids.includes(e.id))
+}
+
 /** Leaving an unchanged new exercise discards it; otherwise any pending save goes out now. */
 function leave(exercise: Exercise, library: Exercise[]): Exercise[] {
   if (!isUnchangedNew(exercise)) {
     flushSave()
     return library
   }
-  if (unsaved?.id === exercise.id) {
-    clearTimeout(saveTimer)
-    unsaved = null
-  }
   // It is stored only if it was changed and then changed back.
-  storage?.exercises.deleteMany([exercise.id]).catch((error) => console.error('Discard failed', error))
-  return library.filter((e) => e.id !== exercise.id)
+  return remove([exercise.id], library)
 }
 
 /** A new Untitled exercise, made now. */
@@ -88,14 +99,17 @@ export const useAppStore = create<AppState>()((set, get) => {
     autosave(exercise, options)
   }
 
-  /** Leaves the open exercise and opens another, now, remembering it as the last one open. */
-  function switchTo(next: Exercise, place: (library: Exercise[], next: Exercise) => Exercise[]) {
+  /**
+   * Leaves the open exercise and opens another, now, remembering it as the last one open. `remaining`
+   * is the library once the open exercise is gone, when it was deleted rather than left.
+   */
+  function switchTo(next: Exercise, place: (library: Exercise[], next: Exercise) => Exercise[], remaining?: Exercise[]) {
     const { editor, library, device } = get()
     const opened = { ...next, lastOpened: Date.now() }
     const deviceNow = { ...device, lastOpenedId: opened.id }
     set({
       editor: newEditorState(opened),
-      library: place(leave(editor.exercise, library), opened),
+      library: place(remaining ?? leave(editor.exercise, library), opened),
       device: deviceNow,
     })
     // A new exercise isn't stored until it is first changed.
@@ -142,6 +156,15 @@ export const useAppStore = create<AppState>()((set, get) => {
         set({ library: updatedInPlace(library, renamed) })
         storage?.exercises.put(renamed).catch((error) => console.error('Saving the name failed', error))
       }
+    },
+    deleteExercises: (ids) => {
+      const { editor, library } = get()
+      const openId = editor.exercise.id
+      const remaining = remove(ids, library)
+      if (!ids.includes(openId)) return set({ library: remaining })
+      const next = exerciseToOpenAfterDelete(library, openId, ids)
+      if (next) switchTo(next, updatedInPlace, remaining)
+      else switchTo(untitledExercise(), addedOnTop, remaining)
     },
   }
 })

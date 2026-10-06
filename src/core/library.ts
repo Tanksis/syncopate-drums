@@ -1,4 +1,4 @@
-// Library rules: which exercise opens, and later the list order, filter, duplicate and discard.
+// Library rules: which exercise opens (at launch or after a delete), list order, filter, duplicate and discard.
 
 import type { Exercise } from './model'
 import { newExercise } from './model'
@@ -15,6 +15,20 @@ export function exerciseToOpenAtLaunch<E extends Pick<Exercise, 'id' | 'lastOpen
     library.find((e) => e.id === lastOpenedId) ??
     library.reduce<E | null>((latest, e) => (latest === null || e.lastOpened > latest.lastOpened ? e : latest), null)
   )
+}
+
+/**
+ * The exercise to have open after deleting some: the open one if it is kept, otherwise the most
+ * recently opened one left. Null when none are left, where a new Untitled exercise opens instead,
+ * so the screen is never empty.
+ */
+export function exerciseToOpenAfterDelete<E extends Pick<Exercise, 'id' | 'lastOpened'>>(
+  library: E[],
+  openId: string,
+  deletedIds: string[],
+): E | null {
+  const deleted = new Set(deletedIds)
+  return exerciseToOpenAtLaunch(library.filter((e) => !deleted.has(e.id)), openId)
 }
 
 /**

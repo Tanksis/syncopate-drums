@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   applyEdit,
   duplicateExercise,
+  exerciseToOpenAfterDelete,
   exerciseToOpenAtLaunch,
   filterByName,
   launchListOrder,
@@ -31,6 +32,21 @@ describe('the exercise opened at launch', () => {
   it('is none with an empty library, so a new Untitled exercise opens', () => {
     expect(exerciseToOpenAtLaunch([], 'deleted')).toBeNull()
     expect(exerciseToOpenAtLaunch([], null)).toBeNull()
+  })
+})
+
+describe('the exercise opened after a delete', () => {
+  it('stays the open one when the open exercise is kept', () => {
+    expect(exerciseToOpenAfterDelete(library, 'triplets', ['syncopation-p38'])).toBe(triplets)
+  })
+
+  it('is the most recently opened one left when the open exercise is deleted', () => {
+    expect(exerciseToOpenAfterDelete(library, 'triplets', ['triplets'])).toBe(syncopation)
+    expect(exerciseToOpenAfterDelete(library, 'syncopation-p38', ['syncopation-p38', 'triplets'])).toBe(paradiddles)
+  })
+
+  it('is none when every exercise is deleted, so a new Untitled exercise opens', () => {
+    expect(exerciseToOpenAfterDelete(library, 'triplets', ['paradiddles', 'syncopation-p38', 'triplets'])).toBeNull()
   })
 })
 
