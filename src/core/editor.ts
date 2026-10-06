@@ -81,8 +81,9 @@ export function newEditorState(exercise: Exercise): EditorState {
 export function applyEdit(state: EditorState, command: EditCommand): EditorState {
   if (command.type === 'selectBars') return selectBars(state, command.step)
   if (command.type === 'undo' || command.type === 'redo') return clearSelection(travel(state, command.type))
-  // Any other command ends the selection, once it has had the chance to act on it.
-  const next = clearSelection(edit(state, command))
+  // Copying keeps the selection; any other command ends it, once it has had the chance to act on it.
+  const edited = edit(state, command)
+  const next = command.type === 'copyBars' ? edited : clearSelection(edited)
   if (next.exercise.bars === state.exercise.bars) return next
   const undo = [...state.history.undo, snapshot(state)].slice(-UNDO_LIMIT)
   return { ...next, history: { undo, redo: [] } }
@@ -215,6 +216,8 @@ function untieLast(bars: Bar[]): Bar[] {
 /** Deletes bars `first` to `last`; deleting every bar leaves one bar of rests. */
 function deleteBars(state: EditorState, first: number, last: number): EditorState {
   const { bars } = state.exercise
+  // A lone bar of rests is already what deleting it would leave.
+  if (bars.length === 1 && bars[0].items.every((item) => item.kind === 'rest')) return state
   const kept = [...untieLast(bars.slice(0, first)), ...bars.slice(last + 1)]
   const next = kept.length > 0 ? kept : [restBar()]
   const { bar, beat } = state.cursor
@@ -230,7 +233,7 @@ function moveTo(state: EditorState, bar: number, beat: number): EditorState {
 
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n))
 
-const MOVES: Record<string, EditCommand> = {
+const PLAIN_KEYS: Record<string, EditCommand> = {
   ArrowLeft: { type: 'move', by: 'beat', step: -1 },
   ArrowRight: { type: 'move', by: 'beat', step: 1 },
   ArrowUp: { type: 'move', by: 'bar', step: -1 },
@@ -262,7 +265,7 @@ export function commandForKey(press: KeyPress): EditCommand | null {
   if (press.ctrlKey && press.shiftKey) return press.key.toLowerCase() === 'z' ? { type: 'redo' } : null
   if (press.ctrlKey) return CTRL_KEYS[press.key.length === 1 ? press.key.toLowerCase() : press.key] ?? null
   if (press.shiftKey && SHIFT_KEYS[press.key]) return SHIFT_KEYS[press.key]
-  if (MOVES[press.key]) return MOVES[press.key]
+  if (PLAIN_KEYS[press.key]) return PLAIN_KEYS[press.key]
   const key = press.key.toLowerCase()
   if (key === 't') return { type: 'toggleTie' }
   if (key === '.') return { type: 'toggleCutShort' }

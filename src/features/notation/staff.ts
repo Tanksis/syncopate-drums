@@ -124,7 +124,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
       const svg = note.getSVGElement()
       svg?.setAttribute('data-bar', String(b))
       svg?.setAttribute('data-beat', String(Math.floor(inBar[i].start / TICKS_PER_BEAT)))
-      svg?.style.setProperty('cursor', 'pointer')
+      svg?.classList.add('cursor-pointer')
       drawn.push({ note, line })
     })
   })

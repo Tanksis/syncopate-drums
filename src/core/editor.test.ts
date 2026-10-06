@@ -11,6 +11,13 @@ const press = (key: string, mods: Partial<KeyPress> = {}): KeyPress => ({
   ...mods,
 })
 
+const ctrl = (key: string, mods: Partial<KeyPress> = {}) => press(key, { ctrlKey: true, ...mods })
+const shift = (key: string) => press(key, { shiftKey: true })
+
+/** Applies each key press in turn through the key map. */
+const keys = (state: EditorState, ...presses: KeyPress[]) =>
+  presses.reduce((s, p) => applyEdit(s, commandForKey(p)!), state)
+
 function type(keys: string[], state = newEditorState(newExercise({ id: 'e1', now: 0 }))): EditorState {
   return keys.reduce((s, key) => {
     const command = commandForKey(press(key))
@@ -134,8 +141,6 @@ describe('ties and cut short', () => {
 describe('moving around', () => {
   // Three bars, cursor on bar 2 beat 3 (0-based: bar 1, beat 2).
   const start = () => ({ ...type(['1', '1', '1', '1', '2', '2', '2', '2', '3']), cursor: { bar: 1, beat: 2 } })
-  const keys = (state: EditorState, ...presses: KeyPress[]) =>
-    presses.reduce((s, p) => applyEdit(s, commandForKey(p)!), state)
 
   it('←/→ move by beat, across bar lines, and stop at the ends', () => {
     expect(keys(start(), press('ArrowRight'), press('ArrowRight')).cursor).toEqual({ bar: 2, beat: 0 })
@@ -193,9 +198,6 @@ describe('turning beats into rests', () => {
 })
 
 describe('reshaping bars', () => {
-  const ctrl = (key: string, mods: Partial<KeyPress> = {}) => press(key, { ctrlKey: true, ...mods })
-  const keys = (state: EditorState, ...presses: KeyPress[]) =>
-    presses.reduce((s, p) => applyEdit(s, commandForKey(p)!), state)
   // Bars 1111 | 2222 | 3333, cursor on bar 2.
   const three = () => ({ ...type('111122223333'.split('')), cursor: { bar: 1, beat: 2 } })
   const tiedInto = (state: EditorState) => beatViews(state.exercise.bars).map((bar) => bar.map((v) => (v.tiedInto ? '⌒' : '-')).join(''))
@@ -206,7 +208,7 @@ describe('reshaping bars', () => {
     expect(state.cursor).toEqual({ bar: 2, beat: 0 })
   })
 
-  it('Ctrl+D duplicates the current bar and moves to the copy', () => {
+  it('Ctrl+D duplicates the current bar and moves on a bar, onto the second of the pair', () => {
     const state = keys(three(), ctrl('d'))
     expect(figureKeys(state)).toEqual(['1111', '2222', '2222', '3333', '    '])
     expect(state.cursor).toEqual({ bar: 2, beat: 2 })
@@ -224,6 +226,13 @@ describe('reshaping bars', () => {
     const state = applyEdit(three(), { type: 'deleteBar', bar: 0 })
     expect(figureKeys(state)).toEqual(['2222', '3333', '    '])
     expect(state.cursor).toEqual({ bar: 0, beat: 2 })
+  })
+
+  it('deleting the only bar when it is already all rests is not a change', () => {
+    const fresh = newEditorState(newExercise({ id: 'e1', now: 0 }))
+    const state = keys(fresh, ctrl('Backspace'))
+    expect(state.exercise).toBe(fresh.exercise)
+    expect(keys(state, ctrl('z')).history).toEqual(fresh.history)
   })
 
   it('deleting the only bar leaves one bar of rests', () => {
@@ -253,10 +262,6 @@ describe('reshaping bars', () => {
 })
 
 describe('selecting, copying and pasting bars', () => {
-  const ctrl = (key: string, mods: Partial<KeyPress> = {}) => press(key, { ctrlKey: true, ...mods })
-  const shift = (key: string) => press(key, { shiftKey: true })
-  const keys = (state: EditorState, ...presses: KeyPress[]) =>
-    presses.reduce((s, p) => applyEdit(s, commandForKey(p)!), state)
   // Bars 1111 | 2222 | 3333 | 4444 | rests, cursor on bar 1.
   const four = () => ({ ...type('1111222233334444'.split('')), cursor: { bar: 0, beat: 1 } })
 
@@ -267,6 +272,12 @@ describe('selecting, copying and pasting bars', () => {
     expect(keys(state, shift('ArrowLeft')).selection).toEqual({ first: 0, last: 1 })
     const back = keys({ ...four(), cursor: { bar: 2, beat: 0 } }, shift('ArrowLeft'), shift('ArrowLeft'))
     expect(back.selection).toEqual({ first: 0, last: 2 })
+  })
+
+  it('copying keeps the selection, so it can then be deleted', () => {
+    const state = keys(four(), shift('ArrowRight'), ctrl('c'))
+    expect(state.selection).toEqual({ first: 0, last: 1 })
+    expect(figureKeys(keys(state, ctrl('Backspace')))).toEqual(['3333', '4444', '    '])
   })
 
   it('moving without Shift clears the selection', () => {
@@ -304,9 +315,6 @@ describe('selecting, copying and pasting bars', () => {
 })
 
 describe('undo and redo', () => {
-  const ctrl = (key: string, mods: Partial<KeyPress> = {}) => press(key, { ctrlKey: true, ...mods })
-  const keys = (state: EditorState, ...presses: KeyPress[]) =>
-    presses.reduce((s, p) => applyEdit(s, commandForKey(p)!), state)
   const undo = ctrl('z')
   const redo = ctrl('Z', { shiftKey: true })
 
