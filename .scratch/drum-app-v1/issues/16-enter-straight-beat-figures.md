@@ -19,10 +19,15 @@ See [spec.md](../spec.md): the exercise core's model types, the auto-speller, th
 
 **Status:** ready-for-agent
 
-- [ ] The core's exercise model matches the spec: bars of note/rest items with duration, dot, triplet membership, tied-to-next and an optional override slot; ticks derived at 12 per beat, not stored. A new-exercise factory gives the fixed defaults
-- [ ] The core derives each beat's view (figure or rest) from the bars, and writing a figure back re-spells the bar; tests cover a round trip for all 16 straight figures and the rest beat
-- [ ] `applyEdit` handles entering a figure (advance the cursor, grow the exercise past the last beat). The key → command mapping is a pure core function, and the UI only dispatches
-- [ ] The palette is laid out like the keyboard, each tile shows its key, clicking a tile enters that figure, and the current beat's figure is highlighted on its tile
-- [ ] The beat strip shows the bars and beats with the cursor
-- [ ] The notation view draws the exercise with VexFlow straight from the model (no MusicXML in between): percussion clef, snare stems down, beams grouped by beat, bar numbers, 4 bars per line with the narrow-window and short-last-line rules, cursor-beat highlight and current-bar shading, scrolling within the free height
-- [ ] Four keystrokes enter a bar, and the staff reads as a drummer would expect for, say, `2 3 7 Space`
+- [x] The core's exercise model matches the spec: bars of note/rest items with duration, dot, triplet membership, tied-to-next and an optional override slot; ticks derived at 12 per beat, not stored. A new-exercise factory gives the fixed defaults
+- [x] The core derives each beat's view (figure or rest) from the bars, and writing a figure back re-spells the bar; tests cover a round trip for all 16 straight figures and the rest beat
+- [x] `applyEdit` handles entering a figure (advance the cursor, grow the exercise past the last beat). The key → command mapping is a pure core function, and the UI only dispatches
+- [x] The palette is laid out like the keyboard, each tile shows its key, clicking a tile enters that figure, and the current beat's figure is highlighted on its tile
+- [x] The beat strip shows the bars and beats with the cursor
+- [x] The notation view draws the exercise with VexFlow straight from the model (no MusicXML in between): percussion clef, snare stems down, beams grouped by beat, bar numbers, 4 bars per line with the narrow-window and short-last-line rules, cursor-beat highlight and current-bar shading, scrolling within the free height
+- [x] Four keystrokes enter a bar, and the staff reads as a drummer would expect for, say, `2 3 7 Space`
+
+## Comments
+
+- 2026-10-06: Implemented on `feature/16-enter-straight-beat-figures`. Core: `model.ts` (types, `itemTicks`, `newExercise`), `figures.ts` (the 15 straight figures + Space; the A–H triplets come with ticket 19), `speller.ts` (`beatViews`, `setBeat`, re-spelling on a sixteenth-cell timeline as in the prototypes; overrides ride on a hit's position) and `editor.ts` (`applyEdit` with `enterFigure`, `commandForKey`). Items carry no ids; a note is identified by bar + start tick. Typing the 4th beat of the last bar adds a bar of rests at once and puts the cursor on it, as the prototype did. UI: Zustand store holding the editor state in memory, the VexFlow adapter `features/notation/staff.ts` (`vexflow/bravura`, so the fonts are bundled for offline), the beat strip and the keyboard-shaped palette with mini-notation tiles. Bar numbers use VexFlow's measure numbers for now; ticket 26 makes them clickable. Checked in Chrome: `2 3 7 Space` reads ♪♪ | 𝄾♪ | ♪.𝅘𝅥𝅯 | 𝄽, tile clicks enter and advance, the narrow window drops to 2 bars per line.
+
