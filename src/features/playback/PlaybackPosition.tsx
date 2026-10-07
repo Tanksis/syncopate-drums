@@ -9,7 +9,10 @@ export function PlaybackPosition() {
   const [label, setLabel] = useState('')
 
   useEffect(() => {
-    if (!playing) return setLabel('')
+    if (!playing) {
+      setLabel('')
+      return
+    }
     let frame = requestAnimationFrame(function step() {
       const head = playhead()
       // React skips the render while the label is unchanged, so this is cheap between beats.

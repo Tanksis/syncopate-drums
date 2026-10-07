@@ -13,24 +13,25 @@ const SOUNDING = ['[&_*]:fill-play', '[&_*]:stroke-play']
  */
 export function followPlayback(scroller: HTMLElement, staff: HTMLElement, drawing: () => Drawing | undefined) {
   let lit: SVGElement | undefined
-  let shownLine: number | undefined
+  let shown: { drawing: Drawing; top: number } | undefined
   let frame = requestAnimationFrame(step)
 
   function step() {
     const head = playhead()
     const current = drawing()
-    const note = head?.noteId === undefined ? undefined : current?.notes.get(head.noteId)
+    const note = head?.noteId === undefined ? undefined : current?.noteElements.get(head.noteId)
     if (note !== lit) {
       lit?.classList.remove(...SOUNDING)
       note?.classList.add(...SOUNDING)
       lit = note
     }
-    // Scroll only when the playhead reaches a new line, so the drummer can still scroll by hand.
+    // Scroll only when the playhead reaches a new line, so the drummer can still scroll by hand,
+    // or after a redraw, which scrolls to the cursor's line instead.
     const bar = head?.position.bar ?? -1
     if (current && bar >= 0) {
       const line = current.line(bar)
-      if (line.top !== shownLine) scrollLineIntoView(scroller, staff, line)
-      shownLine = line.top
+      if (shown?.drawing !== current || shown.top !== line.top) scrollLineIntoView(scroller, staff, line)
+      shown = { drawing: current, top: line.top }
     }
     frame = requestAnimationFrame(step)
   }

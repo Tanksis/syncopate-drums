@@ -102,7 +102,7 @@ export interface DrawnLine {
 
 /** What was drawn: each struck note's SVG element by note id, and where each bar's line is. */
 export interface Drawing {
-  notes: Map<string, SVGElement>
+  noteElements: Map<string, SVGElement>
   line: (bar: number) => DrawnLine
 }
 
@@ -198,7 +198,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
     const top = Math.floor(bar / barsPerLine) * height
     return { top, bottom: top + height + STAVE_TOP }
   }
-  return { notes: struck, line }
+  return { noteElements: struck, line }
 }
 
 /**

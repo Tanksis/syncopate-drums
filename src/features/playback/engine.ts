@@ -105,7 +105,7 @@ function heardTime(ctx: AudioContext): number {
   // Some browsers report no output timestamp until the output has started.
   const output = contextTime && performanceTime
     ? contextTime + (performance.now() - performanceTime) / 1000
-    : ctx.currentTime - ctx.baseLatency - (ctx.outputLatency || 0)
+    : ctx.currentTime - (ctx.baseLatency || 0) - (ctx.outputLatency || 0)
   return output - HIGHLIGHT_LATENCY
 }
 
