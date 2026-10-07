@@ -2,8 +2,8 @@ import type { ReactNode } from 'react'
 import { useRef } from 'react'
 import { useAppStore } from '@/app/store'
 import { PanelHeading } from '@/components/PanelHeading'
-import type { ExerciseSettings, GroovePresetId } from '@/core'
-import { GROOVE_PRESETS, MAX_SWING, MIN_SWING, groovePreset, overrideCount } from '@/core'
+import type { DeviceSettings, ExerciseSettings, GroovePresetId } from '@/core'
+import { GROOVE_PRESETS, MAX_SWING, MAX_VOLUME, MIN_SWING, groovePreset, overrideCount } from '@/core'
 
 export function SettingsSidebar() {
   return (
@@ -24,7 +24,13 @@ export function SettingsSidebar() {
         <Choice label="Voice" setting="voice" options={['snare', 'bass']} names={{ bass: 'bass drum' }} />
       </SettingGroup>
       <SettingGroup title="Editor" />
-      <SettingGroup title="Volume" />
+      <SettingGroup title="Volume">
+        <Volume label="Click" setting="clickVolume" />
+        <Volume label="Exercise" setting="exerciseVolume">
+          <MuteExercise />
+        </Volume>
+        <Volume label="Groove" setting="grooveVolume" />
+      </SettingGroup>
     </aside>
   )
 }
@@ -119,6 +125,63 @@ function Swing() {
         ))}
       </div>
     </div>
+  )
+}
+
+type VolumeSetting = 'clickVolume' | 'exerciseVolume' | 'grooveVolume'
+
+/** A layer's volume on this device, 100% being its usual level; it applies while playing. */
+function Volume({ label, setting, children }: { label: string; setting: VolumeSetting; children?: ReactNode }) {
+  const volume = useAppStore((s) => s.device[setting])
+  const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
+  const setVolume = (value: number, dragging = false) =>
+    setDeviceSettings({ [setting]: value } as Partial<DeviceSettings>, { dragging })
+  // A pointer drag on the slider saves once it ends; arrow keys on it save at once.
+  const dragging = useRef(false)
+  return (
+    <div className="flex items-center gap-2">
+      <label className="flex min-w-0 flex-1 items-center gap-2">
+        <span className="w-14 text-mute">{label}</span>
+        <input
+          type="range"
+          aria-label={`${label} volume`}
+          min={0}
+          max={MAX_VOLUME}
+          step={0.01}
+          value={volume}
+          onChange={(e) => setVolume(Number(e.target.value), dragging.current)}
+          onPointerDown={() => (dragging.current = true)}
+          // Once a drag ends, save the volume it settled on and hand the keyboard back to the editor.
+          onPointerUp={(e) => {
+            dragging.current = false
+            setVolume(Number(e.currentTarget.value))
+            e.currentTarget.blur()
+          }}
+          className="min-w-0 flex-1 accent-accent"
+        />
+        <span className="w-9 text-right tabular-nums">{Math.round(volume * 100)}%</span>
+      </label>
+      {/* The same width on every row, so the sliders line up. */}
+      <div className="flex w-11 justify-end">{children}</div>
+    </div>
+  )
+}
+
+/** Silences the exercise, so the drummer can play the line over the click and the groove. */
+function MuteExercise() {
+  const muted = useAppStore((s) => s.device.exerciseMuted)
+  const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
+  return (
+    <button
+      type="button"
+      aria-pressed={muted}
+      title={muted ? 'Unmute the exercise' : 'Mute the exercise'}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={() => setDeviceSettings({ exerciseMuted: !muted })}
+      className="cursor-pointer rounded-md border border-line bg-card px-1.5 py-0.5 hover:text-accent aria-pressed:bg-accent aria-pressed:text-white aria-pressed:hover:text-white"
+    >
+      mute
+    </button>
   )
 }
 

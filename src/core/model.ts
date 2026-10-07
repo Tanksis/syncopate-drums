@@ -89,11 +89,27 @@ export interface Exercise {
 /** Settings kept per device rather than per exercise, and never exported. */
 export interface DeviceSettings {
   countIn: boolean
+  /** Each playback layer's volume, from 0 (silent) to MAX_VOLUME; 1 is the usual level. */
+  clickVolume: number
+  exerciseVolume: number
+  grooveVolume: number
+  /** Silences the exercise, so the drummer can play the line over the click and the groove. */
+  exerciseMuted: boolean
   /** The exercise open when the app was last used, reopened at launch. */
   lastOpenedId: string | null
 }
 
-export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = { countIn: true, lastOpenedId: null }
+export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
+  countIn: true,
+  clickVolume: 1,
+  exerciseVolume: 1,
+  grooveVolume: 1,
+  exerciseMuted: false,
+  lastOpenedId: null,
+}
+
+/** The loudest a layer's volume goes: a little headroom above its usual level. */
+export const MAX_VOLUME = 1.5
 
 const BASE_TICKS: Record<Duration, number> = { quarter: 12, eighth: 6, sixteenth: 3 }
 

@@ -40,6 +40,8 @@ interface AppState {
   /** The groove layer played and drawn with the exercise. */
   setGroove: (groove: GroovePresetId) => void
   setPlaying: (playing: boolean) => void
+  /** Volumes, the exercise mute and the count-in, kept for this device; `dragging` as for `setBpm`. */
+  setDeviceSettings: (settings: Partial<DeviceSettings>, options?: { dragging?: boolean }) => void
   /** Loops just that bar, or with `extend` grows the loop range to take it in. */
   loopBar: (bar: number, options?: { extend?: boolean }) => void
   /** Loops the whole exercise again. */
@@ -78,6 +80,17 @@ function flushSave() {
   if (!storage || !unsaved) return
   storage.exercises.put(unsaved).catch((error) => console.error('Autosave failed', error))
   unsaved = null
+}
+
+let deviceSaveTimer: ReturnType<typeof setTimeout> | undefined
+
+/** Saves the device settings now, or once a slider drag settles; either way it supersedes any pending save. */
+function saveDevice(device: DeviceSettings, { debounced = false } = {}) {
+  clearTimeout(deviceSaveTimer)
+  const save = () =>
+    storage?.device.save(device).catch((error) => console.error('Saving device settings failed', error))
+  if (debounced) deviceSaveTimer = setTimeout(save, DRAG_SAVE_DELAY_MS)
+  else save()
 }
 
 /** Drops exercises from storage, with any save of theirs still pending, and returns the library without them. */
@@ -126,7 +139,7 @@ export const useAppStore = create<AppState>()((set, get) => {
     })
     // A new exercise isn't stored until it is first changed.
     if (!isUnchangedNew(opened)) autosave(opened)
-    storage?.device.save(deviceNow).catch((error) => console.error('Saving device settings failed', error))
+    saveDevice(deviceNow)
   }
 
   return {
@@ -158,6 +171,11 @@ export const useAppStore = create<AppState>()((set, get) => {
       if (exercise !== editor.exercise) change(exercise, { ...editor, exercise })
     },
     setPlaying: (playing) => set({ playing }),
+    setDeviceSettings: (settings, { dragging = false } = {}) => {
+      const device = { ...get().device, ...settings }
+      set({ device })
+      saveDevice(device, { debounced: dragging })
+    },
     loopBar: (bar, options) => {
       const { editor } = get()
       const exercise = loopAt(editor.exercise, bar, options)

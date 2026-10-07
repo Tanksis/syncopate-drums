@@ -24,6 +24,7 @@ export function TransportControls() {
       </button>
       <PlaybackPosition />
       <BpmControl />
+      <CountInToggle />
       <LoopReadout />
     </div>
   )
@@ -80,5 +81,24 @@ function BpmControl() {
         className="w-36 accent-accent"
       />
     </label>
+  )
+}
+
+/** Whether playback starts with a bar of clicks; kept for this device, not the exercise. */
+function CountInToggle() {
+  const countIn = useAppStore((s) => s.device.countIn)
+  const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
+  return (
+    <button
+      type="button"
+      aria-pressed={countIn}
+      title="Play a one-bar count-in before the exercise"
+      // Keep focus off the button, so the editor's keys still work after a click.
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={() => setDeviceSettings({ countIn: !countIn })}
+      className="cursor-pointer rounded-md border border-line bg-panel px-2 py-0.5 hover:border-accent aria-pressed:bg-accent aria-pressed:text-white"
+    >
+      count-in
+    </button>
   )
 }
