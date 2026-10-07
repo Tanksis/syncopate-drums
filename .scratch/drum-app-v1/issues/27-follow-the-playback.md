@@ -27,3 +27,4 @@ The highlight uses an internal latency offset (default 0). A setting for it is a
   - The header shows "count-in · 1" to "count-in · 4", then "bar · beat", both counted from 1. The position isn't kept in the store: the header reads the engine's `playhead()` in its own rAF loop, so the store doesn't change on every beat.
   - The latency offset is `HIGHLIGHT_LATENCY = 0` in `engine.ts`. There's no setting for it until the highlight drifts.
   - The by-ear-and-eye check on the user's laptop is still open.
+- 2026-10-06: Follow-up PR #17 on the user's request: while playing, the notation no longer draws the blue cursor beat or bar shade, so only the green sounding note is lit. Both come back on stop; the beat strip still shows the cursor.
