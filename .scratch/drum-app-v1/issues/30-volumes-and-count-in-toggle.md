@@ -6,7 +6,7 @@ See [spec.md](../spec.md): the device-settings store and the engine's three Gain
 
 **Blocked by:** 29 (Groove layer presets), 18 (Exercise autosaves and reopens at launch)
 
-**Status:** ready-for-agent
+**Status:** done (merged in PR #21, 2026-10-07)
 
 - [x] The click, exercise and groove volume sliders drive their gains live; the exercise mute silences only the exercise
 - [x] The count-in toggle turns the one-bar count-in on and off (honoured by `schedule`, tested)
