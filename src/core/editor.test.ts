@@ -899,6 +899,19 @@ describe('dragging a hold', () => {
     expect(beatViews(back.exercise.bars)[0][0]).toMatchObject({ triplet: false, figure: { key: '1' } })
     expect(editorBeatViews(back)[0][0]).toMatchObject({ triplet: true, positions: ['hit', 'hold', 'hold'] })
   })
+
+  it('drags into a later beat on its pending triplet grid, which it keeps', () => {
+    const pending = applyEdit(type(['1']), { type: 'setBeatGrid', bar: 0, beat: 1, triplet: true })
+    const into = (state: EditorState, position: number) =>
+      applyEdit(state, { type: 'setHold', from: { bar: 0, beat: 0, position: 0 }, to: { bar: 0, beat: 1, position } })
+    const state = into(pending, 1)
+    expect(beatViews(state.exercise.bars)[0][1]).toMatchObject({ triplet: true, tiedInto: true, positions: ['hold', 'empty', 'empty'] })
+    expect(state.cursor).toEqual({ bar: 0, beat: 0 })
+    // Held right through, it reads the same on either grid, and stays on triplets in the editor.
+    const through = into(pending, 3)
+    expect(beatViews(through.exercise.bars)[0][1].triplet).toBe(false)
+    expect(editorBeatViews(through)[0][1]).toMatchObject({ triplet: true, positions: ['hold', 'hold', 'hold'] })
+  })
 })
 describe('switching a beat between the sixteenth and triplet grid', () => {
   const grid = (state: EditorState, bar: number, beat: number, triplet: boolean) =>

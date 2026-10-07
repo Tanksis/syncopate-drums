@@ -373,10 +373,46 @@ describe("setting a note's hold", () => {
     expect(text(setHold(bar('x.x'), at(0, 0), at(0, 1)))).toBe('e3 re3 e3 rq rq rq')
   })
 
-  it('stays within the beat for now', () => {
-    expect(text(setHold(bar('..x.'), at(0, 2), at(1, 2)))).toBe('re e rq rq rq')
-    const bars = bar('x...')
-    expect(setHold(bars, at(0, 0), at(1, 2))).toBe(bars)
+  it('ties on into the next beat: the note on 1 dragged to the & of 2 is a dotted quarter', () => {
+    const bars = setHold(bar('x...'), at(0, 0), at(1, 2))
+    expect(text(bars)).toBe('q. re rq rq')
+    expect(beatViews(bars)[0][1]).toMatchObject({ tiedInto: true, positions: ['hold', 'hold', 'empty', 'empty'] })
+  })
+
+  it('holds across several beats and over a bar line, tied across it', () => {
+    const twoBars = setBeat([restBar(), restBar()], 0, 3, 'x...')
+    const bars = setHold(twoBars, { bar: 0, beat: 3, position: 0 }, { bar: 1, beat: 0, position: 2 })
+    expect(text(bars)).toBe('rq rq rq q~ | e re rq rq rq')
+    expect(beatViews(bars)[1][0]).toMatchObject({ tiedInto: true, positions: ['hold', 'hold', 'empty', 'empty'] })
+    expect(text(setHold(bar('x...'), at(0, 0), at(2, 0)))).toBe('q.~ e rq rq')
+  })
+
+  it('stops at the next hit, in a later beat too', () => {
+    expect(text(setHold(bar('x...', '..x.'), at(0, 0), at(3, 0)))).toBe('q. e rq rq')
+  })
+
+  it('removes the tie when shortened back past the beat line', () => {
+    const long = setHold(bar('x...'), at(0, 0), at(1, 2))
+    const bars = setHold(long, at(1, 1), at(0, 2))
+    expect(text(bars)).toBe('e re rq rq rq')
+    expect(beatViews(bars)[0][1]).toMatchObject({ tiedInto: false, positions: ['empty', 'empty', 'empty', 'empty'] })
+  })
+
+  it('snaps to the grid of the beat the drag ends in', () => {
+    const tied = setHold(toggleTie(bar('x...', 'x.x'), 0, 1), at(0, 0), at(1, 1))
+    expect(text(tied)).toBe('q~ e3 re3 e3 rq rq')
+    // A beat read on the triplet grid (the editor's pending grid) is snapped on it.
+    expect(text(setHold(bar('x...'), at(0, 0), at(1, 1), [1]))).toBe('q~ e3 rq3 rq rq')
+  })
+
+  it('leaves beats on the pending triplet grid that the hold does not reach as they were', () => {
+    expect(text(setHold(bar('x...', '....', 'x...'), at(0, 0), at(0, 2), [1, 2]))).toBe('e re rq q rq')
+    const long = setHold(bar('x...'), at(0, 0), at(1, 1), [1])
+    expect(text(setHold(long, at(0, 0), at(0, 2), [1]))).toBe('e re rq rq rq')
+  })
+
+  it('writes a beat held right through as a plain beat', () => {
+    expect(text(setHold(bar('x...'), at(0, 0), at(1, 3), [1]))).toBe('q.~ e rq rq')
   })
 
   it('returns the same bars for a press on an empty position', () => {

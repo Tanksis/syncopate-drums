@@ -1,5 +1,5 @@
 import type { PointerEvent } from 'react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import type { BeatView, GridPoint, GridPosition } from '@/core'
 import { REST_FIGURE, applyEdit, editorBeatViews, inLoopRange } from '@/core'
@@ -15,17 +15,33 @@ interface Press {
   to: GridPoint | null
 }
 
-/** The grid position of a beat box under the pointer, kept to the box's first and last. */
-function positionUnder(box: Element, clientX: number): number {
-  const cells = [...box.querySelectorAll('[data-position]')]
+/**
+ * The grid position under the pointer, anywhere in the strip: in the beat box nearest the pointer
+ * (so a drag follows the strip onto the lines it wraps to), kept to that box's first and last
+ * position.
+ */
+function pointUnder(strip: Element, clientX: number, clientY: number): GridPoint | null {
+  let nearest: { box: HTMLElement; distance: number } | null = null
+  for (const box of strip.querySelectorAll<HTMLElement>('[data-beat-box]')) {
+    const r = box.getBoundingClientRect()
+    const distance = Math.hypot(Math.max(r.left - clientX, 0, clientX - r.right), Math.max(r.top - clientY, 0, clientY - r.bottom))
+    if (!nearest || distance < nearest.distance) nearest = { box, distance }
+  }
+  if (!nearest) return null
+  const cells = [...nearest.box.querySelectorAll('[data-position]')]
   const i = cells.findIndex((cell) => clientX < cell.getBoundingClientRect().right)
-  return i === -1 ? cells.length - 1 : i
+  const { bar, beat } = nearest.box.dataset
+  return { bar: Number(bar), beat: Number(beat), position: i === -1 ? cells.length - 1 : i }
 }
+
+const samePoint = (a: GridPoint | null, b: GridPoint | null) =>
+  a?.bar === b?.bar && a?.beat === b?.beat && a?.position === b?.position
 
 /**
  * The bars and beats of the exercise, the main editor. Each beat box shows its grid positions: a
  * hit, a hold bar for a note still sounding, or an empty dot. Clicking a position turns a hit on or
- * off; pressing on a note and dragging sets where its hold ends, shown live and written on release.
+ * off; pressing on a note and dragging sets where its hold ends, on into later beats and bars (tied),
+ * shown live and written on release.
  * Clicking elsewhere on a beat moves the cursor to it. A beat's 3/16 toggle, or a right-click on
  * its box, switches it between the triplet and the sixteenth grid. The cursor, the bar selection
  * and a set loop range are shaded, and a bar's ✕ (shown on hover) deletes it.
@@ -36,6 +52,12 @@ export function BeatStrip() {
   const { loopRange } = editor.exercise.practice
   const dispatch = useAppStore((s) => s.dispatch)
   const [press, setPress] = useState<Press | null>(null)
+  // The press as the handlers last left it, which the next event sees even before it has rendered.
+  const pressRef = useRef<Press | null>(null)
+  const track = (next: Press | null) => {
+    pressRef.current = next
+    setPress(next)
+  }
   // While dragging, the strip shows the hold as the editor would write it on release.
   const shown = press?.to ? applyEdit(editor, { type: 'setHold', from: press.from, to: press.to }) : editor
   const views = editorBeatViews(shown)
@@ -43,21 +65,31 @@ export function BeatStrip() {
   const startPress = (e: PointerEvent<HTMLElement>, from: GridPoint, position: GridPosition) => {
     if (e.button !== 0) return
     e.currentTarget.setPointerCapture(e.pointerId)
-    setPress({ pointerId: e.pointerId, from, onNote: position !== 'empty', moved: false, to: null })
+    track({ pointerId: e.pointerId, from, onNote: position !== 'empty', moved: false, to: null })
+  }
+  /** The press followed to the pointer: the hold runs through the position under it, in this beat or a later one. */
+  const follow = (e: PointerEvent<HTMLElement>, press: Press): Press => {
+    const strip = e.currentTarget.closest('[data-beat-strip]')
+    const under = strip && pointUnder(strip, e.clientX, e.clientY)
+    if (!under) return press
+    const moved = press.moved || !samePoint(under, press.from)
+    const to = press.onNote && moved ? { ...under, position: under.position + 1 } : null
+    return moved !== press.moved || !samePoint(to, press.to) ? { ...press, moved, to } : press
   }
   const movePress = (e: PointerEvent<HTMLElement>) => {
-    if (!press || e.pointerId !== press.pointerId || !e.currentTarget.parentElement) return
-    // The hold runs through the position under the pointer, in the pressed beat for now.
-    const under = positionUnder(e.currentTarget.parentElement, e.clientX)
-    const moved = press.moved || under !== press.from.position
-    const to = press.onNote && moved ? { ...press.from, position: under + 1 } : null
-    if (moved !== press.moved || to?.position !== press.to?.position) setPress({ ...press, moved, to })
+    const press = pressRef.current
+    if (!press || e.pointerId !== press.pointerId) return
+    const next = follow(e, press)
+    if (next !== press) track(next)
   }
   const endPress = (e: PointerEvent<HTMLElement>) => {
+    const press = pressRef.current
     if (!press || e.pointerId !== press.pointerId) return
-    setPress(null)
-    if (!press.moved) dispatch({ type: 'toggleGridPosition', ...press.from })
-    else if (press.to) dispatch({ type: 'setHold', from: press.from, to: press.to })
+    track(null)
+    // The release's own position counts too.
+    const last = follow(e, press)
+    if (!last.moved) dispatch({ type: 'toggleGridPosition', ...last.from })
+    else if (last.to) dispatch({ type: 'setHold', from: last.from, to: last.to })
   }
   /** The beat after this one, if any, to run a hold bar on into it. */
   const nextBeat = (b: number, beat: number): BeatView | undefined =>
@@ -65,7 +97,7 @@ export function BeatStrip() {
 
   return (
     // The strip's right-click switches grids, so the browser's menu stays shut over it.
-    <div aria-label="Beat strip" className="flex flex-wrap gap-2" onContextMenu={(e) => e.preventDefault()}>
+    <div aria-label="Beat strip" data-beat-strip className="flex flex-wrap gap-2" onContextMenu={(e) => e.preventDefault()}>
       {views.map((beats, b) => {
         const selected = selection !== null && b >= selection.first && b <= selection.last
         const looped = inLoopRange(loopRange, b)
@@ -88,6 +120,9 @@ export function BeatStrip() {
                 <div
                   key={beat}
                   aria-label={`Bar ${b + 1}, beat ${beat + 1}`}
+                  data-beat-box
+                  data-bar={b}
+                  data-beat={beat}
                   aria-current={current || undefined}
                   title={[view.tiedInto && 'tied into', view.cutShort && 'cut short'].filter(Boolean).join(', ') || undefined}
                   onClick={() => dispatch({ type: 'moveTo', bar: b, beat })}
@@ -111,7 +146,7 @@ export function BeatStrip() {
                       onPointerDown={(e) => startPress(e, { bar: b, beat, position: i }, position)}
                       onPointerMove={movePress}
                       onPointerUp={endPress}
-                      onPointerCancel={() => setPress(null)}
+                      onPointerCancel={() => track(null)}
                     />
                   ))}
                   <button

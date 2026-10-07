@@ -366,14 +366,13 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
     }
     case 'setHold': {
       const moved = moveTo(state, command.from.bar, command.from.beat)
-      const { bar, beat } = moved.cursor
-      const index = bar * BEATS_PER_BAR + beat
-      const pending = state.pendingGrid.includes(index)
-      const bars = setHold(state.exercise.bars, command.from, command.to, pending || undefined)
+      const bars = setHold(state.exercise.bars, command.from, command.to, state.pendingGrid)
       if (bars === state.exercise.bars) return moved
       // As with a click: a beat on the triplet grid stays there while it reads the same on either.
-      const onTriplets = editorBeatViews(state)[bar][beat].triplet && !beatViews(bars)[bar][beat].triplet
-      return { ...withBars(moved, bars), pendingGrid: withPending(state.pendingGrid, index, onTriplets) }
+      const before = editorBeatViews(state).flat()
+      const after = beatViews(bars).flat()
+      const pendingGrid = before.flatMap((view, index) => (view.triplet && !after[index].triplet ? [index] : []))
+      return { ...withBars(moved, bars), pendingGrid }
     }
     case 'toggleTie':
     case 'toggleCutShort': {

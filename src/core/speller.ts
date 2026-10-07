@@ -324,18 +324,21 @@ export interface GridPoint {
  * one past the beat's last position is the end of the beat. The note holds on through every
  * position before `to`; positions it no longer reaches become empty, spelled as rests.
  *
- * The hold stops before the next hit, and for now within the note's beat. A `from` with no note, or
- * a hold of no length, returns the same bars, as does a hold that already ends there.
+ * `to` may be in a later beat or bar, on that beat's own grid: the beats the hold reaches become
+ * tied continuations (not struck), and shortening it back past a beat line removes the tie. The
+ * hold stops before the next hit. A `from` with no note, or a hold of no length, returns the same
+ * bars, as does a hold that already ends there.
  *
- * `triplet` picks the grid of `from`'s beat, by default the beat's own. A triplet beat left with
- * only a downbeat note holding to its end reads the same on either grid, so it is written as a
+ * `tripletBeats` (beat indices across the exercise, bar × 4 + beat) are read on the triplet grid
+ * whatever their notes say: the editor's pending grid. A triplet beat the change leaves with no hit
+ * off the downbeat and sounding to its end reads the same on either grid, so it is written as a
  * plain beat.
  */
-export function setHold(bars: Bar[], from: GridPoint, to: GridPoint, triplet?: boolean): Bar[] {
+export function setHold(bars: Bar[], from: GridPoint, to: GridPoint, tripletBeats: readonly number[] = []): Bar[] {
   const timeline = toTimeline(bars)
   const { cells } = timeline
-  const fromIndex = from.bar * BEATS_PER_BAR + from.beat
-  if (triplet !== undefined && fromIndex >= 0 && fromIndex < timeline.triplet.length) timeline.triplet[fromIndex] = triplet
+  const written = [...timeline.triplet]
+  for (const index of tripletBeats) if (index >= 0 && index < timeline.triplet.length) timeline.triplet[index] = true
   const tickOf = ({ bar, beat, position }: GridPoint, allowEnd: boolean) => {
     const index = bar * BEATS_PER_BAR + beat
     if (beat < 0 || beat >= BEATS_PER_BAR || index < 0 || index >= timeline.triplet.length) return undefined
@@ -352,17 +355,26 @@ export function setHold(bars: Bar[], from: GridPoint, to: GridPoint, triplet?: b
   while (cells[start].state === 'hold' && start > 0 && cells[start - 1].state !== 'rest') start--
   let end = start + 1
   while (end < cells.length && cells[end].state === 'hold') end++
-  // No further than the next hit, nor (for now) the end of the pressed beat.
-  const beatEnd = (Math.floor(pressed / TICKS_PER_BEAT) + 1) * TICKS_PER_BEAT
+  // No further than the next hit.
   let limit = end
-  while (limit < beatEnd && cells[limit].state === 'rest') limit++
-  const stop = Math.min(target, limit, beatEnd)
+  while (limit < cells.length && cells[limit].state === 'rest') limit++
+  const stop = Math.min(target, limit)
   if (stop <= start || stop === end) return bars
-  for (let t = start + 1; t < Math.max(stop, end); t++) cells[t] = { state: t < stop ? 'hold' : 'rest' }
-  if (timeline.triplet[fromIndex]) {
-    const offBeat = hitsOf(timeline, fromIndex).slice(1).includes('x')
-    timeline.triplet[fromIndex] = offBeat || beatCells(timeline, fromIndex).at(-1)!.state === 'rest'
-  }
+  const changedEnd = Math.max(stop, end)
+  for (let t = start + 1; t < changedEnd; t++) cells[t] = { state: t < stop ? 'hold' : 'rest' }
+  // Beats the hold doesn't reach keep the grid they are written on; the ones it does reach stay
+  // triplet groups only where that grid still shows.
+  const firstBeat = Math.floor(start / TICKS_PER_BEAT)
+  const lastBeat = Math.floor((changedEnd - 1) / TICKS_PER_BEAT)
+  timeline.triplet.forEach((triplet, index) => {
+    if (index < firstBeat || index > lastBeat) timeline.triplet[index] = written[index]
+    else if (triplet) {
+      const beat = beatCells(timeline, index)
+      const offBeat = hitsOf(timeline, index).slice(1).includes('x')
+      const silent = beat.every((c) => c.state === 'rest')
+      timeline.triplet[index] = !silent && (offBeat || beat.at(-1)!.state === 'rest')
+    }
+  })
   return fromTimeline(timeline)
 }
 
