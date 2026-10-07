@@ -4,9 +4,10 @@ import { newExercise, schedule, setBeat, toggleTie } from './index'
 
 const device: DeviceSettings = { countIn: true, lastOpenedId: null }
 
+/** A blank exercise, played straight unless a test swings it. */
 const blank = (bpm = 120): Exercise => {
   const ex = newExercise({ id: 'e1', now: 0 })
-  return { ...ex, practice: { ...ex.practice, bpm } }
+  return { ...ex, practice: { ...ex.practice, bpm, swing: 0.5 } }
 }
 
 /** A compact view of the events for readable assertions: "time kind instrument [accent] [noteId]". */
@@ -197,5 +198,41 @@ describe('a loop range', () => {
     const ex = line(['x...', '....', '....', '....'])
     const { events } = schedule(ex, looping(ex, 2, 5), device, { bar: 0, tick: 36 }, 0.6)
     expect(downbeats(events)).toEqual([0])
+  })
+})
+
+describe('swing', () => {
+  /** Where each struck note lands, as a fraction of the beat it is in. */
+  const landings = (ex: Exercise) => {
+    const beat = 60 / ex.practice.bpm
+    const { events } = schedule(ex, ex.practice, device, { bar: 0, tick: 0 }, 4 * beat)
+    return events.filter((e) => e.kind === 'exercise').map((e) => +((e.time / beat) % 4).toFixed(3))
+  }
+  const swung = (beats: string[], bpm: number, swing: number) => {
+    const ex = line(beats, bpm)
+    return { ...ex, practice: { ...ex.practice, swing } }
+  }
+
+  it('at 180 BPM with 66.7% swing puts the & of 1 at 0.62 of the beat and leaves a triplet at 2/3', () => {
+    expect(landings(swung(['x.x.', 'xxx', '....', '....'], 180, 2 / 3))).toEqual([0, 0.617, 1, 1.333, 1.667])
+  })
+
+  it('applies the full amount at 120 BPM and below', () => {
+    expect(landings(swung(['x.x.', 'x.x.', '....', '....'], 120, 0.75))).toEqual([0, 0.75, 1, 1.75])
+    expect(landings(swung(['x.x.', 'x.x.', '....', '....'], 60, 0.58))).toEqual([0, 0.58, 1, 1.58])
+  })
+
+  it('plays straight by 320 BPM', () => {
+    expect(landings(swung(['x.x.', '....', '....', '....'], 320, 0.75))).toEqual([0, 0.5])
+  })
+
+  it('puts the e halfway through the long eighth and the a halfway through the short one', () => {
+    expect(landings(swung(['xxxx', '....', '....', '....'], 100, 2 / 3))).toEqual([0, 0.333, 0.667, 0.833])
+  })
+
+  it('swings the binary part of every beat, beside unmoved triplet beats', () => {
+    expect(landings(swung(['xxx', 'x.x.', 'xxx', '.xxx'], 120, 0.62))).toEqual([
+      0, 0.333, 0.667, 1, 1.62, 2, 2.333, 2.667, 3.31, 3.62, 3.81,
+    ])
   })
 })

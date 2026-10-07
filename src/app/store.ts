@@ -17,6 +17,7 @@ import {
   updatedInPlace,
   withBpm,
   withLoopRange,
+  withSwing,
 } from '@/core'
 import type { AppStorage } from './repository'
 import { openStorage } from './repository'
@@ -33,6 +34,8 @@ interface AppState {
   dispatch: (command: EditCommand) => void
   /** `dragging` marks a slider drag: its many small changes are saved once they settle. */
   setBpm: (bpm: number, options?: { dragging?: boolean }) => void
+  /** The swing amount, 0.5 (straight) to 0.75; `dragging` as for `setBpm`. */
+  setSwing: (swing: number, options?: { dragging?: boolean }) => void
   setPlaying: (playing: boolean) => void
   /** Loops just that bar, or with `extend` grows the loop range to take it in. */
   loopBar: (bar: number, options?: { extend?: boolean }) => void
@@ -139,6 +142,11 @@ export const useAppStore = create<AppState>()((set, get) => {
     setBpm: (bpm, { dragging = false } = {}) => {
       const { editor } = get()
       const exercise = withBpm(editor.exercise, bpm)
+      change(exercise, { ...editor, exercise }, { debounced: dragging })
+    },
+    setSwing: (swing, { dragging = false } = {}) => {
+      const { editor } = get()
+      const exercise = withSwing(editor.exercise, swing)
       change(exercise, { ...editor, exercise }, { debounced: dragging })
     },
     setPlaying: (playing) => set({ playing }),

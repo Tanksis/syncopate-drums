@@ -11,6 +11,10 @@ export const TICKS_PER_BAR = BEATS_PER_BAR * TICKS_PER_BEAT
 export const MIN_BPM = 30
 export const MAX_BPM = 300
 
+/** Swing amounts, as the first eighth's share of the beat: 0.5 is straight. */
+export const MIN_SWING = 0.5
+export const MAX_SWING = 0.75
+
 /** Bumped whenever the stored shape changes; storage and import migrate through it. */
 export const SCHEMA_VERSION = 1
 
@@ -134,6 +138,12 @@ export function clampBpm(bpm: number): number {
 /** The exercise at a new tempo, kept inside the supported range. */
 export function withBpm(exercise: Exercise, bpm: number): Exercise {
   return { ...exercise, practice: { ...exercise.practice, bpm: clampBpm(bpm) } }
+}
+
+/** The exercise with a new swing amount, kept inside the supported range. */
+export function withSwing(exercise: Exercise, swing: number): Exercise {
+  const clamped = Math.min(MAX_SWING, Math.max(MIN_SWING, swing))
+  return { ...exercise, practice: { ...exercise.practice, swing: clamped } }
 }
 
 /** The exercise with a new loop range; `null` loops the whole exercise. */
