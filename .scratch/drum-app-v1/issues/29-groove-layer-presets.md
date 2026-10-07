@@ -22,3 +22,7 @@ See [spec.md](../spec.md):
 - [ ] The notation view draws the groove as a second voice (stems up, x noteheads, hi-hat foot below the staff), with the exercise stems down
 - [ ] The groove gain's default is raised so the groove sits level with the snare
 - [ ] The preset selector autosaves with the exercise, and the preset comes back on reopen
+
+## Comments
+
+- From ticket 28: `trimTimeline` and `playheadAt` in `src/core/timeline.ts` assume timeline entries are in time order. Swing moves a straight & later, to tick 9 at 75%, so it can land after a triplet-grid groove hit (tick 8) in the same beat. Sort each window's events by time, or check the order, before they go on the timeline.
