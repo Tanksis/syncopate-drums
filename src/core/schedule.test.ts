@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { DeviceSettings, Exercise, GroovePresetId, PlayPosition, ScheduledEvent } from './index'
-import { newExercise, schedule, setBeat, toggleTie } from './index'
+import { DEFAULT_DEVICE_SETTINGS, newExercise, schedule, setBeat, toggleTie } from './index'
 
-const device: DeviceSettings = { countIn: true, lastOpenedId: null }
+const device: DeviceSettings = DEFAULT_DEVICE_SETTINGS
 
 /** A blank exercise, played straight unless a test swings it. */
 const blank = (bpm = 120): Exercise => {

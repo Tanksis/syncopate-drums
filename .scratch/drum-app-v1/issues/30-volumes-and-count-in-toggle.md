@@ -8,7 +8,13 @@ See [spec.md](../spec.md): the device-settings store and the engine's three Gain
 
 **Status:** ready-for-agent
 
-- [ ] The click, exercise and groove volume sliders drive their gains live; the exercise mute silences only the exercise
-- [ ] The count-in toggle turns the one-bar count-in on and off (honoured by `schedule`, tested)
-- [ ] All four settings are stored in the device-settings store, not in the exercise, and come back after a reload
-- [ ] Switching exercises doesn't change them
+- [x] The click, exercise and groove volume sliders drive their gains live; the exercise mute silences only the exercise
+- [x] The count-in toggle turns the one-bar count-in on and off (honoured by `schedule`, tested)
+- [x] All four settings are stored in the device-settings store, not in the exercise, and come back after a reload
+- [x] Switching exercises doesn't change them
+
+## Comments
+
+- The count-in was already honoured by `schedule` and tested ("goes straight to bar 1 when the count-in is off"). This ticket adds the header toggle for it.
+- Volumes run from 0 to 150%, where 100% is each layer's usual level (the groove's raised default from ticket 29). The core's `layerLevels` turns the device settings into a level per layer, with the mute zeroing only the exercise, and tests cover it. On every tick the engine multiplies its base gains by those levels, easing over a few ms so slider moves don't crackle. The by-ear check is left to the user.
+- Like the BPM and swing sliders, a slider drag saves once it settles, and switching exercises saves the device settings at once.

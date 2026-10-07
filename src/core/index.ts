@@ -7,6 +7,7 @@ export { beatViews, placeItems, setBeat, toggleCutShort, toggleTie } from './spe
 export type { BeatView, PlacedItem } from './speller'
 export * from './editor'
 export * from './schedule'
+export * from './mix'
 export * from './groove'
 export * from './migrate'
 export * from './library'
