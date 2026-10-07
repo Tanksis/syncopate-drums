@@ -3,7 +3,7 @@
 // short last line keeps the bar width and stays left aligned.
 
 import { Beam, Dot, Formatter, Fraction, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
-import type { Cursor, Exercise, Item, NoteSticking, PlacedItem, Voice as DrumVoice } from '@/core'
+import type { Cursor, Exercise, Item, LoopRange, NoteSticking, PlacedItem, Voice as DrumVoice } from '@/core'
 import { TICKS_PER_BEAT, placeItems, restBar, setBeat, sticking } from '@/core'
 
 // Mirror the accent and a light tint of it from the design tokens in styles/index.css.
@@ -39,6 +39,8 @@ const SPACE_ABOVE_STAVE = 4
 const STAVE_LINE_GAP = 10
 /** Pixels of clickable space around a printed hand. */
 const HAND_HIT_PAD = 3
+/** Pixels of clickable space around a bar number, which is printed small. */
+const BAR_NUMBER_HIT_PAD = 6
 
 /** The stave line the sticking is printed on, one row for the whole line so the hands read across. */
 const handRowLine = (voice: DrumVoice) => VOICE_LINE[voice] + HAND_ROW_DROP
@@ -96,7 +98,8 @@ export interface CursorLine {
 
 /**
  * Draws the whole exercise into `el`, replacing what was there, at the given width. Each note's
- * SVG element carries `data-bar` and `data-beat`, the beat it sits in.
+ * SVG element carries `data-bar` and `data-beat`, the beat it sits in; each bar number carries
+ * `data-loop-bar`, its bar.
  */
 export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor, width: number): CursorLine {
   el.replaceChildren()
@@ -122,7 +125,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
     const w = barWidth + (column === 0 ? CLEF_WIDTH : 0)
     const y = STAVE_TOP + line * height
 
-    const stave = new Stave(x, y, w).setMeasure(b + 1)
+    const stave = new Stave(x, y, w)
     if (column === 0) stave.addClef('percussion')
     if (b === 0) stave.addTimeSignature('4/4')
     if (b === cursor.bar) {
@@ -132,6 +135,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
       ctx.restore()
     }
     stave.setContext(ctx).draw()
+    drawBarNumber(stave, b, exercise.practice.loopRange)
 
     const inBar = placed.filter((p) => p.bar === b)
     const notes = inBar.map((p) =>
@@ -171,6 +175,34 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
 
   const top = Math.floor(cursor.bar / barsPerLine) * height
   return { top, bottom: top + height + STAVE_TOP }
+}
+
+/**
+ * Prints the bar's number above its start, as VexFlow would, in a group tagged with the bar so a
+ * click can loop it. Bars in a set loop range are numbered in the accent colour.
+ */
+function drawBarNumber(stave: Stave, bar: number, loopRange: LoopRange | null) {
+  const ctx = stave.checkContext()
+  const looped = loopRange !== null && bar >= loopRange.first && bar <= loopRange.last
+  const group: SVGGElement = ctx.openGroup('bar-number')
+  group.dataset.loopBar = String(bar)
+  group.classList.add('cursor-pointer')
+  const title = document.createElementNS('http://www.w3.org/2000/svg', 'title')
+  title.textContent = `Loop bar ${bar + 1} (Shift+click to extend the loop)`
+  group.append(title)
+  ctx.save()
+  ctx.setFont({ ...stave.fontInfo, weight: looped ? 'bold' : stave.fontInfo.weight })
+  if (looped) ctx.setFillStyle(ACCENT_COLOUR)
+  const text = String(bar + 1)
+  const width = ctx.measureText(text).width
+  const height = Number.parseFloat(String(stave.fontInfo.size))
+  const x = stave.getX() - width / 2
+  const y = stave.getYForTopText(0) + 3
+  ctx.fillText(text, x, y)
+  const pad = BAR_NUMBER_HIT_PAD
+  ctx.pointerRect(x - pad, y - height - pad, width + 2 * pad, height + 2 * pad)
+  ctx.restore()
+  ctx.closeGroup()
 }
 
 /**

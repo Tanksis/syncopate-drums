@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { MAX_BPM, MIN_BPM } from '@/core'
+import { LoopReadout } from './LoopReadout'
 import { togglePlayback } from './transport'
 import { usePlaybackKeys } from './usePlaybackKeys'
 
-/** The header's play/stop button and tempo controls. */
+/** The header's play/stop button, tempo controls and loop range. */
 export function TransportControls() {
   usePlaybackKeys()
   const playing = useAppStore((s) => s.playing)
@@ -21,6 +22,7 @@ export function TransportControls() {
         {playing ? '■ Stop' : '▶ Play'}
       </button>
       <BpmControl />
+      <LoopReadout />
     </div>
   )
 }

@@ -2,8 +2,8 @@
 // Musical position (bar, tick) is the source of truth. Each call converts ticks to seconds from
 // the position it is given, at the BPM it is given, so a tempo change only affects what comes next.
 
-import type { DeviceSettings, Exercise, PracticeSettings, Voice } from './model'
-import { TICKS_PER_BAR, TICKS_PER_BEAT } from './model'
+import type { DeviceSettings, Exercise, LoopRange, PracticeSettings, Voice } from './model'
+import { TICKS_PER_BAR, TICKS_PER_BEAT, loopBars } from './model'
 import { placeItems } from './speller'
 
 /** A place in the playback: bar index (negative during the count-in) and tick within the bar. */
@@ -43,7 +43,9 @@ export interface ScheduleResult {
 
 /**
  * Every event from `from` up to `window` seconds later. `'start'` begins playback: with the
- * count-in on, one bar of clicks comes before bar 1.
+ * count-in on, one bar of clicks comes before the loop range. Playback wraps from the end of the
+ * loop range to its start, so a changed range applies at the next wrap, or at once from a
+ * position already past its end.
  */
 export function schedule(
   exercise: Exercise,
@@ -54,7 +56,10 @@ export function schedule(
 ): ScheduleResult {
   const secondsPerTick = 60 / practice.bpm / TICKS_PER_BEAT
   const struck = struckTicks(exercise)
-  let position = from === 'start' ? { bar: device.countIn ? -1 : 0, tick: 0 } : from
+  const loop = loopBars(practice.loopRange, exercise.bars.length)
+  let position: PlayPosition
+  if (from === 'start') position = device.countIn ? { bar: -1, tick: 0 } : { bar: loop.first, tick: 0 }
+  else position = from.bar > loop.last ? { bar: loop.first, tick: 0 } : from
   let elapsed = 0
   const events: ScheduledEvent[] = []
   // Time is counted in whole ticks from the start position, so no rounding error builds up.
@@ -67,15 +72,15 @@ export function schedule(
       const instrument = VOICE_INSTRUMENT[exercise.voice]
       events.push({ time, kind: 'exercise', instrument, accent: false, noteId: `${bar}:${tick}`, position })
     }
-    position = advance(position, exercise.bars.length)
+    position = advance(position, loop)
   }
   return { events, next: position, nextTime: elapsed * secondsPerTick }
 }
 
-/** The next tick, looping from the end of the exercise back to bar 1. */
-function advance({ bar, tick }: PlayPosition, barCount: number): PlayPosition {
+/** The next tick: from the count-in into the loop range, and from its last bar back to its first. */
+function advance({ bar, tick }: PlayPosition, loop: LoopRange): PlayPosition {
   if (tick + 1 < TICKS_PER_BAR) return { bar, tick: tick + 1 }
-  return { bar: bar + 1 < barCount ? bar + 1 : 0, tick: 0 }
+  return { bar: bar < 0 || bar >= loop.last ? loop.first : bar + 1, tick: 0 }
 }
 
 const VOICE_INSTRUMENT: Record<Voice, Instrument> = { snare: 'snare', bass: 'kick' }

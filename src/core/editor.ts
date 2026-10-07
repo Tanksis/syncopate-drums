@@ -3,7 +3,7 @@
 
 import { FIGURES, REST_FIGURE } from './figures'
 import type { Bar, Exercise, Hand } from './model'
-import { BEATS_PER_BAR, TICKS_PER_BEAT, itemTicks, restBar } from './model'
+import { BEATS_PER_BAR, TICKS_PER_BEAT, itemTicks, restBar, withLoopRangeKept } from './model'
 import { beatViews, setBeat, toggleCutShort, toggleTie } from './speller'
 import type { NoteSticking } from './sticking'
 import { overrideCount, sticking } from './sticking'
@@ -97,9 +97,17 @@ export function newEditorState(exercise: Exercise): EditorState {
   return { exercise, cursor: { bar: 0, beat: 0 }, selection: null, clipboard: null, history: { undo: [], redo: [] } }
 }
 
-/** Applies a command. Every change to the bars can be undone; moves and copying can't. */
+/**
+ * Applies a command. Every change to the bars can be undone; moves and copying can't. The loop
+ * range is kept inside the bars left.
+ */
 export function applyEdit(state: EditorState, command: EditCommand): EditorState {
-  if (command.type === 'selectBars') return selectBars(state, command.step)
+  const next = command.type === 'selectBars' ? selectBars(state, command.step) : record(state, command)
+  const exercise = withLoopRangeKept(next.exercise)
+  return exercise === next.exercise ? next : { ...next, exercise }
+}
+
+function record(state: EditorState, command: Exclude<EditCommand, { type: 'selectBars' }>): EditorState {
   if (command.type === 'undo' || command.type === 'redo') return clearSelection(travel(state, command.type))
   // Copying keeps the selection; any other command ends it, once it has had the chance to act on it.
   const edited = edit(state, command)

@@ -53,6 +53,14 @@ export interface LoopRange {
   last: number
 }
 
+/** The bars that loop: the loop range kept inside the exercise, or else every bar. */
+export function loopBars(range: LoopRange | null, barCount: number): LoopRange {
+  const end = barCount - 1
+  if (!range) return { first: 0, last: end }
+  const last = Math.min(range.last, end)
+  return { first: Math.min(range.first, last), last }
+}
+
 export interface PracticeSettings {
   bpm: number
   loopRange: LoopRange | null
@@ -126,4 +134,26 @@ export function clampBpm(bpm: number): number {
 /** The exercise at a new tempo, kept inside the supported range. */
 export function withBpm(exercise: Exercise, bpm: number): Exercise {
   return { ...exercise, practice: { ...exercise.practice, bpm: clampBpm(bpm) } }
+}
+
+/** The exercise with a new loop range; `null` loops the whole exercise. */
+export function withLoopRange(exercise: Exercise, loopRange: LoopRange | null): Exercise {
+  return { ...exercise, practice: { ...exercise.practice, loopRange } }
+}
+
+/**
+ * A click on a bar number loops just that bar. With `extend` (Shift+click) the range grows to take
+ * the bar in, or loops just that bar when no range is set.
+ */
+export function loopAt(exercise: Exercise, bar: number, { extend = false } = {}): Exercise {
+  const range = exercise.practice.loopRange
+  if (!extend || !range) return withLoopRange(exercise, { first: bar, last: bar })
+  return withLoopRange(exercise, { first: Math.min(range.first, bar), last: Math.max(range.last, bar) })
+}
+
+/** The exercise with its loop range kept inside its bars, as it was if it already is. */
+export function withLoopRangeKept(exercise: Exercise): Exercise {
+  const range = exercise.practice.loopRange
+  if (!range || range.last < exercise.bars.length) return exercise
+  return withLoopRange(exercise, loopBars(range, exercise.bars.length))
 }

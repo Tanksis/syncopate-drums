@@ -11,10 +11,12 @@ import {
   exerciseToOpenAtLaunch,
   isUnchangedNew,
   launchListOrder,
+  loopAt,
   newEditorState,
   newExercise,
   updatedInPlace,
   withBpm,
+  withLoopRange,
 } from '@/core'
 import type { AppStorage } from './repository'
 import { openStorage } from './repository'
@@ -32,6 +34,10 @@ interface AppState {
   /** `dragging` marks a slider drag: its many small changes are saved once they settle. */
   setBpm: (bpm: number, options?: { dragging?: boolean }) => void
   setPlaying: (playing: boolean) => void
+  /** Loops just that bar, or with `extend` grows the loop range to take it in. */
+  loopBar: (bar: number, options?: { extend?: boolean }) => void
+  /** Loops the whole exercise again. */
+  loopAll: () => void
   openExercise: (id: string) => void
   /** Opens a new Untitled exercise, on top of the list. */
   createExercise: () => void
@@ -136,6 +142,17 @@ export const useAppStore = create<AppState>()((set, get) => {
       change(exercise, { ...editor, exercise }, { debounced: dragging })
     },
     setPlaying: (playing) => set({ playing }),
+    loopBar: (bar, options) => {
+      const { editor } = get()
+      const exercise = loopAt(editor.exercise, bar, options)
+      change(exercise, { ...editor, exercise })
+    },
+    loopAll: () => {
+      const { editor } = get()
+      if (editor.exercise.practice.loopRange === null) return
+      const exercise = withLoopRange(editor.exercise, null)
+      change(exercise, { ...editor, exercise })
+    },
     openExercise: (id) => {
       const target = get().library.find((e) => e.id === id)
       if (target && id !== get().editor.exercise.id) switchTo(target, updatedInPlace)
