@@ -2,7 +2,7 @@ import type { PointerEvent } from 'react'
 import { useState } from 'react'
 import { useAppStore } from '@/app/store'
 import type { BeatView, GridPoint, GridPosition } from '@/core'
-import { REST_FIGURE, beatViews, inLoopRange, setHold } from '@/core'
+import { REST_FIGURE, applyEdit, editorBeatViews, inLoopRange } from '@/core'
 
 /** A press on a grid position, and (once it moves to another position) the hold end it drags to. */
 interface Press {
@@ -26,18 +26,19 @@ function positionUnder(box: Element, clientX: number): number {
  * The bars and beats of the exercise, the main editor. Each beat box shows its grid positions: a
  * hit, a hold bar for a note still sounding, or an empty dot. Clicking a position turns a hit on or
  * off; pressing on a note and dragging sets where its hold ends, shown live and written on release.
- * Clicking elsewhere on a beat moves the cursor to it. The cursor, the bar selection and a set loop
- * range are shaded, and a bar's ✕ (shown on hover) deletes it.
+ * Clicking elsewhere on a beat moves the cursor to it. A beat's 3/16 toggle, or a right-click on
+ * its box, switches it between the triplet and the sixteenth grid. The cursor, the bar selection
+ * and a set loop range are shaded, and a bar's ✕ (shown on hover) deletes it.
  */
 export function BeatStrip() {
-  const bars = useAppStore((s) => s.editor.exercise.bars)
-  const cursor = useAppStore((s) => s.editor.cursor)
-  const selection = useAppStore((s) => s.editor.selection)
-  const loopRange = useAppStore((s) => s.editor.exercise.practice.loopRange)
+  const editor = useAppStore((s) => s.editor)
+  const { cursor, selection } = editor
+  const { loopRange } = editor.exercise.practice
   const dispatch = useAppStore((s) => s.dispatch)
   const [press, setPress] = useState<Press | null>(null)
-  // While dragging, the strip shows the hold as the core would write it.
-  const views = beatViews(press?.to ? setHold(bars, press.from, press.to) : bars)
+  // While dragging, the strip shows the hold as the editor would write it on release.
+  const shown = press?.to ? applyEdit(editor, { type: 'setHold', from: press.from, to: press.to }) : editor
+  const views = editorBeatViews(shown)
 
   const startPress = (e: PointerEvent<HTMLElement>, from: GridPoint, position: GridPosition) => {
     if (e.button !== 0) return
@@ -63,7 +64,8 @@ export function BeatStrip() {
     beat < views[b].length - 1 ? views[b][beat + 1] : views[b + 1]?.[0]
 
   return (
-    <div aria-label="Beat strip" className="flex flex-wrap gap-2">
+    // The strip's right-click switches grids, so the browser's menu stays shut over it.
+    <div aria-label="Beat strip" className="flex flex-wrap gap-2" onContextMenu={(e) => e.preventDefault()}>
       {views.map((beats, b) => {
         const selected = selection !== null && b >= selection.first && b <= selection.last
         const looped = inLoopRange(loopRange, b)
@@ -73,7 +75,7 @@ export function BeatStrip() {
             aria-selected={selected || undefined}
             title={looped ? 'In the loop range' : undefined}
             // A selected bar in the loop range keeps the loop shading inside the selection's border.
-            className={`group relative flex items-center gap-0.5 rounded-lg border p-1 ${
+            className={`group relative flex items-center gap-0.5 rounded-lg border px-1 pt-1 pb-3 ${
               selected ? 'border-accent' : looped ? 'border-loop-line' : 'border-line'
             } ${looped ? 'bg-loop' : selected ? 'bg-sky-100' : 'bg-card'}`}
           >
@@ -81,6 +83,7 @@ export function BeatStrip() {
             {beats.map((view, beat) => {
               const current = cursor.bar === b && cursor.beat === beat
               const tiedOn = nextBeat(b, beat)?.positions[0] === 'hold'
+              const switchGrid = () => dispatch({ type: 'setBeatGrid', bar: b, beat, triplet: !view.triplet })
               return (
                 <div
                   key={beat}
@@ -88,6 +91,7 @@ export function BeatStrip() {
                   aria-current={current || undefined}
                   title={[view.tiedInto && 'tied into', view.cutShort && 'cut short'].filter(Boolean).join(', ') || undefined}
                   onClick={() => dispatch({ type: 'moveTo', bar: b, beat })}
+                  onContextMenu={switchGrid}
                   className={`relative flex h-9 w-16 cursor-pointer items-stretch rounded-md border border-stone-300 bg-card ${
                     current ? 'outline-3 -outline-offset-2 outline-accent' : ''
                   }`}
@@ -110,6 +114,22 @@ export function BeatStrip() {
                       onPointerCancel={() => setPress(null)}
                     />
                   ))}
+                  <button
+                    type="button"
+                    aria-label={`Bar ${b + 1}, beat ${beat + 1}: ${view.triplet ? 'triplet' : 'sixteenth'} grid`}
+                    title={`On the ${view.triplet ? 'triplet' : 'sixteenth'} grid: switch to ${view.triplet ? 'sixteenths' : 'triplets'} (or right-click the beat)`}
+                    tabIndex={-1}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      switchGrid()
+                    }}
+                    className={`absolute -bottom-2 left-1/2 min-w-4 -translate-x-1/2 cursor-pointer rounded border bg-card px-0.5 font-mono text-[9px]/[11px] hover:border-accent hover:text-accent ${
+                      view.triplet ? 'border-accent text-accent' : 'border-line text-mute'
+                    }`}
+                  >
+                    {view.triplet ? '3' : '16'}
+                  </button>
                 </div>
               )
             })}

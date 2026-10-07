@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Bar, Item } from './index'
-import { FIGURES, REST_FIGURE, TICKS_PER_BAR, beatViews, itemTicks, restBar, setBeat, setHold, toggleCutShort, toggleHit, toggleTie } from './index'
+import { FIGURES, REST_FIGURE, TICKS_PER_BAR, beatViews, clearBeatToDownbeat, itemTicks, restBar, setBeat, setHold, toggleCutShort, toggleHit, toggleTie } from './index'
 
 /** A bar in shorthand: q e s for note values, `.` for a dot, 3 for a triplet, r for a rest, ~ for a tie. */
 function text(bars: Bar[]): string {
@@ -302,6 +302,37 @@ describe('toggling a hit on a grid position', () => {
     expect(toggleHit(bars, 0, 0, 4)).toBe(bars)
     expect(toggleHit(bars, 1, 0, 0)).toBe(bars)
   })
+
+  it('clicks on the triplet grid of a plain beat when asked: positions 1 and 3 give triplet x.x', () => {
+    const bars = toggleHit(toggleHit(bar(), 0, 0, 0, true), 0, 0, 2, true)
+    expect(text(bars)).toBe('q3 e3 rq rq rq')
+    expect(beatViews(bars)[0][0]).toMatchObject({ triplet: true, figure: { key: 's' } })
+  })
+
+  it('writes a triplet beat left with only its downbeat as a plain quarter', () => {
+    expect(text(toggleHit(bar('x.x'), 0, 0, 2))).toBe('q rq rq rq')
+    expect(text(toggleHit(bar(), 0, 0, 0, true))).toBe('q rq rq rq')
+  })
+})
+
+describe('switching grids', () => {
+  it('keeps a downbeat note holding to the end of the beat and clears the other positions', () => {
+    expect(text(clearBeatToDownbeat(bar('x..x', '.xx'), 0, 0))).toBe('q re3 e3 e3 rq rq')
+    expect(text(clearBeatToDownbeat(bar('xxx', 'x.x.'), 0, 0))).toBe('q e e rq rq')
+    expect(text(clearBeatToDownbeat(bar('.x.x'), 0, 0))).toBe('rq rq rq rq')
+  })
+
+  it('keeps a tie into the beat', () => {
+    const tied = toggleTie(bar('x...', 'x.x.'), 0, 1)
+    expect(text(clearBeatToDownbeat(tied, 0, 1))).toBe('q.~ e rq rq')
+  })
+
+  it('reads beats on the triplet grid when asked, for the pending grid', () => {
+    const views = beatViews(bar('x...'), [0, 1])
+    expect(views[0][0]).toMatchObject({ triplet: true, hits: 'x..', positions: ['hit', 'hold', 'hold'] })
+    expect(views[0][1]).toMatchObject({ triplet: true, positions: ['empty', 'empty', 'empty'] })
+    expect(views[0][2]).toMatchObject({ triplet: false })
+  })
 })
 
 describe("setting a note's hold", () => {
@@ -363,5 +394,8 @@ describe("setting a note's hold", () => {
     expect(beatViews(setHold(bar('x...'), at(0, 0), at(0, 1)))[0][0].figure).toBeUndefined()
     // Neither is a shortened note on the triplet grid that isn't the last.
     expect(beatViews(setHold(bar('x.x'), at(0, 0), at(0, 1)))[0][0].figure).toBeUndefined()
+    // A triplet beat's last note shortened to one triplet eighth is the figure cut short.
+    const tripletCut = beatViews(setHold(bar('xx.'), at(0, 1), at(0, 2)))[0][0]
+    expect(tripletCut).toMatchObject({ figure: { hits: 'xx.' }, cutShort: true })
   })
 })
