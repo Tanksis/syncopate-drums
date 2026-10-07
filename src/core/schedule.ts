@@ -4,7 +4,7 @@
 
 import type { DeviceSettings, Exercise, LoopRange, PracticeSettings, Voice } from './model'
 import { TICKS_PER_BAR, TICKS_PER_BEAT, loopBars } from './model'
-import { grooveChords } from './groove'
+import { grooveHitsByTick } from './groove'
 import { placeItems } from './speller'
 
 /** A place in the playback: bar index (negative during the count-in) and tick within the bar. */
@@ -61,7 +61,7 @@ export function schedule(
   const secondsPerTick = 60 / practice.bpm / TICKS_PER_BEAT
   const swing = effectiveSwing(practice.swing, practice.bpm)
   const struck = struckTicks(exercise)
-  const groove = new Map(grooveChords(practice.groove).map((chord) => [chord.start, chord.hits]))
+  const groove = grooveHitsByTick(practice.groove)
   const loop = loopBars(practice.loopRange, exercise.bars.length)
   let position: PlayPosition
   if (from === 'start') position = device.countIn ? { bar: -1, tick: 0 } : { bar: loop.first, tick: 0 }

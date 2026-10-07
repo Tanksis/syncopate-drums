@@ -3,7 +3,7 @@ import { useRef } from 'react'
 import { useAppStore } from '@/app/store'
 import { PanelHeading } from '@/components/PanelHeading'
 import type { ExerciseSettings, GroovePresetId } from '@/core'
-import { GROOVE_PRESETS, MAX_SWING, groovePreset, MIN_SWING, overrideCount } from '@/core'
+import { GROOVE_PRESETS, MAX_SWING, MIN_SWING, groovePreset, overrideCount } from '@/core'
 
 export function SettingsSidebar() {
   return (
@@ -12,7 +12,7 @@ export function SettingsSidebar() {
       className="flex flex-col gap-3.5 overflow-auto border-l border-line bg-panel p-3"
     >
       <SettingGroup title="Groove">
-        <GroovePreset />
+        <GroovePicker />
         <Swing />
       </SettingGroup>
       <SettingGroup title="Sticking">
@@ -39,7 +39,7 @@ function SettingGroup({ title, children }: { title: string; children?: ReactNode
 }
 
 /** The groove layer played and drawn with the exercise, or none. */
-function GroovePreset() {
+function GroovePicker() {
   const groove = useAppStore((s) => s.editor.exercise.practice.groove)
   const setGroove = useAppStore((s) => s.setGroove)
   return (

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import type { GroovePresetId } from './index'
 import { grooveChords } from './index'
 
 /** A compact view of a bar's chords: "start duration key/notehead+key/notehead". */
-const show = (id: string) =>
+const show = (id: GroovePresetId) =>
   grooveChords(id).map(
     (c) => `${c.start} ${c.duration} ${c.hits.map((h) => `${h.notation.key}/${h.notation.notehead}`).join('+')}`,
   )

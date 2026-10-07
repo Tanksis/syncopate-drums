@@ -32,7 +32,8 @@ const HIHAT: GrooveNotation = { key: 'g/5', notehead: 'x' }
 const HIHAT_FOOT: GrooveNotation = { key: 'd/4', notehead: 'x' }
 const BASS_DRUM: GrooveNotation = { key: 'f/4', notehead: 'normal' }
 
-const at = (beat: number, eighth = 0) => beat * 12 + eighth * 6
+/** The tick of a beat, or of the & of it. */
+const at = (beat: number, eighth = 0) => beat * TICKS_PER_BEAT + eighth * (TICKS_PER_BEAT / 2)
 
 /** The jazz ride pattern, louder on 2 and 4, with the hi-hat foot on 2 and 4, and optionally a feathered bass drum on every beat. */
 function jazzRide({ feathered }: { feathered: boolean }): GrooveHit[] {
@@ -68,7 +69,7 @@ export const GROOVE_PRESETS: readonly GroovePreset[] = [
 ]
 
 /** The preset with this id; an id this version of the app doesn't know plays no groove. */
-export function groovePreset(id: string): GroovePreset {
+export function groovePreset(id: GroovePresetId): GroovePreset {
   return GROOVE_PRESETS.find((p) => p.id === id) ?? GROOVE_PRESETS[0]
 }
 
@@ -79,16 +80,26 @@ export interface GrooveChord {
   hits: GrooveHit[]
 }
 
-const DURATION_OF_TICKS: Record<number, Duration> = { 12: 'quarter', 6: 'eighth', 3: 'sixteenth' }
+const DURATION_OF_TICKS: Record<number, Duration> = {
+  [TICKS_PER_BEAT]: 'quarter',
+  [TICKS_PER_BEAT / 2]: 'eighth',
+  [TICKS_PER_BEAT / 4]: 'sixteenth',
+}
+
+/** The preset's hits by the tick they are struck at, in tick order. */
+export function grooveHitsByTick(id: GroovePresetId): Map<number, GrooveHit[]> {
+  const byTick = new Map<number, GrooveHit[]>()
+  for (const hit of groovePreset(id).hits) byTick.set(hit.tick, [...(byTick.get(hit.tick) ?? []), hit])
+  return byTick
+}
 
 /**
  * A bar of the groove preset as the notation draws it: a chord at each tick with hits, held until
  * the next chord or the end of its beat. Every preset starts each beat with a hit and holds each
  * chord for a quarter, an eighth or a sixteenth.
  */
-export function grooveChords(id: string): GrooveChord[] {
-  const byTick = new Map<number, GrooveHit[]>()
-  for (const hit of groovePreset(id).hits) byTick.set(hit.tick, [...(byTick.get(hit.tick) ?? []), hit])
+export function grooveChords(id: GroovePresetId): GrooveChord[] {
+  const byTick = grooveHitsByTick(id)
   const starts = [...byTick.keys()]
   return starts.map((start, i) => {
     const beatEnd = (Math.floor(start / TICKS_PER_BEAT) + 1) * TICKS_PER_BEAT

@@ -111,12 +111,11 @@ function drawNotes(
   const tuplets = groups
     .filter((g) => g.triplet)
     .map((g) => new Tuplet(g.notes, { numNotes: 3, notesOccupied: 2, location: Tuplet.LOCATION_BOTTOM }))
-  const voice = new Voice({ numBeats: beats, beatValue: 4 }).setStrict(false).addTickables(notes)
+  const voiceOf = (tickables: StaveNote[]) =>
+    new Voice({ numBeats: beats, beatValue: 4 }).setStrict(false).addTickables(tickables)
   const grooveNotes = groove.map(grooveNote)
   const grooveGroups = byBeat(groove.map((c) => ({ start: c.start, triplet: false })), grooveNotes)
-  const voices = grooveNotes.length
-    ? [voice, new Voice({ numBeats: beats, beatValue: 4 }).setStrict(false).addTickables(grooveNotes)]
-    : [voice]
+  const voices = grooveNotes.length ? [voiceOf(notes), voiceOf(grooveNotes)] : [voiceOf(notes)]
   // Beamed beat by beat: VexFlow's own grouping loses count of the beats after a triplet group.
   const beam = (stemDirection: number) => (g: { notes: StaveNote[] }) =>
     Beam.generateBeams(g.notes, { groups: [new Fraction(1, 4)], stemDirection })
