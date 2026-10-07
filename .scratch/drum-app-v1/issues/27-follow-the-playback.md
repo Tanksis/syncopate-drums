@@ -10,10 +10,20 @@ The highlight uses an internal latency offset (default 0). A setting for it is a
 
 **Blocked by:** 17 (Play the exercise with click and count-in)
 
-**Status:** ready-for-agent
+**Status:** done (merged in PR #16, 2026-10-06)
 
-- [ ] The engine publishes a timeline of (time, noteId, position) for scheduled events
-- [ ] A rAF loop outside React styles the sounding note from `getOutputTimestamp()` against the timeline, with an internal offset defaulting to 0
-- [ ] The notation view scrolls the current line into view during playback
-- [ ] The header shows count-in and bar · beat while playing
+- [x] The engine publishes a timeline of (time, noteId, position) for scheduled events
+- [x] A rAF loop outside React styles the sounding note from `getOutputTimestamp()` against the timeline, with an internal offset defaulting to 0
+- [x] The notation view scrolls the current line into view during playback
+- [x] The header shows count-in and bar · beat while playing
 - [ ] By eye and ear on the user's laptop: the highlight lands with the sound, including across loop wraps
+
+## Comments
+
+- 2026-10-06: Squash-merged as PR #16. Choices where the spec was silent:
+  - The lit note is the last one struck, and it stays lit until the next note, through rests and ties. No note is lit during the count-in.
+  - The sounding note is green (a new `--color-play` token), so it differs from the blue cursor beat and the amber loop.
+  - The view scrolls only when the playhead reaches a new line, or after a redraw while playing, so the drummer can still scroll by hand.
+  - The header shows "count-in · 1" to "count-in · 4", then "bar · beat", both counted from 1. The position isn't kept in the store: the header reads the engine's `playhead()` in its own rAF loop, so the store doesn't change on every beat.
+  - The latency offset is `HIGHLIGHT_LATENCY = 0` in `engine.ts`. There's no setting for it until the highlight drifts.
+  - The by-ear-and-eye check on the user's laptop is still open.
