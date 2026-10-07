@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE · Swing in the notation</title>
+<!--
+  PROTOTYPE, throwaway. Question (grilling Q16): should the notation view show swing, and how?
+  Four variants of the same two bars, switchable via ?variant=A|B|C|D and the floating bar (← / →):
+    A  Standard          even spacing, no sign of swing (v1 today)
+    B  Swing marking     even spacing plus the "swing" tempo marking proper charts use
+    C  Swung noteheads   off-beat notes slide right by the swing actually played (triplets stay put)
+    D  Timing lane       standard staff plus a dot lane underneath showing where hits land
+  All variants use the hands-up / feet-down notation from ADR 0002 and play the same audio
+  (rough synth sounds), with the playhead line on the latest hit. Nothing is saved.
+-->
+<script src="vexflow.js"></script>
+<style>
+  :root { --accent:#2563eb; --bg:#f5f5f4; --ink:#1c1917; --mute:#78716c; --line:#e7e5e4; --play:#dc2626; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui, sans-serif; }
+  .badge { background:#fde68a; padding:6px 16px; font-weight:600; }
+  main { max-width:1260px; margin:0 auto; padding:16px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:8px; padding:12px 16px; margin-bottom:12px; }
+  .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin:6px 0; }
+  .row label { width:120px; color:var(--mute); }
+  button { font:inherit; border:1px solid var(--line); background:#fff; border-radius:6px; padding:3px 10px; cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  button.on { background:#dbeafe; border-color:var(--accent); }
+  #score { overflow-x:auto; }
+  #state { font:12px ui-monospace, monospace; color:var(--mute); }
+  .desc { color:var(--mute); }
+  .switcher { position:fixed; bottom:16px; left:50%; transform:translateX(-50%); background:#111; color:#fff; border-radius:999px; padding:6px 10px; display:flex; gap:10px; align-items:center; box-shadow:0 4px 14px #0004; z-index:9; }
+  .switcher button { background:#333; color:#fff; border:0; border-radius:999px; }
+  .hide { display:none; }
+</style>
+</head>
+<body>
+<div class="badge">PROTOTYPE · throwaway · How should swing show in the notation? (grilling Q16)</div>
+<main>
+  <div class="card">
+    <b>What to judge:</b> press Play and read along at a few swing amounts and tempos. Is the standard staff (A) fine as it is,
+    or does showing the swing (B, C or D) help you lock in? Bar 2 has sixteenths and a triplet: at 66.7% the
+    triplet's last note and a swung "&amp;" land at the same moment.
+    <div class="desc" id="vdesc" style="margin-top:6px"></div>
+  </div>
+  <div class="card">
+    <div class="row"><label>Playback</label><button id="play">▶ Play</button><label style="width:auto"><input type="checkbox" id="click" checked> click</label></div>
+    <div class="row"><label>Swing amount</label><input id="swing" type="range" min="50" max="75" step="0.1"><span id="swingv" style="width:52px"></span>
+      <button data-swing="50">straight</button><button data-swing="58">light</button><button data-swing="62">medium</button><button data-swing="66.7">triplet</button><button data-swing="75">dotted</button></div>
+    <div class="row"><label>BPM</label><input id="bpm" type="range" min="40" max="320" step="1"><span id="bpmv"></span>
+      <span class="desc">swing eases toward straight above 120 BPM, as in the app</span></div>
+    <div class="row" id="strengthRow"><label>Visual strength</label><input id="strength" type="range" min="0" max="100" step="5"><span id="strengthv"></span>
+      <span class="desc">C only: how far the noteheads move, as a share of the real timing</span></div>
+    <div id="state"></div>
+  </div>
+  <div class="card"><div id="score"></div></div>
+</main>
+<div class="switcher"><button id="prev">◀</button><span id="vlabel"></span><button id="next">▶</button></div>
+
+<script>
+const VF = VexFlow;
+const VARIANTS = {
+  A: ['Standard', 'Even spacing and no sign of swing: how v1 draws it. The swing is only heard.'],
+  B: ['Swing marking', 'Even spacing plus the tempo marking jazz charts use ("Swing", eighths played as a triplet feel). Standard notation; it says swing is on but not how much.'],
+  C: ['Swung noteheads', 'Each off-beat note slides right by the swing actually played (sixteenths in proportion, triplets never). Beats keep their width. Not standard engraving.'],
+  D: ['Timing lane', 'The staff stays standard; the dot lane underneath shows where each hit really lands (grey lines are beats, ticks are straight eighths).'],
+};
+const KEYS = Object.keys(VARIANTS);
+const P = new URLSearchParams(location.search);
+const S = { variant: KEYS.includes(P.get('variant')) ? P.get('variant') : 'A', swing: 66.7, bpm: 120, strength: 100, click: true };
+
+// The two bars, already merged into the hands part (stems up) and the feet part (stems down).
+const RIDE = 'f/5/x2', SN = 'c/5', HF = 'd/4/x2', REST = 'b/4';
+const BARS = [
+  { hands: [
+      { d: 'q', t: 0, k: [RIDE] },
+      { d: '8', t: 12, k: [RIDE] }, { d: '8', t: 18, k: [RIDE, SN], h: 'L' },
+      { d: 'q', t: 24, k: [RIDE] },
+      { d: '8', t: 36, k: [RIDE, SN], h: 'R' }, { d: '8', t: 42, k: [RIDE] } ] },
+  { hands: [
+      { d: '8', t: 0, k: [RIDE, SN], h: 'R', trip: 1 }, { d: '8', t: 4, rest: 1, trip: 1 }, { d: '8', t: 8, k: [SN], h: 'R', trip: 1 },
+      { d: '8', t: 12, k: [RIDE, SN], h: 'R' }, { d: '16', t: 18, k: [RIDE, SN], h: 'R' }, { d: '16', t: 21, k: [SN], h: 'L' },
+      { d: '8', t: 24, k: [RIDE] }, { d: '8', t: 30, k: [SN], h: 'L' },
+      { d: '16', t: 36, k: [RIDE] }, { d: '16', t: 39, k: [SN], h: 'L' }, { d: '16', t: 42, k: [RIDE] }, { d: '16', t: 45, k: [SN], h: 'L' } ] },
+];
+const FEET = [{ ghost: 1, t: 0 }, { d: 'q', t: 12, k: [HF] }, { ghost: 1, t: 24 }, { d: 'q', t: 36, k: [HF] }];
+const SOUND = { [RIDE]: 'ride', [SN]: 'snare', [HF]: 'hhfoot' };
+
+/** The swing actually played: the set amount, eased toward straight from 120 to 320 BPM. */
+function effSwing() {
+  const k = Math.max(0, Math.min(1, (320 - S.bpm) / 200));
+  return 0.5 + (S.swing / 100 - 0.5) * k;
+}
+/** Where a hit at tick p (0–11) of a beat really lands, as a share of the beat. */
+function landing(p, trip) {
+  if (trip) return p / 12;
+  const r = effSwing();
+  return { 0: 0, 3: r / 2, 6: r, 9: r + (1 - r) / 2 }[p];
+}
+
+let drawn = []; // { bar, t, x, sounds } for every hit, for playback and the playhead
+let lineEl;
+
+function render() {
+  const el = document.getElementById('score'); el.innerHTML = '';
+  const W = 1175, H = S.variant === 'D' ? 330 : 250;
+  const r = new VF.Renderer(el, VF.Renderer.Backends.SVG); r.resize(W, H);
+  const ctx = r.getContext();
+  drawn = [];
+  let x = 10, staveY = 60, top = 0, bottom = 0;
+  BARS.forEach((bar, bi) => {
+    const w = bi === 0 ? 560 : 600;
+    const stave = new VF.Stave(x, staveY, w);
+    if (bi === 0) stave.addClef('percussion').addTimeSignature('4/4');
+    if (bi === BARS.length - 1) stave.setEndBarType(VF.Barline.type.END);
+    stave.setContext(ctx).draw();
+    top = stave.getYForLine(0); bottom = stave.getYForLine(4);
+
+    const hn = bar.hands.map((it) => (it.n = new VF.StaveNote({ keys: it.rest ? [REST] : it.k, duration: it.d + (it.rest ? 'r' : ''), stemDirection: 1, clef: 'percussion' })));
+    const fn = FEET.map((it) => (it.n = it.ghost ? new VF.GhostNote({ duration: 'q' }) : new VF.StaveNote({ keys: it.k, duration: it.d, stemDirection: -1, clef: 'percussion' })));
+    const trip = bar.hands.filter((it) => it.trip);
+    const tuplets = trip.length ? [new VF.Tuplet(trip.map((it) => it.n), { numNotes: 3, notesOccupied: 2, bracketed: true })] : [];
+    const beams = VF.Beam.generateBeams(hn, { groups: [new VF.Fraction(1, 4)], stemDirection: 1 });
+    const hv = new VF.Voice({ numBeats: 4, beatValue: 4 }).setStrict(false).addTickables(hn);
+    const fv = new VF.Voice({ numBeats: 4, beatValue: 4 }).setStrict(false).addTickables(fn);
+    new VF.Formatter().joinVoices([hv, fv]).format([hv, fv], w - (stave.getNoteStartX() - x) - 20);
+
+    // Beat edges in tick-context space: every beat starts with a ride hit.
+    const tcAt = (t) => bar.hands.find((it) => it.t === t).n.getTickContext();
+    const bx = [0, 12, 24, 36].map((t) => tcAt(t).getX());
+    bx.push(stave.getNoteEndX() - stave.getNoteStartX() - 12);
+    const swungX = (t, trip) => { const b = Math.floor(t / 12); return bx[b] + (bx[b + 1] - bx[b]) * landing(t % 12, trip); };
+
+    if (S.variant === 'C') {
+      const moved = new Set();
+      for (const it of bar.hands) {
+        const tc = it.n.getTickContext();
+        if (it.t % 12 === 0 || moved.has(tc)) continue;
+        moved.add(tc);
+        const b = Math.floor(it.t / 12);
+        const straight = bx[b] + (bx[b + 1] - bx[b]) * ((it.t % 12) / 12);
+        tc.setX(tc.getX() + (swungX(it.t, it.trip) - straight) * (S.strength / 100));
+      }
+    }
+
+    hv.draw(ctx, stave); fv.draw(ctx, stave);
+    beams.forEach((b) => b.setContext(ctx).draw());
+    tuplets.forEach((t) => t.setContext(ctx).draw());
+
+    // Sticking under the staff, for the exercise's (snare) notes only.
+    ctx.save(); ctx.setFont('Arial', 13, 'bold');
+    for (const it of bar.hands) if (it.h) ctx.fillText(it.h, it.n.getAbsoluteX() + 2, bottom + 48);
+    ctx.restore();
+
+    if (S.variant === 'B' && bi === 0) {
+      ctx.save(); ctx.setFont('Arial', 15, 'bold'); ctx.fillText('Swing', stave.getNoteStartX(), 26);
+      ctx.setFont('Arial', 15, ''); ctx.fillText('(♫ = ♩ ³♪)', stave.getNoteStartX() + 60, 26); ctx.restore();
+    }
+
+    if (S.variant === 'D') {
+      const laneY = bottom + 80, rows = { ride: laneY, snare: laneY + 18, hhfoot: laneY + 36 };
+      const x0 = stave.getNoteStartX();
+      ctx.save();
+      if (bi === 0) { ctx.setFont('Arial', 10, ''); Object.entries(rows).forEach(([n, y]) => ctx.fillText(n, 14, y + 4)); }
+      ctx.setStrokeStyle('#d6d3d1'); ctx.setLineWidth(1);
+      for (let b = 0; b < 4; b++) {
+        ctx.beginPath(); ctx.moveTo(x0 + bx[b], laneY - 10); ctx.lineTo(x0 + bx[b], laneY + 46); ctx.stroke();
+        const mid = x0 + (bx[b] + bx[b + 1]) / 2;
+        ctx.beginPath(); ctx.moveTo(mid, laneY - 10); ctx.lineTo(mid, laneY - 4); ctx.stroke();
+      }
+      const dot = (t, trip, sound) => { ctx.setFillStyle(sound === 'snare' ? '#2563eb' : '#57534e'); ctx.beginPath(); ctx.arc(x0 + swungX(t, trip), rows[sound], 4, 0, 2 * Math.PI); ctx.fill(); };
+      for (const it of bar.hands) if (!it.rest) it.k.forEach((k) => dot(it.t, it.trip, SOUND[k]));
+      for (const it of FEET) if (!it.ghost) dot(it.t, false, 'hhfoot');
+      ctx.restore();
+    }
+
+    for (const it of bar.hands) if (!it.rest) drawn.push({ bar: bi, t: it.t, trip: it.trip, x: it.n.getAbsoluteX() + 5, sounds: it.k.map((k) => SOUND[k]) });
+    for (const it of FEET) if (!it.ghost) {
+      const same = drawn.find((d) => d.bar === bi && d.t === it.t);
+      if (same) same.sounds.push('hhfoot'); else drawn.push({ bar: bi, t: it.t, x: it.n.getAbsoluteX() + 5, sounds: ['hhfoot'] });
+    }
+    x += w;
+  });
+
+  const svg = el.querySelector('svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.style.width = '100%'; svg.style.height = 'auto';
+  lineEl = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  lineEl.setAttribute('y1', top - 28); lineEl.setAttribute('y2', bottom + 30);
+  lineEl.setAttribute('stroke', '#dc2626'); lineEl.setAttribute('stroke-width', '2'); lineEl.setAttribute('opacity', '0.75');
+  lineEl.style.display = 'none';
+  svg.appendChild(lineEl);
+}
+
+// ---------- audio (rough synth) ----------
+let ac, NOISE;
+const player = { on: false, timer: 0, frame: 0, start: 0, loops: 0, idx: 0, queued: [] };
+function events() {
+  const spb = 60 / S.bpm;
+  return drawn.map((d) => ({ ...d, time: (d.bar * 4 + Math.floor(d.t / 12) + landing(d.t % 12, d.trip)) * spb })).sort((a, b) => a.time - b.time);
+}
+function hit(kind, t) {
+  const src = ac.createBufferSource(); src.buffer = NOISE;
+  const f = ac.createBiquadFilter(), g = ac.createGain();
+  const [type, freq, vol, dec] = { ride: ['highpass', 5500, 0.18, 0.35], snare: ['bandpass', 1800, 0.7, 0.14], hhfoot: ['highpass', 7000, 0.18, 0.05] }[kind];
+  f.type = type; f.frequency.value = freq;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dec);
+  src.connect(f).connect(g).connect(ac.destination); src.start(t); src.stop(t + dec + 0.05);
+}
+function click(t, accent) {
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.frequency.value = accent ? 1600 : 1100; g.gain.setValueAtTime(0.25, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+  o.connect(g).connect(ac.destination); o.start(t); o.stop(t + 0.05);
+}
+function play() {
+  if (!ac) { ac = new AudioContext(); NOISE = ac.createBuffer(1, ac.sampleRate, ac.sampleRate); const d = NOISE.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+  ac.resume();
+  Object.assign(player, { on: true, start: ac.currentTime + 0.1, loops: 0, idx: 0, queued: [] });
+  const evs = events(), spb = 60 / S.bpm, loopLen = 8 * spb;
+  let nextBeat = 0;
+  player.timer = setInterval(() => {
+    const horizon = ac.currentTime + 0.12;
+    while (true) {
+      const e = evs[player.idx], at = player.start + player.loops * loopLen + e.time;
+      if (at > horizon) break;
+      e.sounds.forEach((s) => hit(s, at)); player.queued.push({ at, x: e.x });
+      if (++player.idx === evs.length) { player.idx = 0; player.loops++; }
+    }
+    while (player.start + nextBeat * spb <= horizon) { if (S.click) click(player.start + nextBeat * spb, nextBeat % 4 === 0); nextBeat++; }
+  }, 25);
+  const step = () => {
+    const now = ac.currentTime - (ac.outputLatency || 0);
+    while (player.queued.length > 1 && player.queued[1].at <= now) player.queued.shift();
+    const cur = player.queued[0];
+    if (cur && cur.at <= now) { lineEl.style.display = ''; lineEl.setAttribute('x1', cur.x); lineEl.setAttribute('x2', cur.x); }
+    player.frame = requestAnimationFrame(step);
+  };
+  player.frame = requestAnimationFrame(step);
+  sync();
+}
+function stop() { clearInterval(player.timer); cancelAnimationFrame(player.frame); player.on = false; if (lineEl) lineEl.style.display = 'none'; sync(); }
+
+// ---------- controls ----------
+const $ = (id) => document.getElementById(id);
+function sync() {
+  $('swing').value = S.swing; $('swingv').textContent = S.swing.toFixed(1) + '%';
+  $('bpm').value = S.bpm; $('bpmv').textContent = S.bpm + ' BPM';
+  $('strength').value = S.strength; $('strengthv').textContent = S.strength + '%';
+  $('strengthRow').classList.toggle('hide', S.variant !== 'C');
+  document.querySelectorAll('[data-swing]').forEach((b) => b.classList.toggle('on', +b.dataset.swing === S.swing));
+  $('play').textContent = player.on ? '■ Stop' : '▶ Play';
+  $('vlabel').textContent = `${S.variant} (${VARIANTS[S.variant][0]})`;
+  $('vdesc').innerHTML = `<b>${S.variant} · ${VARIANTS[S.variant][0]}:</b> ${VARIANTS[S.variant][1]}`;
+  $('state').textContent = `variant ${S.variant} · swing set ${S.swing.toFixed(1)}% · played ${(effSwing() * 100).toFixed(1)}% at ${S.bpm} BPM` + (S.variant === 'C' ? ` · visual strength ${S.strength}%` : '') + ` · click ${S.click ? 'on' : 'off'}`;
+}
+function set(patch) {
+  const was = player.on; if (was) stop();
+  Object.assign(S, patch);
+  if ('variant' in patch) { const u = new URL(location); u.searchParams.set('variant', S.variant); history.replaceState(null, '', u); }
+  render(); sync(); if (was) play();
+}
+const cycle = (dir) => set({ variant: KEYS[(KEYS.indexOf(S.variant) + dir + KEYS.length) % KEYS.length] });
+$('prev').onclick = () => cycle(-1); $('next').onclick = () => cycle(1);
+addEventListener('keydown', (e) => {
+  if (e.target.matches('input, textarea, [contenteditable]')) return;
+  if (e.key === 'ArrowLeft') cycle(-1); if (e.key === 'ArrowRight') cycle(1);
+  if (e.key === ' ') { e.preventDefault(); player.on ? stop() : play(); }
+});
+$('play').onclick = () => (player.on ? stop() : play());
+$('click').onchange = (e) => { S.click = e.target.checked; sync(); };
+$('swing').oninput = (e) => set({ swing: +e.target.value });
+$('bpm').oninput = (e) => set({ bpm: +e.target.value });
+$('strength').oninput = (e) => set({ strength: +e.target.value });
+document.querySelectorAll('[data-swing]').forEach((b) => (b.onclick = () => set({ swing: +b.dataset.swing })));
+render(); sync();
+</script>
+</body>
+</html>
