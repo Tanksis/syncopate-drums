@@ -68,13 +68,14 @@ function GroovePicker() {
 }
 
 const SWING_PRESETS = [
+  { name: 'off', swing: MIN_SWING },
   { name: 'light', swing: 0.58 },
   { name: 'medium', swing: 0.62 },
   { name: 'triplet', swing: 2 / 3 },
   { name: 'dotted', swing: 0.75 },
 ]
 
-/** The swing amount: a slider from straight to dotted, and buttons for the common feels. */
+/** The swing amount: a slider from straight to dotted, and buttons for off (straight) and the common feels. */
 function Swing() {
   const swing = useAppStore((s) => s.editor.exercise.practice.swing)
   const setSwing = useAppStore((s) => s.setSwing)

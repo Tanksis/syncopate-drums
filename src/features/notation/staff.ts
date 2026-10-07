@@ -44,6 +44,11 @@ const SPACE_ABOVE_STAVE = 4
 /** More stave lines above for the groove's stems, which reach about this far above the top line. */
 const GROOVE_SPACE = 3
 const STAVE_LINE_GAP = 10
+/**
+ * Pixels an exercise rest set beside a groove chord stands clear of the chord's x noteheads, which
+ * set its shift: the bass drum's normal notehead is wider, and the rest must clear that too.
+ */
+const REST_GAP = 10
 /** Pixels of clickable space around a printed hand. */
 const HAND_HIT_PAD = 3
 /** Pixels of clickable space around a bar number, which is printed small. */
@@ -128,7 +133,7 @@ function drawNotes(
   notes.forEach((note, i) => {
     if (!note.isRest() || note.getKeyLine(0) === restLines[i]) return
     const chord = grooveNotes[groove.findIndex((c) => c.start === placed[i].start)]
-    note.setKeyLine(0, restLines[i]).setXShift((chord?.getVoiceShiftWidth() ?? 0) + 2)
+    note.setKeyLine(0, restLines[i]).setXShift((chord?.getVoiceShiftWidth() ?? 0) + REST_GAP)
   })
   voices.forEach((v) => v.draw(ctx, stave))
   beams.forEach((b) => b.setContext(ctx).draw())
