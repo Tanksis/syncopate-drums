@@ -46,7 +46,9 @@ export function NotationView() {
       <div
         ref={staffRef}
         onClick={(e) => {
-          // A click on a note moves the cursor to its beat.
+          // A click on a hand flips its sticking; a click on a note moves the cursor to its beat.
+          const handGroup = (e.target as Element).closest<SVGElement>('[data-note-id]')
+          if (handGroup) return dispatch({ type: 'flipOverride', note: { id: handGroup.dataset.noteId! } })
           const note = (e.target as Element).closest<SVGElement>('[data-bar]')
           if (note) dispatch({ type: 'moveTo', bar: Number(note.dataset.bar), beat: Number(note.dataset.beat) })
         }}

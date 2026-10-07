@@ -38,6 +38,11 @@ export function sticking(exercise: Exercise): NoteSticking[] {
   })
 }
 
+/** How many notes carry a sticking override, shown or hidden. */
+export function overrideCount(exercise: Exercise): number {
+  return sticking(exercise).filter((n) => n.override).length
+}
+
 const isStruck = (p: PlacedItem) => p.item.kind === 'note' && !p.continuation
 
 /** Alternates hand to hand over the struck notes, starting on the lead hand. */
