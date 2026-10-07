@@ -23,8 +23,8 @@ export type Voice = 'snare' | 'bass'
 export type StickingMode = 'natural' | 'alternate' | 'off'
 export type Duration = 'quarter' | 'eighth' | 'sixteenth'
 
-/** The groove presets arrive in a later ticket; until then the groove layer is always off. */
-export type GroovePresetId = 'off'
+/** The groove layer under the exercise, or none; the presets themselves are in `groove.ts`. */
+export type GroovePresetId = 'off' | 'jazz' | 'jazzFeathered' | 'hihatEighths'
 
 interface ItemBase {
   duration: Duration
@@ -149,6 +149,12 @@ export function clampSwing(swing: number): number {
 /** The exercise with a new swing amount, kept inside the supported range. */
 export function withSwing(exercise: Exercise, swing: number): Exercise {
   return { ...exercise, practice: { ...exercise.practice, swing: clampSwing(swing) } }
+}
+
+/** The exercise with a groove preset, as it was if it already has that one. */
+export function withGroove(exercise: Exercise, groove: GroovePresetId): Exercise {
+  if (groove === exercise.practice.groove) return exercise
+  return { ...exercise, practice: { ...exercise.practice, groove } }
 }
 
 /** The exercise with a new loop range; `null` loops the whole exercise. */

@@ -1,7 +1,7 @@
 // App-wide state, and the only caller of the repository: the open exercise autosaves on every change.
 
 import { create } from 'zustand'
-import type { DeviceSettings, EditCommand, EditorState, Exercise } from '@/core'
+import type { DeviceSettings, EditCommand, EditorState, Exercise, GroovePresetId } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
   addedOnTop,
@@ -16,6 +16,7 @@ import {
   newExercise,
   updatedInPlace,
   withBpm,
+  withGroove,
   withLoopRange,
   withSwing,
 } from '@/core'
@@ -36,6 +37,8 @@ interface AppState {
   setBpm: (bpm: number, options?: { dragging?: boolean }) => void
   /** The swing amount, 0.5 (straight) to 0.75; `dragging` as for `setBpm`. */
   setSwing: (swing: number, options?: { dragging?: boolean }) => void
+  /** The groove layer played and drawn with the exercise. */
+  setGroove: (groove: GroovePresetId) => void
   setPlaying: (playing: boolean) => void
   /** Loops just that bar, or with `extend` grows the loop range to take it in. */
   loopBar: (bar: number, options?: { extend?: boolean }) => void
@@ -148,6 +151,11 @@ export const useAppStore = create<AppState>()((set, get) => {
       const { editor } = get()
       const exercise = withSwing(editor.exercise, swing)
       change(exercise, { ...editor, exercise }, { debounced: dragging })
+    },
+    setGroove: (groove) => {
+      const { editor } = get()
+      const exercise = withGroove(editor.exercise, groove)
+      if (exercise !== editor.exercise) change(exercise, { ...editor, exercise })
     },
     setPlaying: (playing) => set({ playing }),
     loopBar: (bar, options) => {

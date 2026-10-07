@@ -4,6 +4,7 @@
 
 import type { DeviceSettings, Exercise, LoopRange, PracticeSettings, Voice } from './model'
 import { TICKS_PER_BAR, TICKS_PER_BEAT, loopBars } from './model'
+import { grooveHitsByTick } from './groove'
 import { placeItems } from './speller'
 
 /** A place in the playback: bar index (negative during the count-in) and tick within the bar. */
@@ -28,12 +29,15 @@ export interface ScheduledEvent {
   kind: 'click' | 'exercise' | 'groove'
   instrument: Instrument
   accent: boolean
+  /** How hard a groove hit is played, 0–1 of the instrument's usual level; other events always play at 1. */
+  velocity?: number
   /** The struck note, as `bar:tick`. */
   noteId?: string
   position: PlayPosition
 }
 
 export interface ScheduleResult {
+  /** In time order. */
   events: ScheduledEvent[]
   /** The first position not yet scheduled: pass it to the next call. */
   next: PlayPosition
@@ -57,6 +61,7 @@ export function schedule(
   const secondsPerTick = 60 / practice.bpm / TICKS_PER_BEAT
   const swing = effectiveSwing(practice.swing, practice.bpm)
   const struck = struckTicks(exercise)
+  const groove = grooveHitsByTick(practice.groove)
   const loop = loopBars(practice.loopRange, exercise.bars.length)
   let position: PlayPosition
   if (from === 'start') position = device.countIn ? { bar: -1, tick: 0 } : { bar: loop.first, tick: 0 }
@@ -75,8 +80,15 @@ export function schedule(
       const instrument = VOICE_INSTRUMENT[exercise.voice]
       events.push({ time, kind: 'exercise', instrument, accent: false, noteId: `${bar}:${tick}`, position })
     }
+    if (bar >= 0) {
+      for (const { instrument, velocity } of groove.get(tick) ?? []) {
+        events.push({ time, kind: 'groove', instrument, accent: false, velocity, position })
+      }
+    }
     position = advance(position, loop)
   }
+  // Swing can move a groove's & past a triplet note later in the beat, so put the events in time order.
+  events.sort((a, b) => a.time - b.time)
   return { events, next: position, nextTime: elapsed * secondsPerTick }
 }
 

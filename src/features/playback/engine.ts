@@ -16,8 +16,12 @@ const HIGHLIGHT_LATENCY = 0
 
 type Layer = ScheduledEvent['kind']
 
-/** The gain each layer feeds into the master. Device volumes replace these in a later ticket. */
-const LAYER_GAIN: Record<Layer, number> = { click: 0.6, exercise: 0.9, groove: 0.7 }
+/**
+ * The gain each layer feeds into the master. Device volumes replace these in a later ticket. The
+ * ride sample is about 11 dB quieter than the snare (roughly K-weighted, over the first 400 ms), so
+ * the groove is raised that much to sit level with the snare.
+ */
+const LAYER_GAIN: Record<Layer, number> = { click: 0.6, exercise: 0.9, groove: 3.5 }
 
 /** Virtuosity Drums one-shots for each kit piece, played round-robin, at a fixed velocity. */
 const SAMPLES: Record<Exclude<Instrument, 'click'>, { files: string[]; velocity: number }> = {
@@ -170,7 +174,9 @@ function tick(): void {
   for (const event of result.events) {
     const when = cursor.time + event.time
     play(audio, when, event)
-    timeline.push({ time: when, noteId: event.noteId, position: event.position })
+    // The groove isn't followed in the notation. Its swung &s can land after a triplet note
+    // scheduled in the next window, and the timeline must stay in time order.
+    if (event.kind !== 'groove') timeline.push({ time: when, noteId: event.noteId, position: event.position })
   }
   cursor = { position: result.next, time: cursor.time + result.nextTime }
 }
@@ -205,7 +211,7 @@ function sample({ ctx, layers, buffers }: Audio, when: number, event: ScheduledE
   const source = ctx.createBufferSource()
   source.buffer = buffers.get(files[turn])!
   const gain = ctx.createGain()
-  gain.gain.value = velocity
+  gain.gain.value = velocity * (event.velocity ?? 1)
   source.connect(gain).connect(layers[event.kind])
   source.start(when)
   return source

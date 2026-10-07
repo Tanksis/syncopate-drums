@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { EditorState, ExerciseSettings, KeyPress } from './index'
-import { applyEdit, beatViews, commandForKey, loopAt, newEditorState, newExercise, sticking, withBpm, withLoopRange, withSwing } from './index'
+import { applyEdit, beatViews, commandForKey, loopAt, newEditorState, newExercise, sticking, withBpm, withGroove, withLoopRange, withSwing } from './index'
 
 const press = (key: string, mods: Partial<KeyPress> = {}): KeyPress => ({
   key,
@@ -103,6 +103,14 @@ describe('the tempo', () => {
     expect(withBpm(ex, 12).practice.bpm).toBe(30)
     expect(withBpm(ex, 400).practice.bpm).toBe(300)
     expect(withBpm(ex, 144).practice).toMatchObject({ loopRange: null, groove: 'off' })
+  })
+})
+
+describe('the groove preset', () => {
+  it('is set on the exercise, leaving the other practice settings alone', () => {
+    const ex = newExercise({ id: 'e1', now: 0 })
+    expect(withGroove(ex, 'jazzFeathered').practice).toEqual({ ...ex.practice, groove: 'jazzFeathered' })
+    expect(withGroove(ex, 'off')).toBe(ex)
   })
 })
 

@@ -3,8 +3,8 @@
 // short last line keeps the bar width and stays left aligned.
 
 import { Beam, Dot, Formatter, Fraction, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
-import type { Cursor, Exercise, Item, LoopRange, NoteSticking, PlacedItem, Voice as DrumVoice } from '@/core'
-import { TICKS_PER_BEAT, inLoopRange, placeItems, restBar, setBeat, sticking } from '@/core'
+import type { Cursor, Duration, Exercise, GrooveChord, Item, LoopRange, NoteSticking, PlacedItem, Voice as DrumVoice } from '@/core'
+import { TICKS_PER_BEAT, grooveChords, inLoopRange, placeItems, restBar, setBeat, sticking } from '@/core'
 
 // Mirror the accent, a light tint of it and the loop range's ink and shade from the design tokens in styles/index.css.
 const ACCENT_COLOUR = '#2563eb'
@@ -27,9 +27,10 @@ export const notationFontsReady: Promise<unknown> = Promise.all([
   document.fonts.load('12px Academico'),
 ])
 
+const VEX_DURATION: Record<Duration, string> = { quarter: 'q', eighth: '8', sixteenth: '16' }
+
 function vexDuration(item: Item): string {
-  const base = { quarter: 'q', eighth: '8', sixteenth: '16' }[item.duration]
-  return base + (item.dotted ? 'd' : '') + (item.kind === 'rest' ? 'r' : '')
+  return VEX_DURATION[item.duration] + (item.dotted ? 'd' : '') + (item.kind === 'rest' ? 'r' : '')
 }
 
 /** Where each voice's notes sit on the percussion staff: snare on the third space, bass drum on the first. */
@@ -40,6 +41,8 @@ const VOICE_LINE: Record<DrumVoice, number> = { snare: 1.5, bass: 3.5 }
 const HAND_ROW_DROP = 8
 /** Stave lines a stave leaves above its top line, for the bar number. */
 const SPACE_ABOVE_STAVE = 4
+/** More stave lines above for the groove's stems, which reach about this far above the top line. */
+const GROOVE_SPACE = 3
 const STAVE_LINE_GAP = 10
 /** Pixels of clickable space around a printed hand. */
 const HAND_HIT_PAD = 3
@@ -49,8 +52,11 @@ const BAR_NUMBER_HIT_PAD = 6
 /** The stave line the sticking is printed on, one row for the whole line so the hands read across. */
 const handRowLine = (voice: DrumVoice) => VOICE_LINE[voice] + HAND_ROW_DROP
 
-/** Each line of music is tall enough for the sticking row under the voice's stems and tuplets. */
-const lineHeight = (voice: DrumVoice) => (SPACE_ABOVE_STAVE + handRowLine(voice) + 1) * STAVE_LINE_GAP
+/**
+ * Each line of music is tall enough for the sticking row under the voice's stems and tuplets, and
+ * for the groove's stems, if any, under the bar numbers.
+ */
+const lineHeight = (voice: DrumVoice, spaceAbove: number) => (spaceAbove + handRowLine(voice) + 1) * STAVE_LINE_GAP
 
 function staveNote(item: Item, highlight: boolean, voice: DrumVoice = 'snare'): StaveNote {
   const note = new StaveNote({
@@ -64,33 +70,68 @@ function staveNote(item: Item, highlight: boolean, voice: DrumVoice = 'snare'): 
   return note
 }
 
-/**
- * Formats and draws one bar's (or one beat's) notes on a stave, beamed by the beat. Each triplet
- * group gets its tuplet "3", with a bracket when not all of its notes are beamed.
- */
-function drawNotes(stave: Stave, placed: readonly PlacedItem[], notes: StaveNote[], beats: number, width: number) {
-  const ctx = stave.getContext()
-  const byBeat = new Map<number, { notes: StaveNote[]; triplet: boolean }>()
-  placed.forEach((p, i) => {
-    const beat = Math.floor(p.start / TICKS_PER_BEAT)
-    const group = byBeat.get(beat) ?? { notes: [], triplet: p.item.triplet }
-    group.notes.push(notes[i])
-    byBeat.set(beat, group)
+/** A groove chord, stems up, with x noteheads where its hits have them. */
+function grooveNote(chord: GrooveChord): StaveNote {
+  return new StaveNote({
+    keys: chord.hits.map(({ notation }) => notation.key + (notation.notehead === 'x' ? '/x2' : '')),
+    duration: VEX_DURATION[chord.duration],
+    stemDirection: 1,
+    clef: 'percussion',
   })
-  const groups = [...byBeat.values()]
+}
+
+/** Notes grouped by the beat they start in, each group knowing whether it is a triplet group. */
+function byBeat(starts: readonly { start: number; triplet: boolean }[], notes: StaveNote[]) {
+  const groups = new Map<number, { notes: StaveNote[]; triplet: boolean }>()
+  starts.forEach(({ start, triplet }, i) => {
+    const beat = Math.floor(start / TICKS_PER_BEAT)
+    const group = groups.get(beat) ?? { notes: [], triplet }
+    group.notes.push(notes[i])
+    groups.set(beat, group)
+  })
+  return [...groups.values()]
+}
+
+/**
+ * Formats and draws one bar's (or one beat's) notes on a stave, beamed by the beat, with the
+ * groove's chords as a second voice above them. Each triplet group gets its tuplet "3", with a
+ * bracket when not all of its notes are beamed.
+ */
+function drawNotes(
+  stave: Stave,
+  placed: readonly PlacedItem[],
+  notes: StaveNote[],
+  beats: number,
+  width: number,
+  groove: readonly GrooveChord[] = [],
+) {
+  const ctx = stave.getContext()
+  const groups = byBeat(placed.map((p) => ({ start: p.start, triplet: p.item.triplet })), notes)
   // Tuplets first: they scale their notes' ticks, which the beams and the formatter read.
   const tuplets = groups
     .filter((g) => g.triplet)
     .map((g) => new Tuplet(g.notes, { numNotes: 3, notesOccupied: 2, location: Tuplet.LOCATION_BOTTOM }))
-  const voice = new Voice({ numBeats: beats, beatValue: 4 }).setStrict(false).addTickables(notes)
+  const voiceOf = (tickables: StaveNote[]) =>
+    new Voice({ numBeats: beats, beatValue: 4 }).setStrict(false).addTickables(tickables)
+  const grooveNotes = groove.map(grooveNote)
+  const grooveGroups = byBeat(groove.map((c) => ({ start: c.start, triplet: false })), grooveNotes)
+  const voices = grooveNotes.length ? [voiceOf(notes), voiceOf(grooveNotes)] : [voiceOf(notes)]
   // Beamed beat by beat: VexFlow's own grouping loses count of the beats after a triplet group.
-  const beams = groups.flatMap((g) =>
-    Beam.generateBeams(g.notes, { groups: [new Fraction(1, 4)], stemDirection: -1 }),
-  )
+  const beam = (stemDirection: number) => (g: { notes: StaveNote[] }) =>
+    Beam.generateBeams(g.notes, { groups: [new Fraction(1, 4)], stemDirection })
+  const beams = [...groups.flatMap(beam(-1)), ...grooveGroups.flatMap(beam(1))]
   tuplets.forEach((t) => t.setBracketed(t.getNotes().some((n) => !n.hasBeam())))
-  new Formatter().joinVoices([voice]).format([voice], width)
-  voice.draw(ctx, stave)
-  beams.forEach((beam) => beam.setContext(ctx).draw())
+  const restLines = notes.map((n) => n.getKeyLine(0))
+  new Formatter().joinVoices(voices).format(voices, width)
+  // A groove chord's stem crosses the whole staff, and VexFlow nudges a rest beside it just a line
+  // down, onto the hi-hat foot. Set it back, beside the chord instead, as VexFlow does with notes.
+  notes.forEach((note, i) => {
+    if (!note.isRest() || note.getKeyLine(0) === restLines[i]) return
+    const chord = grooveNotes[groove.findIndex((c) => c.start === placed[i].start)]
+    note.setKeyLine(0, restLines[i]).setXShift((chord?.getVoiceShiftWidth() ?? 0) + 2)
+  })
+  voices.forEach((v) => v.draw(ctx, stave))
+  beams.forEach((b) => b.setContext(ctx).draw())
   tuplets.forEach((tuplet) => tuplet.setContext(ctx).draw())
 }
 
@@ -118,7 +159,12 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   const barsPerLine = Math.max(1, Math.min(BARS_PER_LINE, Math.floor(available / MIN_BAR_WIDTH)))
   const barWidth = Math.floor(available / barsPerLine)
   const lines = Math.ceil(bars.length / barsPerLine)
-  const height = lineHeight(exercise.voice)
+  const groove = grooveChords(exercise.practice.groove)
+  const grooved = groove.length > 0
+  const spaceAbove = SPACE_ABOVE_STAVE + (grooved ? GROOVE_SPACE : 0)
+  /** The bar number's line above the stave, clear of the groove's stems. */
+  const barNumberLine = grooved ? GROOVE_SPACE : 0
+  const height = lineHeight(exercise.voice, spaceAbove)
 
   const renderer = new Renderer(el as HTMLDivElement, Renderer.Backends.SVG)
   renderer.resize(width, lines * height + STAVE_TOP)
@@ -136,7 +182,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
     const w = barWidth + (column === 0 ? CLEF_WIDTH : 0)
     const y = STAVE_TOP + line * height
 
-    const stave = new Stave(x, y, w)
+    const stave = new Stave(x, y, w, { spaceAboveStaffLn: spaceAbove })
     if (column === 0) stave.addClef('percussion')
     if (b === 0) stave.addTimeSignature('4/4')
     if (b === cursor?.bar) {
@@ -147,14 +193,14 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
     }
     if (inLoopRange(exercise.practice.loopRange, b)) {
       // A band across the top of each looped bar, behind its number, so the range reads as one strip.
-      const bandTop = stave.getYForTopText(0) + 3 - LOOP_BAND_HEIGHT + 2
+      const bandTop = stave.getYForTopText(barNumberLine) + 3 - LOOP_BAND_HEIGHT + 2
       ctx.save()
       ctx.setFillStyle(LOOP_SHADE)
       ctx.fillRect(x, bandTop, w, LOOP_BAND_HEIGHT)
       ctx.restore()
     }
     stave.setContext(ctx).draw()
-    drawBarNumber(stave, b, exercise.practice.loopRange)
+    drawBarNumber(stave, b, exercise.practice.loopRange, barNumberLine)
 
     const inBar = placed.filter((p) => p.bar === b)
     const notes = inBar.map((p) =>
@@ -164,7 +210,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
         exercise.voice,
       ),
     )
-    drawNotes(stave, inBar, notes, 4, Math.max(30, x + w - stave.getNoteStartX() - 18))
+    drawNotes(stave, inBar, notes, 4, Math.max(30, x + w - stave.getNoteStartX() - 18), groove)
     notes.forEach((note, i) => {
       // Tagged with its beat, so a click on it can move the cursor there.
       const svg = note.getSVGElement()
@@ -203,9 +249,10 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
 
 /**
  * Prints the bar's number above its start, as VexFlow would, in a group tagged with the bar so a
- * click can loop it. Bars in a set loop range are numbered in bold, in the loop colour.
+ * click can loop it, on the given text line above the stave. Bars in a set loop range are numbered
+ * in bold, in the loop colour.
  */
-function drawBarNumber(stave: Stave, bar: number, loopRange: LoopRange | null) {
+function drawBarNumber(stave: Stave, bar: number, loopRange: LoopRange | null, line: number) {
   const ctx = stave.checkContext()
   const looped = inLoopRange(loopRange, bar)
   const group: SVGGElement = ctx.openGroup('bar-number')
@@ -221,7 +268,7 @@ function drawBarNumber(stave: Stave, bar: number, loopRange: LoopRange | null) {
   const width = ctx.measureText(text).width
   const height = Number.parseFloat(String(stave.fontInfo.size))
   const x = stave.getX() - width / 2
-  const y = stave.getYForTopText(0) + 3
+  const y = stave.getYForTopText(line) + 3
   ctx.fillText(text, x, y)
   const pad = BAR_NUMBER_HIT_PAD
   ctx.pointerRect(x - pad, y - height - pad, width + 2 * pad, height + 2 * pad)
