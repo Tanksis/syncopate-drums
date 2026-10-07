@@ -6,7 +6,7 @@ import type { Bar, Exercise, Hand } from './model'
 import { BEATS_PER_BAR, TICKS_PER_BEAT, itemTicks, restBar } from './model'
 import { beatViews, setBeat, toggleCutShort, toggleTie } from './speller'
 import type { NoteSticking } from './sticking'
-import { sticking } from './sticking'
+import { overrideCount, sticking } from './sticking'
 
 export interface Cursor {
   bar: number
@@ -71,14 +71,16 @@ export type EditCommand =
   | { type: 'pasteBars' }
   | { type: 'setExerciseSettings'; settings: Partial<ExerciseSettings> }
   /**
-   * Sets the opposite hand as a sticking override on a struck note, or clears its override: the
-   * `index`th struck note of the cursor beat (from 0), or the note with that id. Does nothing while
-   * sticking is hidden.
+   * Sets the opposite hand as a sticking override on a struck note, or clears its override. Does
+   * nothing while sticking is hidden.
    */
-  | { type: 'flipOverride'; note: { index: number } | { id: string } }
+  | { type: 'flipOverride'; note: OverrideTarget }
   | { type: 'resetOverrides' }
   | { type: 'undo' }
   | { type: 'redo' }
+
+/** A struck note: the `index`th of the cursor beat (from 0), or the note with that id. */
+export type OverrideTarget = { index: number } | { id: string }
 
 /** The parts of a key press the key map reads, as `KeyboardEvent` reports them. */
 export interface KeyPress {
@@ -214,7 +216,7 @@ function edit(
     }
     case 'resetOverrides': {
       const { bars } = state.exercise
-      if (!bars.some((bar) => bar.items.some((item) => item.kind === 'note' && item.override))) return state
+      if (overrideCount(state.exercise) === 0) return state
       const cleared = bars.map((bar) => ({
         items: bar.items.map((item) => (item.kind === 'note' && item.override ? withoutOverride(item) : item)),
       }))
@@ -227,7 +229,7 @@ function edit(
   }
 }
 
-function overrideTarget(state: EditorState, note: { index: number } | { id: string }): NoteSticking | undefined {
+function overrideTarget(state: EditorState, note: OverrideTarget): NoteSticking | undefined {
   const notes = sticking(state.exercise)
   if ('id' in note) return notes.find((n) => n.noteId === note.id)
   const { bar, beat } = state.cursor

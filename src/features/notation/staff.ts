@@ -3,13 +3,12 @@
 // short last line keeps the bar width and stays left aligned.
 
 import { Beam, Dot, Formatter, Fraction, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
-import type { Cursor, Exercise, Hand, Item, NoteSticking, PlacedItem, Voice as DrumVoice } from '@/core'
+import type { Cursor, Exercise, Item, NoteSticking, PlacedItem, Voice as DrumVoice } from '@/core'
 import { TICKS_PER_BEAT, placeItems, restBar, setBeat, sticking } from '@/core'
 
 // Mirror the accent and a light tint of it from the design tokens in styles/index.css.
-const CURSOR_COLOUR = '#2563eb'
+const ACCENT_COLOUR = '#2563eb'
 const CURRENT_BAR_SHADE = '#eff6ff'
-const OVERRIDE_COLOUR = '#2563eb'
 
 const BARS_PER_LINE = 4
 const MIN_BAR_WIDTH = 190
@@ -53,7 +52,7 @@ function staveNote(item: Item, highlight: boolean, voice: DrumVoice = 'snare'): 
     clef: 'percussion',
   })
   if (item.dotted) Dot.buildAndAttach([note], { all: true })
-  if (highlight) note.setStyle({ fillStyle: CURSOR_COLOUR, strokeStyle: CURSOR_COLOUR })
+  if (highlight) note.setStyle({ fillStyle: ACCENT_COLOUR, strokeStyle: ACCENT_COLOUR })
   return note
 }
 
@@ -110,7 +109,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   renderer.resize(width, lines * height + STAVE_TOP)
   const ctx = renderer.getContext()
   const placed = placeItems(bars)
-  const hands = new Map(sticking(exercise).map((n) => [n.noteId, n]))
+  const stickings = new Map(sticking(exercise).map((n) => [n.noteId, n]))
   // Every drawn note in exercise order, with its line, for drawing the ties once all bars are formatted.
   const drawn: { note: StaveNote; line: number }[] = []
 
@@ -148,8 +147,8 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
       svg?.setAttribute('data-beat', String(Math.floor(inBar[i].start / TICKS_PER_BEAT)))
       svg?.classList.add('cursor-pointer')
       drawn.push({ note, line })
-      const hand = hands.get(`${b}:${inBar[i].start}`)
-      if (hand?.shown) drawHand(stave, note, hand.shown, hand, handRowLine(exercise.voice))
+      const noteSticking = stickings.get(`${b}:${inBar[i].start}`)
+      if (noteSticking) drawHand(stave, note, noteSticking, handRowLine(exercise.voice))
     })
   })
 
@@ -176,7 +175,8 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
  * Prints the shown R or L centred under a note, on the given stave line, in a group tagged with the
  * note's id so a click can flip it. An override is printed in the accent colour, with a hover hint.
  */
-function drawHand(stave: Stave, note: StaveNote, hand: Hand, { noteId, override }: NoteSticking, line: number) {
+function drawHand(stave: Stave, note: StaveNote, { noteId, shown: hand, override }: NoteSticking, line: number) {
+  if (!hand) return
   const ctx = stave.checkContext()
   const group: SVGGElement = ctx.openGroup('hand')
   group.dataset.noteId = noteId
@@ -188,7 +188,7 @@ function drawHand(stave: Stave, note: StaveNote, hand: Hand, { noteId, override 
   }
   ctx.save()
   ctx.setFont('Academico', 12, 'bold')
-  if (override) ctx.setFillStyle(OVERRIDE_COLOUR)
+  if (override) ctx.setFillStyle(ACCENT_COLOUR)
   const x = (note.getNoteHeadBeginX() + note.getNoteHeadEndX()) / 2 - ctx.measureText(hand).width / 2
   ctx.fillText(hand, x, stave.getYForLine(line))
   ctx.restore()

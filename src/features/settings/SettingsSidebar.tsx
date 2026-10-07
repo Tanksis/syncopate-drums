@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { useAppStore } from '@/app/store'
 import { PanelHeading } from '@/components/PanelHeading'
 import type { ExerciseSettings } from '@/core'
-import { sticking } from '@/core'
+import { overrideCount } from '@/core'
 
 export function SettingsSidebar() {
   return (
@@ -36,7 +36,7 @@ function SettingGroup({ title, children }: { title: string; children?: ReactNode
 
 /** Clears every sticking override in one undoable step; disabled when there are none. */
 function ResetOverrides() {
-  const count = useAppStore((s) => sticking(s.editor.exercise).filter((n) => n.override).length)
+  const count = useAppStore((s) => overrideCount(s.editor.exercise))
   const dispatch = useAppStore((s) => s.dispatch)
   return (
     <button
