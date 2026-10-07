@@ -33,10 +33,12 @@ export function NotationView() {
 
   useLayoutEffect(() => {
     if (!fontsReady || width === 0) return
-    const drawing = (drawingRef.current = drawExercise(staffRef.current!, exercise, cursor, width))
+    // While playing, the cursor isn't drawn, so only the sounding note is lit, and the view
+    // follows the playback rather than the cursor.
+    const drawing = (drawingRef.current = drawExercise(staffRef.current!, exercise, playing ? null : cursor, width))
     // Keep the cursor's line in view as typing runs past the bottom.
-    scrollLineIntoView(scrollerRef.current!, staffRef.current!, drawing.line(cursor.bar))
-  }, [exercise, cursor, width, fontsReady])
+    if (!playing) scrollLineIntoView(scrollerRef.current!, staffRef.current!, drawing.line(cursor.bar))
+  }, [exercise, cursor, width, fontsReady, playing])
 
   useEffect(() => {
     if (playing) return followPlayback(scrollerRef.current!, staffRef.current!, () => drawingRef.current)

@@ -109,9 +109,9 @@ export interface Drawing {
 /**
  * Draws the whole exercise into `el`, replacing what was there, at the given width. Each note's
  * SVG element carries `data-bar` and `data-beat`, the beat it sits in; each bar number carries
- * `data-loop-bar`, its bar.
+ * `data-loop-bar`, its bar. With no cursor, no beat or bar is highlighted.
  */
-export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor, width: number): Drawing {
+export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor | null, width: number): Drawing {
   el.replaceChildren()
   const { bars } = exercise
   const available = width - 2 * MARGIN - CLEF_WIDTH
@@ -139,7 +139,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
     const stave = new Stave(x, y, w)
     if (column === 0) stave.addClef('percussion')
     if (b === 0) stave.addTimeSignature('4/4')
-    if (b === cursor.bar) {
+    if (b === cursor?.bar) {
       ctx.save()
       ctx.setFillStyle(CURRENT_BAR_SHADE)
       ctx.fillRect(x, stave.getYForLine(-1), w, stave.getYForLine(5) - stave.getYForLine(-1))
@@ -160,7 +160,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
     const notes = inBar.map((p) =>
       staveNote(
         p.item,
-        b === cursor.bar && Math.floor(p.start / TICKS_PER_BEAT) === cursor.beat,
+        b === cursor?.bar && Math.floor(p.start / TICKS_PER_BEAT) === cursor.beat,
         exercise.voice,
       ),
     )
