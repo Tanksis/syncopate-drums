@@ -25,8 +25,8 @@ export function followPlayback(scroller: HTMLElement, staff: HTMLElement, drawin
       note?.classList.add(...SOUNDING)
       lit = note
     }
-    // Scroll only when the playhead reaches a new line, so the drummer can still scroll by hand,
-    // or after a redraw, which scrolls to the cursor's line instead.
+    // Scroll only when the playhead reaches a new line, or after a redraw (which can move the
+    // lines), so the drummer can still scroll by hand.
     const bar = head?.position.bar ?? -1
     if (current && bar >= 0) {
       const line = current.line(bar)
