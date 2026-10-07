@@ -97,6 +97,8 @@ export interface DeviceSettings {
   grooveVolume: number
   /** Silences the exercise, so the drummer can play the line over the click and the groove. */
   exerciseMuted: boolean
+  /** The grid editor's vim keys: Normal mode and its commands. Off, there's no Normal mode. */
+  vimKeys: boolean
   /** The exercise open when the app was last used, reopened at launch. */
   lastOpenedId: string | null
 }
@@ -107,6 +109,7 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   exerciseVolume: 1,
   grooveVolume: 1,
   exerciseMuted: false,
+  vimKeys: true,
   lastOpenedId: null,
 }
 

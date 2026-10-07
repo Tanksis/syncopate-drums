@@ -575,3 +575,234 @@ describe('sticking overrides', () => {
     expect(applyEdit(reset, { type: 'resetOverrides' })).toBe(reset)
   })
 })
+
+/**
+ * Types keys through the key map in whatever mode the editor is in, as vim writes them: one
+ * character per key, with `<Esc>`, `<BS>`, `<Del>`, `<Left>`… and `<C-r>` for Ctrl+R.
+ */
+function vim(state: EditorState, typed: string, { vimKeys = true } = {}): EditorState {
+  const named: Record<string, string> = { Esc: 'Escape', BS: 'Backspace', Del: 'Delete', Left: 'ArrowLeft', Right: 'ArrowRight' }
+  const presses = [...typed.matchAll(/<(C-)?(\w+)>|./g)].map(([char, ctrlMod, name]) => {
+    if (!name) return press(char, { shiftKey: char !== char.toLowerCase() || '$?'.includes(char) })
+    return press(named[name] ?? name, { ctrlKey: !!ctrlMod })
+  })
+  return presses.reduce((s, p) => {
+    const command = commandForKey(p, { ...s, vimKeys })
+    return command ? applyEdit(s, command) : s
+  }, state)
+}
+
+describe('vim modes', () => {
+  const fresh = () => newEditorState(newExercise({ id: 'e1', now: 0 }))
+
+  it('opens in Insert mode; Esc goes to Normal mode, stepping back onto the last beat typed', () => {
+    expect(fresh().mode).toBe('insert')
+    const state = vim(fresh(), '123<Esc>')
+    expect(state.mode).toBe('normal')
+    expect(state.cursor).toEqual({ bar: 0, beat: 2 })
+  })
+
+  it('i returns to Insert on the cursor beat, a on the beat after it', () => {
+    const normal = vim(fresh(), '123<Esc>')
+    expect(vim(normal, 'i')).toMatchObject({ mode: 'insert', cursor: { bar: 0, beat: 2 } })
+    expect(vim(normal, 'a')).toMatchObject({ mode: 'insert', cursor: { bar: 0, beat: 3 } })
+    expect(figureKeys(vim(normal, 'a4'))).toEqual(['1234', '    '])
+  })
+
+  it('figure keys do not enter figures in Normal mode', () => {
+    const normal = vim(fresh(), '1<Esc>')
+    expect(vim(normal, '2').exercise).toBe(normal.exercise)
+  })
+
+  it('with vim keys off there is no Normal mode: Esc does nothing', () => {
+    const state = vim(fresh(), '12<Esc>3', { vimKeys: false })
+    expect(state.mode).toBe('insert')
+    expect(figureKeys(state)).toEqual(['123 '])
+  })
+
+  it('with vim keys off the arrows, Backspace, Delete and Ctrl shortcuts still work', () => {
+    const state = vim(fresh(), '1234<Left><Left><BS><Del><C-Enter>', { vimKeys: false })
+    expect(figureKeys(state)).toEqual(['1  4', '    ', '    '])
+    expect(figureKeys(vim(state, '<C-z>', { vimKeys: false }))).toEqual(['1  4', '    '])
+  })
+})
+
+describe('vim Normal mode', () => {
+  // Bars 1111 | 2222 | 3333 | 4444 | rests, in Normal mode with the cursor on bar 2, beat 3.
+  const four = (cursor = { bar: 1, beat: 2 }) => ({ ...vim(type('1111222233334444'.split('')), '<Esc>'), cursor })
+
+  it('h/l move by beat and w/b by bar, a beat being a character and a bar a word', () => {
+    expect(vim(four(), 'l').cursor).toEqual({ bar: 1, beat: 3 })
+    expect(vim(four(), 'll').cursor).toEqual({ bar: 2, beat: 0 })
+    expect(vim(four(), 'h').cursor).toEqual({ bar: 1, beat: 1 })
+    expect(vim(four(), 'w').cursor).toEqual({ bar: 2, beat: 0 })
+    expect(vim(four(), 'b').cursor).toEqual({ bar: 1, beat: 0 })
+    expect(vim(four(), 'bb').cursor).toEqual({ bar: 0, beat: 0 })
+    expect(vim(four({ bar: 4, beat: 1 }), 'w').cursor).toEqual({ bar: 4, beat: 3 })
+  })
+
+  it('0/$ go to the first and last beat of the bar, gg/G to the start and end of the exercise', () => {
+    expect(vim(four(), '0').cursor).toEqual({ bar: 1, beat: 0 })
+    expect(vim(four(), '$').cursor).toEqual({ bar: 1, beat: 3 })
+    expect(vim(four(), 'gg').cursor).toEqual({ bar: 0, beat: 0 })
+    expect(vim(four(), 'G').cursor).toEqual({ bar: 4, beat: 3 })
+  })
+
+  it('takes a count before a move, and before G to go to that bar', () => {
+    expect(vim(four(), '3l').cursor).toEqual({ bar: 2, beat: 1 })
+    expect(vim(four(), '2w').cursor).toEqual({ bar: 3, beat: 0 })
+    expect(vim(four(), '10h').cursor).toEqual({ bar: 0, beat: 0 })
+    expect(vim(four(), '3G').cursor).toEqual({ bar: 2, beat: 0 })
+    expect(vim(four(), '4gg').cursor).toEqual({ bar: 3, beat: 0 })
+  })
+
+  it('x turns the cursor beat into a rest, and a count of beats from it, leaving the cursor', () => {
+    expect(figureKeys(vim(four(), 'x'))).toEqual(['1111', '22 2', '3333', '4444', '    '])
+    const state = vim(four(), '3x')
+    expect(figureKeys(state)).toEqual(['1111', '22  ', ' 333', '4444', '    '])
+    expect(state.cursor).toEqual({ bar: 1, beat: 2 })
+    expect(figureKeys(vim(state, 'u'))).toEqual(['1111', '2222', '3333', '4444', '    '])
+  })
+
+  it('dd deletes the cursor bar; 2dd two bars, and u restores both', () => {
+    expect(figureKeys(vim(four(), 'dd'))).toEqual(['1111', '3333', '4444', '    '])
+    const state = vim(four(), '2dd')
+    expect(figureKeys(state)).toEqual(['1111', '4444', '    '])
+    expect(state.cursor).toEqual({ bar: 1, beat: 2 })
+    const undone = vim(state, 'u')
+    expect(figureKeys(undone)).toEqual(['1111', '2222', '3333', '4444', '    '])
+    expect(undone.cursor).toEqual({ bar: 1, beat: 2 })
+    expect(figureKeys(vim(undone, '<C-r>'))).toEqual(['1111', '4444', '    '])
+  })
+
+  it('yy then p puts the bar after the cursor bar, P before it', () => {
+    const start = four()
+    const yanked = vim(start, 'yy')
+    expect(yanked.exercise).toBe(start.exercise)
+    const after = vim(yanked, 'wwp')
+    expect(figureKeys(after)).toEqual(['1111', '2222', '3333', '4444', '2222', '    '])
+    expect(after.cursor).toEqual({ bar: 4, beat: 0 })
+    expect(figureKeys(vim(yanked, 'P'))).toEqual(['1111', '2222', '2222', '3333', '4444', '    '])
+  })
+
+  it('2yy yanks two bars, and 3p puts them three times', () => {
+    const state = vim(four({ bar: 0, beat: 0 }), '2yyG3p')
+    expect(figureKeys(state)).toEqual(['1111', '2222', '3333', '4444', '    ', '1111', '2222', '1111', '2222', '1111', '2222'])
+    expect(figureKeys(vim(state, 'u'))).toEqual(['1111', '2222', '3333', '4444', '    '])
+  })
+
+  it('p with nothing yanked does nothing', () => {
+    const state = four()
+    expect(vim(state, 'p').exercise).toBe(state.exercise)
+  })
+
+  it('o/O open a bar of rests below or above the cursor bar, in Insert mode', () => {
+    const below = vim(four(), 'o')
+    expect(figureKeys(below)).toEqual(['1111', '2222', '    ', '3333', '4444', '    '])
+    expect(below).toMatchObject({ mode: 'insert', cursor: { bar: 2, beat: 0 } })
+    const above = vim(four(), 'O5')
+    expect(figureKeys(above)).toEqual(['1111', '5   ', '2222', '3333', '4444', '    '])
+    expect(above.mode).toBe('insert')
+  })
+
+  it('r and a figure key replace the cursor beat, leaving the cursor and the mode', () => {
+    const state = vim(four(), 'r5')
+    expect(figureKeys(state)).toEqual(['1111', '2252', '3333', '4444', '    '])
+    expect(state).toMatchObject({ mode: 'normal', cursor: { bar: 1, beat: 2 } })
+    expect(figureKeys(vim(four(), 'r '))).toEqual(['1111', '22 2', '3333', '4444', '    '])
+    expect(figureKeys(vim(four(), '2ra'))).toEqual(['1111', '22aa', '3333', '4444', '    '])
+    const start = four()
+    expect(vim(start, 'rq').exercise).toBe(start.exercise)
+  })
+
+  it('. repeats the last change where the cursor is now, with its count unless given another', () => {
+    expect(figureKeys(vim(four(), 'dd.'))).toEqual(['1111', '4444', '    '])
+    expect(figureKeys(vim(four(), 'r5l.'))).toEqual(['1111', '2255', '3333', '4444', '    '])
+    expect(figureKeys(vim(four({ bar: 0, beat: 0 }), '2xw.'))).toEqual(['  11', '  22', '3333', '4444', '    '])
+    expect(figureKeys(vim(four({ bar: 0, beat: 0 }), 'xw3.'))).toEqual([' 111', '   2', '3333', '4444', '    '])
+  })
+
+  it('. does not repeat moves, yanks or undo, and is one undoable step', () => {
+    const state = vim(four(), 'ddlyyu.')
+    expect(figureKeys(state)).toEqual(['1111', '3333', '4444', '    '])
+    expect(figureKeys(vim(state, 'u'))).toEqual(['1111', '2222', '3333', '4444', '    '])
+    const nothing = vim(newEditorState(four().exercise), '<Esc>')
+    expect(vim(nothing, '.').exercise).toBe(nothing.exercise)
+  })
+
+  it('. repeats a figure typed in Insert mode', () => {
+    const state = vim(type(['1', '2']), '<Esc>0.')
+    expect(figureKeys(state)).toEqual(['22  '])
+  })
+
+  it('. repeats a typed figure in place, as r does: no change on the beat just typed, then stamps with a count', () => {
+    const typed = vim(type(['1', '2']), '<Esc>')
+    const again = vim(typed, '.')
+    expect(again.exercise).toBe(typed.exercise)
+    expect(again.cursor).toEqual({ bar: 0, beat: 1 })
+    expect(figureKeys(vim(typed, 'l2.'))).toEqual(['1222'])
+  })
+
+  it('a counted G or gg extends the selection', () => {
+    expect(vim(four({ bar: 0, beat: 0 }), 'V3G').selection).toEqual({ first: 0, last: 2 })
+    expect(vim(four({ bar: 3, beat: 0 }), 'V2gg').selection).toEqual({ first: 1, last: 3 })
+  })
+
+  it('V selects the cursor bar, moves extend the selection, and y yanks it and ends it', () => {
+    const selecting = vim(four(), 'Vw')
+    expect(selecting.selection).toEqual({ first: 1, last: 2 })
+    expect(selecting.mode).toBe('normal')
+    const yanked = vim(selecting, 'y')
+    expect(yanked.selection).toBeNull()
+    expect(figureKeys(vim(yanked, 'Gp'))).toEqual(['1111', '2222', '3333', '4444', '    ', '2222', '3333'])
+  })
+
+  it('V then d (or x) deletes the selected bars', () => {
+    expect(figureKeys(vim(four(), 'Vwd'))).toEqual(['1111', '4444', '    '])
+    expect(figureKeys(vim(four(), 'Vbx'))).toEqual(['1111', '3333', '4444', '    '])
+  })
+
+  it('V then p replaces the selected bars with the yanked ones', () => {
+    const state = vim(four({ bar: 0, beat: 0 }), 'yywVwp')
+    expect(figureKeys(state)).toEqual(['1111', '1111', '4444', '    '])
+    expect(state.selection).toBeNull()
+    expect(figureKeys(vim(state, 'u'))).toEqual(['1111', '2222', '3333', '4444', '    '])
+  })
+
+  it('Esc or V again ends the selection, staying in Normal mode', () => {
+    expect(vim(four(), 'Vw<Esc>')).toMatchObject({ selection: null, mode: 'normal', cursor: { bar: 2, beat: 0 } })
+    expect(vim(four(), 'VwV').selection).toBeNull()
+  })
+
+  it('the arrows, Backspace, Delete, Ctrl shortcuts and Alt+1–4 work in Normal mode too', () => {
+    const context = { ...four(), vimKeys: true }
+    expect(commandForKey(press('ArrowRight'), context)).toEqual({ type: 'move', by: 'beat', step: 1 })
+    expect(commandForKey(press('Backspace'), context)).toEqual({ type: 'rest', stepBack: true })
+    expect(commandForKey(press('Delete'), context)).toEqual({ type: 'rest', stepBack: false })
+    expect(commandForKey(ctrl('d'), context)).toEqual({ type: 'duplicateBar' })
+    expect(commandForKey(ctrl('z'), context)).toEqual({ type: 'undo' })
+    expect(commandForKey(press('1', { altKey: true }), context)).toEqual({ type: 'flipOverride', note: { index: 0 } })
+    // Ctrl+Space is left to the transport.
+    expect(commandForKey(ctrl(' '), context)).toBeNull()
+  })
+
+  it('Ctrl+R redoes only in Normal mode, leaving it to the browser in Insert mode', () => {
+    expect(commandForKey(ctrl('r'), { ...four(), vimKeys: true })).toEqual({ type: 'redo', count: 1 })
+    expect(commandForKey(ctrl('r'))).toBeNull()
+  })
+
+  it('reads Shift and a letter as the capital, even when the key comes unshifted', () => {
+    expect(commandForKey(press('g', { shiftKey: true }), { ...four(), vimKeys: true })).toEqual({ type: 'jump', to: 'end' })
+  })
+
+  it('Esc drops the keys pending', () => {
+    expect(vim(four(), '2d<Esc>').pending).toBe('')
+    expect(figureKeys(vim(four(), '2d<Esc>d'))).toEqual(figureKeys(four()))
+  })
+
+  it('a key that completes no command drops the keys pending', () => {
+    const state = vim(four(), '3q')
+    expect(state.pending).toBe('')
+    expect(vim(state, 'l').cursor).toEqual({ bar: 1, beat: 3 })
+  })
+})
