@@ -1,12 +1,12 @@
-// The staff parts: the exercise and its groove layer written by limb, as drum-set charts are (ADR
-// 0002). Everything played with the hands is one part, stems up; everything played with the feet
-// is the other, stems down. Hits at the same tick share a stem, and a part rests only where it is
-// silent.
+// The staff parts: the exercise and its groove layer written by limb, as drum-set charts are (ADRs
+// 0002 and 0004). Everything played with the hands is one part, stems up; everything played with
+// the feet is the other, stems down, unless the feet only ever play with the hands in a bar: then
+// the bar is one voice and the feet hang on the hands' stems. Hits at the same tick share a stem.
 
 import type { Bar, Duration, GroovePresetId, Limb, Voice } from './model'
 import { TICKS_PER_BAR, TICKS_PER_BEAT, VOICE_LIMB, itemTicks } from './model'
 import type { GrooveNotation } from './groove'
-import { grooveChords } from './groove'
+import { grooveHitsByTick } from './groove'
 import type { Instrument } from './schedule'
 import { VOICE_INSTRUMENT } from './schedule'
 import { placeItems, spellSpan } from './speller'
@@ -81,11 +81,11 @@ export interface StaffSpace extends Value {
 
 export type StaffEvent = StaffChord | StaffRest | StaffSpace
 
-/** One bar's two parts, each filling the bar in order. */
+/** One bar's two parts, each filling the bar in order, or empty. */
 export interface StaffBar {
-  /** Snare, ride and hi-hat: stems up. */
+  /** Snare, ride and hi-hat, and in a bar of one voice the feet too: stems up. */
   hands: StaffEvent[]
-  /** Bass drum and hi-hat foot: stems down. */
+  /** Bass drum and hi-hat foot: stems down. Empty in a bar of one voice. */
   feet: StaffEvent[]
 }
 
@@ -104,13 +104,15 @@ interface Sound {
  * The exercise and its groove preset as the notation writes them, bar by bar: a hands part (stems
  * up) and a feet part (stems down) of chords, rests and space.
  *
+ * - A bar where the feet play, but only ever together with the hands, is one voice: the feet's
+ *   notes join the hands' chords and the feet part is empty. Otherwise the bar is two voices.
  * - Hits at the same tick in a part share a chord. A chord holds until the part's next chord, or
- *   until all its notes' holds have ended if that is sooner. Groove notes hold as `grooveChords`
- *   writes them.
+ *   until all its notes' holds have ended if that is sooner. A groove note holds to the end of its
+ *   beat.
  * - An exercise note held past its part's next chord ends there, untied. Its exact hold and ties
  *   are written only where nothing else in the part strikes before it ends.
- * - The part holding the exercise rests wherever it is silent; a part of groove notes alone has
- *   space there instead. Rests and notes are spelled as the speller spells them.
+ * - A part rests wherever it is silent if it holds the exercise or has a note in the bar; otherwise
+ *   it has space there. Rests and notes are spelled as the speller spells them.
  * - Where the exercise and the groove strike the same drum at once, the exercise's note is written.
  * - In a triplet beat of the exercise, a groove hit off the triplet grid is written on the next
  *   triplet position.
@@ -133,26 +135,37 @@ export function staffParts(bars: readonly Bar[], voice: Voice, groove: GroovePre
   }
 
   const grooveSounds: Sound[] = bars.flatMap((_, b) =>
-    grooveChords(groove).flatMap((chord) =>
-      chord.hits.flatMap((hit): Sound[] => {
+    [...grooveHitsByTick(groove)].flatMap(([tick, hits]) =>
+      hits.flatMap((hit): Sound[] => {
         const drum = DRUM_OF_INSTRUMENT[hit.instrument]
         if (!drum) return []
-        const start = b * TICKS_PER_BAR + chord.start
-        const end = start + itemTicks({ duration: chord.duration, dotted: false, triplet: false })
+        const start = b * TICKS_PER_BAR + tick
+        const end = start - (start % TICKS_PER_BEAT) + TICKS_PER_BEAT
         return [{ drum, notation: hit.notation, start, end, heard: start }]
       }),
     ),
   )
 
-  const noTriplets = triplet.map(() => false)
+  const barOf = (s: Sound) => Math.floor(s.start / TICKS_PER_BAR)
+  // Every sound on the grid of the hands part as it would be in a bar of one voice, which holds the exercise.
+  const all = [...exercise, ...grooveSounds.map((s) => onGrid(s, triplet))]
+  const oneVoice = bars.map((_, b) => {
+    const inBar = all.filter((s) => barOf(s) === b)
+    const handStarts = new Set(inBar.filter((s) => LIMB[s.drum] === 'hands').map((s) => s.start))
+    const feet = inBar.filter((s) => LIMB[s.drum] === 'feet')
+    return feet.length > 0 && feet.every((s) => handStarts.has(s.start))
+  })
+  const limbOf = (s: Sound): Limb => (oneVoice[barOf(s)] ? 'hands' : LIMB[s.drum])
+
   const parts = (['hands', 'feet'] as const).map((limb) => {
-    const holdsExercise = limb === exerciseLimb
-    const beats = holdsExercise ? triplet : noTriplets
+    const holdsExercise = (b: number) => (oneVoice[b] ? limb === 'hands' : limb === exerciseLimb)
+    const beats = triplet.map((t, beat) => t && holdsExercise(Math.floor((beat * TICKS_PER_BEAT) / TICKS_PER_BAR)))
     const sounds = [
-      ...(holdsExercise ? exercise : []),
-      ...grooveSounds.filter((s) => LIMB[s.drum] === limb).map((s) => onGrid(s, beats)),
+      ...exercise.filter((s) => limbOf(s) === limb),
+      ...grooveSounds.filter((s) => limbOf(s) === limb).map((s) => onGrid(s, beats)),
     ]
-    return writePart(sounds, beats, holdsExercise, total)
+    const rests = bars.map((_, b) => holdsExercise(b) || sounds.some((s) => barOf(s) === b))
+    return writePart(sounds, beats, rests, total)
   })
 
   return bars.map((_, b) => {
@@ -160,7 +173,7 @@ export function staffParts(bars: readonly Bar[], voice: Voice, groove: GroovePre
       events
         .filter((e) => Math.floor(e.start / TICKS_PER_BAR) === b)
         .map((e) => ({ ...e, start: e.start - b * TICKS_PER_BAR }))
-    return { hands: inBar(parts[0]), feet: inBar(parts[1]) }
+    return { hands: inBar(parts[0]), feet: oneVoice[b] ? [] : inBar(parts[1]) }
   })
 }
 
@@ -176,12 +189,12 @@ function onGrid(sound: Sound, triplet: readonly boolean[]): Sound {
 }
 
 /** One part over the whole exercise, with starts in ticks of the whole exercise. */
-function writePart(sounds: Sound[], triplet: readonly boolean[], withRests: boolean, total: number): StaffEvent[] {
+function writePart(sounds: Sound[], triplet: readonly boolean[], rests: readonly boolean[], total: number): StaffEvent[] {
   const events: StaffEvent[] = []
   const starts = [...new Set(sounds.map((s) => s.start))].sort((a, b) => a - b)
   const silence = (from: number, to: number) => {
     for (const { start, value } of spellSpan(from, to, false, triplet)) {
-      events.push({ kind: withRests ? 'rest' : 'space', start, ...value })
+      events.push({ kind: rests[Math.floor(start / TICKS_PER_BAR)] ? 'rest' : 'space', start, ...value })
     }
   }
   let t = 0

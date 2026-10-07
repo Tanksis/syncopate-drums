@@ -2,7 +2,7 @@
 
 Date: 2026-10-07
 
-Status: accepted
+Status: accepted, refined by [ADR 0004](0004-one-voice-when-feet-play-with-hands.md): a bar where the feet only play with the hands is written as one voice
 
 The notation view writes drum-set notation by limb, not by layer: the exercise and the groove layer merge into one **hands part** (snare, ride, hi-hat; stems up) and one **feet part** (bass drum, hi-hat foot; stems down). v1 drew the exercise as its own stems-down voice under the groove layer, so a snare line needed its own rests wherever the ride was keeping time, and those rests collided with the hi-hat foot. Merging by limb is how drum-set charts are written (and how Groove Scribe writes them): a snare hit on a ride note shares its stem, and a rest appears only where no hand plays.
 

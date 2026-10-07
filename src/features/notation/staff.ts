@@ -1,7 +1,7 @@
 // The notation renderer: draws an exercise straight from the model with VexFlow (no MusicXML in
 // between). We do the line wrapping ourselves: 4 bars per line, fewer on a narrow window, and a
 // short last line keeps the bar width and stays left aligned. What to draw comes from the core's
-// staff parts: the hands part stems up, the feet part stems down (ADR 0002).
+// staff parts: the hands part stems up, the feet part stems down, or one voice stems up (ADRs 0002, 0004).
 
 import type { StemmableNote } from 'vexflow/bravura'
 import { Beam, Dot, Formatter, Fraction, GhostNote, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
@@ -174,9 +174,9 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   const lines = Math.ceil(bars.length / barsPerLine)
   const parts = staffParts(bars, exercise.voice, exercise.practice.groove)
   const exerciseLimb = VOICE_LIMB[exercise.voice]
-  /** A part is drawn when it holds the exercise or has a note anywhere. */
-  const drawnLimbs = (['hands', 'feet'] as const).filter(
-    (limb) => limb === exerciseLimb || parts.some((bar) => bar[limb].some((e) => e.kind === 'chord')),
+  /** A part is drawn when it has a note or a rest anywhere. */
+  const drawnLimbs = (['hands', 'feet'] as const).filter((limb) =>
+    parts.some((bar) => bar[limb].some((e) => e.kind !== 'space')),
   )
   const handRow = exerciseLimb === 'feet' ? HAND_ROW_BASS : drawnLimbs.includes('feet') ? HAND_ROW_FEET : HAND_ROW_HANDS
   const spaceAbove = SPACE_ABOVE_STAVE + (drawnLimbs.includes('hands') ? STEMS_UP_SPACE : 0)
@@ -188,7 +188,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   renderer.resize(width, lines * height + STAVE_TOP)
   const ctx = renderer.getContext()
   const stickings = new Map(sticking(exercise).map((n) => [n.noteId, n]))
-  /** Each part's last drawn note of each drum, with its line, to tie the next one to. */
+  /** The last drawn note of each drum, with its line, to tie the next one to. */
   const lastOf = new Map<string, TieEnd>()
   const ties: StaveTie[] = []
   /** Where the playhead line goes for each struck position, by `bar:tick`. */
@@ -221,12 +221,14 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
     stave.setContext(ctx).draw()
     drawBarNumber(stave, b, exercise.practice.loopRange, barNumberLine)
 
-    const drawings = drawnLimbs.map(
-      (limb): PartDrawing => ({ limb, drawn: parts[b][limb].map((event) => ({ event, note: eventNote(event, limb) })) }),
-    )
+    const drawings = drawnLimbs
+      .filter((limb) => parts[b][limb].length)
+      .map((limb): PartDrawing => ({ limb, drawn: parts[b][limb].map((event) => ({ event, note: eventNote(event, limb) })) }))
+    /** The part holding the exercise in this bar: the hands, in a bar of one voice. */
+    const exercisePart = parts[b][exerciseLimb].length ? exerciseLimb : 'hands'
     // The cursor's beat is lit in the part holding the exercise.
     for (const { limb, drawn } of drawings) {
-      if (limb !== exerciseLimb || b !== cursor?.bar) continue
+      if (limb !== exercisePart || b !== cursor?.bar) continue
       for (const { event, note } of drawn) {
         if (Math.floor(event.start / TICKS_PER_BEAT) === cursor.beat) note.setStyle({ fillStyle: ACCENT_COLOUR, strokeStyle: ACCENT_COLOUR })
       }
@@ -239,7 +241,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
       for (const { event, note } of drawn) {
         if (event.kind !== 'chord' || !(note instanceof StaveNote)) continue
         for (const tick of event.strikes) marks.set(`${b}:${tick}`, { x: noteCentre(note), top, bottom })
-        if (limb === exerciseLimb) {
+        if (limb === exercisePart) {
           // Tagged with its beat, so a click on it can move the cursor there.
           const svg = note.getSVGElement()
           svg?.setAttribute('data-bar', String(b))
@@ -248,9 +250,9 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
         }
         for (const n of event.notes) {
           const index = keyIndex(event, n.drum)
-          const previous = lastOf.get(`${limb}:${n.drum}`)
+          const previous = lastOf.get(n.drum)
           if (n.tied && previous) ties.push(...tie(previous, { note, index, line }))
-          lastOf.set(`${limb}:${n.drum}`, { note, index, line })
+          lastOf.set(n.drum, { note, index, line })
           const noteSticking = n.noteId && !n.tied ? stickings.get(n.noteId) : undefined
           if (noteSticking) drawHand(stave, note, noteSticking, handRow)
         }

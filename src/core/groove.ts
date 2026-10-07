@@ -1,7 +1,7 @@
 // The groove presets: predefined groove layers played and drawn above the exercise, the same in
 // every bar.
 
-import type { Duration, GroovePresetId } from './model'
+import type { GroovePresetId } from './model'
 import { TICKS_PER_BEAT } from './model'
 import type { Instrument } from './schedule'
 
@@ -73,37 +73,9 @@ export function groovePreset(id: GroovePresetId): GroovePreset {
   return GROOVE_PRESETS.find((p) => p.id === id) ?? GROOVE_PRESETS[0]
 }
 
-/** The hits struck together at one tick, drawn as one chord. */
-export interface GrooveChord {
-  start: number
-  duration: Duration
-  hits: GrooveHit[]
-}
-
-const DURATION_OF_TICKS: Record<number, Duration> = {
-  [TICKS_PER_BEAT]: 'quarter',
-  [TICKS_PER_BEAT / 2]: 'eighth',
-  [TICKS_PER_BEAT / 4]: 'sixteenth',
-}
-
 /** The preset's hits by the tick they are struck at, in tick order. */
 export function grooveHitsByTick(id: GroovePresetId): Map<number, GrooveHit[]> {
   const byTick = new Map<number, GrooveHit[]>()
   for (const hit of groovePreset(id).hits) byTick.set(hit.tick, [...(byTick.get(hit.tick) ?? []), hit])
   return byTick
-}
-
-/**
- * A bar of the groove preset as the notation draws it: a chord at each tick with hits, held until
- * the next chord or the end of its beat. Every preset starts each beat with a hit and holds each
- * chord for a quarter, an eighth or a sixteenth.
- */
-export function grooveChords(id: GroovePresetId): GrooveChord[] {
-  const byTick = grooveHitsByTick(id)
-  const starts = [...byTick.keys()]
-  return starts.map((start, i) => {
-    const beatEnd = (Math.floor(start / TICKS_PER_BEAT) + 1) * TICKS_PER_BEAT
-    const end = Math.min(starts[i + 1] ?? beatEnd, beatEnd)
-    return { start, duration: DURATION_OF_TICKS[end - start], hits: byTick.get(start)! }
-  })
 }

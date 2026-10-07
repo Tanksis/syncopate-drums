@@ -110,8 +110,9 @@ The notation writes drum-set notation by limb. Everything played with the hands 
 - **Playhead.** The playback timeline records, for every exercise and groove event (not clicks, not the count-in), its position in the bar and that it's a staff hit. `playheadAt` returns the latest staff hit's position (bar, tick) for the renderer to place the line, alongside the existing position used by the header. The sounding-note id is no longer needed for colouring.
 - **Staff parts.** A new pure function takes an exercise, its groove preset and its voice, and returns, per bar, the **hands part** and the **feet part**. Each part is a run of chords and rests with durations, dots, triplet grouping and ties, ready to draw. Each chord note carries its drum, notehead, whether it is an exercise note (with its note id for sticking and overrides), and whether it's a tied continuation (drawn, not struck). Rules:
   - Snare exercise notes and groove ride / hi-hat hits go in the hands part (stems up); bass drum exercise notes and groove hi-hat foot / bass drum hits go in the feet part (stems down).
-  - Hits at the same tick in a part form one chord. A chord holds until the next chord in that part, or until all its notes' holds have ended if that's sooner. Groove notes hold as `grooveChords` defines today.
-  - A part containing the exercise shows rests where nothing in it sounds or is held. A part with only groove notes shows no rests (empty space, as v1 draws the groove).
+  - A bar where the feet play but every foot hit lands with a hand hit is one voice: the feet's notes join the hands part's chords and the feet part is empty (ADR 0004, decided 2026-10-07 after the user compared PR #25 with Groove Scribe).
+  - Hits at the same tick in a part form one chord. A chord holds until the next chord in that part, or until all its notes' holds have ended if that's sooner. A groove note holds to the end of its beat, so it ends at its own part's next chord, not another limb's (ADR 0004).
+  - A part rests where nothing in it sounds or is held if it contains the exercise or has a note in the bar. Otherwise it is empty space (ADR 0004: in two voices each voice has its rests).
   - An exercise note held on past the next chord in its part ends at that chord: it is not tied on through it. Its exact hold and ties are written only where nothing else in the part strikes before it ends (a bare snare line, or a tie across a beat where the part has no onset). Decided 2026-10-07 after seeing ticket 06; it replaces "appears in that chord as a tied continuation".
   - A bass drum exercise hit and a groove bass drum hit at the same tick become one note: the exercise's. The schedule plays one bass drum there.
   - It reuses the speller's spelling rules for the exercise part (beam groups by beat, triplet groups within a beat, dotted values where legal).
@@ -120,7 +121,7 @@ The notation writes drum-set notation by limb. Everything played with the hands 
 
 ### Notation renderer
 
-- Draws the two parts the core returns: hands part stems up, feet part stems down, groove-only parts padded with invisible notes where they have no rests. It no longer decides which voice a note belongs to, and no longer forces the exercise stems down.
+- Draws the parts the core returns: hands part stems up, feet part stems down (none in a bar of one voice), parts with no notes in a bar padded with invisible notes. It no longer decides which voice a note belongs to, and no longer forces the exercise stems down.
 - Sticking annotations and override clicks attach to exercise notes inside chords, by note id.
 - Keeps a map from (bar, tick) to x so the playhead line can be placed, and draws the line in the existing requestAnimationFrame loop from the core's `playheadAt`. The sounding-note colour is removed. Line scrolling is unchanged.
 
