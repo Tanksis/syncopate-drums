@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
+import { followPlayback, scrollLineIntoView } from './followPlayback'
+import type { Drawing } from './staff'
 import { drawExercise, notationFontsReady } from './staff'
 
 export function NotationView() {
@@ -7,10 +9,12 @@ export function NotationView() {
   const cursor = useAppStore((s) => s.editor.cursor)
   const dispatch = useAppStore((s) => s.dispatch)
   const loopBar = useAppStore((s) => s.loopBar)
+  const playing = useAppStore((s) => s.playing)
   const scrollerRef = useRef<HTMLElement>(null)
   const staffRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
   const [fontsReady, setFontsReady] = useState(false)
+  const drawingRef = useRef<Drawing>(undefined)
 
   useEffect(() => {
     let live = true
@@ -29,14 +33,14 @@ export function NotationView() {
 
   useLayoutEffect(() => {
     if (!fontsReady || width === 0) return
-    const line = drawExercise(staffRef.current!, exercise, cursor, width)
+    const drawing = (drawingRef.current = drawExercise(staffRef.current!, exercise, cursor, width))
     // Keep the cursor's line in view as typing runs past the bottom.
-    const scroller = scrollerRef.current!
-    const top = staffRef.current!.offsetTop + line.top
-    const bottom = staffRef.current!.offsetTop + line.bottom
-    if (top < scroller.scrollTop) scroller.scrollTop = top
-    else if (bottom > scroller.scrollTop + scroller.clientHeight) scroller.scrollTop = bottom - scroller.clientHeight
+    scrollLineIntoView(scrollerRef.current!, staffRef.current!, drawing.line(cursor.bar))
   }, [exercise, cursor, width, fontsReady])
+
+  useEffect(() => {
+    if (playing) return followPlayback(scrollerRef.current!, staffRef.current!, () => drawingRef.current)
+  }, [playing])
 
   return (
     <section

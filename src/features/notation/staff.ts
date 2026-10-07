@@ -94,10 +94,16 @@ function drawNotes(stave: Stave, placed: readonly PlacedItem[], notes: StaveNote
   tuplets.forEach((tuplet) => tuplet.setContext(ctx).draw())
 }
 
-/** Where the cursor's line was drawn, so the view can scroll it into view. */
-export interface CursorLine {
+/** Where a line of music was drawn, so the view can scroll it into view. */
+export interface DrawnLine {
   top: number
   bottom: number
+}
+
+/** What was drawn: each struck note's SVG element by note id, and where each bar's line is. */
+export interface Drawing {
+  notes: Map<string, SVGElement>
+  line: (bar: number) => DrawnLine
 }
 
 /**
@@ -105,7 +111,7 @@ export interface CursorLine {
  * SVG element carries `data-bar` and `data-beat`, the beat it sits in; each bar number carries
  * `data-loop-bar`, its bar.
  */
-export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor, width: number): CursorLine {
+export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor, width: number): Drawing {
   el.replaceChildren()
   const { bars } = exercise
   const available = width - 2 * MARGIN - CLEF_WIDTH
@@ -121,6 +127,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   const stickings = new Map(sticking(exercise).map((n) => [n.noteId, n]))
   // Every drawn note in exercise order, with its line, for drawing the ties once all bars are formatted.
   const drawn: { note: StaveNote; line: number }[] = []
+  const struck = new Map<string, SVGElement>()
 
   bars.forEach((_, b) => {
     const line = Math.floor(b / barsPerLine)
@@ -165,7 +172,9 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
       svg?.setAttribute('data-beat', String(Math.floor(inBar[i].start / TICKS_PER_BEAT)))
       svg?.classList.add('cursor-pointer')
       drawn.push({ note, line })
-      const noteSticking = stickings.get(`${b}:${inBar[i].start}`)
+      const noteId = `${b}:${inBar[i].start}`
+      if (svg && inBar[i].item.kind === 'note' && !inBar[i].continuation) struck.set(noteId, svg)
+      const noteSticking = stickings.get(noteId)
       if (noteSticking) drawHand(stave, note, noteSticking, handRowLine(exercise.voice))
     })
   })
@@ -185,8 +194,11 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
     ties.forEach((tie) => tie.setContext(ctx).draw())
   })
 
-  const top = Math.floor(cursor.bar / barsPerLine) * height
-  return { top, bottom: top + height + STAVE_TOP }
+  const line = (bar: number) => {
+    const top = Math.floor(bar / barsPerLine) * height
+    return { top, bottom: top + height + STAVE_TOP }
+  }
+  return { notes: struck, line }
 }
 
 /**

@@ -2,12 +2,17 @@
 // 25 ms asks the core for the next 100 ms of events and starts each sound on the audio clock,
 // so timing is sample-accurate however late the tick itself runs.
 
-import type { DeviceSettings, Exercise, Instrument, PlayPosition, ScheduledEvent } from '@/core'
-import { schedule } from '@/core'
+import type { DeviceSettings, Exercise, Instrument, PlayPosition, Playhead, ScheduledEvent, TimelineEntry } from '@/core'
+import { playheadAt, schedule, trimTimeline } from '@/core'
 
 const LOOKAHEAD = 0.1
 /** Head start for the first event, so it isn't late before the first tick has run. */
 const START_DELAY = 0.05
+/**
+ * Seconds the drummer hears a sound after the output clock says it played. The highlight is
+ * drawn this much later. Zero unless the highlight turns out to drift on the user's laptop.
+ */
+const HIGHLIGHT_LATENCY = 0
 
 type Layer = ScheduledEvent['kind']
 
@@ -46,6 +51,8 @@ let generation = 0
 let cursor: { position: PlayPosition | 'start'; time: number } | undefined
 let read: (() => PlaybackInput) | undefined
 const sources = new Set<AudioScheduledSourceNode>()
+/** Every event scheduled and not yet long past, on the audio clock, for the highlight. */
+let timeline: TimelineEntry[] = []
 const roundRobin = new Map<Instrument, number>()
 
 /**
@@ -74,12 +81,32 @@ export function stopPlayback(): void {
   generation++
   worker?.postMessage('stop')
   cursor = undefined
+  timeline = []
   for (const source of sources) {
     source.onended = null
     source.stop()
     source.disconnect()
   }
   sources.clear()
+}
+
+/**
+ * Where playback is now, by what the drummer hears rather than what is scheduled: the position
+ * and the sounding note. Undefined when stopped, and during the head start before the first sound.
+ */
+export function playhead(): Playhead | undefined {
+  if (!audio || !cursor) return undefined
+  return playheadAt(timeline, heardTime(audio.ctx))
+}
+
+/** The audio-clock time of the sound reaching the speakers now. */
+function heardTime(ctx: AudioContext): number {
+  const { contextTime, performanceTime } = ctx.getOutputTimestamp()
+  // Some browsers report no output timestamp until the output has started.
+  const output = contextTime && performanceTime
+    ? contextTime + (performance.now() - performanceTime) / 1000
+    : ctx.currentTime - ctx.baseLatency - (ctx.outputLatency || 0)
+  return output - HIGHLIGHT_LATENCY
 }
 
 function createAudio(): Audio {
@@ -139,7 +166,12 @@ function tick(): void {
   if (cursor.time < now) cursor = { ...cursor, time: now + START_DELAY }
   const horizon = now + LOOKAHEAD
   const result = schedule(exercise, exercise.practice, device, cursor.position, horizon - cursor.time)
-  for (const event of result.events) play(audio, cursor.time + event.time, event)
+  timeline = trimTimeline(timeline, heardTime(audio.ctx))
+  for (const event of result.events) {
+    const when = cursor.time + event.time
+    play(audio, when, event)
+    timeline.push({ time: when, noteId: event.noteId, position: event.position })
+  }
   cursor = { position: result.next, time: cursor.time + result.nextTime }
 }
 

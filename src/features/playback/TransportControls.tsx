@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { MAX_BPM, MIN_BPM } from '@/core'
 import { LoopReadout } from './LoopReadout'
+import { PlaybackPosition } from './PlaybackPosition'
 import { togglePlayback } from './transport'
 import { usePlaybackKeys } from './usePlaybackKeys'
 
@@ -21,6 +22,7 @@ export function TransportControls() {
       >
         {playing ? '■ Stop' : '▶ Play'}
       </button>
+      <PlaybackPosition />
       <BpmControl />
       <LoopReadout />
     </div>
