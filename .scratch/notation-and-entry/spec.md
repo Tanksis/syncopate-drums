@@ -94,7 +94,7 @@ The notation writes drum-set notation by limb. Everything played with the hands 
 51. As a drummer, I want a bass drum exercise hit and a groove bass drum hit at the same position drawn as one notehead and played as one sound (the exercise's), so that one drum isn't written or played twice.
 52. As a drummer, I want the sticking under the staff to label only the exercise's notes, even where they share a stem with the groove, so that the hands I read are the line's.
 53. As a drummer, I want overrides still clickable on the exercise's notes in a merged chord, so that the notation stays where I set sticking.
-54. As a drummer, I want an exercise note that is tied on under a groove hit to show as a tied notehead in that chord (not struck), so that ties stay readable in the merged part.
+54. As a drummer, I want an exercise note held on past the next chord of its part to end at that chord, with no tie through it (a snare quarter under hi-hat eighths reads as a plain eighth in the hi-hat chord), and its exact hold and ties shown only where nothing else in the part strikes in between, so that the merged part stays uncluttered. (Changed 2026-10-07 after seeing ticket 06: it was a tied notehead in each later chord.)
 55. As a drummer, I want swing still written as plain eighths with no change to the spacing, so that the chart stays standard notation.
 56. As a drummer, I want the cursor beat highlight, current-bar shading, bar numbers and loop-range clicks to keep working on the merged parts, so that nothing I rely on from v1 is lost.
 
@@ -112,7 +112,7 @@ The notation writes drum-set notation by limb. Everything played with the hands 
   - Snare exercise notes and groove ride / hi-hat hits go in the hands part (stems up); bass drum exercise notes and groove hi-hat foot / bass drum hits go in the feet part (stems down).
   - Hits at the same tick in a part form one chord. A chord holds until the next chord in that part, or until all its notes' holds have ended if that's sooner. Groove notes hold as `grooveChords` defines today.
   - A part containing the exercise shows rests where nothing in it sounds or is held. A part with only groove notes shows no rests (empty space, as v1 draws the groove).
-  - An exercise note held on under a later chord appears in that chord as a tied continuation of its own drum.
+  - An exercise note held on past the next chord in its part ends at that chord: it is not tied on through it. Its exact hold and ties are written only where nothing else in the part strikes before it ends (a bare snare line, or a tie across a beat where the part has no onset). Decided 2026-10-07 after seeing ticket 06; it replaces "appears in that chord as a tied continuation".
   - A bass drum exercise hit and a groove bass drum hit at the same tick become one note: the exercise's. The schedule plays one bass drum there.
   - It reuses the speller's spelling rules for the exercise part (beam groups by beat, triplet groups within a beat, dotted values where legal).
 - **Schedule.** Unchanged except that a groove bass drum hit is dropped where a bass drum exercise hit falls at the same tick.
@@ -150,7 +150,7 @@ The notation writes drum-set notation by limb. Everything played with the hands 
   - "at the time of the ride's & of 2 in a jazz groove with the line resting, the playhead is at bar 1, tick 18";
   - "jazz groove plus a snare on the & of 2: the hands part has one chord (ride + snare) at tick 18 and no rests";
   - "a bass drum exercise on beat 1 with the feathered preset: one bass drum in the feet part and one scheduled bass drum event".
-- **Modules covered:** speller (new operations and the beat view's positions), editor (`applyEdit` with the new commands, undo, `.` exclusion, pending grid), timeline (`playheadAt` with groove and click events), staff parts (every preset × snare and bass voice, ties under chords, rests only where the rules say), and schedule (bass drum de-duplication).
+- **Modules covered:** speller (new operations and the beat view's positions), editor (`applyEdit` with the new commands, undo, `.` exclusion, pending grid), timeline (`playheadAt` with groove and click events), staff parts (every preset × snare and bass voice, holds ending at the next chord, rests only where the rules say), and schedule (bass drum de-duplication).
 - **Prior art:** `speller.test.ts` and `editor.test.ts` (command sequences in, bars, views and cursor out), `timeline.test.ts` (`playheadAt`), `groove.test.ts` (`grooveChords`), `schedule.test.ts` (event lists).
 - **Not tested automatically (checked by eye and ear, with real-mouse checks in the browser):** the beat strip's pointer handling and drawing, the VexFlow adapter, the playhead line's placement and timing, and the Figures panel.
 
