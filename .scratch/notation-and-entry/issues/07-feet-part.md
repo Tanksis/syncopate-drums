@@ -4,9 +4,9 @@
 
 **Blocked by:** 06 (Hands part: snare stems up, merged with the groove)
 
-**Status:** ready-for-agent
+**Status:** done (merged in PR #25, 2026-10-07)
 
-- [ ] The staff parts put bass drum exercise notes in the feet part, with rests only where nothing in the feet part sounds or is held; the hands part (groove only) shows no rests
-- [ ] An exercise bass drum hit and a groove bass drum hit at the same tick become one note (the exercise's), and the schedule plays one bass drum there
-- [ ] Sticking stays hidden under the bass drum voice, and overrides are kept
-- [ ] Core tests (e.g. a bass drum exercise on beat 1 with the feathered preset gives one bass drum in the feet part and one scheduled bass drum event); checked by eye in the browser
+- [x] The staff parts put bass drum exercise notes in the feet part, with rests only where nothing in the feet part sounds or is held; the hands part (groove only) shows no rests
+- [x] An exercise bass drum hit and a groove bass drum hit at the same tick become one note (the exercise's), and the schedule plays one bass drum there
+- [x] Sticking stays hidden under the bass drum voice, and overrides are kept
+- [x] Core tests (e.g. a bass drum exercise on beat 1 with the feathered preset gives one bass drum in the feet part and one scheduled bass drum event); checked by eye in the browser
