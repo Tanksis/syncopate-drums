@@ -40,7 +40,7 @@ interface AppState {
   /** The groove layer played and drawn with the exercise. */
   setGroove: (groove: GroovePresetId) => void
   setPlaying: (playing: boolean) => void
-  /** Volumes, the exercise mute and the count-in, kept for this device; `dragging` as for `setBpm`. */
+  /** Volumes, the exercise mute, the count-in and vim keys, kept for this device; `dragging` as for `setBpm`. */
   setDeviceSettings: (settings: Partial<DeviceSettings>, options?: { dragging?: boolean }) => void
   /** Loops just that bar, or with `extend` grows the loop range to take it in. */
   loopBar: (bar: number, options?: { extend?: boolean }) => void
@@ -172,7 +172,10 @@ export const useAppStore = create<AppState>()((set, get) => {
     },
     setPlaying: (playing) => set({ playing }),
     setDeviceSettings: (settings, { dragging = false } = {}) => {
+      const { editor } = get()
       const device = { ...get().device, ...settings }
+      // With vim keys off there's no Normal mode to be left in.
+      if (!device.vimKeys && editor.mode === 'normal') set({ editor: applyEdit(editor, { type: 'insert' }) })
       set({ device })
       saveDevice(device, { debounced: dragging })
     },

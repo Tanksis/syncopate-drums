@@ -23,7 +23,9 @@ export function SettingsSidebar() {
       <SettingGroup title="Exercise">
         <Choice label="Voice" setting="voice" options={['snare', 'bass']} names={{ bass: 'bass drum' }} />
       </SettingGroup>
-      <SettingGroup title="Editor" />
+      <SettingGroup title="Editor">
+        <VimKeys />
+      </SettingGroup>
       <SettingGroup title="Volume">
         <Volume label="Click" setting="clickVolume" />
         <Volume label="Exercise" setting="exerciseVolume">
@@ -180,6 +182,33 @@ function MuteExercise() {
     >
       mute
     </button>
+  )
+}
+
+/** The editor's vim keys on this device: Normal mode, Esc and the mode indicator. */
+function VimKeys() {
+  const vimKeys = useAppStore((s) => s.device.vimKeys)
+  const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
+  return (
+    <div role="group" aria-label="Vim keys" className="flex items-center justify-between gap-2">
+      <span className="text-mute" title="Esc for Normal mode and vim commands; ? lists the keys">
+        Vim keys
+      </span>
+      <div className="flex overflow-hidden rounded-md border border-line">
+        {[true, false].map((on) => (
+          <button
+            key={String(on)}
+            type="button"
+            aria-pressed={vimKeys === on}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setDeviceSettings({ vimKeys: on })}
+            className="cursor-pointer border-l border-line bg-card px-2 py-0.5 first:border-l-0 hover:text-accent aria-pressed:bg-accent aria-pressed:text-white aria-pressed:hover:text-white"
+          >
+            {on ? 'on' : 'off'}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 
