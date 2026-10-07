@@ -1,9 +1,10 @@
 import { useAppStore } from '@/app/store'
-import { REST_FIGURE, beatViews } from '@/core'
+import { REST_FIGURE, beatViews, inLoopRange } from '@/core'
 
 /**
- * The bars and beats of the exercise, each beat showing its figure's key, with the cursor and the
- * bar selection, and a set loop range shaded. Clicking a beat moves the cursor to it; a bar's ✕ (shown on hover) deletes it.
+ * The bars and beats of the exercise, each beat showing its figure's key, with the cursor, the bar
+ * selection and a set loop range shaded. Clicking a beat moves the cursor to it; a bar's ✕ (shown
+ * on hover) deletes it.
  */
 export function BeatStrip() {
   const bars = useAppStore((s) => s.editor.exercise.bars)
@@ -16,15 +17,16 @@ export function BeatStrip() {
     <div aria-label="Beat strip" className="flex flex-wrap gap-2">
       {beatViews(bars).map((beats, b) => {
         const selected = selection !== null && b >= selection.first && b <= selection.last
-        const looped = loopRange !== null && b >= loopRange.first && b <= loopRange.last
+        const looped = inLoopRange(loopRange, b)
         return (
           <div
             key={b}
             aria-selected={selected || undefined}
             title={looped ? 'In the loop range' : undefined}
+            // A selected bar in the loop range keeps the loop shading inside the selection's border.
             className={`group relative flex items-center gap-0.5 rounded-lg border p-1 ${
-              selected ? 'border-accent bg-sky-100' : looped ? 'border-amber-300 bg-amber-100' : 'border-line bg-card'
-            }`}
+              selected ? 'border-accent' : looped ? 'border-loop-line' : 'border-line'
+            } ${looped ? 'bg-loop' : selected ? 'bg-sky-100' : 'bg-card'}`}
           >
             <span className="w-5 text-center font-mono text-[11px] text-mute">{b + 1}</span>
             {beats.map((view, beat) => {

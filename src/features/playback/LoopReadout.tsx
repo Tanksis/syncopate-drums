@@ -11,7 +11,7 @@ export function LoopReadout() {
   return (
     <div className="flex items-center gap-2" title="Click a bar number to loop it, Shift+click to extend">
       <span className="text-mute">Loop</span>
-      <span className="tabular-nums">{loopRange ? bars : 'all bars'}</span>
+      <span className={`tabular-nums ${loopRange ? 'font-semibold text-loop-ink' : ''}`}>{loopRange ? bars : 'all bars'}</span>
       {loopRange && (
         <button
           type="button"

@@ -130,13 +130,46 @@ describe('the loop range', () => {
     expect(withLoopRange(loopAt(five(), 2), null).practice.loopRange).toBeNull()
   })
 
-  it('is kept inside the exercise when bars are deleted', () => {
+  it('shrinks when its own bars are deleted', () => {
     const exercise = loopAt(loopAt(five(), 2), 4, { extend: true })
     const state = { ...newEditorState(exercise), cursor: { bar: 4, beat: 0 } }
     const once = applyEdit(state, { type: 'deleteBar' })
     expect(once.exercise.practice.loopRange).toEqual({ first: 2, last: 3 })
-    const twice = applyEdit(applyEdit(once, { type: 'deleteBar', bar: 3 }), { type: 'deleteBar', bar: 2 })
-    expect(twice.exercise.practice.loopRange).toEqual({ first: 1, last: 1 })
+    const twice = applyEdit(once, { type: 'deleteBar', bar: 3 })
+    expect(twice.exercise.practice.loopRange).toEqual({ first: 2, last: 2 })
+  })
+
+  it('follows its bars when bars before it are added or deleted', () => {
+    // Looping bars 3–4.
+    const state = (bar: number) => ({ ...newEditorState(loopAt(loopAt(five(), 2), 3, { extend: true })), cursor: { bar, beat: 0 } })
+    expect(applyEdit(state(0), { type: 'deleteBar' }).exercise.practice.loopRange).toEqual({ first: 1, last: 2 })
+    expect(applyEdit(state(0), { type: 'addBar' }).exercise.practice.loopRange).toEqual({ first: 3, last: 4 })
+    expect(applyEdit(state(1), { type: 'duplicateBar' }).exercise.practice.loopRange).toEqual({ first: 3, last: 4 })
+    // A bar added or deleted inside the range grows or shrinks it.
+    expect(applyEdit(state(2), { type: 'addBar' }).exercise.practice.loopRange).toEqual({ first: 2, last: 4 })
+    expect(applyEdit(state(2), { type: 'deleteBar' }).exercise.practice.loopRange).toEqual({ first: 2, last: 2 })
+  })
+
+  it('undo and redo of an added or deleted bar take the range back with the bars', () => {
+    const looped = { ...newEditorState(loopAt(loopAt(five(), 2), 3, { extend: true })), cursor: { bar: 3, beat: 0 } }
+    const deleted = applyEdit(looped, { type: 'deleteBar' })
+    const undone = applyEdit(deleted, { type: 'undo' })
+    expect(undone.exercise.practice.loopRange).toEqual({ first: 2, last: 3 })
+    expect(applyEdit(undone, { type: 'redo' }).exercise.practice.loopRange).toEqual({ first: 2, last: 2 })
+    const added = applyEdit({ ...looped, cursor: { bar: 0, beat: 0 } }, { type: 'addBar' })
+    expect(applyEdit(added, { type: 'undo' }).exercise.practice.loopRange).toEqual({ first: 2, last: 3 })
+  })
+
+  it('undo of a note change leaves a range picked since alone', () => {
+    const typed = type(['1'], newEditorState(five()))
+    const relooped = { ...typed, exercise: loopAt(typed.exercise, 4) }
+    expect(applyEdit(relooped, { type: 'undo' }).exercise.practice.loopRange).toEqual({ first: 4, last: 4 })
+  })
+
+  it('loops the whole exercise again once all its bars are deleted', () => {
+    const exercise = loopAt(loopAt(five(), 1), 2, { extend: true })
+    const state = { ...newEditorState(exercise), selection: { first: 0, last: 3 }, cursor: { bar: 3, beat: 0 } }
+    expect(applyEdit(state, { type: 'deleteBar' }).exercise.practice.loopRange).toBeNull()
   })
 
   it('is left alone by edits that keep it inside the exercise', () => {

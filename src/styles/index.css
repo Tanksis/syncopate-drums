@@ -10,6 +10,10 @@
   --color-line: #e7e5e4;
   --color-panel: #fafaf9;
   --color-danger: #b91c1c;
+  /* The loop range: its shading, border and bar numbers. */
+  --color-loop: #fef3c7;
+  --color-loop-line: #fcd34d;
+  --color-loop-ink: #b45309;
 
   --font-sans: system-ui, sans-serif;
 }

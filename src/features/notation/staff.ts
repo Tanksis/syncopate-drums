@@ -4,11 +4,12 @@
 
 import { Beam, Dot, Formatter, Fraction, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
 import type { Cursor, Exercise, Item, LoopRange, NoteSticking, PlacedItem, Voice as DrumVoice } from '@/core'
-import { TICKS_PER_BEAT, placeItems, restBar, setBeat, sticking } from '@/core'
+import { TICKS_PER_BEAT, inLoopRange, placeItems, restBar, setBeat, sticking } from '@/core'
 
-// Mirror the accent and a light tint of it from the design tokens in styles/index.css.
+// Mirror the accent, a light tint of it and the loop range's ink from the design tokens in styles/index.css.
 const ACCENT_COLOUR = '#2563eb'
 const CURRENT_BAR_SHADE = '#eff6ff'
+const LOOP_COLOUR = '#b45309'
 
 const BARS_PER_LINE = 4
 const MIN_BAR_WIDTH = 190
@@ -179,11 +180,11 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
 
 /**
  * Prints the bar's number above its start, as VexFlow would, in a group tagged with the bar so a
- * click can loop it. Bars in a set loop range are numbered in the accent colour.
+ * click can loop it. Bars in a set loop range are numbered in bold, in the loop colour.
  */
 function drawBarNumber(stave: Stave, bar: number, loopRange: LoopRange | null) {
   const ctx = stave.checkContext()
-  const looped = loopRange !== null && bar >= loopRange.first && bar <= loopRange.last
+  const looped = inLoopRange(loopRange, bar)
   const group: SVGGElement = ctx.openGroup('bar-number')
   group.dataset.loopBar = String(bar)
   group.classList.add('cursor-pointer')
@@ -192,7 +193,7 @@ function drawBarNumber(stave: Stave, bar: number, loopRange: LoopRange | null) {
   group.append(title)
   ctx.save()
   ctx.setFont({ ...stave.fontInfo, weight: looped ? 'bold' : stave.fontInfo.weight })
-  if (looped) ctx.setFillStyle(ACCENT_COLOUR)
+  if (looped) ctx.setFillStyle(LOOP_COLOUR)
   const text = String(bar + 1)
   const width = ctx.measureText(text).width
   const height = Number.parseFloat(String(stave.fontInfo.size))
