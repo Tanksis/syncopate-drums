@@ -735,6 +735,19 @@ describe('vim Normal mode', () => {
     expect(figureKeys(state)).toEqual(['22  '])
   })
 
+  it('. repeats a typed figure in place, as r does: no change on the beat just typed, then stamps with a count', () => {
+    const typed = vim(type(['1', '2']), '<Esc>')
+    const again = vim(typed, '.')
+    expect(again.exercise).toBe(typed.exercise)
+    expect(again.cursor).toEqual({ bar: 0, beat: 1 })
+    expect(figureKeys(vim(typed, 'l2.'))).toEqual(['1222'])
+  })
+
+  it('a counted G or gg extends the selection', () => {
+    expect(vim(four({ bar: 0, beat: 0 }), 'V3G').selection).toEqual({ first: 0, last: 2 })
+    expect(vim(four({ bar: 3, beat: 0 }), 'V2gg').selection).toEqual({ first: 1, last: 3 })
+  })
+
   it('V selects the cursor bar, moves extend the selection, and y yanks it and ends it', () => {
     const selecting = vim(four(), 'Vw')
     expect(selecting.selection).toEqual({ first: 1, last: 2 })

@@ -45,7 +45,7 @@ export interface EditorState {
   /** The keys typed so far of an unfinished Normal-mode command, such as `2d`. */
   pending: string
   /** The last command that changed the bars, for `.` to repeat. */
-  lastChange: EditCommand | null
+  lastChange: RecordedCommand | null
 }
 
 /** The exercise settings that are edited like its notes: every change to them can be undone. */
@@ -79,6 +79,8 @@ export type EditCommand =
   | { type: 'moveTo'; bar: number; beat: number }
   /** To the first or last beat of the exercise, or of the cursor bar. */
   | { type: 'jump'; to: 'start' | 'end' | 'barStart' | 'barEnd' }
+  /** vim's `3G`: to the first beat of that bar, kept inside the exercise. */
+  | { type: 'goToBar'; bar: number }
   /** vim's `w`/`b`: on to the start of the next bar (or the last beat), or back to the start of a bar. */
   | { type: 'moveWord'; step: number }
   /**
@@ -186,6 +188,7 @@ function apply(state: EditorState, command: EditCommand): EditorState {
     case 'move':
     case 'moveWord':
     case 'jump':
+    case 'goToBar':
       // In Normal mode a selection is vim's Visual Line mode: moving takes the selection along.
       if (state.mode === 'normal' && state.selection) return selectTo(state, edit(state, command).cursor)
       return record(state, command)
@@ -194,14 +197,15 @@ function apply(state: EditorState, command: EditCommand): EditorState {
       if (!last) return state
       const repeated = command.count && COUNTED.has(last.type) ? ({ ...last, count: command.count } as RecordedCommand) : last
       // Repeating a change never changes the mode, as a repeated `o` would.
-      return { ...record(state, repeated as RecordedCommand), mode: state.mode }
+      return { ...record(state, repeated), mode: state.mode }
     }
     default:
       return record(state, command)
   }
 }
 
-type RecordedCommand = Exclude<EditCommand, { type: 'selectBars' | 'pending' | 'normal' | 'insert' | 'repeatChange' }>
+/** The commands that go through the undo history, the ones `.` can repeat among them. */
+export type RecordedCommand = Exclude<EditCommand, { type: 'selectBars' | 'pending' | 'normal' | 'insert' | 'repeatChange' }>
 
 /** The changes that take a count, which a count given to `.` replaces. */
 const COUNTED = new Set<EditCommand['type']>(['rest', 'deleteBar', 'putBars', 'replaceBars', 'replaceBeats'])
@@ -222,8 +226,12 @@ function record(state: EditorState, command: RecordedCommand): EditorState {
   return { ...next, history: { undo, redo: [] }, lastChange }
 }
 
-/** A change as `.` repeats it: one that acted on a selection or a clicked bar acts on as many bars from the cursor. */
+/**
+ * A change as `.` repeats it: one that acted on a selection or a clicked bar acts on as many bars
+ * from the cursor, and a typed figure is stamped in place, as `r` does.
+ */
 function repeatable(state: EditorState, command: RecordedCommand): RecordedCommand {
+  if (command.type === 'enterFigure') return { type: 'replaceBeats', hits: command.hits }
   if (command.type === 'deleteBar' && command.bar !== undefined) return { type: 'deleteBar' }
   if (command.type !== 'deleteBar' && command.type !== 'replaceBars') return command
   const { first, last } = selectedBars(state, command.count)
@@ -340,6 +348,8 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
     }
     case 'moveTo':
       return moveTo(state, command.bar, command.beat)
+    case 'goToBar':
+      return moveTo(state, command.bar, 0)
     case 'setExerciseSettings': {
       const exercise = { ...state.exercise, ...command.settings }
       return sameSettings(exercise, state.exercise) ? state : { ...state, exercise }
@@ -424,7 +434,10 @@ function selectedBars(state: EditorState, count = 1): BarSelection {
   return state.selection ?? { first: bar, last: Math.min(bar + count - 1, state.exercise.bars.length - 1) }
 }
 
-/** Sets `count` beats from the cursor on, as many as there are, to a figure. A rest over a rest is no change. */
+/**
+ * Sets `count` beats from the cursor on, as many as there are, to a figure. A rest over a rest, or
+ * a figure over the same figure (not cut short), is no change.
+ */
 function setBeats(state: EditorState, hits: string, count: number): EditorState {
   const views = beatViews(state.exercise.bars)
   const from = state.cursor.bar * BEATS_PER_BAR + state.cursor.beat
@@ -433,8 +446,10 @@ function setBeats(state: EditorState, hits: string, count: number): EditorState 
   for (let i = from; i < to; i++) {
     const bar = Math.floor(i / BEATS_PER_BAR)
     const beat = i % BEATS_PER_BAR
-    const alreadyRest = hits === REST_FIGURE.hits && !views[bar][beat].hits.includes('x')
-    if (!alreadyRest) bars = setBeat(bars, bar, beat, hits)
+    const view = views[bar][beat]
+    const alreadyRest = hits === REST_FIGURE.hits && !view.hits.includes('x')
+    const alreadySet = view.hits === hits && !view.cutShort
+    if (!alreadyRest && !alreadySet) bars = setBeat(bars, bar, beat, hits)
   }
   return bars === state.exercise.bars ? state : withBars(state, bars)
 }
@@ -609,9 +624,9 @@ function normalCommand(key: string, { pending, selection }: KeyContext): EditCom
     case '$':
       return { type: 'jump', to: 'barEnd' }
     case 'gg':
-      return counted ? { type: 'moveTo', bar: count - 1, beat: 0 } : { type: 'jump', to: 'start' }
     case 'G':
-      return counted ? { type: 'moveTo', bar: count - 1, beat: 0 } : { type: 'jump', to: 'end' }
+      if (counted) return { type: 'goToBar', bar: count - 1 }
+      return { type: 'jump', to: rest === 'gg' ? 'start' : 'end' }
     case 'i':
       return { type: 'insert' }
     case 'a':

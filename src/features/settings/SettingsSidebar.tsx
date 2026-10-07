@@ -200,6 +200,7 @@ function VimKeys() {
             key={String(on)}
             type="button"
             aria-pressed={vimKeys === on}
+            // Keep focus off the button, so the editor's keys still work after a click.
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => setDeviceSettings({ vimKeys: on })}
             className="cursor-pointer border-l border-line bg-card px-2 py-0.5 first:border-l-0 hover:text-accent aria-pressed:bg-accent aria-pressed:text-white aria-pressed:hover:text-white"
