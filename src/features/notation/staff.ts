@@ -37,6 +37,8 @@ const HAND_ROW_DROP = 8
 /** Stave lines a stave leaves above its top line, for the bar number. */
 const SPACE_ABOVE_STAVE = 4
 const STAVE_LINE_GAP = 10
+/** Pixels of clickable space around a printed hand. */
+const HAND_HIT_PAD = 3
 
 /** The stave line the sticking is printed on, one row for the whole line so the hands read across. */
 const handRowLine = (voice: DrumVoice) => VOICE_LINE[voice] + HAND_ROW_DROP
@@ -189,8 +191,12 @@ function drawHand(stave: Stave, note: StaveNote, { noteId, shown: hand, override
   ctx.save()
   ctx.setFont('Academico', 12, 'bold')
   if (override) ctx.setFillStyle(ACCENT_COLOUR)
-  const x = (note.getNoteHeadBeginX() + note.getNoteHeadEndX()) / 2 - ctx.measureText(hand).width / 2
-  ctx.fillText(hand, x, stave.getYForLine(line))
+  const width = ctx.measureText(hand).width
+  const x = (note.getNoteHeadBeginX() + note.getNoteHeadEndX()) / 2 - width / 2
+  const y = stave.getYForLine(line)
+  ctx.fillText(hand, x, y)
+  // VexFlow's SVG ignores the pointer, so the hand needs its own invisible hit area to be clicked.
+  ctx.pointerRect(x - HAND_HIT_PAD, y - 12 - HAND_HIT_PAD, width + 2 * HAND_HIT_PAD, 14 + 2 * HAND_HIT_PAD)
   ctx.restore()
   ctx.closeGroup()
 }
