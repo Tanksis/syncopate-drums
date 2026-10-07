@@ -126,6 +126,30 @@ function spell(start: number, end: number, rest: boolean, triplet: boolean) {
   return out
 }
 
+/** A note value (or rest) spelled at a tick of the whole exercise. */
+export interface SpelledPiece {
+  start: number
+  value: Value & Pick<Item, 'triplet'>
+}
+
+/**
+ * Spells one note held (or one silence) from `start` to `end`, ticks of the whole exercise, as
+ * the values written one after another, tied for a note. A note is cut at bar lines (and tied
+ * across) and at a triplet group's edges, where this beat or the one before it is a triplet group;
+ * a rest at every beat. `triplet` says which beats of the exercise are triplet groups.
+ */
+export function spellSpan(start: number, end: number, note: boolean, triplet: readonly boolean[]): SpelledPiece[] {
+  const tripletAt = (tick: number) => triplet[Math.floor(tick / TICKS_PER_BEAT)] ?? false
+  const cutsAt = (beatStart: number) =>
+    !note || beatStart % TICKS_PER_BAR === 0 || tripletAt(beatStart) || tripletAt(beatStart - TICKS_PER_BEAT)
+  const cuts = [start]
+  for (let t = (Math.floor(start / TICKS_PER_BEAT) + 1) * TICKS_PER_BEAT; t < end; t += TICKS_PER_BEAT) {
+    if (cutsAt(t)) cuts.push(t)
+  }
+  cuts.push(end)
+  return cuts.slice(1).flatMap((to, i) => spell(cuts[i], to, !note, tripletAt(cuts[i])))
+}
+
 function fromTimeline({ cells, triplet }: Timeline): Bar[] {
   // Runs of sound or silence over the whole timeline, in ticks.
   type Segment = { note: boolean; start: number; end: number; override?: Hand }
@@ -140,20 +164,9 @@ function fromTimeline({ cells, triplet }: Timeline): Bar[] {
     else segments.push({ note: false, start, end: start + 1 })
   })
 
-  const tripletAt = (tick: number) => triplet[Math.floor(tick / TICKS_PER_BEAT)] ?? false
-  // A note is cut at bar lines (and tied across) and at a triplet group's edges, where this beat or
-  // the one before it is a triplet group; a rest at every beat.
-  const cutsAt = (beatStart: number, note: boolean) =>
-    !note || beatStart % TICKS_PER_BAR === 0 || tripletAt(beatStart) || tripletAt(beatStart - TICKS_PER_BEAT)
-
   const bars: Bar[] = Array.from({ length: cells.length / TICKS_PER_BAR }, () => ({ items: [] }))
   for (const seg of segments) {
-    const cuts = [seg.start]
-    for (let t = (Math.floor(seg.start / TICKS_PER_BEAT) + 1) * TICKS_PER_BEAT; t < seg.end; t += TICKS_PER_BEAT) {
-      if (cutsAt(t, seg.note)) cuts.push(t)
-    }
-    cuts.push(seg.end)
-    const pieces = cuts.slice(1).flatMap((end, i) => spell(cuts[i], end, !seg.note, tripletAt(cuts[i])))
+    const pieces = spellSpan(seg.start, seg.end, seg.note, triplet)
     pieces.forEach((piece, i) => {
       const item: Item = seg.note
         ? {
