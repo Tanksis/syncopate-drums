@@ -33,7 +33,7 @@ export function NotationView() {
 
   useLayoutEffect(() => {
     if (!fontsReady || width === 0) return
-    // While playing, the cursor isn't drawn, so only the sounding note is lit, and the view
+    // While playing, the cursor isn't drawn, so only the playhead line marks the music, and the view
     // follows the playback rather than the cursor.
     const drawing = (drawingRef.current = drawExercise(staffRef.current!, exercise, playing ? null : cursor, width))
     // Keep the cursor's line in view as typing runs past the bottom.

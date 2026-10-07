@@ -3,7 +3,7 @@
 // short last line keeps the bar width and stays left aligned.
 
 import { Beam, Dot, Formatter, Fraction, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
-import type { Cursor, Duration, Exercise, GrooveChord, Item, LoopRange, NoteSticking, PlacedItem, Voice as DrumVoice } from '@/core'
+import type { Cursor, Duration, Exercise, GrooveChord, Item, LoopRange, NoteSticking, PlacedItem, PlayPosition, Voice as DrumVoice } from '@/core'
 import { TICKS_PER_BEAT, grooveChords, inLoopRange, placeItems, restBar, setBeat, sticking } from '@/core'
 
 // Mirror the accent, a light tint of it and the loop range's ink and shade from the design tokens in styles/index.css.
@@ -100,7 +100,7 @@ function byBeat(starts: readonly { start: number; triplet: boolean }[], notes: S
 /**
  * Formats and draws one bar's (or one beat's) notes on a stave, beamed by the beat, with the
  * groove's chords as a second voice above them. Each triplet group gets its tuplet "3", with a
- * bracket when not all of its notes are beamed.
+ * bracket when not all of its notes are beamed. Returns the groove's drawn chords, in order.
  */
 function drawNotes(
   stave: Stave,
@@ -138,6 +138,7 @@ function drawNotes(
   voices.forEach((v) => v.draw(ctx, stave))
   beams.forEach((b) => b.setContext(ctx).draw())
   tuplets.forEach((tuplet) => tuplet.setContext(ctx).draw())
+  return grooveNotes
 }
 
 /** Where a line of music was drawn, so the view can scroll it into view. */
@@ -146,11 +147,28 @@ export interface DrawnLine {
   bottom: number
 }
 
-/** What was drawn: each struck note's SVG element by note id, and where each bar's line is. */
-export interface Drawing {
-  noteElements: Map<string, SVGElement>
-  line: (bar: number) => DrawnLine
+/** Where the playhead line goes for a hit: across the staff, through the hit's noteheads. */
+export interface PlayheadMark {
+  x: number
+  top: number
+  bottom: number
 }
+
+/**
+ * What was drawn: the SVG, where each bar's line is, and where the playhead line goes for a hit
+ * at a position (undefined for a position with nothing struck on the staff).
+ */
+export interface Drawing {
+  svg: SVGSVGElement | null
+  line: (bar: number) => DrawnLine
+  playheadMark: (position: PlayPosition) => PlayheadMark | undefined
+}
+
+/** Stave lines the playhead line reaches above the top line and below the bottom line. */
+const PLAYHEAD_OVERHANG = 1.5
+
+/** The x of the middle of a note's noteheads. */
+const noteCentre = (note: StaveNote) => (note.getNoteHeadBeginX() + note.getNoteHeadEndX()) / 2
 
 /**
  * Draws the whole exercise into `el`, replacing what was there, at the given width. Each note's
@@ -178,7 +196,8 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   const stickings = new Map(sticking(exercise).map((n) => [n.noteId, n]))
   // Every drawn note in exercise order, with its line, for drawing the ties once all bars are formatted.
   const drawn: { note: StaveNote; line: number }[] = []
-  const struck = new Map<string, SVGElement>()
+  /** Where the playhead line goes for each struck position, by `bar:tick`. */
+  const marks = new Map<string, PlayheadMark>()
 
   bars.forEach((_, b) => {
     const line = Math.floor(b / barsPerLine)
@@ -215,7 +234,10 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
         exercise.voice,
       ),
     )
-    drawNotes(stave, inBar, notes, 4, Math.max(30, x + w - stave.getNoteStartX() - 18), groove)
+    const grooveNotes = drawNotes(stave, inBar, notes, 4, Math.max(30, x + w - stave.getNoteStartX() - 18), groove)
+    const top = stave.getYForLine(-PLAYHEAD_OVERHANG)
+    const bottom = stave.getYForLine(4 + PLAYHEAD_OVERHANG)
+    groove.forEach((chord, i) => marks.set(`${b}:${chord.start}`, { x: noteCentre(grooveNotes[i]), top, bottom }))
     notes.forEach((note, i) => {
       // Tagged with its beat, so a click on it can move the cursor there.
       const svg = note.getSVGElement()
@@ -224,7 +246,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
       svg?.classList.add('cursor-pointer')
       drawn.push({ note, line })
       const noteId = `${b}:${inBar[i].start}`
-      if (svg && inBar[i].item.kind === 'note' && !inBar[i].continuation) struck.set(noteId, svg)
+      if (inBar[i].item.kind === 'note' && !inBar[i].continuation) marks.set(noteId, { x: noteCentre(note), top, bottom })
       const noteSticking = stickings.get(noteId)
       if (noteSticking) drawHand(stave, note, noteSticking, handRowLine(exercise.voice))
     })
@@ -249,7 +271,8 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
     const top = Math.floor(bar / barsPerLine) * height
     return { top, bottom: top + height + STAVE_TOP }
   }
-  return { noteElements: struck, line }
+  const playheadMark = ({ bar, tick }: PlayPosition) => marks.get(`${bar}:${tick}`)
+  return { svg: el.querySelector('svg'), line, playheadMark }
 }
 
 /**
