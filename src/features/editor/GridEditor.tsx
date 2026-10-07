@@ -1,8 +1,10 @@
 import { useCallback, useState } from 'react'
+import { usePrototypeVariant } from '@/components/PrototypeSwitcher'
 import { useAppStore } from '@/app/store'
 import { keepFocus } from '@/components/keepFocus'
 import { BeatStrip } from './BeatStrip'
 import { CheatSheet } from './CheatSheet'
+import { EditorPanelPrototype } from './EditorPanelPrototype'
 import { Palette } from './Palette'
 import { useEditorKeys } from './useEditorKeys'
 
@@ -10,6 +12,7 @@ export function GridEditor() {
   const [helpOpen, setHelpOpen] = useState(false)
   const toggleHelp = useCallback(() => setHelpOpen((open) => !open), [])
   useEditorKeys(toggleHelp)
+  const variant = usePrototypeVariant()
   return (
     <section
       aria-label="Grid editor"
@@ -30,7 +33,7 @@ export function GridEditor() {
         </button>
       </div>
       {helpOpen && <CheatSheet onClose={toggleHelp} />}
-      <BeatStrip />
+      {variant ? <EditorPanelPrototype variant={variant} /> : <BeatStrip />}
       <FiguresPanel />
     </section>
   )
