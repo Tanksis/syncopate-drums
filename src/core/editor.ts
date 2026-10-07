@@ -13,7 +13,8 @@ import {
   withLoopRange,
   withLoopRangeInBars,
 } from './model'
-import { beatViews, setBeat, toggleCutShort, toggleHit, toggleTie } from './speller'
+import type { GridPoint } from './speller'
+import { beatViews, setBeat, setHold, toggleCutShort, toggleHit, toggleTie } from './speller'
 import type { NoteSticking } from './sticking'
 import { overrideCount, sticking } from './sticking'
 
@@ -77,6 +78,12 @@ export type EditCommand =
    * moves the cursor to that beat without advancing. Never repeated by `.`.
    */
   | { type: 'toggleGridPosition'; bar: number; beat: number; position: number }
+  /**
+   * A drag on a note in the beat strip: sets where the hold of the note sounding at `from` ends (at
+   * `to`, which is not held), and moves the cursor to `from`'s beat without advancing. Never
+   * repeated by `.`.
+   */
+  | { type: 'setHold'; from: GridPoint; to: GridPoint }
   | { type: 'toggleTie' }
   | { type: 'toggleCutShort' }
   /** Moves the cursor by beats or bars, stopping at the ends of the exercise. */
@@ -213,9 +220,9 @@ function apply(state: EditorState, command: EditCommand): EditorState {
 export type RecordedCommand = Exclude<EditCommand, { type: 'selectBars' | 'pending' | 'normal' | 'insert' | 'repeatChange' }>
 
 /** The mouse's edits on the beat strip, which `.` never repeats. */
-type MouseCommand = Extract<RecordedCommand, { type: 'toggleGridPosition' }>
+type MouseCommand = Extract<RecordedCommand, { type: 'toggleGridPosition' | 'setHold' }>
 
-const MOUSE_COMMANDS = new Set<EditCommand['type']>(['toggleGridPosition'])
+const MOUSE_COMMANDS = new Set<EditCommand['type']>(['toggleGridPosition', 'setHold'])
 
 /** The changes `.` can repeat: the keyboard's. */
 export type RepeatableCommand = Exclude<RecordedCommand, MouseCommand>
@@ -298,6 +305,11 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
       const { bar, beat, position } = command
       const moved = moveTo(state, bar, beat)
       const bars = toggleHit(state.exercise.bars, moved.cursor.bar, moved.cursor.beat, position)
+      return bars === state.exercise.bars ? moved : withBars(moved, bars)
+    }
+    case 'setHold': {
+      const moved = moveTo(state, command.from.bar, command.from.beat)
+      const bars = setHold(state.exercise.bars, command.from, command.to)
       return bars === state.exercise.bars ? moved : withBars(moved, bars)
     }
     case 'toggleTie':
@@ -458,7 +470,7 @@ function selectedBars(state: EditorState, count = 1): BarSelection {
 
 /**
  * Sets `count` beats from the cursor on, as many as there are, to a figure. A rest over a rest, or
- * a figure over the same figure (not cut short), is no change.
+ * a figure over the same figure (not cut short, holds at their defaults), is no change.
  */
 function setBeats(state: EditorState, hits: string, count: number): EditorState {
   const views = beatViews(state.exercise.bars)
@@ -470,7 +482,7 @@ function setBeats(state: EditorState, hits: string, count: number): EditorState 
     const beat = i % BEATS_PER_BAR
     const view = views[bar][beat]
     const alreadyRest = hits === REST_FIGURE.hits && !view.hits.includes('x')
-    const alreadySet = view.hits === hits && !view.cutShort
+    const alreadySet = view.figure?.hits === hits && !view.cutShort
     if (!alreadyRest && !alreadySet) bars = setBeat(bars, bar, beat, hits)
   }
   return bars === state.exercise.bars ? state : withBars(state, bars)

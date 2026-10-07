@@ -848,3 +848,44 @@ describe('clicking grid positions', () => {
     expect(beatViews(struck.exercise.bars)[0][1]).toMatchObject({ tiedInto: false, figure: { key: '1' } })
   })
 })
+
+describe('dragging a hold', () => {
+  const drag = (state: EditorState, bar: number, beat: number, position: number, end: number) =>
+    applyEdit(state, { type: 'setHold', from: { bar, beat, position }, to: { bar, beat, position: end } })
+  const text = (state: EditorState) => beatViews(state.exercise.bars)[0].map((v) => v.positions.map((p) => p[0]).join(''))
+
+  it('sets the hold, moving the cursor to the beat without advancing or changing the mode', () => {
+    const state = drag(vim(type(['2', '2']), '<Esc>'), 0, 0, 0, 1)
+    expect(text(state)[0]).toBe('hehh')
+    expect(state.cursor).toEqual({ bar: 0, beat: 0 })
+    expect(state.mode).toBe('normal')
+    expect(drag(type(['2', '2']), 0, 1, 2, 3).mode).toBe('insert')
+  })
+
+  it('is one undo step', () => {
+    const state = drag(drag(type(['2']), 0, 0, 2, 3), 0, 0, 0, 1)
+    expect(text(keys(state, ctrl('z')))[0]).toBe('hhhe')
+    expect(text(keys(state, ctrl('z'), ctrl('z')))[0]).toBe('hhhh')
+  })
+
+  it('is not the change . repeats', () => {
+    const dragged = drag(vim(type(['4', '4']), '<Esc>'), 0, 0, 0, 1)
+    expect(dragged.lastChange).toEqual(vim(type(['4', '4']), '<Esc>').lastChange)
+  })
+
+  it('records nothing when the drag changes nothing', () => {
+    const state = type(['2'])
+    const dragged = drag(state, 0, 0, 0, 0)
+    expect(dragged.history).toBe(state.history)
+    expect(dragged.cursor).toEqual({ bar: 0, beat: 0 })
+  })
+
+  it('a figure key over a beat with custom holds resets them', () => {
+    const custom = drag(type(['2']), 0, 0, 0, 1)
+    expect(beatViews(custom.exercise.bars)[0][0].figure).toBeUndefined()
+    const retyped = type(['2'], { ...custom, cursor: { bar: 0, beat: 0 } })
+    expect(figureKeys(retyped)).toEqual(['2   '])
+    const replaced = vim({ ...custom, cursor: { bar: 0, beat: 0 } }, '<Esc>r2')
+    expect(figureKeys(replaced)).toEqual(['2   '])
+  })
+})

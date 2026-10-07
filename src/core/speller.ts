@@ -188,6 +188,22 @@ function hitsOf({ cells, triplet }: Timeline, beat: number): string {
     .join('')
 }
 
+/**
+ * Do the beat's holds read as its figure's defaults? Every note holds on to the next hit, and the
+ * last to the end of the beat, or (cut short) for an eighth on 1 or &, a sixteenth elsewhere, or a
+ * triplet eighth.
+ */
+function hasDefaultHolds(timeline: Timeline, beat: number, hits: string): boolean {
+  const cells = beatCells(timeline, beat)
+  const triplet = timeline.triplet[beat]
+  const hitTicks = slotTicks(triplet).filter((_, i) => hits[i] === 'x')
+  const sounds = (end: number) => cells.map((_, t) => t >= hitTicks[0] && t < end)
+  const matches = (sounding: boolean[]) => cells.every((cell, t) => (cell.state !== 'rest') === sounding[t])
+  if (hitTicks.length === 0 || matches(sounds(TICKS_PER_BEAT))) return true
+  const last = hitTicks.at(-1)!
+  return matches(sounds(last + (triplet ? TRIPLET_EIGHTH : last % EIGHTH === 0 ? EIGHTH : SIXTEENTH)))
+}
+
 const POSITION_OF: Record<Cell['state'], GridPosition> = { hit: 'hit', hold: 'hold', rest: 'empty' }
 
 /** Each bar's four beats as the grid editor sees them. */
@@ -199,7 +215,7 @@ export function beatViews(bars: readonly Bar[]): BeatView[][] {
       const hits = hitsOf(timeline, index)
       const cells = beatCells(timeline, index)
       return {
-        figure: figureOfHits(hits),
+        figure: hasDefaultHolds(timeline, index, hits) ? figureOfHits(hits) : undefined,
         hits,
         tiedInto: cells[0].state === 'hold',
         cutShort: cells.at(-1)!.state === 'rest' && cells.some((c) => c.state !== 'rest'),
@@ -267,6 +283,51 @@ export function toggleHit(bars: Bar[], bar: number, beat: number, position: numb
     cells[tick] = { state: 'hit' }
     for (let t = tick + 1; t < first + TICKS_PER_BEAT && cells[t].state === 'rest'; t++) cells[t] = { state: 'hold' }
   }
+  return fromTimeline(timeline)
+}
+
+/** A grid position of one beat: bar, beat in the bar, and position on the beat's grid (from 0). */
+export interface GridPoint {
+  bar: number
+  beat: number
+  position: number
+}
+
+/**
+ * Sets where a note's hold ends and re-spells the bars. `from` is any grid position the note sounds
+ * at (its hit or its hold); `to` is the grid position the hold stops at, which is not held. A `to`
+ * one past the beat's last position is the end of the beat. The note holds on through every
+ * position before `to`; positions it no longer reaches become empty, spelled as rests.
+ *
+ * The hold stops before the next hit, and for now within the note's beat. A `from` with no note, or
+ * a hold of no length, returns the same bars, as does a hold that already ends there.
+ */
+export function setHold(bars: Bar[], from: GridPoint, to: GridPoint): Bar[] {
+  const timeline = toTimeline(bars)
+  const { cells } = timeline
+  const tickOf = ({ bar, beat, position }: GridPoint, allowEnd: boolean) => {
+    const index = bar * BEATS_PER_BAR + beat
+    if (beat < 0 || beat >= BEATS_PER_BAR || index < 0 || index >= timeline.triplet.length) return undefined
+    const slots = slotTicks(timeline.triplet[index])
+    if (allowEnd && position === slots.length) return (index + 1) * TICKS_PER_BEAT
+    const offset = slots[position]
+    return offset === undefined ? undefined : index * TICKS_PER_BEAT + offset
+  }
+  const pressed = tickOf(from, false)
+  const target = tickOf(to, true)
+  if (pressed === undefined || target === undefined || cells[pressed].state === 'rest') return bars
+  // The note's start: back over its hold to its hit, or to where its sound begins.
+  let start = pressed
+  while (cells[start].state === 'hold' && start > 0 && cells[start - 1].state !== 'rest') start--
+  let end = start + 1
+  while (end < cells.length && cells[end].state === 'hold') end++
+  // No further than the next hit, nor (for now) the end of the pressed beat.
+  const beatEnd = (Math.floor(pressed / TICKS_PER_BEAT) + 1) * TICKS_PER_BEAT
+  let limit = end
+  while (limit < beatEnd && cells[limit].state === 'rest') limit++
+  const stop = Math.min(target, limit, beatEnd)
+  if (stop <= start || stop === end) return bars
+  for (let t = start + 1; t < Math.max(stop, end); t++) cells[t] = { state: t < stop ? 'hold' : 'rest' }
   return fromTimeline(timeline)
 }
 
