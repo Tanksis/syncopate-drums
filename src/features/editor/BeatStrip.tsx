@@ -1,7 +1,8 @@
 import type { PointerEvent } from 'react'
 import { useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
-import type { BeatView, GridPoint, GridPosition } from '@/core'
+import { keepFocus } from '@/components/keepFocus'
+import type { BeatView, GridPoint, PositionState } from '@/core'
 import { REST_FIGURE, applyEdit, editorBeatViews, inLoopRange } from '@/core'
 
 /** A press on a grid position, and (once it moves to another position) the hold end it drags to. */
@@ -28,10 +29,10 @@ function pointUnder(strip: Element, clientX: number, clientY: number): GridPoint
     if (!nearest || distance < nearest.distance) nearest = { box, distance }
   }
   if (!nearest) return null
-  const cells = [...nearest.box.querySelectorAll('[data-position]')]
-  const i = cells.findIndex((cell) => clientX < cell.getBoundingClientRect().right)
+  const positions = [...nearest.box.querySelectorAll('[data-position]')]
+  const i = positions.findIndex((position) => clientX < position.getBoundingClientRect().right)
   const { bar, beat } = nearest.box.dataset
-  return { bar: Number(bar), beat: Number(beat), position: i === -1 ? cells.length - 1 : i }
+  return { bar: Number(bar), beat: Number(beat), position: i === -1 ? positions.length - 1 : i }
 }
 
 const samePoint = (a: GridPoint | null, b: GridPoint | null) =>
@@ -62,7 +63,7 @@ export function BeatStrip() {
   const shown = press?.to ? applyEdit(editor, { type: 'setHold', from: press.from, to: press.to }) : editor
   const views = editorBeatViews(shown)
 
-  const startPress = (e: PointerEvent<HTMLElement>, from: GridPoint, position: GridPosition) => {
+  const startPress = (e: PointerEvent<HTMLElement>, from: GridPoint, position: PositionState) => {
     if (e.button !== 0) return
     e.currentTarget.setPointerCapture(e.pointerId)
     track({ pointerId: e.pointerId, from, onNote: position !== 'empty', moved: false, to: null })
@@ -138,7 +139,7 @@ export function BeatStrip() {
                     </span>
                   )}
                   {view.positions.map((position, i) => (
-                    <PositionCell
+                    <GridPositionButton
                       key={i}
                       label={`Bar ${b + 1}, beat ${beat + 1}, position ${i + 1}: ${position}`}
                       position={position}
@@ -154,7 +155,7 @@ export function BeatStrip() {
                     aria-label={`Bar ${b + 1}, beat ${beat + 1}: ${view.triplet ? 'triplet' : 'sixteenth'} grid`}
                     title={`On the ${view.triplet ? 'triplet' : 'sixteenth'} grid: switch to ${view.triplet ? 'sixteenths' : 'triplets'} (or right-click the beat)`}
                     tabIndex={-1}
-                    onMouseDown={(e) => e.preventDefault()}
+                    onMouseDown={keepFocus}
                     onClick={(e) => {
                       e.stopPropagation()
                       switchGrid()
@@ -174,7 +175,7 @@ export function BeatStrip() {
               aria-label={`Delete bar ${b + 1}`}
               tabIndex={-1}
               // Keep focus off the button, so Space and Enter go to the editor rather than clicking it.
-              onMouseDown={(e) => e.preventDefault()}
+              onMouseDown={keepFocus}
               onClick={() => dispatch({ type: 'deleteBar', bar: b })}
               className="absolute -top-2 -right-2 hidden size-5 cursor-pointer items-center justify-center rounded-full border border-line bg-card text-[10px] text-mute group-hover:flex hover:border-accent hover:text-accent"
             >
@@ -191,14 +192,14 @@ export function BeatStrip() {
  * One grid position: a hit's dot, a plain dot when empty, and the hold bar running in from the
  * left where the note sounds on here and out to the right where it sounds on after.
  */
-function PositionCell({
+function GridPositionButton({
   label,
   position,
   holdsOn,
   ...pointer
 }: {
   label: string
-  position: GridPosition
+  position: PositionState
   /** The note here (struck or held) still sounds at the next position, so the bar runs on. */
   holdsOn: boolean
   /** A press here is a click on release, or a drag of the note's hold once it moves. */
@@ -215,7 +216,7 @@ function PositionCell({
       data-position
       tabIndex={-1}
       // Keep focus off the position, so Space and Enter go to the editor rather than clicking it.
-      onMouseDown={(e) => e.preventDefault()}
+      onMouseDown={keepFocus}
       {...pointer}
       // The press handles the click; the beat box's own click (moving the cursor) must not follow.
       onClick={(e) => e.stopPropagation()}
@@ -226,7 +227,7 @@ function PositionCell({
       {position === 'hit' ? (
         <span className="relative size-2.5 rounded-full bg-ink group-hover/pos:bg-accent" />
       ) : position === 'empty' ? (
-        <span className="relative size-1 rounded-full bg-stone-400 group-hover/pos:size-2 group-hover/pos:bg-accent" />
+        <span className="relative size-1 rounded-full bg-mute/70 group-hover/pos:size-2 group-hover/pos:bg-accent" />
       ) : (
         <span className="relative size-2 rounded-full group-hover/pos:bg-accent/60" />
       )}
