@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { useAppStore } from '@/app/store'
+import { keepFocus } from '@/components/keepFocus'
 import type { EditCommand, Figure } from '@/core'
-import { FIGURES, REST_FIGURE, beatViews } from '@/core'
+import { FIGURES, REST_FIGURE, editorBeatViews } from '@/core'
 import { drawFigure, notationFontsReady } from '@/features/notation/staff'
 
 const TILE_WIDTH = 64
@@ -10,9 +11,10 @@ const TILE_HEIGHT = 50
 /** The beat figures laid out like the keyboard; clicking a tile enters its figure. */
 export function Palette() {
   const dispatch = useAppStore((s) => s.dispatch)
+  // The beat as the editor shows it: on the pending grid, no sixteenth figure is lit.
   const current = useAppStore((s) => {
-    const { exercise, cursor } = s.editor
-    return beatViews(exercise.bars)[cursor.bar][cursor.beat].figure
+    const { cursor } = s.editor
+    return editorBeatViews(s.editor)[cursor.bar][cursor.beat].figure
   })
 
   const tile = (figure: Figure, wide = false) => (
@@ -21,7 +23,7 @@ export function Palette() {
       type="button"
       title={figure.hits}
       // Keep focus off the tile, so Space enters a rest rather than clicking it again.
-      onMouseDown={(e) => e.preventDefault()}
+      onMouseDown={keepFocus}
       onClick={() => dispatch({ type: 'enterFigure', hits: figure.hits })}
       className={`relative cursor-pointer rounded-md border bg-card hover:border-accent ${
         figure === current ? 'border-accent bg-sky-100' : 'border-line'
@@ -43,7 +45,7 @@ export function Palette() {
     <button
       type="button"
       title={title}
-      onMouseDown={(e) => e.preventDefault()}
+      onMouseDown={keepFocus}
       onClick={() => dispatch(command)}
       className="cursor-pointer rounded-md border border-line bg-card px-3 text-xs text-mute hover:border-accent"
       style={{ height: TILE_HEIGHT }}

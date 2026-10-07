@@ -8,6 +8,11 @@ export const TICKS_PER_BEAT = 12
 
 export const TICKS_PER_BAR = BEATS_PER_BAR * TICKS_PER_BEAT
 
+/** A beat's index across the whole exercise: bar × 4 + beat. */
+export function beatIndex(bar: number, beat: number): number {
+  return bar * BEATS_PER_BAR + beat
+}
+
 export const MIN_BPM = 30
 export const MAX_BPM = 300
 
@@ -20,6 +25,12 @@ export const SCHEMA_VERSION = 1
 
 export type Hand = 'R' | 'L'
 export type Voice = 'snare' | 'bass'
+
+/** A limb of the drummer, and the part of the staff it plays: hands stems up, feet stems down. */
+export type Limb = 'hands' | 'feet'
+
+/** The limb that plays an exercise in each voice. */
+export const VOICE_LIMB: Record<Voice, Limb> = { snare: 'hands', bass: 'feet' }
 export type StickingMode = 'natural' | 'alternate' | 'off'
 export type Duration = 'quarter' | 'eighth' | 'sixteenth'
 
@@ -124,8 +135,8 @@ export const MAX_VOLUME = 1.5
 
 const BASE_TICKS: Record<Duration, number> = { quarter: 12, eighth: 6, sixteenth: 3 }
 
-/** How many ticks an item lasts. */
-export function itemTicks(item: Item): number {
+/** How many ticks an item (or any value of a duration, dotted or not, triplet or not) lasts. */
+export function itemTicks(item: Pick<Item, 'duration' | 'dotted' | 'triplet'>): number {
   const ticks = BASE_TICKS[item.duration] * (item.dotted ? 1.5 : 1)
   return item.triplet ? (ticks * 2) / 3 : ticks
 }

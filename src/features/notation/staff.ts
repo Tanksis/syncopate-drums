@@ -5,8 +5,8 @@
 
 import type { StemmableNote } from 'vexflow/bravura'
 import { Beam, Dot, Formatter, Fraction, GhostNote, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
-import type { Cursor, Drum, Duration, Exercise, LoopRange, NoteSticking, PlayPosition, StaffEvent, Voice as DrumVoice } from '@/core'
-import { TICKS_PER_BEAT, inLoopRange, restBar, setBeat, staffParts, sticking } from '@/core'
+import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, NoteSticking, PlayPosition, StaffEvent, Voice as DrumVoice } from '@/core'
+import { TICKS_PER_BEAT, VOICE_LIMB, inLoopRange, restBar, setBeat, staffParts, sticking } from '@/core'
 
 // Mirror the accent, a light tint of it and the loop range's ink and shade from the design tokens in styles/index.css.
 const ACCENT_COLOUR = '#2563eb'
@@ -47,8 +47,7 @@ const HAND_HIT_PAD = 3
 /** Pixels of clickable space around a bar number, which is printed small. */
 const BAR_NUMBER_HIT_PAD = 6
 
-const STEM_DIRECTION = { hands: 1, feet: -1 } as const
-type Limb = keyof typeof STEM_DIRECTION
+const STEM_DIRECTION: Record<Limb, 1 | -1> = { hands: 1, feet: -1 }
 /** Where each part's rests sit: the middle line, or lower for the feet. */
 const REST_KEY: Record<Limb, string> = { hands: 'b/4', feet: 'e/4' }
 
@@ -174,12 +173,12 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   const barWidth = Math.floor(available / barsPerLine)
   const lines = Math.ceil(bars.length / barsPerLine)
   const parts = staffParts(bars, exercise.voice, exercise.practice.groove)
-  const exerciseLimb: Limb = exercise.voice === 'bass' ? 'feet' : 'hands'
+  const exerciseLimb = VOICE_LIMB[exercise.voice]
   /** A part is drawn when it holds the exercise or has a note anywhere. */
   const drawnLimbs = (['hands', 'feet'] as const).filter(
     (limb) => limb === exerciseLimb || parts.some((bar) => bar[limb].some((e) => e.kind === 'chord')),
   )
-  const handRow = exercise.voice === 'bass' ? HAND_ROW_BASS : drawnLimbs.includes('feet') ? HAND_ROW_FEET : HAND_ROW_HANDS
+  const handRow = exerciseLimb === 'feet' ? HAND_ROW_BASS : drawnLimbs.includes('feet') ? HAND_ROW_FEET : HAND_ROW_HANDS
   const spaceAbove = SPACE_ABOVE_STAVE + (drawnLimbs.includes('hands') ? STEMS_UP_SPACE : 0)
   /** The bar number's line above the stave, clear of the hands part's stems. */
   const barNumberLine = drawnLimbs.includes('hands') ? STEMS_UP_SPACE : 0
@@ -190,7 +189,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   const ctx = renderer.getContext()
   const stickings = new Map(sticking(exercise).map((n) => [n.noteId, n]))
   /** Each part's last drawn note of each drum, with its line, to tie the next one to. */
-  const lastOf = new Map<string, { note: StaveNote; index: number; line: number }>()
+  const lastOf = new Map<string, TieEnd>()
   const ties: StaveTie[] = []
   /** Where the playhead line goes for each struck position, by `bar:tick`. */
   const marks = new Map<string, PlayheadMark>()
@@ -268,6 +267,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   return { svg: el.querySelector('svg'), line, playheadMark }
 }
 
+/** A notehead a tie can run from or to: its note, its index in the chord, and its line of staves. */
 type TieEnd = { note: StaveNote; index: number; line: number }
 
 /** A tie between two noteheads; one that runs over a line break is drawn as two halves. */

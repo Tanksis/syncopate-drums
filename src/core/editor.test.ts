@@ -939,6 +939,13 @@ describe('switching a beat between the sixteenth and triplet grid', () => {
     expect(beatViews(state.exercise.bars)[0][1]).toMatchObject({ triplet: false, figure: { key: '1' } })
   })
 
+  it('shows no sixteenth figure for a beat on the pending grid, for the palette to light', () => {
+    const empty = grid(fresh(), 0, 1, true)
+    expect(view(empty, 0, 1).figure).toBeUndefined()
+    const downbeat = click(empty, 0, 1, 0)
+    expect(view(downbeat, 0, 1)).toMatchObject({ hits: 'x..', figure: undefined })
+  })
+
   it('keeps a downbeat hit, clears the others and holds the downbeat to the end of the beat', () => {
     const state = grid(type(['7']), 0, 0, true)
     expect(view(state, 0, 0)).toMatchObject({ triplet: true, positions: ['hit', 'hold', 'hold'] })

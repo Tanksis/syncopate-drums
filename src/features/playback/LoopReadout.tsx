@@ -1,4 +1,5 @@
 import { useAppStore } from '@/app/store'
+import { keepFocus } from '@/components/keepFocus'
 import { loopBars } from '@/core'
 
 /** The header's loop range: the bars that repeat, and "all" to loop the whole exercise again. */
@@ -17,7 +18,7 @@ export function LoopReadout() {
           type="button"
           title="Loop the whole exercise"
           // Keep focus off the button, so Space and Enter go to the editor rather than clicking it.
-          onMouseDown={(e) => e.preventDefault()}
+          onMouseDown={keepFocus}
           onClick={loopAll}
           className="cursor-pointer rounded-md border border-line bg-panel px-2 py-0.5 hover:border-accent"
         >

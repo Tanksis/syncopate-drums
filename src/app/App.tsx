@@ -8,6 +8,7 @@ import { TransportControls } from '@/features/playback/TransportControls'
 import { SettingsSidebar } from '@/features/settings/SettingsSidebar'
 import { useAppStore } from '@/app/store'
 import { NameInput } from '@/components/NameInput'
+import { keepFocus } from '@/components/keepFocus'
 
 export function App() {
   const saving = useAppStore((s) => s.saving)
@@ -55,7 +56,7 @@ function ExerciseName() {
     <button
       type="button"
       title="Rename"
-      onMouseDown={(e) => e.preventDefault()}
+      onMouseDown={keepFocus}
       onClick={() => setRenaming(true)}
       className="cursor-text truncate rounded border border-transparent bg-transparent px-1 text-mute hover:border-line"
     >

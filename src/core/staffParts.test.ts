@@ -140,14 +140,14 @@ describe('the staff parts: hands up, feet down', () => {
       )
       for (const { hands: h, feet: f } of staffParts(line, 'snare', groove)) {
         for (const part of [h, f]) {
-          expect(part.reduce((ticks, e) => ticks + itemTicks({ ...e, kind: 'rest' }), 0)).toBe(TICKS_PER_BAR)
+          expect(part.reduce((ticks, e) => ticks + itemTicks(e), 0)).toBe(TICKS_PER_BAR)
         }
         expect([...h, ...f].filter((e) => e.kind === 'rest')).toEqual([])
       }
       // As a bass drum line, both parts still fill every bar and the hands part (groove only) never rests.
       for (const { hands: h, feet: f } of staffParts(line, 'bass', groove)) {
         for (const part of [h, f]) {
-          expect(part.reduce((ticks, e) => ticks + itemTicks({ ...e, kind: 'rest' }), 0)).toBe(TICKS_PER_BAR)
+          expect(part.reduce((ticks, e) => ticks + itemTicks(e), 0)).toBe(TICKS_PER_BAR)
         }
         expect(h.filter((e) => e.kind === 'rest')).toEqual([])
       }

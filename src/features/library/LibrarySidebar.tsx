@@ -1,17 +1,14 @@
-import type { MouseEvent } from 'react'
 import { useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { NameInput } from '@/components/NameInput'
 import { PanelHeading } from '@/components/PanelHeading'
+import { keepFocus } from '@/components/keepFocus'
 import type { Exercise } from '@/core'
 import { filterByName } from '@/core'
 import { downloadExport } from './download'
 import { exerciseCount } from './exerciseCount'
 import { ImportButton } from './ImportButton'
-
-// Buttons keep focus off themselves, so Space still enters a rest rather than clicking them again.
-const keepFocus = (e: MouseEvent) => e.preventDefault()
 
 const buttonClass =
   'flex-1 cursor-pointer rounded-md border border-line bg-card px-2 py-1 font-semibold hover:border-accent'

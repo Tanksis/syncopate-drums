@@ -6,6 +6,7 @@ import type { Bar, Exercise, Hand, LoopRange } from './model'
 import {
   BEATS_PER_BAR,
   TICKS_PER_BEAT,
+  beatIndex,
   itemTicks,
   loopRangeAfterDelete,
   loopRangeAfterInsert,
@@ -297,8 +298,34 @@ function withPendingGridChecked(before: EditorState, after: EditorState, command
   if (after.exercise.bars.length !== before.exercise.bars.length) return { ...after, pendingGrid: [] }
   const was = beatViews(before.exercise.bars).flat()
   const now = beatViews(after.exercise.bars).flat()
-  const kept = pendingGrid.filter((i) => JSON.stringify(was[i]) === JSON.stringify(now[i]))
+  const kept = pendingGrid.filter((i) => sameBeatView(was[i], now[i]))
   return kept.length === pendingGrid.length ? after : { ...after, pendingGrid: kept }
+}
+
+/** Two views of a beat that read the same. Figures are compared as the palette's own objects. */
+function sameBeatView(a: BeatView, b: BeatView): boolean {
+  return (
+    a.figure === b.figure &&
+    a.hits === b.hits &&
+    a.tiedInto === b.tiedInto &&
+    a.cutShort === b.cutShort &&
+    a.triplet === b.triplet &&
+    a.positions.length === b.positions.length &&
+    a.positions.every((position, i) => position === b.positions[i])
+  )
+}
+
+/**
+ * The pending grid once a click or a drag has written `bars`. Of the beats from `first` to `last`,
+ * one the editor showed on the triplet grid stays there while the new bars don't write it as a
+ * triplet group (it reads the same on either grid); beats outside them keep their place in it.
+ */
+function pendingGridAfter(state: EditorState, bars: Bar[], first = 0, last = Infinity): number[] {
+  const before = editorBeatViews(state).flat()
+  const after = beatViews(bars).flat()
+  const outside = state.pendingGrid.filter((i) => i < first || i > last)
+  const inside = before.flatMap((view, i) => (i >= first && i <= last && view.triplet && !after[i].triplet ? [i] : []))
+  return [...outside, ...inside]
 }
 
 function clearSelection(state: EditorState): EditorState {
@@ -342,26 +369,25 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
         cursor = { bar: bar + 1, beat: 0 }
       }
       // A typed figure sets the beat's grid itself.
-      const pendingGrid = withPending(state.pendingGrid, bar * BEATS_PER_BAR + beat, false)
+      const pendingGrid = withPending(state.pendingGrid, beatIndex(bar, beat), false)
       return { ...withBars(state, bars), cursor, pendingGrid }
     }
     case 'toggleGridPosition': {
       const moved = moveTo(state, command.bar, command.beat)
       const { bar, beat } = moved.cursor
-      const index = bar * BEATS_PER_BAR + beat
+      const index = beatIndex(bar, beat)
       const pending = state.pendingGrid.includes(index)
       const bars = toggleHit(state.exercise.bars, bar, beat, command.position, pending || undefined)
       if (bars === state.exercise.bars) return moved
       // A beat on the triplet grid stays there while it reads the same on either grid.
-      const onTriplets = editorBeatViews(state)[bar][beat].triplet && !beatViews(bars)[bar][beat].triplet
-      return { ...withBars(moved, bars), pendingGrid: withPending(state.pendingGrid, index, onTriplets) }
+      return { ...withBars(moved, bars), pendingGrid: pendingGridAfter(state, bars, index, index) }
     }
     case 'setBeatGrid': {
       const moved = moveTo(state, command.bar, command.beat)
       const { bar, beat } = moved.cursor
       if (editorBeatViews(state)[bar][beat].triplet === command.triplet) return moved
       const bars = clearBeatToDownbeat(state.exercise.bars, bar, beat)
-      const pendingGrid = withPending(state.pendingGrid, bar * BEATS_PER_BAR + beat, command.triplet)
+      const pendingGrid = withPending(state.pendingGrid, beatIndex(bar, beat), command.triplet)
       return { ...withBars(moved, bars), pendingGrid }
     }
     case 'setHold': {
@@ -369,10 +395,7 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
       const bars = setHold(state.exercise.bars, command.from, command.to, state.pendingGrid)
       if (bars === state.exercise.bars) return moved
       // As with a click: a beat on the triplet grid stays there while it reads the same on either.
-      const before = editorBeatViews(state).flat()
-      const after = beatViews(bars).flat()
-      const pendingGrid = before.flatMap((view, index) => (view.triplet && !after[index].triplet ? [index] : []))
-      return { ...withBars(moved, bars), pendingGrid }
+      return { ...withBars(moved, bars), pendingGrid: pendingGridAfter(state, bars) }
     }
     case 'toggleTie':
     case 'toggleCutShort': {
@@ -439,7 +462,7 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
       const { bar, beat } = state.cursor
       if (command.by === 'bar') return moveTo(state, bar + command.step, beat)
       const total = state.exercise.bars.length * BEATS_PER_BAR
-      const index = clamp(bar * BEATS_PER_BAR + beat + command.step, 0, total - 1)
+      const index = clamp(beatIndex(bar, beat) + command.step, 0, total - 1)
       return moveTo(state, Math.floor(index / BEATS_PER_BAR), index % BEATS_PER_BAR)
     }
     case 'moveTo':
@@ -537,7 +560,7 @@ function selectedBars(state: EditorState, count = 1): BarSelection {
  */
 function setBeats(state: EditorState, hits: string, count: number): EditorState {
   const views = editorBeatViews(state)
-  const from = state.cursor.bar * BEATS_PER_BAR + state.cursor.beat
+  const from = beatIndex(state.cursor.bar, state.cursor.beat)
   const to = Math.min(from + count, views.length * BEATS_PER_BAR)
   let { bars } = state.exercise
   for (let i = from; i < to; i++) {

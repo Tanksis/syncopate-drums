@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import { useAppStore } from '@/app/store'
+import { keepFocus } from '@/components/keepFocus'
 import { BeatStrip } from './BeatStrip'
 import { CheatSheet } from './CheatSheet'
 import { Palette } from './Palette'
@@ -21,7 +22,7 @@ export function GridEditor() {
           type="button"
           aria-pressed={helpOpen}
           title="Keys for this mode (?)"
-          onMouseDown={(e) => e.preventDefault()}
+          onMouseDown={keepFocus}
           onClick={toggleHelp}
           className="cursor-pointer rounded-md border border-line bg-card px-2 py-0.5 text-xs text-mute hover:text-accent aria-pressed:border-accent aria-pressed:text-accent"
         >
@@ -47,7 +48,7 @@ function FiguresPanel() {
         aria-controls="figures-panel"
         title={open ? 'Hide the figure tiles' : 'Show the figure tiles and their keys'}
         // Keep focus off the button, so the editor's keys still work after a click.
-        onMouseDown={(e) => e.preventDefault()}
+        onMouseDown={keepFocus}
         onClick={() => setDeviceSettings({ figuresPanelOpen: !open })}
         className="flex w-fit cursor-pointer items-center gap-1 text-xs font-semibold text-mute hover:text-accent"
       >
@@ -90,7 +91,7 @@ function VimSwitch() {
       aria-checked={vimKeys}
       title={vimKeys ? 'Turn vim keys off: no Normal mode, Esc does nothing' : 'Turn vim keys on: Esc for Normal mode'}
       // Keep focus off the button, so the editor's keys still work after a click.
-      onMouseDown={(e) => e.preventDefault()}
+      onMouseDown={keepFocus}
       onClick={() => setDeviceSettings({ vimKeys: !vimKeys })}
       className="ml-auto cursor-pointer rounded-md border border-line bg-card px-2 py-0.5 text-xs text-mute hover:text-accent aria-checked:border-accent aria-checked:text-accent"
     >

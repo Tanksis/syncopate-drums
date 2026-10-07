@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useRef } from 'react'
 import { useAppStore } from '@/app/store'
 import { PanelHeading } from '@/components/PanelHeading'
+import { keepFocus } from '@/components/keepFocus'
 import type { ExerciseSettings, GroovePresetId, VolumeSetting } from '@/core'
 import { GROOVE_PRESETS, MAX_SWING, MAX_VOLUME, MIN_SWING, groovePreset, overrideCount } from '@/core'
 
@@ -118,7 +119,7 @@ function Swing() {
             key={preset.name}
             type="button"
             aria-pressed={Math.abs(preset.swing - swing) < 1e-6}
-            onMouseDown={(e) => e.preventDefault()}
+            onMouseDown={keepFocus}
             onClick={() => setSwing(preset.swing)}
             className="flex-1 cursor-pointer border-l border-line bg-card px-1 py-0.5 first:border-l-0 hover:text-accent aria-pressed:bg-accent aria-pressed:text-white aria-pressed:hover:text-white"
           >
@@ -176,7 +177,7 @@ function MuteExercise() {
       type="button"
       aria-pressed={muted}
       title={muted ? 'Unmute the exercise' : 'Mute the exercise'}
-      onMouseDown={(e) => e.preventDefault()}
+      onMouseDown={keepFocus}
       onClick={() => setDeviceSettings({ exerciseMuted: !muted })}
       className="cursor-pointer rounded-md border border-line bg-card px-1.5 py-0.5 hover:text-accent aria-pressed:bg-accent aria-pressed:text-white aria-pressed:hover:text-white"
     >
@@ -201,7 +202,7 @@ function VimKeys() {
             type="button"
             aria-pressed={vimKeys === on}
             // Keep focus off the button, so the editor's keys still work after a click.
-            onMouseDown={(e) => e.preventDefault()}
+            onMouseDown={keepFocus}
             onClick={() => setDeviceSettings({ vimKeys: on })}
             className="cursor-pointer border-l border-line bg-card px-2 py-0.5 first:border-l-0 hover:text-accent aria-pressed:bg-accent aria-pressed:text-white aria-pressed:hover:text-white"
           >
@@ -221,7 +222,7 @@ function ResetOverrides() {
     <button
       type="button"
       disabled={count === 0}
-      onMouseDown={(e) => e.preventDefault()}
+      onMouseDown={keepFocus}
       onClick={() => dispatch({ type: 'resetOverrides' })}
       className="cursor-pointer self-end rounded-md border border-line bg-card px-2 py-0.5 hover:text-accent disabled:cursor-default disabled:text-mute disabled:hover:text-mute"
     >
@@ -254,7 +255,7 @@ function Choice<K extends keyof ExerciseSettings>({
             type="button"
             aria-pressed={option === value}
             // Keep focus off the button, so the editor's keys still work after a click.
-            onMouseDown={(e) => e.preventDefault()}
+            onMouseDown={keepFocus}
             onClick={() => dispatch({ type: 'setExerciseSettings', settings: { [setting]: option } })}
             className="cursor-pointer border-l border-line bg-card px-2 py-0.5 first:border-l-0 hover:text-accent aria-pressed:bg-accent aria-pressed:text-white aria-pressed:hover:text-white"
           >

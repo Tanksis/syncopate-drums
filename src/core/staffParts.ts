@@ -3,18 +3,19 @@
 // is the other, stems down. Hits at the same tick share a stem, and a part rests only where it is
 // silent.
 
-import type { Bar, Duration, GroovePresetId, Voice } from './model'
-import { TICKS_PER_BAR, TICKS_PER_BEAT } from './model'
+import type { Bar, Duration, GroovePresetId, Limb, Voice } from './model'
+import { TICKS_PER_BAR, TICKS_PER_BEAT, VOICE_LIMB, itemTicks } from './model'
 import type { GrooveNotation } from './groove'
 import { grooveChords } from './groove'
 import type { Instrument } from './schedule'
+import { VOICE_INSTRUMENT } from './schedule'
 import { placeItems, spellSpan } from './speller'
 
 /** A drum of the kit as the notation writes it. */
 export type Drum = 'hihat' | 'ride' | 'snare' | 'bass' | 'hihatFoot'
 
 /** The limb that plays each drum: the hands part or the feet part. */
-const LIMB: Record<Drum, 'hands' | 'feet'> = { hihat: 'hands', ride: 'hands', snare: 'hands', bass: 'feet', hihatFoot: 'feet' }
+const LIMB: Record<Drum, Limb> = { hihat: 'hands', ride: 'hands', snare: 'hands', bass: 'feet', hihatFoot: 'feet' }
 
 /** Top to bottom on the staff: the order of a chord's notes. */
 const DRUM_ORDER: readonly Drum[] = ['hihat', 'ride', 'snare', 'bass', 'hihatFoot']
@@ -99,8 +100,6 @@ interface Sound {
   noteId?: string
 }
 
-const DURATION_TICKS: Record<Duration, number> = { quarter: 12, eighth: 6, sixteenth: 3 }
-
 /**
  * The exercise and its groove preset as the notation writes them, bar by bar: a hands part (stems
  * up) and a feet part (stems down) of chords, rests and space.
@@ -118,8 +117,8 @@ const DURATION_TICKS: Record<Duration, number> = { quarter: 12, eighth: 6, sixte
  */
 export function staffParts(bars: readonly Bar[], voice: Voice, groove: GroovePresetId): StaffBar[] {
   const total = bars.length * TICKS_PER_BAR
-  const exerciseDrum = DRUM_OF_INSTRUMENT[voice === 'snare' ? 'snare' : 'kick']!
-  const exerciseLimb = LIMB[exerciseDrum]
+  const exerciseDrum = DRUM_OF_INSTRUMENT[VOICE_INSTRUMENT[voice]]!
+  const exerciseLimb = VOICE_LIMB[voice]
 
   // The exercise's struck notes, each held through its tied continuations.
   const exercise: Sound[] = []
@@ -128,7 +127,7 @@ export function staffParts(bars: readonly Bar[], voice: Voice, groove: GroovePre
     const start = p.bar * TICKS_PER_BAR + p.start
     if (p.item.kind !== 'note') continue
     if (p.item.triplet) triplet[Math.floor(start / TICKS_PER_BEAT)] = true
-    const end = start + ticksOf(p.item)
+    const end = start + itemTicks(p.item)
     if (p.continuation && exercise.length) exercise.at(-1)!.end = end
     else exercise.push({ drum: exerciseDrum, notation: VOICE_NOTATION[voice], start, end, heard: start, noteId: `${p.bar}:${p.start}` })
   }
@@ -139,7 +138,8 @@ export function staffParts(bars: readonly Bar[], voice: Voice, groove: GroovePre
         const drum = DRUM_OF_INSTRUMENT[hit.instrument]
         if (!drum) return []
         const start = b * TICKS_PER_BAR + chord.start
-        return [{ drum, notation: hit.notation, start, end: start + DURATION_TICKS[chord.duration], heard: start }]
+        const end = start + itemTicks({ duration: chord.duration, dotted: false, triplet: false })
+        return [{ drum, notation: hit.notation, start, end, heard: start }]
       }),
     ),
   )
@@ -162,11 +162,6 @@ export function staffParts(bars: readonly Bar[], voice: Voice, groove: GroovePre
         .map((e) => ({ ...e, start: e.start - b * TICKS_PER_BAR }))
     return { hands: inBar(parts[0]), feet: inBar(parts[1]) }
   })
-}
-
-function ticksOf(item: { duration: Duration; dotted: boolean; triplet: boolean }): number {
-  const ticks = DURATION_TICKS[item.duration] * (item.dotted ? 1.5 : 1)
-  return item.triplet ? (ticks * 2) / 3 : ticks
 }
 
 /** A groove sound in a triplet beat, its start and end moved on to the next triplet position. */
