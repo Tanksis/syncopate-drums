@@ -15,7 +15,17 @@ export interface BeatView {
   tiedInto: boolean
   /** The beat's last note ends early, with a rest after it. */
   cutShort: boolean
+  /** On the triplet grid (three triplet eighths) rather than the sixteenth grid (four sixteenths). */
+  triplet: boolean
+  /** One per grid position of the beat, in order. */
+  positions: GridPosition[]
 }
+
+/**
+ * A grid position: a note struck there, a note still sounding there (including a tied
+ * continuation on the downbeat), or silence.
+ */
+export type GridPosition = 'hit' | 'hold' | 'empty'
 
 /** One tick of the timeline: a struck note, a note still sounding, or silence. */
 type Cell = { state: 'hit'; override?: Hand } | { state: 'hold' } | { state: 'rest' }
@@ -178,6 +188,8 @@ function hitsOf({ cells, triplet }: Timeline, beat: number): string {
     .join('')
 }
 
+const POSITION_OF: Record<Cell['state'], GridPosition> = { hit: 'hit', hold: 'hold', rest: 'empty' }
+
 /** Each bar's four beats as the grid editor sees them. */
 export function beatViews(bars: readonly Bar[]): BeatView[][] {
   const timeline = toTimeline(bars)
@@ -191,6 +203,8 @@ export function beatViews(bars: readonly Bar[]): BeatView[][] {
         hits,
         tiedInto: cells[0].state === 'hold',
         cutShort: cells.at(-1)!.state === 'rest' && cells.some((c) => c.state !== 'rest'),
+        triplet: timeline.triplet[index],
+        positions: slotTicks(timeline.triplet[index]).map((t) => POSITION_OF[cells[t].state]),
       }
     }),
   )
@@ -221,6 +235,37 @@ export function setBeat(bars: readonly Bar[], bar: number, beat: number, hits: s
     } else {
       cells[first + t] = { state: sounding ? 'hold' : 'rest' }
     }
+  }
+  return fromTimeline(timeline)
+}
+
+/**
+ * Turns a hit on or off at one grid position of a beat (on the beat's grid) and re-spells the bars.
+ *
+ * - A hit on an empty position holds until the next hit or the end of the beat.
+ * - A hit inside a note's hold (a tied-into downbeat among them) splits it: the earlier note stops
+ *   there and the new one takes the rest of the hold.
+ * - Removing a hit that the previous note ran right up to lets that note hold on through the
+ *   removed note's span; otherwise the span (with any tied continuation) becomes empty. A downbeat
+ *   is never held on into from the beat before, so a tie never points at a rest.
+ *
+ * A removed note's sticking override goes with it. Off the grid, the same bars are returned.
+ */
+export function toggleHit(bars: Bar[], bar: number, beat: number, position: number): Bar[] {
+  const timeline = toTimeline(bars)
+  const { cells } = timeline
+  const index = bar * BEATS_PER_BAR + beat
+  const offset = slotTicks(timeline.triplet[index] ?? false)[position]
+  if (index >= timeline.triplet.length || offset === undefined) return bars
+  const first = index * TICKS_PER_BEAT
+  const tick = first + offset
+  if (cells[tick].state === 'hit') {
+    const state = offset > 0 && cells[tick - 1].state !== 'rest' ? 'hold' : 'rest'
+    cells[tick] = { state }
+    for (let t = tick + 1; t < cells.length && cells[t].state === 'hold'; t++) cells[t] = { state }
+  } else {
+    cells[tick] = { state: 'hit' }
+    for (let t = tick + 1; t < first + TICKS_PER_BEAT && cells[t].state === 'rest'; t++) cells[t] = { state: 'hold' }
   }
   return fromTimeline(timeline)
 }

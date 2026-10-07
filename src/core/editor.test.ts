@@ -806,3 +806,45 @@ describe('vim Normal mode', () => {
     expect(vim(state, 'l').cursor).toEqual({ bar: 1, beat: 3 })
   })
 })
+
+describe('clicking grid positions', () => {
+  const click = (state: EditorState, bar: number, beat: number, position: number) =>
+    applyEdit(state, { type: 'toggleGridPosition', bar, beat, position })
+  const fresh = () => newEditorState(newExercise({ id: 'e1', now: 0 }))
+
+  it('clicks several positions in one beat, the cursor moving to that beat without advancing', () => {
+    const state = click(click(fresh(), 0, 2, 2), 0, 2, 0)
+    expect(state.cursor).toEqual({ bar: 0, beat: 2 })
+    expect(figureKeys(state)).toEqual(['  2 '])
+  })
+
+  it('makes each click one undo step', () => {
+    const state = click(click(fresh(), 0, 1, 0), 0, 1, 2)
+    expect(figureKeys(keys(state, ctrl('z')))).toEqual([' 1  '])
+    expect(figureKeys(keys(state, ctrl('z'), ctrl('z')))).toEqual(['    '])
+  })
+
+  it('works in Insert and Normal mode without changing the mode', () => {
+    expect(click(fresh(), 0, 0, 0).mode).toBe('insert')
+    const clicked = click(vim(fresh(), '<Esc>'), 0, 3, 0)
+    expect(clicked.mode).toBe('normal')
+    expect(figureKeys(clicked)).toEqual(['   1'])
+  })
+
+  it('is not the change . repeats', () => {
+    const clicked = click(vim(fresh(), '2<Esc>'), 0, 2, 3)
+    const repeated = vim({ ...clicked, cursor: { bar: 0, beat: 1 } }, '.')
+    expect(figureKeys(repeated)).toEqual(['22x '])
+  })
+
+  it('removes the & of an eighth pair, giving a quarter', () => {
+    expect(figureKeys(click(type(['2']), 0, 0, 2))).toEqual(['1   '])
+  })
+
+  it('strikes the downbeat of a tied-into beat again', () => {
+    const tied = keys(type(['1', '1']), press('ArrowLeft'), press('t'))
+    expect(beatViews(tied.exercise.bars)[0][1].tiedInto).toBe(true)
+    const struck = click(tied, 0, 1, 0)
+    expect(beatViews(struck.exercise.bars)[0][1]).toMatchObject({ tiedInto: false, figure: { key: '1' } })
+  })
+})
