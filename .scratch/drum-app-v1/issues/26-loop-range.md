@@ -24,3 +24,4 @@ See [spec.md](../spec.md): `schedule` (loop range with wraparound, live loop cha
   - The loop colour is amber, as new `--color-loop*` tokens, so it differs from the blue selection. Bars in the range get bold amber numbers in the notation too. "all" shows only while a range is set, and the readout says "all bars" otherwise.
   - Bar numbers are now drawn by `staff.ts` rather than VexFlow's `setMeasure`, so each has a click target.
   - There's no separate sticking test for a narrowed range: `sticking` never reads the range, so a test would only restate that.
+- 2026-10-06: Follow-up PR #15 after the user couldn't see the shading: looped bars also get an amber band across their top in the notation, behind the bar numbers, and the loop shade is a stronger amber.
