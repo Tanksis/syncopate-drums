@@ -2,8 +2,8 @@ import type { ReactNode } from 'react'
 import { useRef } from 'react'
 import { useAppStore } from '@/app/store'
 import { PanelHeading } from '@/components/PanelHeading'
-import type { ExerciseSettings } from '@/core'
-import { MAX_SWING, MIN_SWING, overrideCount } from '@/core'
+import type { ExerciseSettings, GroovePresetId } from '@/core'
+import { GROOVE_PRESETS, MAX_SWING, groovePreset, MIN_SWING, overrideCount } from '@/core'
 
 export function SettingsSidebar() {
   return (
@@ -12,6 +12,7 @@ export function SettingsSidebar() {
       className="flex flex-col gap-3.5 overflow-auto border-l border-line bg-panel p-3"
     >
       <SettingGroup title="Groove">
+        <GroovePreset />
         <Swing />
       </SettingGroup>
       <SettingGroup title="Sticking">
@@ -34,6 +35,35 @@ function SettingGroup({ title, children }: { title: string; children?: ReactNode
       <PanelHeading>{title}</PanelHeading>
       {children}
     </section>
+  )
+}
+
+/** The groove layer played and drawn with the exercise, or none. */
+function GroovePreset() {
+  const groove = useAppStore((s) => s.editor.exercise.practice.groove)
+  const setGroove = useAppStore((s) => s.setGroove)
+  return (
+    <label className="flex items-center justify-between gap-2">
+      <span className="text-mute">Preset</span>
+      <select
+        aria-label="Groove preset"
+        value={groove}
+        // The sidebar is narrow, so the longer names are cut short; the full name shows on hover.
+        title={groovePreset(groove).name}
+        // Once a preset is picked, hand the keyboard back to the editor.
+        onChange={(e) => {
+          setGroove(e.target.value as GroovePresetId)
+          e.currentTarget.blur()
+        }}
+        className="min-w-0 flex-1 cursor-pointer rounded-md border border-line bg-card px-1 py-0.5"
+      >
+        {GROOVE_PRESETS.map((preset) => (
+          <option key={preset.id} value={preset.id}>
+            {preset.name}
+          </option>
+        ))}
+      </select>
+    </label>
   )
 }
 
