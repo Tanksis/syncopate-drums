@@ -13,8 +13,8 @@ import {
   withLoopRange,
   withLoopRangeInBars,
 } from './model'
-import type { BeatView } from './speller'
-import { beatViews, clearBeatToDownbeat, setBeat, toggleCutShort, toggleHit, toggleTie } from './speller'
+import type { BeatView, GridPoint } from './speller'
+import { beatViews, clearBeatToDownbeat, setBeat, setHold, toggleCutShort, toggleHit, toggleTie } from './speller'
 import type { NoteSticking } from './sticking'
 import { overrideCount, sticking } from './sticking'
 
@@ -85,6 +85,12 @@ export type EditCommand =
    * moves the cursor to that beat without advancing. Never repeated by `.`.
    */
   | { type: 'toggleGridPosition'; bar: number; beat: number; position: number }
+  /**
+   * A drag on a note in the beat strip: sets where the hold of the note sounding at `from` ends (at
+   * `to`, which is not held), and moves the cursor to `from`'s beat without advancing. Never
+   * repeated by `.`.
+   */
+  | { type: 'setHold'; from: GridPoint; to: GridPoint }
   /**
    * The 3/16 toggle or a right-click on a beat box: puts the beat on the triplet or the sixteenth
    * grid, keeping a note on the downbeat and clearing the others, and moves the cursor to that beat
@@ -233,9 +239,9 @@ function apply(state: EditorState, command: EditCommand): EditorState {
 export type RecordedCommand = Exclude<EditCommand, { type: 'selectBars' | 'pending' | 'normal' | 'insert' | 'repeatChange' }>
 
 /** The mouse's edits on the beat strip, which `.` never repeats. */
-type MouseCommand = Extract<RecordedCommand, { type: 'toggleGridPosition' | 'setBeatGrid' }>
+type MouseCommand = Extract<RecordedCommand, { type: 'toggleGridPosition' | 'setBeatGrid' | 'setHold' }>
 
-const MOUSE_COMMANDS = new Set<EditCommand['type']>(['toggleGridPosition', 'setBeatGrid'])
+const MOUSE_COMMANDS = new Set<EditCommand['type']>(['toggleGridPosition', 'setBeatGrid', 'setHold'])
 
 /** The changes `.` can repeat: the keyboard's. */
 export type RepeatableCommand = Exclude<RecordedCommand, MouseCommand>
@@ -357,6 +363,17 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
       const bars = clearBeatToDownbeat(state.exercise.bars, bar, beat)
       const pendingGrid = withPending(state.pendingGrid, bar * BEATS_PER_BAR + beat, command.triplet)
       return { ...withBars(moved, bars), pendingGrid }
+    }
+    case 'setHold': {
+      const moved = moveTo(state, command.from.bar, command.from.beat)
+      const { bar, beat } = moved.cursor
+      const index = bar * BEATS_PER_BAR + beat
+      const pending = state.pendingGrid.includes(index)
+      const bars = setHold(state.exercise.bars, command.from, command.to, pending || undefined)
+      if (bars === state.exercise.bars) return moved
+      // As with a click: a beat on the triplet grid stays there while it reads the same on either.
+      const onTriplets = editorBeatViews(state)[bar][beat].triplet && !beatViews(bars)[bar][beat].triplet
+      return { ...withBars(moved, bars), pendingGrid: withPending(state.pendingGrid, index, onTriplets) }
     }
     case 'toggleTie':
     case 'toggleCutShort': {
@@ -516,8 +533,8 @@ function selectedBars(state: EditorState, count = 1): BarSelection {
 
 /**
  * Sets `count` beats from the cursor on, as many as there are, to a figure, which also takes them
- * off the pending grid. A rest over a rest, or a figure over the same figure (not cut short), is
- * no change.
+ * off the pending grid. A rest over a rest, or a figure over the same figure (not cut short, holds
+ * at their defaults), is no change.
  */
 function setBeats(state: EditorState, hits: string, count: number): EditorState {
   const views = editorBeatViews(state)
@@ -529,7 +546,7 @@ function setBeats(state: EditorState, hits: string, count: number): EditorState 
     const beat = i % BEATS_PER_BAR
     const view = views[bar][beat]
     const alreadyRest = hits === REST_FIGURE.hits && !view.hits.includes('x')
-    const alreadySet = view.hits === hits && !view.cutShort
+    const alreadySet = view.figure?.hits === hits && !view.cutShort
     if (!alreadyRest && !alreadySet) bars = setBeat(bars, bar, beat, hits)
   }
   const pendingGrid = state.pendingGrid.filter((i) => i < from || i >= to)

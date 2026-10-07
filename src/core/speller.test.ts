@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Bar, Item } from './index'
-import { FIGURES, REST_FIGURE, TICKS_PER_BAR, beatViews, clearBeatToDownbeat, itemTicks, restBar, setBeat, toggleCutShort, toggleHit, toggleTie } from './index'
+import { FIGURES, REST_FIGURE, TICKS_PER_BAR, beatViews, clearBeatToDownbeat, itemTicks, restBar, setBeat, setHold, toggleCutShort, toggleHit, toggleTie } from './index'
 
 /** A bar in shorthand: q e s for note values, `.` for a dot, 3 for a triplet, r for a rest, ~ for a tie. */
 function text(bars: Bar[]): string {
@@ -332,5 +332,70 @@ describe('switching grids', () => {
     expect(views[0][0]).toMatchObject({ triplet: true, hits: 'x..', positions: ['hit', 'hold', 'hold'] })
     expect(views[0][1]).toMatchObject({ triplet: true, positions: ['empty', 'empty', 'empty'] })
     expect(views[0][2]).toMatchObject({ triplet: false })
+  })
+})
+
+describe("setting a note's hold", () => {
+  const at = (beat: number, position: number) => ({ bar: 0, beat, position })
+
+  it('shortens the first note of x.x. to one sixteenth: sixteenth, sixteenth rest, eighth', () => {
+    const bars = setHold(bar('x.x.'), at(0, 0), at(0, 1))
+    expect(text(bars)).toBe('s rs e rq rq rq')
+    expect(beatViews(bars)[0][0].positions).toEqual(['hit', 'empty', 'hit', 'hold'])
+  })
+
+  it('stops a drag past the next hit just before it', () => {
+    const shortened = setHold(bar('x..x'), at(0, 0), at(0, 1))
+    expect(text(shortened)).toBe('s re s rq rq rq')
+    expect(text(setHold(shortened, at(0, 0), at(0, 4)))).toBe('e. s rq rq rq')
+    // Already running up to the next hit, a drag past it changes nothing.
+    const bars = bar('x.x.')
+    expect(setHold(bars, at(0, 0), at(0, 3))).toBe(bars)
+  })
+
+  it('refuses a hold of no length', () => {
+    const bars = bar('x.x.')
+    expect(setHold(bars, at(0, 0), at(0, 0))).toBe(bars)
+    expect(setHold(bars, at(0, 2), at(0, 1))).toBe(bars)
+  })
+
+  it('takes a press on the hold bar as a press on its note', () => {
+    expect(text(setHold(bar('x...'), at(0, 2), at(0, 3)))).toBe('e. rs rq rq rq')
+  })
+
+  it('makes the positions after a shortened note empty, anywhere in the beat', () => {
+    const bars = setHold(bar('xx..'), at(0, 1), at(0, 2))
+    expect(text(bars)).toBe('s s re rq rq rq')
+    expect(beatViews(bars)[0][0].positions).toEqual(['hit', 'hit', 'empty', 'empty'])
+  })
+
+  it('works on the triplet grid', () => {
+    expect(text(setHold(bar('x.x'), at(0, 0), at(0, 1)))).toBe('e3 re3 e3 rq rq rq')
+  })
+
+  it('stays within the beat for now', () => {
+    expect(text(setHold(bar('..x.'), at(0, 2), at(1, 2)))).toBe('re e rq rq rq')
+    const bars = bar('x...')
+    expect(setHold(bars, at(0, 0), at(1, 2))).toBe(bars)
+  })
+
+  it('returns the same bars for a press on an empty position', () => {
+    const bars = bar('..x.')
+    expect(setHold(bars, at(0, 0), at(0, 1))).toBe(bars)
+  })
+
+  it('leaves a beat whose holds are not the defaults with no figure', () => {
+    const views = beatViews(setHold(bar('x.x.', 'x...', 'x...', 'xxx'), at(0, 0), at(0, 1)))[0]
+    expect(views[0]).toMatchObject({ figure: undefined, hits: 'x.x.' })
+    // A note shortened to its cut-short length is the figure cut short.
+    const cut = beatViews(setHold(bar('x...'), at(0, 0), at(0, 2)))[0][0]
+    expect(cut).toMatchObject({ figure: { key: '1' }, cutShort: true })
+    // A note on 1 held for a sixteenth is not.
+    expect(beatViews(setHold(bar('x...'), at(0, 0), at(0, 1)))[0][0].figure).toBeUndefined()
+    // Neither is a shortened note on the triplet grid that isn't the last.
+    expect(beatViews(setHold(bar('x.x'), at(0, 0), at(0, 1)))[0][0].figure).toBeUndefined()
+    // A triplet beat's last note shortened to one triplet eighth is the figure cut short.
+    const tripletCut = beatViews(setHold(bar('xx.'), at(0, 1), at(0, 2)))[0][0]
+    expect(tripletCut).toMatchObject({ figure: { hits: 'xx.' }, cutShort: true })
   })
 })
