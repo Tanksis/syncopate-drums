@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Bar, Item } from './index'
-import { FIGURES, REST_FIGURE, TICKS_PER_BAR, beatViews, itemTicks, restBar, setBeat, toggleCutShort, toggleTie } from './index'
+import { FIGURES, REST_FIGURE, TICKS_PER_BAR, beatViews, itemTicks, restBar, setBeat, toggleCutShort, toggleHit, toggleTie } from './index'
 
 /** A bar in shorthand: q e s for note values, `.` for a dot, 3 for a triplet, r for a rest, ~ for a tie. */
 function text(bars: Bar[]): string {
@@ -217,5 +217,89 @@ describe('tie and cut round-trip', () => {
   it('clears cut short when a new figure is entered', () => {
     const cut = toggleCutShort(bar('x...'), 0, 0)
     expect(beatViews(setBeat(cut, 0, 0, 'xx..'))[0][0].cutShort).toBe(false)
+  })
+})
+
+describe('grid positions', () => {
+  it('reads each sixteenth position of a beat as a hit, a hold or empty', () => {
+    const views = beatViews(toggleCutShort(bar('x.x.', '.x..', '....', 'x...'), 0, 3))
+    expect(views[0].map((v) => v.positions)).toEqual([
+      ['hit', 'hold', 'hit', 'hold'],
+      ['empty', 'hit', 'hold', 'hold'],
+      ['empty', 'empty', 'empty', 'empty'],
+      ['hit', 'hold', 'empty', 'empty'],
+    ])
+    expect(views[0].every((v) => !v.triplet)).toBe(true)
+  })
+
+  it('reads a triplet beat as three positions, and a tied-into downbeat as a hold', () => {
+    const view = beatViews(toggleTie(bar('x...', 'x.x'), 0, 1))[0][1]
+    expect(view).toMatchObject({ triplet: true, positions: ['hold', 'hold', 'hit'] })
+  })
+})
+
+describe('toggling a hit on a grid position', () => {
+  it('puts a hit on the & then the downbeat, giving two eighths (figure 2)', () => {
+    const bars = toggleHit(toggleHit(bar(), 0, 0, 2), 0, 0, 0)
+    expect(text(bars)).toBe('e e rq rq rq')
+    expect(beatViews(bars)[0][0].figure?.key).toBe('2')
+  })
+
+  it("splits another note's hold: the earlier note stops at the new hit, which takes the rest", () => {
+    // A dotted quarter tied into beat 2 (q.), then a hit on the e of 2 inside its hold.
+    const tied = toggleTie(bar('x...', 'x.x.'), 0, 1)
+    expect(text(toggleHit(tied, 0, 1, 1))).toBe('q~ s s e rq rq')
+    // A hit inside a cut-short note's hold leaves the rest after it.
+    const cut = toggleHit(toggleCutShort(bar('x...'), 0, 0), 0, 0, 1)
+    expect(beatViews(cut)[0][0].positions).toEqual(['hit', 'hit', 'empty', 'empty'])
+  })
+
+  it('strikes the downbeat of a tied-into beat again, ending the tie', () => {
+    const tied = toggleTie(bar('x...', 'x...'), 0, 1)
+    const bars = toggleHit(tied, 0, 1, 0)
+    expect(beatViews(bars)[0][1]).toMatchObject({ tiedInto: false, positions: ['hit', 'hold', 'hold', 'hold'] })
+    expect(text(bars)).toBe('q q rq rq')
+  })
+
+  it('removes the & of x.x. and lets the note on 1 hold on: a quarter (figure 1)', () => {
+    const bars = toggleHit(bar('x.x.'), 0, 0, 2)
+    expect(text(bars)).toBe('q rq rq rq')
+    expect(beatViews(bars)[0][0].figure?.key).toBe('1')
+  })
+
+  it('leaves the span empty when the hit removed came after a shortened note', () => {
+    // x... cut short (an eighth and an eighth rest), then a hit on the a: e rs s
+    const shortened = toggleHit(toggleCutShort(bar('x...'), 0, 0), 0, 0, 3)
+    expect(text(shortened)).toBe('e rs s rq rq rq')
+    const bars = toggleHit(shortened, 0, 0, 3)
+    expect(text(bars)).toBe('e re rq rq rq')
+    expect(beatViews(bars)[0][0].positions).toEqual(['hit', 'hold', 'empty', 'empty'])
+  })
+
+  it("drops a removed note's sticking override", () => {
+    const withOverride: Bar[] = [
+      { items: [{ kind: 'note', duration: 'quarter', dotted: false, triplet: false, tiedToNext: false, override: 'L' }, ...restBar().items.slice(1)] },
+    ]
+    const bars = toggleHit(toggleHit(withOverride, 0, 0, 0), 0, 0, 0)
+    expect(text(bars)).toBe('q rq rq rq')
+    expect(bars[0].items.some((i) => i.kind === 'note' && i.override)).toBe(false)
+  })
+
+  it('removes a downbeat without holding the previous beat on into it, so no tie points at a rest', () => {
+    const bars = toggleHit(bar('x...', 'x...'), 0, 1, 0)
+    expect(text(bars)).toBe('q rq rq rq')
+    expect(beatViews(bars)[0][1]).toMatchObject({ tiedInto: false, positions: ['empty', 'empty', 'empty', 'empty'] })
+  })
+
+  it('removes a note tied on into the next beat along with its continuation', () => {
+    const tied = toggleTie(bar('..x.', 'x.x.'), 0, 1)
+    expect(text(tied)).toBe('re q e rq rq')
+    expect(text(toggleHit(tied, 0, 0, 2))).toBe('rq re e rq rq')
+  })
+
+  it('returns the same bars for a position off the grid', () => {
+    const bars = bar('x...')
+    expect(toggleHit(bars, 0, 0, 4)).toBe(bars)
+    expect(toggleHit(bars, 1, 0, 0)).toBe(bars)
   })
 })

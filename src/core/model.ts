@@ -99,6 +99,8 @@ export interface DeviceSettings {
   exerciseMuted: boolean
   /** The grid editor's vim keys: Normal mode and its commands. Off, there's no Normal mode. */
   vimKeys: boolean
+  /** The grid editor's "Figures" panel of palette tiles is open. */
+  figuresPanelOpen: boolean
   /** The exercise open when the app was last used, reopened at launch. */
   lastOpenedId: string | null
 }
@@ -110,6 +112,7 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   grooveVolume: 1,
   exerciseMuted: false,
   vimKeys: true,
+  figuresPanelOpen: false,
   lastOpenedId: null,
 }
 

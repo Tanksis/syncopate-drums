@@ -13,7 +13,7 @@ import {
   withLoopRange,
   withLoopRangeInBars,
 } from './model'
-import { beatViews, setBeat, toggleCutShort, toggleTie } from './speller'
+import { beatViews, setBeat, toggleCutShort, toggleHit, toggleTie } from './speller'
 import type { NoteSticking } from './sticking'
 import { overrideCount, sticking } from './sticking'
 
@@ -44,8 +44,8 @@ export interface EditorState {
   mode: EditorMode
   /** The keys typed so far of an unfinished Normal-mode command, such as `2d`. */
   pending: string
-  /** The last command that changed the bars, for `.` to repeat. */
-  lastChange: RecordedCommand | null
+  /** The last keyboard command that changed the bars, for `.` to repeat. */
+  lastChange: RepeatableCommand | null
 }
 
 /** The exercise settings that are edited like its notes: every change to them can be undone. */
@@ -72,6 +72,11 @@ const UNDO_LIMIT = 200
 
 export type EditCommand =
   | { type: 'enterFigure'; hits: string }
+  /**
+   * A click on a beat's grid position (from 0, on the beat's grid): turns a hit there on or off, and
+   * moves the cursor to that beat without advancing. Never repeated by `.`.
+   */
+  | { type: 'toggleGridPosition'; bar: number; beat: number; position: number }
   | { type: 'toggleTie' }
   | { type: 'toggleCutShort' }
   /** Moves the cursor by beats or bars, stopping at the ends of the exercise. */
@@ -195,7 +200,7 @@ function apply(state: EditorState, command: EditCommand): EditorState {
     case 'repeatChange': {
       const last = state.lastChange
       if (!last) return state
-      const repeated = command.count && COUNTED.has(last.type) ? ({ ...last, count: command.count } as RecordedCommand) : last
+      const repeated = command.count && COUNTED.has(last.type) ? ({ ...last, count: command.count } as RepeatableCommand) : last
       // Repeating a change never changes the mode, as a repeated `o` would.
       return { ...record(state, repeated), mode: state.mode }
     }
@@ -206,6 +211,16 @@ function apply(state: EditorState, command: EditCommand): EditorState {
 
 /** The commands that go through the undo history, the ones `.` can repeat among them. */
 export type RecordedCommand = Exclude<EditCommand, { type: 'selectBars' | 'pending' | 'normal' | 'insert' | 'repeatChange' }>
+
+/** The mouse's edits on the beat strip, which `.` never repeats. */
+type MouseCommand = Extract<RecordedCommand, { type: 'toggleGridPosition' }>
+
+const MOUSE_COMMANDS = new Set<EditCommand['type']>(['toggleGridPosition'])
+
+/** The changes `.` can repeat: the keyboard's. */
+export type RepeatableCommand = Exclude<RecordedCommand, MouseCommand>
+
+const isMouseCommand = (command: RecordedCommand): command is MouseCommand => MOUSE_COMMANDS.has(command.type)
 
 /** The changes that take a count, which a count given to `.` replaces. */
 const COUNTED = new Set<EditCommand['type']>(['rest', 'deleteBar', 'putBars', 'replaceBars', 'replaceBeats'])
@@ -222,7 +237,8 @@ function record(state: EditorState, command: RecordedCommand): EditorState {
   const next = command.type === 'copyBars' && state.mode === 'insert' ? edited : clearSelection(edited)
   if (next.exercise.bars === state.exercise.bars && sameSettings(next.exercise, state.exercise)) return next
   const undo = [...state.history.undo, snapshot(state)].slice(-UNDO_LIMIT)
-  const lastChange = next.exercise.bars === state.exercise.bars ? state.lastChange : repeatable(state, command)
+  const unrepeated = next.exercise.bars === state.exercise.bars || isMouseCommand(command)
+  const lastChange = unrepeated ? state.lastChange : repeatable(state, command)
   return { ...next, history: { undo, redo: [] }, lastChange }
 }
 
@@ -230,7 +246,7 @@ function record(state: EditorState, command: RecordedCommand): EditorState {
  * A change as `.` repeats it: one that acted on a selection or a clicked bar acts on as many bars
  * from the cursor, and a typed figure is stamped in place, as `r` does.
  */
-function repeatable(state: EditorState, command: RecordedCommand): RecordedCommand {
+function repeatable(state: EditorState, command: RepeatableCommand): RepeatableCommand {
   if (command.type === 'enterFigure') return { type: 'replaceBeats', hits: command.hits }
   if (command.type === 'deleteBar' && command.bar !== undefined) return { type: 'deleteBar' }
   if (command.type !== 'deleteBar' && command.type !== 'replaceBars') return command
@@ -277,6 +293,12 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
         cursor = { bar: bar + 1, beat: 0 }
       }
       return { ...withBars(state, bars), cursor }
+    }
+    case 'toggleGridPosition': {
+      const { bar, beat, position } = command
+      const moved = moveTo(state, bar, beat)
+      const bars = toggleHit(state.exercise.bars, moved.cursor.bar, moved.cursor.beat, position)
+      return bars === state.exercise.bars ? moved : withBars(moved, bars)
     }
     case 'toggleTie':
     case 'toggleCutShort': {

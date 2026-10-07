@@ -30,8 +30,38 @@ export function GridEditor() {
       </div>
       {helpOpen && <CheatSheet onClose={toggleHelp} />}
       <BeatStrip />
-      <Palette />
+      <FiguresPanel />
     </section>
+  )
+}
+
+/** The palette tiles, folded away by default; whether it's open is remembered per device. */
+function FiguresPanel() {
+  const open = useAppStore((s) => s.device.figuresPanelOpen)
+  const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
+  return (
+    <div className="flex flex-col gap-1.5">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls="figures-panel"
+        title={open ? 'Hide the figure tiles' : 'Show the figure tiles and their keys'}
+        // Keep focus off the button, so the editor's keys still work after a click.
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => setDeviceSettings({ figuresPanelOpen: !open })}
+        className="flex w-fit cursor-pointer items-center gap-1 text-xs font-semibold text-mute hover:text-accent"
+      >
+        <span aria-hidden className={`inline-block transition-transform ${open ? 'rotate-90' : ''}`}>
+          ▸
+        </span>
+        Figures
+      </button>
+      {open && (
+        <div id="figures-panel">
+          <Palette />
+        </div>
+      )}
+    </div>
   )
 }
 
