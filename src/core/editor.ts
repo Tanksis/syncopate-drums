@@ -2,9 +2,11 @@
 // turns a key press into a command, so the UI only dispatches.
 
 import { FIGURES, REST_FIGURE } from './figures'
-import type { Bar, Exercise } from './model'
-import { BEATS_PER_BAR, restBar } from './model'
+import type { Bar, Exercise, Hand } from './model'
+import { BEATS_PER_BAR, TICKS_PER_BEAT, itemTicks, restBar } from './model'
 import { beatViews, setBeat, toggleCutShort, toggleTie } from './speller'
+import type { NoteSticking } from './sticking'
+import { sticking } from './sticking'
 
 export interface Cursor {
   bar: number
@@ -68,6 +70,13 @@ export type EditCommand =
   /** Pastes the copied bars over the bars from the cursor bar on, growing the exercise if needed. */
   | { type: 'pasteBars' }
   | { type: 'setExerciseSettings'; settings: Partial<ExerciseSettings> }
+  /**
+   * Sets the opposite hand as a sticking override on a struck note, or clears its override: the
+   * `index`th struck note of the cursor beat (from 0), or the note with that id. Does nothing while
+   * sticking is hidden.
+   */
+  | { type: 'flipOverride'; note: { index: number } | { id: string } }
+  | { type: 'resetOverrides' }
   | { type: 'undo' }
   | { type: 'redo' }
 
@@ -78,6 +87,8 @@ export interface KeyPress {
   altKey: boolean
   metaKey: boolean
   shiftKey: boolean
+  /** The physical key, so Alt+digit still reads as a digit where Alt types another character. */
+  code?: string
 }
 
 export function newEditorState(exercise: Exercise): EditorState {
@@ -194,11 +205,49 @@ function edit(
       const exercise = { ...state.exercise, ...command.settings }
       return sameSettings(exercise, state.exercise) ? state : { ...state, exercise }
     }
+    case 'flipOverride': {
+      const target = overrideTarget(state, command.note)
+      // Hidden sticking keeps its overrides as they are.
+      if (!target || target.shown === null) return state
+      const hand = target.override ? undefined : target.computed === 'R' ? 'L' : 'R'
+      return withBars(state, withOverride(state.exercise.bars, target, hand))
+    }
+    case 'resetOverrides': {
+      const { bars } = state.exercise
+      if (!bars.some((bar) => bar.items.some((item) => item.kind === 'note' && item.override))) return state
+      const cleared = bars.map((bar) => ({
+        items: bar.items.map((item) => (item.kind === 'note' && item.override ? withoutOverride(item) : item)),
+      }))
+      return withBars(state, cleared)
+    }
     case 'jump':
       return command.to === 'start'
         ? moveTo(state, 0, 0)
         : moveTo(state, state.exercise.bars.length - 1, BEATS_PER_BAR - 1)
   }
+}
+
+function overrideTarget(state: EditorState, note: { index: number } | { id: string }): NoteSticking | undefined {
+  const notes = sticking(state.exercise)
+  if ('id' in note) return notes.find((n) => n.noteId === note.id)
+  const { bar, beat } = state.cursor
+  return notes.filter((n) => n.bar === bar && Math.floor(n.start / TICKS_PER_BEAT) === beat)[note.index]
+}
+
+/** The bars with the override on the note starting at `start` in `bar` set, or cleared. */
+function withOverride(bars: Bar[], { bar, start }: Pick<NoteSticking, 'bar' | 'start'>, hand: Hand | undefined): Bar[] {
+  let tick = 0
+  const items = bars[bar].items.map((item) => {
+    const at = tick
+    tick += itemTicks(item)
+    if (at !== start || item.kind !== 'note') return item
+    return hand ? { ...item, override: hand } : withoutOverride(item)
+  })
+  return bars.map((b, i) => (i === bar ? { items } : b))
+}
+
+function withoutOverride<N extends { override?: Hand }>({ override: _, ...rest }: N): Omit<N, 'override'> {
+  return rest
 }
 
 function selectBars(state: EditorState, step: number): EditorState {
@@ -277,6 +326,11 @@ const CTRL_KEYS: Record<string, EditCommand> = {
 }
 
 export function commandForKey(press: KeyPress): EditCommand | null {
+  if (press.altKey && !press.ctrlKey && !press.metaKey) {
+    // Alt+1–4 flips the sticking of the 1st–4th struck note of the cursor beat.
+    const digit = /^Digit([1-4])$/.exec(press.code ?? '')?.[1] ?? /^[1-4]$/.exec(press.key)?.[0]
+    return digit ? { type: 'flipOverride', note: { index: Number(digit) - 1 } } : null
+  }
   if (press.altKey || press.metaKey) return null
   if (press.ctrlKey && press.shiftKey) return press.key.toLowerCase() === 'z' ? { type: 'redo' } : null
   if (press.ctrlKey) return CTRL_KEYS[press.key.length === 1 ? press.key.toLowerCase() : press.key] ?? null

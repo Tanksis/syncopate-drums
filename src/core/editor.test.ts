@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { EditorState, ExerciseSettings, KeyPress } from './index'
-import { applyEdit, beatViews, commandForKey, newEditorState, newExercise, withBpm } from './index'
+import { applyEdit, beatViews, commandForKey, newEditorState, newExercise, sticking, withBpm } from './index'
 
 const press = (key: string, mods: Partial<KeyPress> = {}): KeyPress => ({
   key,
@@ -91,7 +91,7 @@ describe('the key map', () => {
     expect(commandForKey(press('2', { ctrlKey: true }))).toBeNull()
     expect(commandForKey(press(' ', { ctrlKey: true }))).toBeNull()
     expect(commandForKey(press('z', { metaKey: true }))).toBeNull()
-    expect(commandForKey(press('1', { altKey: true }))).toBeNull()
+    expect(commandForKey(press('5', { altKey: true }))).toBeNull()
   })
 })
 
@@ -390,5 +390,96 @@ describe('sticking and voice settings', () => {
   it('setting what is already set is not a change', () => {
     const state = type(['1'])
     expect(set(state, { sticking: 'natural' })).toBe(state)
+  })
+})
+
+describe('sticking overrides', () => {
+  const alt = (key: string) => press(key, { altKey: true })
+  /** The shown hands in order, with `-` for a note that shows none. */
+  const hands = (state: EditorState) => sticking(state.exercise).map((n) => n.shown ?? '-').join('')
+  const overrides = (state: EditorState) => sticking(state.exercise).map((n) => n.override ?? '-').join('')
+  /** `x.x.` `xxxx` under natural sticking, cursor on the sixteenths. */
+  const start = () => ({ ...type(['2', '4']), cursor: { bar: 0, beat: 1 } })
+
+  it('Alt+1–4 flips the 1st–4th struck note of the cursor beat, leaving the others alone', () => {
+    expect(hands(start())).toBe('RL' + 'RLRL')
+    expect(hands(keys(start(), alt('2')))).toBe('RL' + 'RRRL')
+    expect(hands(keys(start(), alt('1'), alt('4')))).toBe('RL' + 'LLRR')
+  })
+
+  it('flipping an overridden note again clears its override', () => {
+    expect(overrides(keys(start(), alt('2'), alt('2')))).toBe('------')
+    expect(hands(keys(start(), alt('2'), alt('2')))).toBe('RL' + 'RLRL')
+  })
+
+  it('a click flips the note by its id, wherever the cursor is', () => {
+    const state = applyEdit(start(), { type: 'flipOverride', note: { id: '0:6' } })
+    expect(hands(state)).toBe('RR' + 'RLRL')
+    expect(state.cursor).toEqual({ bar: 0, beat: 1 })
+  })
+
+  it('counts struck notes only, and does nothing past the last one', () => {
+    // `.xxx` then a tie into `x.x.`: the beat's first struck note is the one after the tie.
+    const state = { ...keys(type(['9', '2']), press('ArrowLeft'), press('t')), cursor: { bar: 0, beat: 1 } }
+    expect(hands(keys(state, alt('1')))).toBe('LRL' + 'R')
+    expect(keys(state, alt('2'))).toBe(state)
+  })
+
+  it('Alt+1–4 works by the physical key too, as on a Mac where Alt types another character', () => {
+    expect(commandForKey(press('¡', { altKey: true, code: 'Digit1' }))).toEqual({ type: 'flipOverride', note: { index: 0 } })
+    expect(commandForKey(press('3', { altKey: true }))).toEqual({ type: 'flipOverride', note: { index: 2 } })
+  })
+
+  it('each flip is one undoable step', () => {
+    const flipped = keys(start(), alt('1'), alt('2'))
+    expect(overrides(keys(flipped, ctrl('z')))).toBe('--' + 'L---')
+    expect(overrides(keys(flipped, ctrl('z'), ctrl('z')))).toBe('------')
+    expect(overrides(keys(flipped, ctrl('z'), ctrl('Z', { shiftKey: true })))).toBe('--' + 'LR--')
+  })
+
+  it('survives re-entering a neighbouring beat and a duration change on its own note', () => {
+    const flipped = keys(start(), alt('3'))
+    // Re-entering beat 1 as straight sixteenths.
+    const neighbour = keys({ ...flipped, cursor: { bar: 0, beat: 0 } }, press('4'))
+    expect(overrides(neighbour)).toBe('----' + '--L-')
+    // `xxxx` → `x...`: the overridden first sixteenth becomes a quarter.
+    const longer = keys({ ...keys(start(), alt('1')), cursor: { bar: 0, beat: 1 } }, press('1'))
+    expect(beatViews(longer.exercise.bars)[0][1].hits).toBe('x...')
+    expect(overrides(longer)).toBe('--' + 'L')
+  })
+
+  it('is dropped when its beat becomes a rest', () => {
+    const flipped = keys(start(), alt('2'))
+    const rested = keys({ ...flipped, cursor: { bar: 0, beat: 1 } }, press('Delete'))
+    expect(overrides(rested)).toBe('--')
+    expect(overrides(keys({ ...rested, cursor: { bar: 0, beat: 1 } }, press('4')))).toBe('------')
+  })
+
+  it('is kept across mode switches, and hidden but kept with sticking off or the bass drum voice', () => {
+    const set = (state: EditorState, settings: Partial<ExerciseSettings>) =>
+      applyEdit(state, { type: 'setExerciseSettings', settings })
+    const flipped = keys(start(), alt('2'))
+    const alternate = set(flipped, { sticking: 'alternate' })
+    expect(overrides(alternate)).toBe('--' + '-R--')
+    expect(hands(set(flipped, { sticking: 'off' }))).toBe('------')
+    expect(hands(set(set(flipped, { sticking: 'off' }), { sticking: 'natural' }))).toBe('RL' + 'RRRL')
+    expect(hands(set(flipped, { voice: 'bass' }))).toBe('------')
+    expect(overrides(set(flipped, { voice: 'bass' }))).toBe('--' + '-R--')
+  })
+
+  it('cannot be flipped while sticking is hidden', () => {
+    const off = applyEdit(start(), { type: 'setExerciseSettings', settings: { sticking: 'off' } })
+    expect(keys(off, alt('1'))).toBe(off)
+    const bass = applyEdit(start(), { type: 'setExerciseSettings', settings: { voice: 'bass' } })
+    expect(applyEdit(bass, { type: 'flipOverride', note: { id: '0:0' } })).toBe(bass)
+  })
+
+  it('reset clears every override in one undoable step, and is not a change with none set', () => {
+    const flipped = keys(start(), alt('1'), alt('4'), press('ArrowLeft'), alt('2'))
+    expect(overrides(flipped)).toBe('-R' + 'L--R')
+    const reset = applyEdit(flipped, { type: 'resetOverrides' })
+    expect(overrides(reset)).toBe('------')
+    expect(overrides(keys(reset, ctrl('z')))).toBe('-R' + 'L--R')
+    expect(applyEdit(reset, { type: 'resetOverrides' })).toBe(reset)
   })
 })

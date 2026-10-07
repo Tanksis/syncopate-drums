@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useAppStore } from '@/app/store'
 import { PanelHeading } from '@/components/PanelHeading'
 import type { ExerciseSettings } from '@/core'
+import { sticking } from '@/core'
 
 export function SettingsSidebar() {
   return (
@@ -13,6 +14,7 @@ export function SettingsSidebar() {
       <SettingGroup title="Sticking">
         <Choice label="Mode" setting="sticking" options={['natural', 'alternate', 'off']} />
         <Choice label="Lead hand" setting="leadHand" options={['R', 'L']} />
+        <ResetOverrides />
       </SettingGroup>
       <SettingGroup title="Exercise">
         <Choice label="Voice" setting="voice" options={['snare', 'bass']} names={{ bass: 'bass drum' }} />
@@ -29,6 +31,23 @@ function SettingGroup({ title, children }: { title: string; children?: ReactNode
       <PanelHeading>{title}</PanelHeading>
       {children}
     </section>
+  )
+}
+
+/** Clears every sticking override in one undoable step; disabled when there are none. */
+function ResetOverrides() {
+  const count = useAppStore((s) => sticking(s.editor.exercise).filter((n) => n.override).length)
+  const dispatch = useAppStore((s) => s.dispatch)
+  return (
+    <button
+      type="button"
+      disabled={count === 0}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={() => dispatch({ type: 'resetOverrides' })}
+      className="cursor-pointer self-end rounded-md border border-line bg-card px-2 py-0.5 hover:text-accent disabled:cursor-default disabled:text-mute disabled:hover:text-mute"
+    >
+      Reset overrides ({count})
+    </button>
   )
 }
 
