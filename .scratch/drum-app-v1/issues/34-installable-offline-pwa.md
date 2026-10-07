@@ -16,3 +16,4 @@ See [spec.md](../spec.md): PWA via `vite-plugin-pwa`, samples precached, service
 ## Comments
 
 - Deferred on 2026-10-07 at the user's request. They have considerations and user-experience points to discuss before it is built. Revisit after that discussion.
+- 2026-10-07: stays deferred until the user feels the app is ready to install; nothing to build before then.
