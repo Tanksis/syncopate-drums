@@ -37,16 +37,35 @@ The drum an exercise's notes are played on (snare by default, or bass drum).
 ### Practice
 
 **Notation view**:
-The standard drum-staff rendering of an exercise, with sticking below and the groove layer above; what the user reads from while practicing.
+The standard drum-staff rendering of an exercise and its groove layer, with sticking below; what the user reads from while practicing.
 _Avoid_: Score, sheet
 
+**Hands part**:
+Everything on the staff played with the hands (snare, ride, hi-hat), written stems up as one rhythm: hits that land together share a stem, and a rest appears only where no hand plays.
+_Avoid_: Upper voice
+
+**Feet part**:
+Everything on the staff played with the feet (bass drum, hi-hat foot), written stems down below the hands part.
+_Avoid_: Lower voice
+
+**Playhead**:
+The line across the staff during playback that marks the position of the latest hit, from any instrument.
+
 **Grid editor**:
-Where the user enters and edits an exercise one beat at a time by picking a beat figure for each beat; the notation view mirrors it. The app decides the spelling (notes, rests, dots, ties).
+Where the user enters and edits an exercise one beat at a time, by turning grid positions on and off and dragging a note's hold, or by typing a beat figure's key; the notation view mirrors it. The app decides the spelling (notes, rests, dots, ties).
 _Avoid_: Sequencer, piano roll
 
 **Beat figure**:
-A one-beat rhythm picked from the grid editor's palette (e.g. two eighths, or a triplet with the middle note left out), defined only by where its hits fall on a sixteenth or triplet grid. Each note holds until the next hit or the end of the beat, unless the beat's last note is cut short. It may be tied into from the previous beat. There are 22: every sixteenth-grid pattern plus every triplet pattern a sixteenth grid can't write.
+A one-beat rhythm picked from the grid editor's palette (e.g. two eighths, or a triplet with the middle note left out), defined only by where its hits fall on a sixteenth or triplet grid. Each note holds until the next hit or the end of the beat, unless the beat's last note is cut short. It may be tied into from the previous beat. There are 22: every sixteenth-grid pattern plus every triplet pattern a sixteenth grid can't write. A beat whose notes have been given other holds has no beat figure.
 _Avoid_: Cell, pattern
+
+**Hold**:
+How long a note is written to last, in grid positions: by default until the next hit or the end of the beat, or set by dragging, from one grid position up to the next hit, tied on across beats and bars. It changes how the note is written, not how it sounds.
+_Avoid_: Length, sustain
+
+**Grid position**:
+One place a hit can fall within a beat: one of its four sixteenths, or one of its three triplet eighths when the beat is on the triplet grid. Each beat is on one grid or the other; only the downbeat is on both.
+_Avoid_: Cell, step, slot
 
 **Click**:
 The metronome sound: every quarter note, with beat 1 accented.
@@ -79,7 +98,7 @@ A hand the user has set manually on one note, replacing the computed sticking; a
 ### Groove
 
 **Groove layer**:
-Extra drum-set voices (e.g. jazz ride pattern and hi-hat on 2 & 4) shown on the same staff above an exercise's notes, and played back with it.
+Extra drum-set instruments (e.g. jazz ride pattern and hi-hat on 2 & 4) written on the same staff as an exercise's notes, in the hands part or the feet part, and played back with it.
 _Avoid_: Overlay, accompaniment, backing
 
 **Groove preset**:
