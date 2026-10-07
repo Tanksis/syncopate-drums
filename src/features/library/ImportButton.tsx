@@ -1,7 +1,8 @@
-import type { ChangeEvent, MouseEvent } from 'react'
+import type { ChangeEvent } from 'react'
 import { useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { Dialog, DialogButton } from '@/components/Dialog'
+import { keepFocus } from '@/components/keepFocus'
 import type { Exercise, ImportChoice } from '@/core'
 import { importConflicts, parseImport } from '@/core'
 import { exerciseCount } from './exerciseCount'
@@ -43,7 +44,7 @@ export function ImportButton({ className, onImported }: { className: string; onI
         type="button"
         title="Add exercises from an exported file"
         // Keeps focus off the button, so Space still enters a rest rather than clicking it again.
-        onMouseDown={(e: MouseEvent) => e.preventDefault()}
+        onMouseDown={keepFocus}
         onClick={() => picker.current?.click()}
         className={className}
       >

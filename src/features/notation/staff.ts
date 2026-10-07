@@ -1,10 +1,12 @@
 // The notation renderer: draws an exercise straight from the model with VexFlow (no MusicXML in
 // between). We do the line wrapping ourselves: 4 bars per line, fewer on a narrow window, and a
-// short last line keeps the bar width and stays left aligned.
+// short last line keeps the bar width and stays left aligned. What to draw comes from the core's
+// staff parts: the hands part stems up, the feet part stems down (ADR 0002).
 
-import { Beam, Dot, Formatter, Fraction, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
-import type { Cursor, Duration, Exercise, GrooveChord, Item, LoopRange, NoteSticking, PlacedItem, Voice as DrumVoice } from '@/core'
-import { TICKS_PER_BEAT, grooveChords, inLoopRange, placeItems, restBar, setBeat, sticking } from '@/core'
+import type { StemmableNote } from 'vexflow/bravura'
+import { Beam, Dot, Formatter, Fraction, GhostNote, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
+import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, NoteSticking, PlayPosition, StaffEvent, Voice as DrumVoice } from '@/core'
+import { TICKS_PER_BEAT, VOICE_LIMB, inLoopRange, restBar, setBeat, staffParts, sticking } from '@/core'
 
 // Mirror the accent, a light tint of it and the loop range's ink and shade from the design tokens in styles/index.css.
 const ACCENT_COLOUR = '#2563eb'
@@ -29,112 +31,101 @@ export const notationFontsReady: Promise<unknown> = Promise.all([
 
 const VEX_DURATION: Record<Duration, string> = { quarter: 'q', eighth: '8', sixteenth: '16' }
 
-function vexDuration(item: Item): string {
-  return VEX_DURATION[item.duration] + (item.dotted ? 'd' : '') + (item.kind === 'rest' ? 'r' : '')
-}
-
-/** Where each voice's notes sit on the percussion staff: snare on the third space, bass drum on the first. */
-const VOICE_KEY: Record<DrumVoice, string> = { snare: 'c/5', bass: 'f/4' }
-/** The same, as a stave line counted down from the top line. */
-const VOICE_LINE: Record<DrumVoice, number> = { snare: 1.5, bass: 3.5 }
-/** Stave lines from a notehead down past its stem and a tuplet's "3" to the sticking row. */
-const HAND_ROW_DROP = 8
 /** Stave lines a stave leaves above its top line, for the bar number. */
 const SPACE_ABOVE_STAVE = 4
-/** More stave lines above for the groove's stems, which reach about this far above the top line. */
-const GROOVE_SPACE = 3
+/** More stave lines above for the hands part's stems, which reach about this far above the top line. */
+const STEMS_UP_SPACE = 3
+/** The stave line the sticking is printed on: under the hands part's stems... */
+const HAND_ROW_HANDS = 6.5
+/** ...or under the feet part's stems down, when it is drawn. */
+const HAND_ROW_FEET = 9.5
+/** ...or further down, under the bass drum line's stems and its tuplets. */
+const HAND_ROW_BASS = 11.5
 const STAVE_LINE_GAP = 10
-/**
- * Pixels an exercise rest set beside a groove chord stands clear of the chord's x noteheads, which
- * set its shift: the bass drum's normal notehead is wider, and the rest must clear that too.
- */
-const REST_GAP = 10
 /** Pixels of clickable space around a printed hand. */
 const HAND_HIT_PAD = 3
 /** Pixels of clickable space around a bar number, which is printed small. */
 const BAR_NUMBER_HIT_PAD = 6
 
-/** The stave line the sticking is printed on, one row for the whole line so the hands read across. */
-const handRowLine = (voice: DrumVoice) => VOICE_LINE[voice] + HAND_ROW_DROP
+const STEM_DIRECTION: Record<Limb, 1 | -1> = { hands: 1, feet: -1 }
+/** Where each part's rests sit: the middle line, or lower for the feet. */
+const REST_KEY: Record<Limb, string> = { hands: 'b/4', feet: 'e/4' }
 
-/**
- * Each line of music is tall enough for the sticking row under the voice's stems and tuplets, and
- * for the groove's stems, if any, under the bar numbers.
- */
-const lineHeight = (voice: DrumVoice, spaceAbove: number) => (spaceAbove + handRowLine(voice) + 1) * STAVE_LINE_GAP
+/** A part's event as drawn: a StaveNote, or a GhostNote for space. */
+interface DrawnEvent {
+  event: StaffEvent
+  note: StemmableNote
+}
 
-function staveNote(item: Item, highlight: boolean, voice: DrumVoice = 'snare'): StaveNote {
+/** The VexFlow note for one event of a part. Chord keys go bottom to top, the order ties index. */
+function eventNote(event: StaffEvent, limb: Limb): StemmableNote {
+  const duration = VEX_DURATION[event.duration] + (event.dotted ? 'd' : '')
+  if (event.kind === 'space') return new GhostNote({ duration })
   const note = new StaveNote({
-    keys: [item.kind === 'rest' ? 'b/4' : VOICE_KEY[voice]],
-    duration: vexDuration(item),
-    stemDirection: -1,
+    keys: event.kind === 'rest' ? [REST_KEY[limb]] : event.notes.map((n) => n.key + (n.notehead === 'x' ? '/x2' : '')).reverse(),
+    duration: duration + (event.kind === 'rest' ? 'r' : ''),
+    stemDirection: STEM_DIRECTION[limb],
     clef: 'percussion',
   })
-  if (item.dotted) Dot.buildAndAttach([note], { all: true })
-  if (highlight) note.setStyle({ fillStyle: ACCENT_COLOUR, strokeStyle: ACCENT_COLOUR })
+  if (event.dotted) Dot.buildAndAttach([note], { all: true })
   return note
 }
 
-/** A groove chord, stems up, with x noteheads where its hits have them. */
-function grooveNote(chord: GrooveChord): StaveNote {
-  return new StaveNote({
-    keys: chord.hits.map(({ notation }) => notation.key + (notation.notehead === 'x' ? '/x2' : '')),
-    duration: VEX_DURATION[chord.duration],
-    stemDirection: 1,
-    clef: 'percussion',
-  })
-}
+/** The index of a drum's key in a chord's StaveNote, whose keys run bottom to top. */
+const keyIndex = (event: StaffEvent, drum: Drum) =>
+  event.kind === 'chord' ? event.notes.length - 1 - event.notes.findIndex((n) => n.drum === drum) : 0
 
-/** Notes grouped by the beat they start in, each group knowing whether it is a triplet group. */
-function byBeat(starts: readonly { start: number; triplet: boolean }[], notes: StaveNote[]) {
-  const groups = new Map<number, { notes: StaveNote[]; triplet: boolean }>()
-  starts.forEach(({ start, triplet }, i) => {
-    const beat = Math.floor(start / TICKS_PER_BEAT)
-    const group = groups.get(beat) ?? { notes: [], triplet }
-    group.notes.push(notes[i])
+/** A part's notes grouped by the beat they start in, each group knowing whether it is a triplet group. */
+function byBeat(drawn: readonly DrawnEvent[]) {
+  const groups = new Map<number, { notes: StemmableNote[]; triplet: boolean }>()
+  for (const { event, note } of drawn) {
+    const beat = Math.floor(event.start / TICKS_PER_BEAT)
+    const group = groups.get(beat) ?? { notes: [], triplet: event.triplet }
+    group.notes.push(note)
     groups.set(beat, group)
-  })
+  }
   return [...groups.values()]
 }
 
+/** A part as drawn in one bar, or one beat. */
+interface PartDrawing {
+  limb: Limb
+  drawn: DrawnEvent[]
+}
+
 /**
- * Formats and draws one bar's (or one beat's) notes on a stave, beamed by the beat, with the
- * groove's chords as a second voice above them. Each triplet group gets its tuplet "3", with a
- * bracket when not all of its notes are beamed.
+ * Formats and draws one bar's (or one beat's) parts on a stave together, each beamed by the beat.
+ * Each triplet group gets its tuplet "3" on the stem side, with a bracket when not all of its
+ * notes are beamed.
  */
-function drawNotes(
-  stave: Stave,
-  placed: readonly PlacedItem[],
-  notes: StaveNote[],
-  beats: number,
-  width: number,
-  groove: readonly GrooveChord[] = [],
-) {
+function drawParts(stave: Stave, parts: readonly PartDrawing[], beats: number, width: number) {
   const ctx = stave.getContext()
-  const groups = byBeat(placed.map((p) => ({ start: p.start, triplet: p.item.triplet })), notes)
+  const groups = parts.map((p) => ({ limb: p.limb, groups: byBeat(p.drawn) }))
   // Tuplets first: they scale their notes' ticks, which the beams and the formatter read.
-  const tuplets = groups
-    .filter((g) => g.triplet)
-    .map((g) => new Tuplet(g.notes, { numNotes: 3, notesOccupied: 2, location: Tuplet.LOCATION_BOTTOM }))
-  const voiceOf = (tickables: StaveNote[]) =>
-    new Voice({ numBeats: beats, beatValue: 4 }).setStrict(false).addTickables(tickables)
-  const grooveNotes = groove.map(grooveNote)
-  const grooveGroups = byBeat(groove.map((c) => ({ start: c.start, triplet: false })), grooveNotes)
-  const voices = grooveNotes.length ? [voiceOf(notes), voiceOf(grooveNotes)] : [voiceOf(notes)]
+  const tuplets = groups.flatMap(({ limb, groups: g }) =>
+    g
+      .filter((group) => group.triplet)
+      .map(
+        (group) =>
+          new Tuplet(group.notes, {
+            numNotes: 3,
+            notesOccupied: 2,
+            location: limb === 'hands' ? Tuplet.LOCATION_TOP : Tuplet.LOCATION_BOTTOM,
+          }),
+      ),
+  )
   // Beamed beat by beat: VexFlow's own grouping loses count of the beats after a triplet group.
-  const beam = (stemDirection: number) => (g: { notes: StaveNote[] }) =>
-    Beam.generateBeams(g.notes, { groups: [new Fraction(1, 4)], stemDirection })
-  const beams = [...groups.flatMap(beam(-1)), ...grooveGroups.flatMap(beam(1))]
-  tuplets.forEach((t) => t.setBracketed(t.getNotes().some((n) => !n.hasBeam())))
-  const restLines = notes.map((n) => n.getKeyLine(0))
+  const beams = groups.flatMap(({ limb, groups: g }) =>
+    g.flatMap((group) => {
+      const notes = group.notes.filter((n): n is StaveNote => n instanceof StaveNote)
+      return Beam.generateBeams(notes, { groups: [new Fraction(1, 4)], stemDirection: STEM_DIRECTION[limb] })
+    }),
+  )
+  tuplets.forEach((t) => t.setBracketed(t.getNotes().some((n) => !(n as StaveNote).hasBeam?.())))
+  const voices = parts.map((p) =>
+    new Voice({ numBeats: beats, beatValue: 4 }).setStrict(false).addTickables(p.drawn.map((d) => d.note)),
+  )
   new Formatter().joinVoices(voices).format(voices, width)
-  // A groove chord's stem crosses the whole staff, and VexFlow nudges a rest beside it just a line
-  // down, onto the hi-hat foot. Set it back, beside the chord instead, as VexFlow does with notes.
-  notes.forEach((note, i) => {
-    if (!note.isRest() || note.getKeyLine(0) === restLines[i]) return
-    const chord = grooveNotes[groove.findIndex((c) => c.start === placed[i].start)]
-    note.setKeyLine(0, restLines[i]).setXShift((chord?.getVoiceShiftWidth() ?? 0) + REST_GAP)
-  })
   voices.forEach((v) => v.draw(ctx, stave))
   beams.forEach((b) => b.setContext(ctx).draw())
   tuplets.forEach((tuplet) => tuplet.setContext(ctx).draw())
@@ -146,16 +137,33 @@ export interface DrawnLine {
   bottom: number
 }
 
-/** What was drawn: each struck note's SVG element by note id, and where each bar's line is. */
-export interface Drawing {
-  noteElements: Map<string, SVGElement>
-  line: (bar: number) => DrawnLine
+/** Where the playhead line goes for a hit: across the staff, through the hit's noteheads. */
+export interface PlayheadMark {
+  x: number
+  top: number
+  bottom: number
 }
 
 /**
- * Draws the whole exercise into `el`, replacing what was there, at the given width. Each note's
- * SVG element carries `data-bar` and `data-beat`, the beat it sits in; each bar number carries
- * `data-loop-bar`, its bar. With no cursor, no beat or bar is highlighted.
+ * What was drawn: the SVG, where each bar's line is, and where the playhead line goes for a hit
+ * at a position (undefined for a position with nothing struck on the staff).
+ */
+export interface Drawing {
+  svg: SVGSVGElement | null
+  line: (bar: number) => DrawnLine
+  playheadMark: (position: PlayPosition) => PlayheadMark | undefined
+}
+
+/** Stave lines the playhead line reaches above the top line and below the bottom line. */
+const PLAYHEAD_OVERHANG = 1.5
+
+/** The x of the middle of a note's noteheads. */
+const noteCentre = (note: StaveNote) => (note.getNoteHeadBeginX() + note.getNoteHeadEndX()) / 2
+
+/**
+ * Draws the whole exercise into `el`, replacing what was there, at the given width. Each of the
+ * exercise part's notes carries `data-bar` and `data-beat`, the beat it sits in; each bar number
+ * carries `data-loop-bar`, its bar. With no cursor, no beat or bar is highlighted.
  */
 export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor | null, width: number): Drawing {
   el.replaceChildren()
@@ -164,21 +172,27 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   const barsPerLine = Math.max(1, Math.min(BARS_PER_LINE, Math.floor(available / MIN_BAR_WIDTH)))
   const barWidth = Math.floor(available / barsPerLine)
   const lines = Math.ceil(bars.length / barsPerLine)
-  const groove = grooveChords(exercise.practice.groove)
-  const grooved = groove.length > 0
-  const spaceAbove = SPACE_ABOVE_STAVE + (grooved ? GROOVE_SPACE : 0)
-  /** The bar number's line above the stave, clear of the groove's stems. */
-  const barNumberLine = grooved ? GROOVE_SPACE : 0
-  const height = lineHeight(exercise.voice, spaceAbove)
+  const parts = staffParts(bars, exercise.voice, exercise.practice.groove)
+  const exerciseLimb = VOICE_LIMB[exercise.voice]
+  /** A part is drawn when it holds the exercise or has a note anywhere. */
+  const drawnLimbs = (['hands', 'feet'] as const).filter(
+    (limb) => limb === exerciseLimb || parts.some((bar) => bar[limb].some((e) => e.kind === 'chord')),
+  )
+  const handRow = exerciseLimb === 'feet' ? HAND_ROW_BASS : drawnLimbs.includes('feet') ? HAND_ROW_FEET : HAND_ROW_HANDS
+  const spaceAbove = SPACE_ABOVE_STAVE + (drawnLimbs.includes('hands') ? STEMS_UP_SPACE : 0)
+  /** The bar number's line above the stave, clear of the hands part's stems. */
+  const barNumberLine = drawnLimbs.includes('hands') ? STEMS_UP_SPACE : 0
+  const height = (spaceAbove + handRow + 1) * STAVE_LINE_GAP
 
   const renderer = new Renderer(el as HTMLDivElement, Renderer.Backends.SVG)
   renderer.resize(width, lines * height + STAVE_TOP)
   const ctx = renderer.getContext()
-  const placed = placeItems(bars)
   const stickings = new Map(sticking(exercise).map((n) => [n.noteId, n]))
-  // Every drawn note in exercise order, with its line, for drawing the ties once all bars are formatted.
-  const drawn: { note: StaveNote; line: number }[] = []
-  const struck = new Map<string, SVGElement>()
+  /** Each part's last drawn note of each drum, with its line, to tie the next one to. */
+  const lastOf = new Map<string, TieEnd>()
+  const ties: StaveTie[] = []
+  /** Where the playhead line goes for each struck position, by `bar:tick`. */
+  const marks = new Map<string, PlayheadMark>()
 
   bars.forEach((_, b) => {
     const line = Math.floor(b / barsPerLine)
@@ -207,49 +221,64 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
     stave.setContext(ctx).draw()
     drawBarNumber(stave, b, exercise.practice.loopRange, barNumberLine)
 
-    const inBar = placed.filter((p) => p.bar === b)
-    const notes = inBar.map((p) =>
-      staveNote(
-        p.item,
-        b === cursor?.bar && Math.floor(p.start / TICKS_PER_BEAT) === cursor.beat,
-        exercise.voice,
-      ),
+    const drawings = drawnLimbs.map(
+      (limb): PartDrawing => ({ limb, drawn: parts[b][limb].map((event) => ({ event, note: eventNote(event, limb) })) }),
     )
-    drawNotes(stave, inBar, notes, 4, Math.max(30, x + w - stave.getNoteStartX() - 18), groove)
-    notes.forEach((note, i) => {
-      // Tagged with its beat, so a click on it can move the cursor there.
-      const svg = note.getSVGElement()
-      svg?.setAttribute('data-bar', String(b))
-      svg?.setAttribute('data-beat', String(Math.floor(inBar[i].start / TICKS_PER_BEAT)))
-      svg?.classList.add('cursor-pointer')
-      drawn.push({ note, line })
-      const noteId = `${b}:${inBar[i].start}`
-      if (svg && inBar[i].item.kind === 'note' && !inBar[i].continuation) struck.set(noteId, svg)
-      const noteSticking = stickings.get(noteId)
-      if (noteSticking) drawHand(stave, note, noteSticking, handRowLine(exercise.voice))
-    })
-  })
+    // The cursor's beat is lit in the part holding the exercise.
+    for (const { limb, drawn } of drawings) {
+      if (limb !== exerciseLimb || b !== cursor?.bar) continue
+      for (const { event, note } of drawn) {
+        if (Math.floor(event.start / TICKS_PER_BEAT) === cursor.beat) note.setStyle({ fillStyle: ACCENT_COLOUR, strokeStyle: ACCENT_COLOUR })
+      }
+    }
+    drawParts(stave, drawings, 4, Math.max(30, x + w - stave.getNoteStartX() - 18))
 
-  // A tie that runs over a line break is drawn as two halves: out of one line and into the next.
-  placed.forEach((_, i) => {
-    if (!placed[i + 1]?.continuation) return
-    const from = drawn[i]
-    const to = drawn[i + 1]
-    const ties =
-      from.line === to.line
-        ? [new StaveTie({ firstNote: from.note, lastNote: to.note, firstIndexes: [0], lastIndexes: [0] })]
-        : [
-            new StaveTie({ firstNote: from.note, lastNote: null, firstIndexes: [0], lastIndexes: [0] }),
-            incomingTie(to.note),
-          ]
-    ties.forEach((tie) => tie.setContext(ctx).draw())
+    const top = stave.getYForLine(-PLAYHEAD_OVERHANG)
+    const bottom = stave.getYForLine(4 + PLAYHEAD_OVERHANG)
+    for (const { limb, drawn } of drawings) {
+      for (const { event, note } of drawn) {
+        if (event.kind !== 'chord' || !(note instanceof StaveNote)) continue
+        for (const tick of event.strikes) marks.set(`${b}:${tick}`, { x: noteCentre(note), top, bottom })
+        if (limb === exerciseLimb) {
+          // Tagged with its beat, so a click on it can move the cursor there.
+          const svg = note.getSVGElement()
+          svg?.setAttribute('data-bar', String(b))
+          svg?.setAttribute('data-beat', String(Math.floor(event.start / TICKS_PER_BEAT)))
+          svg?.classList.add('cursor-pointer')
+        }
+        for (const n of event.notes) {
+          const index = keyIndex(event, n.drum)
+          const previous = lastOf.get(`${limb}:${n.drum}`)
+          if (n.tied && previous) ties.push(...tie(previous, { note, index, line }))
+          lastOf.set(`${limb}:${n.drum}`, { note, index, line })
+          const noteSticking = n.noteId && !n.tied ? stickings.get(n.noteId) : undefined
+          if (noteSticking) drawHand(stave, note, noteSticking, handRow)
+        }
+      }
+    }
   })
+  ties.forEach((t) => t.setContext(ctx).draw())
 
   const line = (bar: number) => {
     const top = Math.floor(bar / barsPerLine) * height
     return { top, bottom: top + height + STAVE_TOP }
   }
-  return { noteElements: struck, line }
+  const playheadMark = ({ bar, tick }: PlayPosition) => marks.get(`${bar}:${tick}`)
+  return { svg: el.querySelector('svg'), line, playheadMark }
+}
+
+/** A notehead a tie can run from or to: its note, its index in the chord, and its line of staves. */
+type TieEnd = { note: StaveNote; index: number; line: number }
+
+/** A tie between two noteheads; one that runs over a line break is drawn as two halves. */
+function tie(from: TieEnd, to: TieEnd): StaveTie[] {
+  if (from.line === to.line) {
+    return [new StaveTie({ firstNote: from.note, lastNote: to.note, firstIndexes: [from.index], lastIndexes: [to.index] })]
+  }
+  const incoming = new StaveTie({ firstNote: null, lastNote: to.note, firstIndexes: [to.index], lastIndexes: [to.index] })
+  // The second half starts back by the clef, not at the note.
+  incoming.renderOptions.firstXShift = -12
+  return [new StaveTie({ firstNote: from.note, lastNote: null, firstIndexes: [from.index], lastIndexes: [from.index] }), incoming]
 }
 
 /**
@@ -300,7 +329,7 @@ function drawHand(stave: Stave, note: StaveNote, { noteId, shown: hand, override
   ctx.setFont('Academico', 12, 'bold')
   if (override) ctx.setFillStyle(ACCENT_COLOUR)
   const width = ctx.measureText(hand).width
-  const x = (note.getNoteHeadBeginX() + note.getNoteHeadEndX()) / 2 - width / 2
+  const x = noteCentre(note) - width / 2
   const y = stave.getYForLine(line)
   ctx.fillText(hand, x, y)
   // VexFlow's SVG ignores the pointer, so the hand needs its own invisible hit area to be clicked.
@@ -309,23 +338,18 @@ function drawHand(stave: Stave, note: StaveNote, { noteId, shown: hand, override
   ctx.closeGroup()
 }
 
-/** The second half of a tie split by a line break: it starts back by the clef, not at the note. */
-function incomingTie(note: StaveNote): StaveTie {
-  const tie = new StaveTie({ firstNote: null, lastNote: note, firstIndexes: [0], lastIndexes: [0] })
-  tie.renderOptions.firstXShift = -12
-  return tie
-}
-
-/** Draws one beat figure on its own, shrunk to fit a palette tile. */
+/** Draws one beat figure on its own, as a bare snare line writes it, shrunk to fit a palette tile. */
 export function drawFigure(el: HTMLElement, hits: string, width: number, height: number) {
   el.replaceChildren()
   const scale = 0.55
-  const placed = placeItems(setBeat([restBar()], 0, 0, hits)).filter((p) => p.start < TICKS_PER_BEAT)
+  const voice: DrumVoice = 'snare'
+  const [{ hands }] = staffParts(setBeat([restBar()], 0, 0, hits), voice, 'off')
   const renderer = new Renderer(el as HTMLDivElement, Renderer.Backends.SVG)
   renderer.resize(width, height)
   const ctx = renderer.getContext()
   ctx.scale(scale, scale)
   const stave = new Stave(0, -22, width / scale).setContext(ctx)
   stave.draw()
-  drawNotes(stave, placed, placed.map((p) => staveNote(p.item, false)), 1, width / scale - 30)
+  const drawn = hands.filter((e) => e.start < TICKS_PER_BEAT).map((event) => ({ event, note: eventNote(event, 'hands') }))
+  drawParts(stave, [{ limb: 'hands', drawn }], 1, width / scale - 30)
 }

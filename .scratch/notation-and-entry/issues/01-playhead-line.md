@@ -4,11 +4,11 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done (merged in PR #25, 2026-10-07)
 
-- [ ] The playback timeline records exercise and groove hits (not clicks, not the count-in) as staff hits, each with its position (bar, tick)
-- [ ] `playheadAt` reports the latest staff hit's position. Tested in the core: in a jazz groove with the line resting, at the ride's & of 2 the playhead is at bar 1, tick 18; a click-only moment doesn't move it
-- [ ] The notation view draws a vertical line across the staff at that position, in time with what is heard (the same audio-clock timing as the v1 highlight)
-- [ ] The sounding-note colour is gone; the cursor-beat highlight while editing is unchanged
-- [ ] The view still scrolls to keep the playhead's line in view
-- [ ] Checked in the browser on a jazz-groove exercise with rests: the line moves on every ride, hi-hat foot and snare hit
+- [x] The playback timeline records exercise and groove hits (not clicks, not the count-in) as staff hits, each with its position (bar, tick)
+- [x] `playheadAt` reports the latest staff hit's position. Tested in the core: in a jazz groove with the line resting, at the ride's & of 2 the playhead is at bar 1, tick 18; a click-only moment doesn't move it
+- [x] The notation view draws a vertical line across the staff at that position, in time with what is heard (the same audio-clock timing as the v1 highlight)
+- [x] The sounding-note colour is gone; the cursor-beat highlight while editing is unchanged
+- [x] The view still scrolls to keep the playhead's line in view
+- [x] Checked in the browser on a jazz-groove exercise with rests: the line moves on every ride, hi-hat foot and snare hit

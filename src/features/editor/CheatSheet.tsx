@@ -1,4 +1,5 @@
 import { useAppStore } from '@/app/store'
+import { keepFocus } from '@/components/keepFocus'
 import { keyHelp } from './keyHelp'
 
 /** The keys for the editor's current mode; `?` shows and hides it. */
@@ -12,7 +13,7 @@ export function CheatSheet({ onClose }: { onClose: () => void }) {
         type="button"
         title="Close (?)"
         aria-label="Close the key sheet"
-        onMouseDown={(e) => e.preventDefault()}
+        onMouseDown={keepFocus}
         onClick={onClose}
         className="absolute top-1.5 right-2 cursor-pointer text-mute hover:text-accent"
       >

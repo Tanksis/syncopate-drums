@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import { useAppStore } from '@/app/store'
+import { keepFocus } from '@/components/keepFocus'
 import { BeatStrip } from './BeatStrip'
 import { CheatSheet } from './CheatSheet'
 import { Palette } from './Palette'
@@ -21,7 +22,7 @@ export function GridEditor() {
           type="button"
           aria-pressed={helpOpen}
           title="Keys for this mode (?)"
-          onMouseDown={(e) => e.preventDefault()}
+          onMouseDown={keepFocus}
           onClick={toggleHelp}
           className="cursor-pointer rounded-md border border-line bg-card px-2 py-0.5 text-xs text-mute hover:text-accent aria-pressed:border-accent aria-pressed:text-accent"
         >
@@ -30,8 +31,38 @@ export function GridEditor() {
       </div>
       {helpOpen && <CheatSheet onClose={toggleHelp} />}
       <BeatStrip />
-      <Palette />
+      <FiguresPanel />
     </section>
+  )
+}
+
+/** The palette tiles, folded away by default; whether it's open is remembered per device. */
+function FiguresPanel() {
+  const open = useAppStore((s) => s.device.figuresPanelOpen)
+  const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
+  return (
+    <div className="flex flex-col gap-1.5">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls="figures-panel"
+        title={open ? 'Hide the figure tiles' : 'Show the figure tiles and their keys'}
+        // Keep focus off the button, so the editor's keys still work after a click.
+        onMouseDown={keepFocus}
+        onClick={() => setDeviceSettings({ figuresPanelOpen: !open })}
+        className="flex w-fit cursor-pointer items-center gap-1 text-xs font-semibold text-mute hover:text-accent"
+      >
+        <span aria-hidden className={`inline-block transition-transform ${open ? 'rotate-90' : ''}`}>
+          ▸
+        </span>
+        Figures
+      </button>
+      {open && (
+        <div id="figures-panel">
+          <Palette />
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -60,7 +91,7 @@ function VimSwitch() {
       aria-checked={vimKeys}
       title={vimKeys ? 'Turn vim keys off: no Normal mode, Esc does nothing' : 'Turn vim keys on: Esc for Normal mode'}
       // Keep focus off the button, so the editor's keys still work after a click.
-      onMouseDown={(e) => e.preventDefault()}
+      onMouseDown={keepFocus}
       onClick={() => setDeviceSettings({ vimKeys: !vimKeys })}
       className="ml-auto cursor-pointer rounded-md border border-line bg-card px-2 py-0.5 text-xs text-mute hover:text-accent aria-checked:border-accent aria-checked:text-accent"
     >

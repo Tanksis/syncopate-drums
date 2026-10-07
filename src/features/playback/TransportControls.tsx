@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
+import { keepFocus } from '@/components/keepFocus'
 import { MAX_BPM, MIN_BPM } from '@/core'
 import { LoopReadout } from './LoopReadout'
 import { PlaybackPosition } from './PlaybackPosition'
@@ -16,7 +17,7 @@ export function TransportControls() {
         type="button"
         title="Play / stop (Ctrl+Space)"
         // Keep focus off the button, so Space enters a rest rather than toggling playback.
-        onMouseDown={(e) => e.preventDefault()}
+        onMouseDown={keepFocus}
         onClick={togglePlayback}
         className="w-20 cursor-pointer rounded-md border border-line bg-panel px-2.5 py-1 font-semibold hover:border-accent"
       >
@@ -94,7 +95,7 @@ function CountInToggle() {
       aria-pressed={countIn}
       title="Play a one-bar count-in before the exercise"
       // Keep focus off the button, so the editor's keys still work after a click.
-      onMouseDown={(e) => e.preventDefault()}
+      onMouseDown={keepFocus}
       onClick={() => setDeviceSettings({ countIn: !countIn })}
       className="cursor-pointer rounded-md border border-line bg-panel px-2 py-0.5 hover:border-accent aria-pressed:bg-accent aria-pressed:text-white"
     >

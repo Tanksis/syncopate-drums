@@ -4,7 +4,7 @@
 import type { Figure } from './figures'
 import { figureOfHits, isTripletHits } from './figures'
 import type { Bar, Hand, Item } from './model'
-import { BEATS_PER_BAR, TICKS_PER_BAR, TICKS_PER_BEAT, itemTicks } from './model'
+import { BEATS_PER_BAR, TICKS_PER_BAR, TICKS_PER_BEAT, beatIndex, itemTicks } from './model'
 
 /** What the grid editor shows for one beat. */
 export interface BeatView {
@@ -15,7 +15,17 @@ export interface BeatView {
   tiedInto: boolean
   /** The beat's last note ends early, with a rest after it. */
   cutShort: boolean
+  /** On the triplet grid (three triplet eighths) rather than the sixteenth grid (four sixteenths). */
+  triplet: boolean
+  /** One per grid position of the beat, in order. */
+  positions: PositionState[]
 }
+
+/**
+ * A grid position: a note struck there, a note still sounding there (including a tied
+ * continuation on the downbeat), or silence.
+ */
+export type PositionState = 'hit' | 'hold' | 'empty'
 
 /** One tick of the timeline: a struck note, a note still sounding, or silence. */
 type Cell = { state: 'hit'; override?: Hand } | { state: 'hold' } | { state: 'rest' }
@@ -70,6 +80,14 @@ function toTimeline(bars: readonly Bar[]): Timeline {
   return { cells, triplet }
 }
 
+/**
+ * Reads the given beats (indices across the exercise, bar × 4 + beat) on the triplet grid whatever
+ * their notes say. Indices outside the exercise are ignored.
+ */
+function readAsTriplets(timeline: Timeline, tripletBeats: readonly number[]): void {
+  for (const index of tripletBeats) if (index >= 0 && index < timeline.triplet.length) timeline.triplet[index] = true
+}
+
 /** Can a note (or rest) of this many ticks start here and still read well? */
 function fits(start: number, ticks: number, rest: boolean): boolean {
   const inBeat = start % TICKS_PER_BEAT
@@ -116,6 +134,30 @@ function spell(start: number, end: number, rest: boolean, triplet: boolean) {
   return out
 }
 
+/** A note value (or rest) spelled at a tick of the whole exercise. */
+export interface SpelledPiece {
+  start: number
+  value: Value & Pick<Item, 'triplet'>
+}
+
+/**
+ * Spells one note held (or one silence) from `start` to `end`, ticks of the whole exercise, as
+ * the values written one after another, tied for a note. A note is cut at bar lines (and tied
+ * across) and at a triplet group's edges, where this beat or the one before it is a triplet group;
+ * a rest at every beat. `triplet` says which beats of the exercise are triplet groups.
+ */
+export function spellSpan(start: number, end: number, note: boolean, triplet: readonly boolean[]): SpelledPiece[] {
+  const tripletAt = (tick: number) => triplet[Math.floor(tick / TICKS_PER_BEAT)] ?? false
+  const cutsAt = (beatStart: number) =>
+    !note || beatStart % TICKS_PER_BAR === 0 || tripletAt(beatStart) || tripletAt(beatStart - TICKS_PER_BEAT)
+  const cuts = [start]
+  for (let t = (Math.floor(start / TICKS_PER_BEAT) + 1) * TICKS_PER_BEAT; t < end; t += TICKS_PER_BEAT) {
+    if (cutsAt(t)) cuts.push(t)
+  }
+  cuts.push(end)
+  return cuts.slice(1).flatMap((to, i) => spell(cuts[i], to, !note, tripletAt(cuts[i])))
+}
+
 function fromTimeline({ cells, triplet }: Timeline): Bar[] {
   // Runs of sound or silence over the whole timeline, in ticks.
   type Segment = { note: boolean; start: number; end: number; override?: Hand }
@@ -130,20 +172,9 @@ function fromTimeline({ cells, triplet }: Timeline): Bar[] {
     else segments.push({ note: false, start, end: start + 1 })
   })
 
-  const tripletAt = (tick: number) => triplet[Math.floor(tick / TICKS_PER_BEAT)] ?? false
-  // A note is cut at bar lines (and tied across) and at a triplet group's edges, where this beat or
-  // the one before it is a triplet group; a rest at every beat.
-  const cutsAt = (beatStart: number, note: boolean) =>
-    !note || beatStart % TICKS_PER_BAR === 0 || tripletAt(beatStart) || tripletAt(beatStart - TICKS_PER_BEAT)
-
   const bars: Bar[] = Array.from({ length: cells.length / TICKS_PER_BAR }, () => ({ items: [] }))
   for (const seg of segments) {
-    const cuts = [seg.start]
-    for (let t = (Math.floor(seg.start / TICKS_PER_BEAT) + 1) * TICKS_PER_BEAT; t < seg.end; t += TICKS_PER_BEAT) {
-      if (cutsAt(t, seg.note)) cuts.push(t)
-    }
-    cuts.push(seg.end)
-    const pieces = cuts.slice(1).flatMap((end, i) => spell(cuts[i], end, !seg.note, tripletAt(cuts[i])))
+    const pieces = spellSpan(seg.start, seg.end, seg.note, triplet)
     pieces.forEach((piece, i) => {
       const item: Item = seg.note
         ? {
@@ -178,19 +209,44 @@ function hitsOf({ cells, triplet }: Timeline, beat: number): string {
     .join('')
 }
 
-/** Each bar's four beats as the grid editor sees them. */
-export function beatViews(bars: readonly Bar[]): BeatView[][] {
+/**
+ * Do the beat's holds read as its figure's defaults? Every note holds on to the next hit, and the
+ * last to the end of the beat, or (cut short) for an eighth on 1 or &, a sixteenth elsewhere, or a
+ * triplet eighth.
+ */
+function hasDefaultHolds(timeline: Timeline, beat: number, hits: string): boolean {
+  const cells = beatCells(timeline, beat)
+  const triplet = timeline.triplet[beat]
+  const hitTicks = slotTicks(triplet).filter((_, i) => hits[i] === 'x')
+  const sounds = (end: number) => cells.map((_, t) => t >= hitTicks[0] && t < end)
+  const matches = (sounding: boolean[]) => cells.every((cell, t) => (cell.state !== 'rest') === sounding[t])
+  if (hitTicks.length === 0 || matches(sounds(TICKS_PER_BEAT))) return true
+  const last = hitTicks.at(-1)!
+  return matches(sounds(last + (triplet ? TRIPLET_EIGHTH : last % EIGHTH === 0 ? EIGHTH : SIXTEENTH)))
+}
+
+const POSITION_OF: Record<Cell['state'], PositionState> = { hit: 'hit', hold: 'hold', rest: 'empty' }
+
+/**
+ * Each bar's four beats as the grid editor sees them. `tripletBeats` (beat indices across the
+ * exercise, bar × 4 + beat) are read on the triplet grid whatever their notes say: the editor's
+ * pending grid, for beats that read the same on either grid.
+ */
+export function beatViews(bars: readonly Bar[], tripletBeats: readonly number[] = []): BeatView[][] {
   const timeline = toTimeline(bars)
+  readAsTriplets(timeline, tripletBeats)
   return bars.map((_, b) =>
     Array.from({ length: BEATS_PER_BAR }, (_, beat) => {
-      const index = b * BEATS_PER_BAR + beat
+      const index = beatIndex(b, beat)
       const hits = hitsOf(timeline, index)
       const cells = beatCells(timeline, index)
       return {
-        figure: figureOfHits(hits),
+        figure: hasDefaultHolds(timeline, index, hits) ? figureOfHits(hits) : undefined,
         hits,
         tiedInto: cells[0].state === 'hold',
         cutShort: cells.at(-1)!.state === 'rest' && cells.some((c) => c.state !== 'rest'),
+        triplet: timeline.triplet[index],
+        positions: slotTicks(timeline.triplet[index]).map((t) => POSITION_OF[cells[t].state]),
       }
     }),
   )
@@ -204,7 +260,7 @@ export function beatViews(bars: readonly Bar[]): BeatView[][] {
 export function setBeat(bars: readonly Bar[], bar: number, beat: number, hits: string): Bar[] {
   const timeline = toTimeline(bars)
   const { cells } = timeline
-  const index = bar * BEATS_PER_BAR + beat
+  const index = beatIndex(bar, beat)
   const first = index * TICKS_PER_BEAT
   const triplet = isTripletHits(hits)
   timeline.triplet[index] = triplet
@@ -226,13 +282,129 @@ export function setBeat(bars: readonly Bar[], bar: number, beat: number, hits: s
 }
 
 /**
+ * Turns a hit on or off at one grid position of a beat (on the beat's grid) and re-spells the bars.
+ *
+ * - A hit on an empty position holds until the next hit or the end of the beat.
+ * - A hit inside a note's hold (a tied-into downbeat among them) splits it: the earlier note stops
+ *   there and the new one takes the rest of the hold.
+ * - Removing a hit that the previous note ran right up to lets that note hold on through the
+ *   removed note's span; otherwise the span (with any tied continuation) becomes empty. A downbeat
+ *   is never held on into from the beat before, so a tie never points at a rest.
+ *
+ * A removed note's sticking override goes with it. Off the grid, the same bars are returned.
+ *
+ * `triplet` picks the grid to click on, by default the beat's own. A triplet beat left with no hit
+ * off the downbeat reads the same on either grid, so it is written as a plain beat.
+ */
+export function toggleHit(bars: Bar[], bar: number, beat: number, position: number, triplet?: boolean): Bar[] {
+  const timeline = toTimeline(bars)
+  const { cells } = timeline
+  const index = beatIndex(bar, beat)
+  if (index >= timeline.triplet.length) return bars
+  const onTriplets = triplet ?? timeline.triplet[index]
+  const offset = slotTicks(onTriplets)[position]
+  if (offset === undefined) return bars
+  timeline.triplet[index] = onTriplets
+  const first = index * TICKS_PER_BEAT
+  const tick = first + offset
+  if (cells[tick].state === 'hit') {
+    const state = offset > 0 && cells[tick - 1].state !== 'rest' ? 'hold' : 'rest'
+    cells[tick] = { state }
+    for (let t = tick + 1; t < cells.length && cells[t].state === 'hold'; t++) cells[t] = { state }
+  } else {
+    cells[tick] = { state: 'hit' }
+    for (let t = tick + 1; t < first + TICKS_PER_BEAT && cells[t].state === 'rest'; t++) cells[t] = { state: 'hold' }
+  }
+  if (onTriplets) timeline.triplet[index] = hitsOf(timeline, index).slice(1).includes('x')
+  return fromTimeline(timeline)
+}
+
+/** A grid position of one beat: bar, beat in the bar, and position on the beat's grid (from 0). */
+export interface GridPoint {
+  bar: number
+  beat: number
+  position: number
+}
+
+/**
+ * Sets where a note's hold ends and re-spells the bars. `from` is any grid position the note sounds
+ * at (its hit or its hold); `to` is the grid position the hold stops at, which is not held. A `to`
+ * one past the beat's last position is the end of the beat. The note holds on through every
+ * position before `to`; positions it no longer reaches become empty, spelled as rests.
+ *
+ * `to` may be in a later beat or bar, on that beat's own grid: the beats the hold reaches become
+ * tied continuations (not struck), and shortening it back past a beat line removes the tie. The
+ * hold stops before the next hit. A `from` with no note, or a hold of no length, returns the same
+ * bars, as does a hold that already ends there.
+ *
+ * `tripletBeats` (beat indices across the exercise, bar × 4 + beat) are read on the triplet grid
+ * whatever their notes say: the editor's pending grid. A triplet beat the change leaves with no hit
+ * off the downbeat and sounding to its end reads the same on either grid, so it is written as a
+ * plain beat.
+ */
+export function setHold(bars: Bar[], from: GridPoint, to: GridPoint, tripletBeats: readonly number[] = []): Bar[] {
+  const timeline = toTimeline(bars)
+  const { cells } = timeline
+  const written = [...timeline.triplet]
+  readAsTriplets(timeline, tripletBeats)
+  const tickOf = ({ bar, beat, position }: GridPoint, allowEnd: boolean) => {
+    const index = beatIndex(bar, beat)
+    if (beat < 0 || beat >= BEATS_PER_BAR || index < 0 || index >= timeline.triplet.length) return undefined
+    const slots = slotTicks(timeline.triplet[index])
+    if (allowEnd && position === slots.length) return (index + 1) * TICKS_PER_BEAT
+    const offset = slots[position]
+    return offset === undefined ? undefined : index * TICKS_PER_BEAT + offset
+  }
+  const pressed = tickOf(from, false)
+  const target = tickOf(to, true)
+  if (pressed === undefined || target === undefined || cells[pressed].state === 'rest') return bars
+  // The note's start: back over its hold to its hit, or to where its sound begins.
+  let start = pressed
+  while (cells[start].state === 'hold' && start > 0 && cells[start - 1].state !== 'rest') start--
+  let end = start + 1
+  while (end < cells.length && cells[end].state === 'hold') end++
+  // No further than the next hit.
+  let limit = end
+  while (limit < cells.length && cells[limit].state === 'rest') limit++
+  const stop = Math.min(target, limit)
+  if (stop <= start || stop === end) return bars
+  const changedEnd = Math.max(stop, end)
+  for (let t = start + 1; t < changedEnd; t++) cells[t] = { state: t < stop ? 'hold' : 'rest' }
+  // Beats the hold doesn't reach keep the grid they are written on; the ones it does reach stay
+  // triplet groups only where that grid still shows.
+  const firstBeat = Math.floor(start / TICKS_PER_BEAT)
+  const lastBeat = Math.floor((changedEnd - 1) / TICKS_PER_BEAT)
+  timeline.triplet.forEach((triplet, index) => {
+    if (index < firstBeat || index > lastBeat) timeline.triplet[index] = written[index]
+    else if (triplet) {
+      const beat = beatCells(timeline, index)
+      const offBeat = hitsOf(timeline, index).slice(1).includes('x')
+      const silent = beat.every((c) => c.state === 'rest')
+      timeline.triplet[index] = !silent && (offBeat || beat.at(-1)!.state === 'rest')
+    }
+  })
+  return fromTimeline(timeline)
+}
+
+/**
+ * Clears a beat for a switch between the sixteenth and the triplet grid. Only the downbeat is on
+ * both, so a note on the downbeat (struck, or tied into the beat) is kept and holds to the end of
+ * the beat, and the other positions are cleared. With nothing off the downbeat the beat reads the same on either
+ * grid, so it is written as a plain beat: the grid it's on is the editor's to remember.
+ */
+export function clearBeatToDownbeat(bars: readonly Bar[], bar: number, beat: number): Bar[] {
+  const downbeat = hitsOf(toTimeline(bars), beatIndex(bar, beat))[0] === 'x'
+  return setBeat(bars, bar, beat, downbeat ? 'x...' : '....')
+}
+
+/**
  * Ties the beat's first note to the previous beat's last note, or unties it. A tie needs the beat
  * to start with a hit and the previous beat to end with a note; otherwise the same bars are
  * returned.
  */
 export function toggleTie(bars: Bar[], bar: number, beat: number): Bar[] {
   const timeline = toTimeline(bars)
-  const first = (bar * BEATS_PER_BAR + beat) * TICKS_PER_BEAT
+  const first = beatIndex(bar, beat) * TICKS_PER_BEAT
   const cell = timeline.cells[first]
   if (cell.state === 'hold') timeline.cells[first] = { state: 'hit' }
   else if (cell.state === 'hit' && first > 0 && timeline.cells[first - 1].state !== 'rest') {
@@ -253,7 +425,7 @@ const TRIPLET_EIGHTH = 4
  */
 export function toggleCutShort(bars: Bar[], bar: number, beat: number): Bar[] {
   const timeline = toTimeline(bars)
-  const index = bar * BEATS_PER_BAR + beat
+  const index = beatIndex(bar, beat)
   const first = index * TICKS_PER_BEAT
   const { cells } = timeline
   let lastSounding = TICKS_PER_BEAT - 1

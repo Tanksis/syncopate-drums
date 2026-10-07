@@ -76,12 +76,15 @@ export function schedule(
     if (tick % TICKS_PER_BEAT === 0) {
       events.push({ time, kind: 'click', instrument: 'click', accent: tick === 0, position })
     }
-    if (bar >= 0 && struck[bar]?.has(tick)) {
+    const exerciseStrikes = bar >= 0 && struck[bar]?.has(tick)
+    if (exerciseStrikes) {
       const instrument = VOICE_INSTRUMENT[exercise.voice]
       events.push({ time, kind: 'exercise', instrument, accent: false, noteId: `${bar}:${tick}`, position })
     }
     if (bar >= 0) {
       for (const { instrument, velocity } of groove.get(tick) ?? []) {
+        // One drum is played once: a bass drum line's hit replaces the groove's bass drum there.
+        if (exerciseStrikes && exercise.voice === 'bass' && BASS_DRUMS.has(instrument)) continue
         events.push({ time, kind: 'groove', instrument, accent: false, velocity, position })
       }
     }
@@ -121,7 +124,10 @@ function advance({ bar, tick }: PlayPosition, loop: LoopRange): PlayPosition {
   return { bar: bar < 0 || bar >= loop.last ? loop.first : bar + 1, tick: 0 }
 }
 
-const VOICE_INSTRUMENT: Record<Voice, Instrument> = { snare: 'snare', bass: 'kick' }
+/** The instrument an exercise in each voice is played on. */
+export const VOICE_INSTRUMENT: Record<Voice, Instrument> = { snare: 'snare', bass: 'kick' }
+
+const BASS_DRUMS: ReadonlySet<Instrument> = new Set(['kick', 'kickFeathered'])
 
 /** Per bar, the ticks where a note is struck (tied continuations are held, not struck). */
 function struckTicks(exercise: Exercise): Set<number>[] {

@@ -10,7 +10,7 @@
   --color-line: #e7e5e4;
   --color-panel: #fafaf9;
   --color-danger: #b91c1c;
-  /* The note sounding during playback, apart from the blue cursor and the amber loop. */
+  /* The playhead line during playback, apart from the blue cursor and the amber loop. */
   --color-play: #059669;
   /* The loop range: its shading, border and bar numbers. */
   --color-loop: #fde68a;

@@ -1,33 +1,56 @@
 // The playback timeline: what the engine has scheduled, on the audio clock, so the notation can
-// light the note the drummer is hearing and the header can show where playback is.
+// place the playhead on the hit the drummer is hearing and the header can show where playback is.
 
 import { TICKS_PER_BEAT } from './model'
-import type { PlayPosition } from './schedule'
+import type { PlayPosition, ScheduledEvent } from './schedule'
 
-/** One scheduled event: when it sounds, where it is and, for a struck note, which note. */
+/** One scheduled event: when it sounds, where it is and whether it's a hit on the staff. */
 export interface TimelineEntry {
   time: number
-  noteId?: string
+  /** An exercise or groove hit, as opposed to a click. */
+  staffHit?: boolean
   position: PlayPosition
 }
 
-/** Where playback is at a moment, and the note that is sounding then. */
+/** Where playback is at a moment, and where the latest hit on the staff is. */
 export interface Playhead {
   position: PlayPosition
-  noteId?: string
+  /** The latest staff hit, where the notation draws the playhead line. */
+  hit?: PlayPosition
+}
+
+/**
+ * The timeline with a window of scheduled events added, the window starting at audio-clock time
+ * `start`. Exercise and groove events are staff hits; clicks are not. The result stays in time
+ * order, even when a swung & from the last window lands after the start of this one.
+ */
+export function recordEvents(
+  timeline: readonly TimelineEntry[],
+  events: readonly ScheduledEvent[],
+  start: number,
+): TimelineEntry[] {
+  const result = [...timeline]
+  for (const event of events) {
+    const entry: TimelineEntry = { time: start + event.time, position: event.position }
+    if (event.kind !== 'click') entry.staffHit = true
+    let i = result.length
+    while (i > 0 && result[i - 1].time > entry.time) i--
+    result.splice(i, 0, entry)
+  }
+  return result
 }
 
 /**
  * The playhead at `time`, from a timeline in time order: the position of the latest event that
- * has sounded, and the latest note struck, which stays lit until the next. Undefined before
- * anything has sounded.
+ * has sounded, and the latest staff hit, which holds until the next. Undefined before anything
+ * has sounded.
  */
 export function playheadAt(timeline: readonly TimelineEntry[], time: number): Playhead | undefined {
   const last = lastAt(timeline, time)
   if (last < 0) return undefined
-  const note = lastNote(timeline, last)
+  const hit = lastHit(timeline, last)
   const { position } = timeline[last]
-  return note < 0 ? { position } : { noteId: timeline[note].noteId, position }
+  return hit < 0 ? { position } : { hit: timeline[hit].position, position }
 }
 
 /** The position as the header shows it: the count-in's beat, then bar · beat, counted from 1. */
@@ -43,8 +66,8 @@ export function positionLabel({ bar, tick }: PlayPosition): string {
 export function trimTimeline(timeline: readonly TimelineEntry[], time: number): TimelineEntry[] {
   const last = lastAt(timeline, time)
   if (last < 0) return [...timeline]
-  const note = lastNote(timeline, last)
-  return note < 0 || note === last ? timeline.slice(last) : [timeline[note], ...timeline.slice(last)]
+  const hit = lastHit(timeline, last)
+  return hit < 0 || hit === last ? timeline.slice(last) : [timeline[hit], ...timeline.slice(last)]
 }
 
 /** The index of the last entry sounding at or before `time`, or -1. */
@@ -54,9 +77,9 @@ function lastAt(timeline: readonly TimelineEntry[], time: number): number {
   return i
 }
 
-/** The index of the last note at or before index `from`, or -1. */
-function lastNote(timeline: readonly TimelineEntry[], from: number): number {
+/** The index of the last staff hit at or before index `from`, or -1. */
+function lastHit(timeline: readonly TimelineEntry[], from: number): number {
   let i = from
-  while (i >= 0 && timeline[i].noteId === undefined) i--
+  while (i >= 0 && !timeline[i].staffHit) i--
   return i
 }

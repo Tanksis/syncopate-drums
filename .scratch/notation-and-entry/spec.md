@@ -57,7 +57,7 @@ The notation writes drum-set notation by limb. Everything played with the hands 
 23. As a drummer, I want positions after a shortened note to become empty, written as rests, so that I can enter a sixteenth followed by a sixteenth rest anywhere in the beat, not only on the beat's last note.
 24. As a drummer, I want dragging past the beat line to tie the note on into the next beat, and on across several beats and over a bar line, so that I can enter quarters, dotted quarters, half notes and syncopated long notes.
 25. As a drummer, I want the beats a drag passes through to become tied continuations (not struck, no hand), so that ties follow the existing rules.
-26. As a drummer, I want the end of a drag to snap to the grid positions of the beat it ends in (sixteenth or triplet), so that holds always end on a real position.
+26. As a drummer, I want a drag's hold to run through the grid position under the pointer, snapped to the grid (sixteenth or triplet) of the beat under it, so that holds always end on a real position. (Clarified 2026-10-07 during code review: the hold takes in the position under the pointer, rather than ending at the nearest position.)
 27. As a drummer, I want a whole drag to be one undo step, so that undo takes back the whole gesture.
 28. As a drummer, I want a note's hold drawn as a bar from its hit through the positions it holds, running on into the next box when it's tied, so that I can see each note's length at a glance.
 29. As a drummer, I want the ⌒ mark to stay on a tied-into beat box as a read-only sign, so that ties remain visible.
@@ -94,7 +94,7 @@ The notation writes drum-set notation by limb. Everything played with the hands 
 51. As a drummer, I want a bass drum exercise hit and a groove bass drum hit at the same position drawn as one notehead and played as one sound (the exercise's), so that one drum isn't written or played twice.
 52. As a drummer, I want the sticking under the staff to label only the exercise's notes, even where they share a stem with the groove, so that the hands I read are the line's.
 53. As a drummer, I want overrides still clickable on the exercise's notes in a merged chord, so that the notation stays where I set sticking.
-54. As a drummer, I want an exercise note that is tied on under a groove hit to show as a tied notehead in that chord (not struck), so that ties stay readable in the merged part.
+54. As a drummer, I want an exercise note held on past the next chord of its part to end at that chord, with no tie through it (a snare quarter under hi-hat eighths reads as a plain eighth in the hi-hat chord), and its exact hold and ties shown only where nothing else in the part strikes in between, so that the merged part stays uncluttered. (Changed 2026-10-07 after seeing ticket 06: it was a tied notehead in each later chord.)
 55. As a drummer, I want swing still written as plain eighths with no change to the spacing, so that the chart stays standard notation.
 56. As a drummer, I want the cursor beat highlight, current-bar shading, bar numbers and loop-range clicks to keep working on the merged parts, so that nothing I rely on from v1 is lost.
 
@@ -112,9 +112,10 @@ The notation writes drum-set notation by limb. Everything played with the hands 
   - Snare exercise notes and groove ride / hi-hat hits go in the hands part (stems up); bass drum exercise notes and groove hi-hat foot / bass drum hits go in the feet part (stems down).
   - Hits at the same tick in a part form one chord. A chord holds until the next chord in that part, or until all its notes' holds have ended if that's sooner. Groove notes hold as `grooveChords` defines today.
   - A part containing the exercise shows rests where nothing in it sounds or is held. A part with only groove notes shows no rests (empty space, as v1 draws the groove).
-  - An exercise note held on under a later chord appears in that chord as a tied continuation of its own drum.
+  - An exercise note held on past the next chord in its part ends at that chord: it is not tied on through it. Its exact hold and ties are written only where nothing else in the part strikes before it ends (a bare snare line, or a tie across a beat where the part has no onset). Decided 2026-10-07 after seeing ticket 06; it replaces "appears in that chord as a tied continuation".
   - A bass drum exercise hit and a groove bass drum hit at the same tick become one note: the exercise's. The schedule plays one bass drum there.
   - It reuses the speller's spelling rules for the exercise part (beam groups by beat, triplet groups within a beat, dotted values where legal).
+  - In a triplet beat of the exercise, a groove hit falling between the beat's triplet positions is written on the next triplet position. It is still struck at its real time (the playhead lands on that chord then), and hits that land on the same position form one chord. Clarified 2026-10-07 during code review.
 - **Schedule.** Unchanged except that a groove bass drum hit is dropped where a bass drum exercise hit falls at the same tick.
 
 ### Notation renderer
@@ -126,7 +127,7 @@ The notation writes drum-set notation by limb. Everything played with the hands 
 ### Beat strip and editor panel
 
 - Each beat box renders its grid positions from the beat view: hit, hold bar (continuing across a tied box edge), or empty. There's no "rest" label. The ⌒ mark stays, read-only.
-- Pointer handling: a click on a position dispatches toggle grid position. A press on a hit or hold bar followed by movement starts a drag. The hold end follows the pointer, snapped to the nearest grid position of the beat under it, and clamped before the next hit. Release dispatches one set-hold command, and the strip shows the hold live while dragging. A drag that doesn't leave the starting position is a click. Right-click on a box, or its 3/16 toggle, dispatches set beat grid; the browser context menu is suppressed on the strip.
+- Pointer handling: a click on a position dispatches toggle grid position. A press on a hit or hold bar followed by movement starts a drag. The hold runs through the grid position under the pointer, snapped to the grid of the beat under it, and stops before the next hit (clarified 2026-10-07 during code review: it takes in the position under the pointer, rather than ending at the nearest one). Release dispatches one set-hold command, and the strip shows the hold live while dragging. A drag that doesn't leave the starting position is a click. Right-click on a box, or its 3/16 toggle, dispatches set beat grid; the browser context menu is suppressed on the strip.
 - Hit-testing must use the real pointer position over each position's element (see the memory about real mouse clicks: dispatched clicks skip hit-testing).
 - The palette tiles move into a collapsible "Figures" panel. Its open state is a new device setting, `figuresPanelOpen`, defaulting to false. Device settings load with defaults merged in, so no migration is needed. The figure keys, `T`, `.` and the cheat sheet are unchanged.
 
@@ -150,7 +151,7 @@ The notation writes drum-set notation by limb. Everything played with the hands 
   - "at the time of the ride's & of 2 in a jazz groove with the line resting, the playhead is at bar 1, tick 18";
   - "jazz groove plus a snare on the & of 2: the hands part has one chord (ride + snare) at tick 18 and no rests";
   - "a bass drum exercise on beat 1 with the feathered preset: one bass drum in the feet part and one scheduled bass drum event".
-- **Modules covered:** speller (new operations and the beat view's positions), editor (`applyEdit` with the new commands, undo, `.` exclusion, pending grid), timeline (`playheadAt` with groove and click events), staff parts (every preset × snare and bass voice, ties under chords, rests only where the rules say), and schedule (bass drum de-duplication).
+- **Modules covered:** speller (new operations and the beat view's positions), editor (`applyEdit` with the new commands, undo, `.` exclusion, pending grid), timeline (`playheadAt` with groove and click events), staff parts (every preset × snare and bass voice, holds ending at the next chord, rests only where the rules say), and schedule (bass drum de-duplication).
 - **Prior art:** `speller.test.ts` and `editor.test.ts` (command sequences in, bars, views and cursor out), `timeline.test.ts` (`playheadAt`), `groove.test.ts` (`grooveChords`), `schedule.test.ts` (event lists).
 - **Not tested automatically (checked by eye and ear, with real-mouse checks in the browser):** the beat strip's pointer handling and drawing, the VexFlow adapter, the playhead line's placement and timing, and the Figures panel.
 
@@ -168,4 +169,5 @@ The notation writes drum-set notation by limb. Everything played with the hands 
 - ADR 0003 reverses v1's "beat figures only" decision (v1 ticket 05). The step grid lost then, but after real use the user prefers clicking where hits fall.
 - The pending-grid rule (story 18) was settled while writing this spec rather than in the session: the model can't store a grid for a beat whose hits fit both grids, so the choice lives in the editor state until a hit fixes it.
 - The merged-part spelling (story 54 and the chord-hold rule) is the starting point and may be tuned once real lines are drawn. The constraint is ADR 0002: hands up, feet down, rests only where the part is silent.
+- A grid switch (story 17) or a figure key (story 33) resets the beat's own holds to the defaults, but a tie out of the beat into the next one is kept (unless the beat is left with no note), as in v1. Clarified 2026-10-07 during code review.
 - The swing mockup is kept as a primary source on the `prototype/swing-notation` branch, not on `main`.

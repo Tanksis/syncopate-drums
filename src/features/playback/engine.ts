@@ -3,14 +3,14 @@
 // so timing is sample-accurate however late the tick itself runs.
 
 import type { DeviceSettings, Exercise, Instrument, Layer, PlayPosition, Playhead, ScheduledEvent, TimelineEntry } from '@/core'
-import { layerLevels, playheadAt, schedule, trimTimeline } from '@/core'
+import { layerLevels, playheadAt, recordEvents, schedule, trimTimeline } from '@/core'
 
 const LOOKAHEAD = 0.1
 /** Head start for the first event, so it isn't late before the first tick has run. */
 const START_DELAY = 0.05
 /**
- * Seconds the drummer hears a sound after the output clock says it played. The highlight is
- * drawn this much later. Zero unless the highlight turns out to drift on the user's laptop.
+ * Seconds the drummer hears a sound after the output clock says it played. The playhead is
+ * drawn this much later. Zero unless the playhead turns out to drift on the user's laptop.
  */
 const HIGHLIGHT_LATENCY = 0
 
@@ -56,7 +56,7 @@ let generation = 0
 let cursor: { position: PlayPosition | 'start'; time: number } | undefined
 let read: (() => PlaybackInput) | undefined
 const sources = new Set<AudioScheduledSourceNode>()
-/** Every event scheduled and not yet long past, on the audio clock, for the highlight. */
+/** Every event scheduled and not yet long past, on the audio clock, for the playhead. */
 let timeline: TimelineEntry[] = []
 const roundRobin = new Map<Instrument, number>()
 /** The gain each layer was last set to. */
@@ -99,7 +99,7 @@ export function stopPlayback(): void {
 
 /**
  * Where playback is now, by what the drummer hears rather than what is scheduled: the position
- * and the sounding note. Undefined when stopped, and during the head start before the first sound.
+ * and the latest hit on the staff. Undefined when stopped, and during the head start before the first sound.
  */
 export function playhead(): Playhead | undefined {
   if (!audio || !cursor) return undefined
@@ -175,13 +175,8 @@ function tick(): void {
   const horizon = now + LOOKAHEAD
   const result = schedule(exercise, exercise.practice, device, cursor.position, horizon - cursor.time)
   timeline = trimTimeline(timeline, heardTime(audio.ctx))
-  for (const event of result.events) {
-    const when = cursor.time + event.time
-    play(audio, when, event)
-    // The groove isn't followed in the notation. Its swung &s can land after a triplet note
-    // scheduled in the next window, and the timeline must stay in time order.
-    if (event.kind !== 'groove') timeline.push({ time: when, noteId: event.noteId, position: event.position })
-  }
+  for (const event of result.events) play(audio, cursor.time + event.time, event)
+  timeline = recordEvents(timeline, result.events, cursor.time)
   cursor = { position: result.next, time: cursor.time + result.nextTime }
 }
 
