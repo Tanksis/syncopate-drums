@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { useRef } from 'react'
 import { useAppStore } from '@/app/store'
 import { PanelHeading } from '@/components/PanelHeading'
-import type { DeviceSettings, ExerciseSettings, GroovePresetId } from '@/core'
+import type { ExerciseSettings, GroovePresetId, VolumeSetting } from '@/core'
 import { GROOVE_PRESETS, MAX_SWING, MAX_VOLUME, MIN_SWING, groovePreset, overrideCount } from '@/core'
 
 export function SettingsSidebar() {
@@ -128,14 +128,12 @@ function Swing() {
   )
 }
 
-type VolumeSetting = 'clickVolume' | 'exerciseVolume' | 'grooveVolume'
-
 /** A layer's volume on this device, 100% being its usual level; it applies while playing. */
 function Volume({ label, setting, children }: { label: string; setting: VolumeSetting; children?: ReactNode }) {
   const volume = useAppStore((s) => s.device[setting])
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   const setVolume = (value: number, dragging = false) =>
-    setDeviceSettings({ [setting]: value } as Partial<DeviceSettings>, { dragging })
+    setDeviceSettings({ [setting]: value }, { dragging })
   // A pointer drag on the slider saves once it ends; arrow keys on it save at once.
   const dragging = useRef(false)
   return (
