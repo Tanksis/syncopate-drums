@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DeviceSettings, Exercise, GroovePresetId, PlayPosition, ScheduledEvent } from './index'
-import { DEFAULT_DEVICE_SETTINGS, newExercise, schedule, setBeat, toggleTie } from './index'
+import { DEFAULT_DEVICE_SETTINGS, newExercise, schedule, setBeat, setHold, toggleTie } from './index'
 
 const device: DeviceSettings = DEFAULT_DEVICE_SETTINGS
 
@@ -333,5 +333,15 @@ describe('the groove layer', () => {
       '0.000 groove ride',
       '0.000 groove kickFeathered',
     ])
+  })
+})
+
+describe('holds', () => {
+  it('change how a note is written, not how it sounds', () => {
+    const ex = line(['x.x.', 'x...', 'xxx', 'x..x'])
+    const held = { ...ex, bars: setHold(setHold(ex.bars, { bar: 0, beat: 0, position: 0 }, { bar: 0, beat: 0, position: 1 }), { bar: 0, beat: 1, position: 0 }, { bar: 0, beat: 1, position: 1 }) }
+    expect(held.bars).not.toEqual(ex.bars)
+    const play = (e: Exercise) => show(schedule(e, e.practice, device, { bar: 0, tick: 0 }, 2).events)
+    expect(play(held)).toEqual(play(ex))
   })
 })
