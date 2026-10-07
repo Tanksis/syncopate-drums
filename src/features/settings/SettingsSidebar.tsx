@@ -59,7 +59,7 @@ function Swing() {
           aria-label="Swing"
           min={MIN_SWING}
           max={MAX_SWING}
-          step="any"
+          step={0.005}
           value={swing}
           onChange={(e) => setSwing(Number(e.target.value), { dragging: dragging.current })}
           onPointerDown={() => (dragging.current = true)}

@@ -112,6 +112,7 @@ describe('the swing amount', () => {
     expect(withSwing(ex, 0.58).practice.swing).toBe(0.58)
     expect(withSwing(ex, 0.4).practice.swing).toBe(0.5)
     expect(withSwing(ex, 0.8).practice.swing).toBe(0.75)
+    expect(withSwing(ex, NaN).practice.swing).toBe(0.5)
     expect(withSwing(ex, 0.62).practice).toMatchObject({ bpm: 80, loopRange: null, groove: 'off' })
   })
 })
