@@ -16,13 +16,14 @@ export function GridEditor() {
     >
       <div className="flex items-center gap-3">
         <ModeIndicator />
+        <VimSwitch />
         <button
           type="button"
           aria-pressed={helpOpen}
           title="Keys for this mode (?)"
           onMouseDown={(e) => e.preventDefault()}
           onClick={toggleHelp}
-          className="ml-auto cursor-pointer rounded-md border border-line bg-card px-2 py-0.5 text-xs text-mute hover:text-accent aria-pressed:border-accent aria-pressed:text-accent"
+          className="cursor-pointer rounded-md border border-line bg-card px-2 py-0.5 text-xs text-mute hover:text-accent aria-pressed:border-accent aria-pressed:text-accent"
         >
           ? keys
         </button>
@@ -45,5 +46,25 @@ function ModeIndicator() {
       -- {name} --
       {pending && <span className="ml-3 text-ink">{pending}</span>}
     </span>
+  )
+}
+
+/** Turns the vim keys on or off right by the editor, as the Editor setting does. */
+function VimSwitch() {
+  const vimKeys = useAppStore((s) => s.device.vimKeys)
+  const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={vimKeys}
+      title={vimKeys ? 'Turn vim keys off: no Normal mode, Esc does nothing' : 'Turn vim keys on: Esc for Normal mode'}
+      // Keep focus off the button, so the editor's keys still work after a click.
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={() => setDeviceSettings({ vimKeys: !vimKeys })}
+      className="ml-auto cursor-pointer rounded-md border border-line bg-card px-2 py-0.5 text-xs text-mute hover:text-accent aria-checked:border-accent aria-checked:text-accent"
+    >
+      vim {vimKeys ? 'on' : 'off'}
+    </button>
   )
 }

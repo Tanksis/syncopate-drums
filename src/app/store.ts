@@ -1,7 +1,7 @@
 // App-wide state, and the only caller of the repository: the open exercise autosaves on every change.
 
 import { create } from 'zustand'
-import type { DeviceSettings, EditCommand, EditorState, Exercise, GroovePresetId } from '@/core'
+import type { DeviceSettings, EditCommand, EditorState, Exercise, GroovePresetId, ImportChoice } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
   addedOnTop,
@@ -14,6 +14,7 @@ import {
   loopAt,
   newEditorState,
   newExercise,
+  planImport,
   updatedInPlace,
   withBpm,
   withGroove,
@@ -58,6 +59,12 @@ interface AppState {
    * new Untitled one when none are left.
    */
   deleteExercises: (ids: string[]) => void
+  /**
+   * Stores exercises read from an import file, with `choice` for those the library already holds,
+   * and returns how many were stored. New ones go on top of the list; replaced ones stay in place,
+   * and a replaced open exercise reopens as imported. Nothing is deleted.
+   */
+  importExercises: (incoming: Exercise[], choice: ImportChoice) => number
 }
 
 /** How long a slider must rest before its value is saved. */
@@ -93,12 +100,17 @@ function saveDevice(device: DeviceSettings, { debounced = false } = {}) {
   else save()
 }
 
-/** Drops exercises from storage, with any save of theirs still pending, and returns the library without them. */
-function remove(ids: string[], library: Exercise[]): Exercise[] {
+/** Forgets a pending save of any of these exercises, which would otherwise overwrite what replaces them. */
+function dropPendingSave(ids: string[]) {
   if (unsaved && ids.includes(unsaved.id)) {
     clearTimeout(saveTimer)
     unsaved = null
   }
+}
+
+/** Drops exercises from storage, with any save of theirs still pending, and returns the library without them. */
+function remove(ids: string[], library: Exercise[]): Exercise[] {
+  dropPendingSave(ids)
   storage?.exercises.deleteMany(ids).catch((error) => console.error('Delete failed', error))
   return library.filter((e) => !ids.includes(e.id))
 }
@@ -219,6 +231,26 @@ export const useAppStore = create<AppState>()((set, get) => {
       const next = exerciseToOpenAfterDelete(library, openId, ids)
       if (next) switchTo(next, updatedInPlace, remaining)
       else switchTo(untitledExercise(), addedOnTop, remaining)
+    },
+    importExercises: (incoming, choice) => {
+      const { editor, library } = get()
+      const stored = planImport(
+        incoming,
+        library.map((e) => e.id),
+        choice,
+        { newId: () => crypto.randomUUID() },
+      )
+      if (stored.length === 0) return 0
+      dropPendingSave(stored.map((e) => e.id))
+      storage?.exercises.putMany(stored).catch((error) => console.error('Import failed', error))
+      const replaced = new Map(stored.map((e) => [e.id, e]))
+      const added = stored.filter((e) => !library.some((existing) => existing.id === e.id))
+      const open = replaced.get(editor.exercise.id)
+      set({
+        library: [...added, ...library.map((e) => replaced.get(e.id) ?? e)],
+        ...(open && { editor: newEditorState(open) }),
+      })
+      return stored.length
     },
   }
 })
