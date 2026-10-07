@@ -53,6 +53,14 @@ export interface LoopRange {
   last: number
 }
 
+/** The bars that loop: the loop range kept inside the exercise, or else every bar. */
+export function loopBars(range: LoopRange | null, barCount: number): LoopRange {
+  const end = barCount - 1
+  if (!range) return { first: 0, last: end }
+  const last = Math.min(range.last, end)
+  return { first: Math.min(range.first, last), last }
+}
+
 export interface PracticeSettings {
   bpm: number
   loopRange: LoopRange | null
@@ -126,4 +134,55 @@ export function clampBpm(bpm: number): number {
 /** The exercise at a new tempo, kept inside the supported range. */
 export function withBpm(exercise: Exercise, bpm: number): Exercise {
   return { ...exercise, practice: { ...exercise.practice, bpm: clampBpm(bpm) } }
+}
+
+/** The exercise with a new loop range; `null` loops the whole exercise. */
+export function withLoopRange(exercise: Exercise, loopRange: LoopRange | null): Exercise {
+  if (loopRange === exercise.practice.loopRange) return exercise
+  return { ...exercise, practice: { ...exercise.practice, loopRange } }
+}
+
+/**
+ * A click on a bar number loops just that bar. With `extend` (Shift+click) the range grows to take
+ * the bar in, or loops just that bar when no range is set.
+ */
+export function loopAt(exercise: Exercise, bar: number, { extend = false } = {}): Exercise {
+  const range = exercise.practice.loopRange
+  if (!extend || !range) return withLoopRange(exercise, { first: bar, last: bar })
+  return withLoopRange(exercise, { first: Math.min(range.first, bar), last: Math.max(range.last, bar) })
+}
+
+/** Whether a bar is in a set loop range. */
+export function inLoopRange(range: LoopRange | null, bar: number): boolean {
+  return range !== null && bar >= range.first && bar <= range.last
+}
+
+/** The loop range once `count` bars are inserted before bar `at`: it moves with its bars, or grows. */
+export function loopRangeAfterInsert(range: LoopRange | null, at: number, count: number): LoopRange | null {
+  if (!range) return null
+  const moved = (bar: number) => (bar >= at ? bar + count : bar)
+  return sameOrNew(range, moved(range.first), moved(range.last))
+}
+
+/**
+ * The loop range once bars `first` to `last` are deleted: it moves with its bars, or shrinks. With
+ * none of its bars left, the whole exercise loops again.
+ */
+export function loopRangeAfterDelete(range: LoopRange | null, first: number, last: number): LoopRange | null {
+  if (!range) return null
+  const count = last - first + 1
+  const from = range.first < first ? range.first : Math.max(first, range.first - count)
+  const to = range.last < first ? range.last : range.last > last ? range.last - count : first - 1
+  return to < from ? null : sameOrNew(range, from, to)
+}
+
+/** The range itself when its bars are unchanged, so an unchanged exercise stays the same object. */
+const sameOrNew = (range: LoopRange, first: number, last: number): LoopRange =>
+  range.first === first && range.last === last ? range : { first, last }
+
+/** The exercise with its loop range kept inside its bars, as it was if it already is. */
+export function withLoopRangeInBars(exercise: Exercise): Exercise {
+  const range = exercise.practice.loopRange
+  if (!range || range.last < exercise.bars.length) return exercise
+  return withLoopRange(exercise, loopBars(range, exercise.bars.length))
 }

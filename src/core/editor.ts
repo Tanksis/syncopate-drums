@@ -2,8 +2,17 @@
 // turns a key press into a command, so the UI only dispatches.
 
 import { FIGURES, REST_FIGURE } from './figures'
-import type { Bar, Exercise, Hand } from './model'
-import { BEATS_PER_BAR, TICKS_PER_BEAT, itemTicks, restBar } from './model'
+import type { Bar, Exercise, Hand, LoopRange } from './model'
+import {
+  BEATS_PER_BAR,
+  TICKS_PER_BEAT,
+  itemTicks,
+  loopRangeAfterDelete,
+  loopRangeAfterInsert,
+  restBar,
+  withLoopRange,
+  withLoopRangeInBars,
+} from './model'
 import { beatViews, setBeat, toggleCutShort, toggleTie } from './speller'
 import type { NoteSticking } from './sticking'
 import { overrideCount, sticking } from './sticking'
@@ -38,6 +47,8 @@ interface Snapshot {
   bars: Bar[]
   settings: ExerciseSettings
   cursor: Cursor
+  /** Taken back only with a change that added or deleted bars, which moved it. */
+  loopRange: LoopRange | null
 }
 
 interface History {
@@ -97,9 +108,17 @@ export function newEditorState(exercise: Exercise): EditorState {
   return { exercise, cursor: { bar: 0, beat: 0 }, selection: null, clipboard: null, history: { undo: [], redo: [] } }
 }
 
-/** Applies a command. Every change to the bars can be undone; moves and copying can't. */
+/**
+ * Applies a command. Every change to the bars can be undone; moves and copying can't. The loop
+ * range moves with its bars as bars are added and deleted, and is kept inside the bars left.
+ */
 export function applyEdit(state: EditorState, command: EditCommand): EditorState {
-  if (command.type === 'selectBars') return selectBars(state, command.step)
+  const next = command.type === 'selectBars' ? selectBars(state, command.step) : record(state, command)
+  const exercise = withLoopRangeInBars(next.exercise)
+  return exercise === next.exercise ? next : { ...next, exercise }
+}
+
+function record(state: EditorState, command: Exclude<EditCommand, { type: 'selectBars' }>): EditorState {
   if (command.type === 'undo' || command.type === 'redo') return clearSelection(travel(state, command.type))
   // Copying keeps the selection; any other command ends it, once it has had the chance to act on it.
   const edited = edit(state, command)
@@ -116,7 +135,7 @@ function clearSelection(state: EditorState): EditorState {
 function snapshot(state: EditorState): Snapshot {
   const { exercise } = state
   const settings = Object.fromEntries(SETTING_KEYS.map((k) => [k, exercise[k]])) as ExerciseSettings
-  return { bars: exercise.bars, settings, cursor: state.cursor }
+  return { bars: exercise.bars, settings, cursor: state.cursor, loopRange: exercise.practice.loopRange }
 }
 
 const sameSettings = (a: ExerciseSettings, b: ExerciseSettings) => SETTING_KEYS.every((k) => a[k] === b[k])
@@ -131,7 +150,8 @@ function travel(state: EditorState, direction: 'undo' | 'redo'): EditorState {
       ? { undo: undo.slice(0, -1), redo: [...redo, snapshot(state)] }
       : { undo: [...undo, snapshot(state)], redo: redo.slice(0, -1) }
   const exercise = { ...state.exercise, bars: target.bars, ...target.settings }
-  return { ...state, exercise, cursor: target.cursor, history }
+  const resized = target.bars.length !== state.exercise.bars.length
+  return { ...state, exercise: resized ? withLoopRange(exercise, target.loopRange) : exercise, cursor: target.cursor, history }
 }
 
 function edit(
@@ -168,14 +188,14 @@ function edit(
       const { bar } = state.cursor
       const { bars } = state.exercise
       const next = [...untieLast(bars.slice(0, bar + 1)), restBar(), ...bars.slice(bar + 1)]
-      return { ...withBars(state, next), cursor: { bar: bar + 1, beat: 0 } }
+      return { ...withBarsInserted(state, next, bar + 1), cursor: { bar: bar + 1, beat: 0 } }
     }
     case 'duplicateBar': {
       // The copy goes in front, so a tie into the bar and a tie out of it both stay where they were.
       const { bar, beat } = state.cursor
       const { bars } = state.exercise
       const next = [...bars.slice(0, bar), ...untieLast([bars[bar]]), ...bars.slice(bar)]
-      return { ...withBars(state, next), cursor: { bar: bar + 1, beat } }
+      return { ...withBarsInserted(state, next, bar), cursor: { bar: bar + 1, beat } }
     }
     case 'deleteBar': {
       if (command.bar !== undefined) return deleteBars(state, command.bar, command.bar)
@@ -269,6 +289,12 @@ function withBars(state: EditorState, bars: Bar[]): EditorState {
   return { ...state, exercise: { ...state.exercise, bars } }
 }
 
+/** New bars with one bar inserted before bar `at`, and the loop range moved to match. */
+function withBarsInserted(state: EditorState, bars: Bar[], at: number): EditorState {
+  const loopRange = loopRangeAfterInsert(state.exercise.practice.loopRange, at, 1)
+  return { ...state, exercise: withLoopRange({ ...state.exercise, bars }, loopRange) }
+}
+
 /**
  * The bars with the last one's final note no longer tied over, for when whatever follows it
  * changes: a tie must not run on into a bar that was never tied into.
@@ -287,9 +313,10 @@ function deleteBars(state: EditorState, first: number, last: number): EditorStat
   if (bars.length === 1 && bars[0].items.every((item) => item.kind === 'rest')) return state
   const kept = [...untieLast(bars.slice(0, first)), ...bars.slice(last + 1)]
   const next = kept.length > 0 ? kept : [restBar()]
+  const loopRange = loopRangeAfterDelete(state.exercise.practice.loopRange, first, last)
   const { bar, beat } = state.cursor
   const cursorBar = bar > last ? bar - (last - first + 1) : Math.min(bar, first)
-  return moveTo(withBars(state, next), cursorBar, beat)
+  return moveTo({ ...state, exercise: withLoopRange({ ...state.exercise, bars: next }, loopRange) }, cursorBar, beat)
 }
 
 /** Puts the cursor on a beat, kept inside the exercise. */

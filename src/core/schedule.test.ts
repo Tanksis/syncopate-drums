@@ -152,3 +152,50 @@ describe('ties', () => {
     expect(events.filter((e) => e.kind === 'exercise').map((e) => e.noteId)).toEqual(['0:0', '0:18', '0:42', '1:6'])
   })
 })
+
+describe('a loop range', () => {
+  // Bars 1–4, each with a note on beat 1 and one on beat 4's last sixteenth.
+  const four = () => line(Array.from({ length: 4 }, () => ['x...', '....', '....', '...x']).flat())
+  const looping = (ex: Exercise, first: number, last: number) => ({ ...ex.practice, loopRange: { first, last } })
+  /** The bar each downbeat click falls in. */
+  const downbeats = (events: ScheduledEvent[]) => events.filter((e) => e.kind === 'click' && e.accent).map((e) => e.position.bar)
+
+  it('wraps from the end of its last bar back to its first bar', () => {
+    const ex = four()
+    const { events, next } = schedule(ex, looping(ex, 1, 2), device, { bar: 2, tick: 36 }, 0.6)
+    expect(show(events)).toEqual([
+      '0.000 click click',
+      '0.375 exercise snare 2:45',
+      '0.500 click click accent',
+      '0.500 exercise snare 1:0',
+    ])
+    expect(next).toEqual({ bar: 1, tick: 3 })
+  })
+
+  it('goes from the count-in to the first bar of the range, and does not count in again on wraps', () => {
+    const ex = four()
+    const { events } = schedule(ex, looping(ex, 2, 2), device, 'start', 4.1)
+    expect(downbeats(events)).toEqual([-1, 2, 2])
+    expect(events.filter((e) => e.kind === 'exercise').map((e) => e.noteId)).toEqual(['2:0', '2:45', '2:0'])
+  })
+
+  it('applies a change at the next wrap when the playhead is inside the new range', () => {
+    const ex = four()
+    // Playing the whole exercise, halfway through bar 2; the loop narrows to bars 1–2.
+    const { events } = schedule(ex, looping(ex, 0, 1), device, { bar: 1, tick: 24 }, 1.1)
+    expect(downbeats(events)).toEqual([0])
+    expect(events.filter((e) => e.kind === 'exercise').map((e) => e.noteId)).toEqual(['1:45', '0:0'])
+  })
+
+  it('jumps to the start of the range at once when the playhead is past its new end', () => {
+    const ex = four()
+    const { events } = schedule(ex, looping(ex, 0, 1), device, { bar: 3, tick: 24 }, 0.1)
+    expect(show(events)).toEqual(['0.000 click click accent', '0.000 exercise snare 0:0'])
+  })
+
+  it('keeps inside the exercise when bars beyond the range were deleted', () => {
+    const ex = line(['x...', '....', '....', '....'])
+    const { events } = schedule(ex, looping(ex, 2, 5), device, { bar: 0, tick: 36 }, 0.6)
+    expect(downbeats(events)).toEqual([0])
+  })
+})

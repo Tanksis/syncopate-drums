@@ -6,6 +6,7 @@ export function NotationView() {
   const exercise = useAppStore((s) => s.editor.exercise)
   const cursor = useAppStore((s) => s.editor.cursor)
   const dispatch = useAppStore((s) => s.dispatch)
+  const loopBar = useAppStore((s) => s.loopBar)
   const scrollerRef = useRef<HTMLElement>(null)
   const staffRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
@@ -45,8 +46,13 @@ export function NotationView() {
     >
       <div
         ref={staffRef}
+        // Shift+click on a bar number would otherwise select text.
+        className="select-none"
         onClick={(e) => {
-          // A click on a hand flips its sticking; a click on a note moves the cursor to its beat.
+          // A click on a bar number loops that bar (Shift extends the loop), on a hand flips its
+          // sticking, and on a note moves the cursor to its beat.
+          const barNumber = (e.target as Element).closest<SVGElement>('[data-loop-bar]')
+          if (barNumber) return loopBar(Number(barNumber.dataset.loopBar), { extend: e.shiftKey })
           const handGroup = (e.target as Element).closest<SVGElement>('[data-note-id]')
           if (handGroup) return dispatch({ type: 'flipOverride', note: { id: handGroup.dataset.noteId! } })
           const note = (e.target as Element).closest<SVGElement>('[data-bar]')
