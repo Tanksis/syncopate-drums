@@ -6,10 +6,13 @@ import { Beam, Dot, Formatter, Fraction, Renderer, Stave, StaveNote, StaveTie, T
 import type { Cursor, Exercise, Item, LoopRange, NoteSticking, PlacedItem, Voice as DrumVoice } from '@/core'
 import { TICKS_PER_BEAT, inLoopRange, placeItems, restBar, setBeat, sticking } from '@/core'
 
-// Mirror the accent, a light tint of it and the loop range's ink from the design tokens in styles/index.css.
+// Mirror the accent, a light tint of it and the loop range's ink and shade from the design tokens in styles/index.css.
 const ACCENT_COLOUR = '#2563eb'
 const CURRENT_BAR_SHADE = '#eff6ff'
 const LOOP_COLOUR = '#b45309'
+const LOOP_SHADE = '#fde68a'
+/** Height of the loop band drawn behind the bar numbers of the looped bars. */
+const LOOP_BAND_HEIGHT = 12
 
 const BARS_PER_LINE = 4
 const MIN_BAR_WIDTH = 190
@@ -133,6 +136,14 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
       ctx.save()
       ctx.setFillStyle(CURRENT_BAR_SHADE)
       ctx.fillRect(x, stave.getYForLine(-1), w, stave.getYForLine(5) - stave.getYForLine(-1))
+      ctx.restore()
+    }
+    if (inLoopRange(exercise.practice.loopRange, b)) {
+      // A band across the top of each looped bar, behind its number, so the range reads as one strip.
+      const bandTop = stave.getYForTopText(0) + 3 - LOOP_BAND_HEIGHT + 2
+      ctx.save()
+      ctx.setFillStyle(LOOP_SHADE)
+      ctx.fillRect(x, bandTop, w, LOOP_BAND_HEIGHT)
       ctx.restore()
     }
     stave.setContext(ctx).draw()
