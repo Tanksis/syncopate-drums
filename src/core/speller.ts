@@ -203,9 +203,14 @@ function hitsOf({ cells, triplet }: Timeline, beat: number): string {
 
 const POSITION_OF: Record<Cell['state'], GridPosition> = { hit: 'hit', hold: 'hold', rest: 'empty' }
 
-/** Each bar's four beats as the grid editor sees them. */
-export function beatViews(bars: readonly Bar[]): BeatView[][] {
+/**
+ * Each bar's four beats as the grid editor sees them. `tripletBeats` (beat indices across the
+ * exercise, bar × 4 + beat) are read on the triplet grid whatever their notes say: the editor's
+ * pending grid, for beats that read the same on either grid.
+ */
+export function beatViews(bars: readonly Bar[], tripletBeats: readonly number[] = []): BeatView[][] {
   const timeline = toTimeline(bars)
+  for (const index of tripletBeats) if (index < timeline.triplet.length) timeline.triplet[index] = true
   return bars.map((_, b) =>
     Array.from({ length: BEATS_PER_BAR }, (_, beat) => {
       const index = b * BEATS_PER_BAR + beat
@@ -263,13 +268,19 @@ export function setBeat(bars: readonly Bar[], bar: number, beat: number, hits: s
  *   is never held on into from the beat before, so a tie never points at a rest.
  *
  * A removed note's sticking override goes with it. Off the grid, the same bars are returned.
+ *
+ * `triplet` picks the grid to click on, by default the beat's own. A triplet beat left with no hit
+ * off the downbeat reads the same on either grid, so it is written as a plain beat.
  */
-export function toggleHit(bars: Bar[], bar: number, beat: number, position: number): Bar[] {
+export function toggleHit(bars: Bar[], bar: number, beat: number, position: number, triplet?: boolean): Bar[] {
   const timeline = toTimeline(bars)
   const { cells } = timeline
   const index = bar * BEATS_PER_BAR + beat
-  const offset = slotTicks(timeline.triplet[index] ?? false)[position]
-  if (index >= timeline.triplet.length || offset === undefined) return bars
+  if (index >= timeline.triplet.length) return bars
+  const onTriplets = triplet ?? timeline.triplet[index]
+  const offset = slotTicks(onTriplets)[position]
+  if (offset === undefined) return bars
+  timeline.triplet[index] = onTriplets
   const first = index * TICKS_PER_BEAT
   const tick = first + offset
   if (cells[tick].state === 'hit') {
@@ -280,7 +291,19 @@ export function toggleHit(bars: Bar[], bar: number, beat: number, position: numb
     cells[tick] = { state: 'hit' }
     for (let t = tick + 1; t < first + TICKS_PER_BEAT && cells[t].state === 'rest'; t++) cells[t] = { state: 'hold' }
   }
+  if (onTriplets) timeline.triplet[index] = hitsOf(timeline, index).slice(1).includes('x')
   return fromTimeline(timeline)
+}
+
+/**
+ * Clears a beat for a switch between the sixteenth and the triplet grid. Only the downbeat is on both, so a note on
+ * the downbeat (struck, or tied into the beat) is kept and holds to the end of the beat, and the
+ * other positions are cleared. With nothing off the downbeat the beat reads the same on either
+ * grid, so it is written as a plain beat: the grid it's on is the editor's to remember.
+ */
+export function clearBeatToDownbeat(bars: readonly Bar[], bar: number, beat: number): Bar[] {
+  const downbeat = hitsOf(toTimeline(bars), bar * BEATS_PER_BAR + beat)[0] === 'x'
+  return setBeat(bars, bar, beat, downbeat ? 'x...' : '....')
 }
 
 /**
