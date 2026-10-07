@@ -100,12 +100,17 @@ function saveDevice(device: DeviceSettings, { debounced = false } = {}) {
   else save()
 }
 
-/** Drops exercises from storage, with any save of theirs still pending, and returns the library without them. */
-function remove(ids: string[], library: Exercise[]): Exercise[] {
+/** Forgets a pending save of any of these exercises, which would otherwise overwrite what replaces them. */
+function dropPendingSave(ids: string[]) {
   if (unsaved && ids.includes(unsaved.id)) {
     clearTimeout(saveTimer)
     unsaved = null
   }
+}
+
+/** Drops exercises from storage, with any save of theirs still pending, and returns the library without them. */
+function remove(ids: string[], library: Exercise[]): Exercise[] {
+  dropPendingSave(ids)
   storage?.exercises.deleteMany(ids).catch((error) => console.error('Delete failed', error))
   return library.filter((e) => !ids.includes(e.id))
 }
@@ -236,11 +241,7 @@ export const useAppStore = create<AppState>()((set, get) => {
         { newId: () => crypto.randomUUID() },
       )
       if (stored.length === 0) return 0
-      // A pending save of a replaced exercise would overwrite what was imported.
-      if (unsaved && stored.some((e) => e.id === unsaved?.id)) {
-        clearTimeout(saveTimer)
-        unsaved = null
-      }
+      dropPendingSave(stored.map((e) => e.id))
       storage?.exercises.putMany(stored).catch((error) => console.error('Import failed', error))
       const replaced = new Map(stored.map((e) => [e.id, e]))
       const added = stored.filter((e) => !library.some((existing) => existing.id === e.id))

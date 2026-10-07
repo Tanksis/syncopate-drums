@@ -107,7 +107,7 @@ describe('parsing an import', () => {
     ['an unknown voice', { ...paradiddles, voice: 'cowbell' }],
     ['an unknown sticking mode', { ...paradiddles, sticking: 'paradiddle' }],
     ['an unknown lead hand', { ...paradiddles, leadHand: 'both' }],
-    ['a tempo out of range', { ...paradiddles, practice: { ...paradiddles.practice, bpm: 900 } }],
+    ['a BPM out of range', { ...paradiddles, practice: { ...paradiddles.practice, bpm: 900 } }],
     ['a swing out of range', { ...paradiddles, practice: { ...paradiddles.practice, swing: 0.9 } }],
     ['an unknown groove', { ...paradiddles, practice: { ...paradiddles.practice, groove: 'polka' } }],
     ['a loop range past the last bar', { ...paradiddles, practice: { ...paradiddles.practice, loopRange: { first: 1, last: 2 } } }],

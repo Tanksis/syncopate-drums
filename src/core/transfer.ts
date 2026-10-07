@@ -141,7 +141,7 @@ function exerciseProblem(exercise: Exercise): string | null {
 function practiceProblem(practice: unknown, barCount: number): string | null {
   if (!isRecord(practice)) return 'has no practice settings'
   const { bpm, swing, groove, loopRange } = practice
-  if (!isFiniteNumber(bpm) || bpm < MIN_BPM || bpm > MAX_BPM) return 'has a tempo out of range'
+  if (!isFiniteNumber(bpm) || bpm < MIN_BPM || bpm > MAX_BPM) return 'has a BPM out of range'
   if (!isFiniteNumber(swing) || swing < MIN_SWING || swing > MAX_SWING) return 'has a swing amount out of range'
   if (!oneOf(groove, GROOVE_PRESETS.map((p) => p.id))) return 'has an unknown groove'
   if (loopRange === null) return null

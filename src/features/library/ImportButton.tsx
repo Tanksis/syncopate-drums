@@ -15,7 +15,7 @@ export function ImportButton({ className, onImported }: { className: string; onI
   const importExercises = useAppStore((s) => s.importExercises)
   const picker = useRef<HTMLInputElement>(null)
   /** An import waiting on the conflict choice. */
-  const [conflicting, setConflicting] = useState<{ exercises: Exercise[]; count: number } | null>(null)
+  const [conflicting, setConflicting] = useState<{ exercises: Exercise[]; conflictCount: number } | null>(null)
   const [refusal, setRefusal] = useState<string | null>(null)
 
   const finish = (exercises: Exercise[], choice: ImportChoice) => {
@@ -31,9 +31,10 @@ export function ImportButton({ className, onImported }: { className: string; onI
     const parsed = parseImport(await file.text())
     if (!parsed.ok) return setRefusal(parsed.reason)
     const ids = useAppStore.getState().library.map((existing) => existing.id)
-    const count = importConflicts(parsed.exercises, ids)
-    if (count === 0) finish(parsed.exercises, 'skip')
-    else setConflicting({ exercises: parsed.exercises, count })
+    const conflictCount = importConflicts(parsed.exercises, ids)
+    // With nothing in the library already, every choice imports the same.
+    if (conflictCount === 0) finish(parsed.exercises, 'skip')
+    else setConflicting({ exercises: parsed.exercises, conflictCount })
   }
 
   return (
@@ -58,7 +59,7 @@ export function ImportButton({ className, onImported }: { className: string; onI
       />
       {conflicting && (
         <Dialog
-          title={`${exerciseCount(conflicting.count)} already in the library`}
+          title={`${exerciseCount(conflicting.conflictCount)} already in the library`}
           onCancel={() => setConflicting(null)}
           buttons={
             <>
@@ -73,11 +74,11 @@ export function ImportButton({ className, onImported }: { className: string; onI
             </>
           }
         >
-          {conflicting.count === 1 ? 'It' : 'They'} can replace the {conflicting.count === 1 ? 'copy' : 'copies'} you
-          have, be kept as {conflicting.count === 1 ? 'a copy' : 'copies'} alongside, or be skipped.
-          {conflicting.exercises.length - conflicting.count === 1 && ' The other exercise is imported either way.'}
-          {conflicting.exercises.length - conflicting.count > 1 &&
-            ` The other ${conflicting.exercises.length - conflicting.count} exercises are imported either way.`}
+          {conflicting.conflictCount === 1 ? 'It' : 'They'} can replace the {conflicting.conflictCount === 1 ? 'copy' : 'copies'} you
+          have, be kept as {conflicting.conflictCount === 1 ? 'a copy' : 'copies'} alongside, or be skipped.
+          {conflicting.exercises.length - conflicting.conflictCount === 1 && ' The other exercise is imported either way.'}
+          {conflicting.exercises.length - conflicting.conflictCount > 1 &&
+            ` The other ${conflicting.exercises.length - conflicting.conflictCount} exercises are imported either way.`}
         </Dialog>
       )}
       {refusal && (
