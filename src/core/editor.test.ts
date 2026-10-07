@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { EditorState, ExerciseSettings, KeyPress } from './index'
-import { applyEdit, beatViews, commandForKey, loopAt, newEditorState, newExercise, sticking, withBpm, withGroove, withLoopRange, withSwing } from './index'
+import { applyEdit, beatViews, commandForKey, editorBeatViews, loopAt, newEditorState, newExercise, sticking, withBpm, withGroove, withLoopRange, withSwing } from './index'
 
 const press = (key: string, mods: Partial<KeyPress> = {}): KeyPress => ({
   key,
@@ -846,5 +846,91 @@ describe('clicking grid positions', () => {
     expect(beatViews(tied.exercise.bars)[0][1].tiedInto).toBe(true)
     const struck = click(tied, 0, 1, 0)
     expect(beatViews(struck.exercise.bars)[0][1]).toMatchObject({ tiedInto: false, figure: { key: '1' } })
+  })
+})
+
+describe('switching a beat between the sixteenth and triplet grid', () => {
+  const grid = (state: EditorState, bar: number, beat: number, triplet: boolean) =>
+    applyEdit(state, { type: 'setBeatGrid', bar, beat, triplet })
+  const click = (state: EditorState, bar: number, beat: number, position: number) =>
+    applyEdit(state, { type: 'toggleGridPosition', bar, beat, position })
+  const fresh = () => newEditorState(newExercise({ id: 'e1', now: 0 }))
+  const view = (state: EditorState, bar: number, beat: number) => editorBeatViews(state)[bar][beat]
+
+  it('puts an empty beat on the triplet grid, with three empty positions', () => {
+    const state = grid(fresh(), 0, 1, true)
+    expect(view(state, 0, 1)).toMatchObject({ triplet: true, positions: ['empty', 'empty', 'empty'] })
+    expect(view(state, 0, 0)).toMatchObject({ triplet: false, positions: ['empty', 'empty', 'empty', 'empty'] })
+  })
+
+  it('takes clicks on triplet positions: positions 1 and 3 make the beat triplet x.x', () => {
+    const state = click(click(grid(fresh(), 0, 1, true), 0, 1, 0), 0, 1, 2)
+    expect(beatViews(state.exercise.bars)[0][1]).toMatchObject({ triplet: true, hits: 'x.x', figure: { key: 's' } })
+    expect(state.pendingGrid).toEqual([])
+  })
+
+  it('keeps the beat on the triplet grid while only its downbeat is clicked, without saving it', () => {
+    const state = click(grid(fresh(), 0, 1, true), 0, 1, 0)
+    expect(view(state, 0, 1)).toMatchObject({ triplet: true, positions: ['hit', 'hold', 'hold'] })
+    expect(beatViews(state.exercise.bars)[0][1]).toMatchObject({ triplet: false, figure: { key: '1' } })
+  })
+
+  it('keeps a downbeat hit, clears the others and holds the downbeat to the end of the beat', () => {
+    const state = grid(type(['7']), 0, 0, true)
+    expect(view(state, 0, 0)).toMatchObject({ triplet: true, positions: ['hit', 'hold', 'hold'] })
+    expect(figureKeys(state)).toEqual(['1   '])
+    const back = grid(type(['a']), 0, 0, false)
+    expect(view(back, 0, 0)).toMatchObject({ triplet: false, positions: ['hit', 'hold', 'hold', 'hold'] })
+    expect(figureKeys(back)).toEqual(['1   '])
+    expect(figureKeys(grid(type(['3']), 0, 0, true))).toEqual(['    '])
+  })
+
+  it('keeps a tie into the beat', () => {
+    const tied = keys(type(['1', '2']), press('ArrowLeft'), press('t'))
+    const state = grid(tied, 0, 1, true)
+    expect(view(state, 0, 1)).toMatchObject({ triplet: true, tiedInto: true, positions: ['hold', 'hold', 'hold'] })
+  })
+
+  it('moves the cursor to the beat without advancing, keeping the mode', () => {
+    const state = grid(vim(fresh(), '<Esc>'), 0, 2, true)
+    expect(state.cursor).toEqual({ bar: 0, beat: 2 })
+    expect(state.mode).toBe('normal')
+  })
+
+  it('makes each switch one undo step, the pending grid with it', () => {
+    const switched = grid(fresh(), 0, 1, true)
+    const undone = keys(switched, ctrl('z'))
+    expect(view(undone, 0, 1).triplet).toBe(false)
+    expect(view(applyEdit(undone, { type: 'redo' }), 0, 1).triplet).toBe(true)
+    const triplets = grid(type(['a']), 0, 0, false)
+    expect(figureKeys(keys(triplets, ctrl('z')))).toEqual(['a   '])
+    const clicked = click(switched, 0, 1, 1)
+    expect(view(keys(clicked, ctrl('z')), 0, 1)).toMatchObject({ triplet: true, positions: ['empty', 'empty', 'empty'] })
+  })
+
+  it('is no change when the beat is already on that grid', () => {
+    const state = grid(type(['a']), 0, 0, true)
+    expect(state.history.undo).toHaveLength(1)
+    expect(grid(fresh(), 0, 0, false).history.undo).toHaveLength(0)
+  })
+
+  it('is not the change . repeats', () => {
+    const switched = grid(vim(fresh(), '2<Esc>'), 0, 2, true)
+    const repeated = vim({ ...switched, cursor: { bar: 0, beat: 1 } }, '.')
+    expect(figureKeys(repeated)).toEqual(['22  '])
+  })
+
+  it('leaves the pending grid when the beat changes by any other command, not when another beat does', () => {
+    const pending = grid(type(['1', '1']), 0, 1, true)
+    expect(view(pending, 0, 1).triplet).toBe(true)
+    expect(view(keys(pending, press('t')), 0, 1).triplet).toBe(false)
+    expect(view(keys(pending, press('ArrowRight'), press('2')), 0, 1).triplet).toBe(true)
+    expect(view(keys(pending, press('1')), 0, 1).triplet).toBe(false)
+  })
+
+  it('goes back on the triplet grid when the last triplet off the downbeat is clicked off', () => {
+    const state = click(type(['s']), 0, 0, 2)
+    expect(view(state, 0, 0)).toMatchObject({ triplet: true, positions: ['hit', 'hold', 'hold'] })
+    expect(figureKeys(state)).toEqual(['1   '])
   })
 })

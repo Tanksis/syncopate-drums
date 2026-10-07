@@ -13,7 +13,8 @@ import {
   withLoopRange,
   withLoopRangeInBars,
 } from './model'
-import { beatViews, setBeat, toggleCutShort, toggleHit, toggleTie } from './speller'
+import type { BeatView } from './speller'
+import { beatViews, clearBeatToDownbeat, setBeat, toggleCutShort, toggleHit, toggleTie } from './speller'
 import type { NoteSticking } from './sticking'
 import { overrideCount, sticking } from './sticking'
 
@@ -46,6 +47,12 @@ export interface EditorState {
   pending: string
   /** The last keyboard command that changed the bars, for `.` to repeat. */
   lastChange: RepeatableCommand | null
+  /**
+   * The pending grid: beats (bar × 4 + beat) switched to the triplet grid whose notes read the same
+   * on either grid (empty, or only a downbeat), so can't say so yet. Not saved; a beat leaves it
+   * when a hit fixes its grid or its content changes by any other command.
+   */
+  pendingGrid: number[]
 }
 
 /** The exercise settings that are edited like its notes: every change to them can be undone. */
@@ -58,6 +65,7 @@ interface Snapshot {
   bars: Bar[]
   settings: ExerciseSettings
   cursor: Cursor
+  pendingGrid: number[]
   /** Taken back only with a change that added or deleted bars, which moved it. */
   loopRange: LoopRange | null
 }
@@ -77,6 +85,12 @@ export type EditCommand =
    * moves the cursor to that beat without advancing. Never repeated by `.`.
    */
   | { type: 'toggleGridPosition'; bar: number; beat: number; position: number }
+  /**
+   * The 3/16 toggle or a right-click on a beat box: puts the beat on the triplet or the sixteenth
+   * grid, keeping a note on the downbeat and clearing the others, and moves the cursor to that beat
+   * without advancing. Never repeated by `.`.
+   */
+  | { type: 'setBeatGrid'; bar: number; beat: number; triplet: boolean }
   | { type: 'toggleTie' }
   | { type: 'toggleCutShort' }
   /** Moves the cursor by beats or bars, stopping at the ends of the exercise. */
@@ -160,7 +174,13 @@ export function newEditorState(exercise: Exercise): EditorState {
     mode: 'insert',
     pending: '',
     lastChange: null,
+    pendingGrid: [],
   }
+}
+
+/** Each bar's four beats as the editor shows them: beats on the pending grid read as triplets. */
+export function editorBeatViews(state: EditorState): BeatView[][] {
+  return beatViews(state.exercise.bars, state.pendingGrid)
 }
 
 /**
@@ -213,9 +233,9 @@ function apply(state: EditorState, command: EditCommand): EditorState {
 export type RecordedCommand = Exclude<EditCommand, { type: 'selectBars' | 'pending' | 'normal' | 'insert' | 'repeatChange' }>
 
 /** The mouse's edits on the beat strip, which `.` never repeats. */
-type MouseCommand = Extract<RecordedCommand, { type: 'toggleGridPosition' }>
+type MouseCommand = Extract<RecordedCommand, { type: 'toggleGridPosition' | 'setBeatGrid' }>
 
-const MOUSE_COMMANDS = new Set<EditCommand['type']>(['toggleGridPosition'])
+const MOUSE_COMMANDS = new Set<EditCommand['type']>(['toggleGridPosition', 'setBeatGrid'])
 
 /** The changes `.` can repeat: the keyboard's. */
 export type RepeatableCommand = Exclude<RecordedCommand, MouseCommand>
@@ -233,9 +253,10 @@ function record(state: EditorState, command: RecordedCommand): EditorState {
   }
   // Copying keeps the selection in Insert mode; any other command ends it, once it has had the
   // chance to act on it, as copying does in Normal mode (vim's Visual mode ends with a yank).
-  const edited = edit(state, command)
+  const edited = withPendingGridChecked(state, edit(state, command), command)
   const next = command.type === 'copyBars' && state.mode === 'insert' ? edited : clearSelection(edited)
-  if (next.exercise.bars === state.exercise.bars && sameSettings(next.exercise, state.exercise)) return next
+  const sameGrid = next.pendingGrid === state.pendingGrid
+  if (next.exercise.bars === state.exercise.bars && sameSettings(next.exercise, state.exercise) && sameGrid) return next
   const undo = [...state.history.undo, snapshot(state)].slice(-UNDO_LIMIT)
   const unrepeated = next.exercise.bars === state.exercise.bars || isMouseCommand(command)
   const lastChange = unrepeated ? state.lastChange : repeatable(state, command)
@@ -254,6 +275,26 @@ function repeatable(state: EditorState, command: RepeatableCommand): RepeatableC
   return { type: command.type, count: last - first + 1 }
 }
 
+/** The pending grid with a beat in it or out of it. */
+function withPending(pendingGrid: number[], index: number, pending: boolean): number[] {
+  const others = pendingGrid.filter((i) => i !== index)
+  return pending ? [...others, index] : others
+}
+
+/**
+ * After any command but the grid's own, the pending grid keeps only the beats whose content it
+ * left as it was; a change to the number of bars clears it.
+ */
+function withPendingGridChecked(before: EditorState, after: EditorState, command: RecordedCommand): EditorState {
+  const { pendingGrid } = after
+  if (isMouseCommand(command) || pendingGrid.length === 0 || after.exercise.bars === before.exercise.bars) return after
+  if (after.exercise.bars.length !== before.exercise.bars.length) return { ...after, pendingGrid: [] }
+  const was = beatViews(before.exercise.bars).flat()
+  const now = beatViews(after.exercise.bars).flat()
+  const kept = pendingGrid.filter((i) => JSON.stringify(was[i]) === JSON.stringify(now[i]))
+  return kept.length === pendingGrid.length ? after : { ...after, pendingGrid: kept }
+}
+
 function clearSelection(state: EditorState): EditorState {
   return state.selection ? { ...state, selection: null } : state
 }
@@ -261,7 +302,8 @@ function clearSelection(state: EditorState): EditorState {
 function snapshot(state: EditorState): Snapshot {
   const { exercise } = state
   const settings = Object.fromEntries(SETTING_KEYS.map((k) => [k, exercise[k]])) as ExerciseSettings
-  return { bars: exercise.bars, settings, cursor: state.cursor, loopRange: exercise.practice.loopRange }
+  const { cursor, pendingGrid } = state
+  return { bars: exercise.bars, settings, cursor, pendingGrid, loopRange: exercise.practice.loopRange }
 }
 
 const sameSettings = (a: ExerciseSettings, b: ExerciseSettings) => SETTING_KEYS.every((k) => a[k] === b[k])
@@ -277,7 +319,8 @@ function travel(state: EditorState, direction: 'undo' | 'redo'): EditorState {
       : { undo: [...undo, snapshot(state)], redo: redo.slice(0, -1) }
   const exercise = { ...state.exercise, bars: target.bars, ...target.settings }
   const resized = target.bars.length !== state.exercise.bars.length
-  return { ...state, exercise: resized ? withLoopRange(exercise, target.loopRange) : exercise, cursor: target.cursor, history }
+  const { cursor, pendingGrid } = target
+  return { ...state, exercise: resized ? withLoopRange(exercise, target.loopRange) : exercise, cursor, pendingGrid, history }
 }
 
 function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'undo' | 'redo' }>): EditorState {
@@ -292,13 +335,28 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
         if (bar === bars.length - 1) bars = [...bars, restBar()]
         cursor = { bar: bar + 1, beat: 0 }
       }
-      return { ...withBars(state, bars), cursor }
+      // A typed figure sets the beat's grid itself.
+      const pendingGrid = withPending(state.pendingGrid, bar * BEATS_PER_BAR + beat, false)
+      return { ...withBars(state, bars), cursor, pendingGrid }
     }
     case 'toggleGridPosition': {
-      const { bar, beat, position } = command
-      const moved = moveTo(state, bar, beat)
-      const bars = toggleHit(state.exercise.bars, moved.cursor.bar, moved.cursor.beat, position)
-      return bars === state.exercise.bars ? moved : withBars(moved, bars)
+      const moved = moveTo(state, command.bar, command.beat)
+      const { bar, beat } = moved.cursor
+      const index = bar * BEATS_PER_BAR + beat
+      const pending = state.pendingGrid.includes(index)
+      const bars = toggleHit(state.exercise.bars, bar, beat, command.position, pending || undefined)
+      if (bars === state.exercise.bars) return moved
+      // A beat on the triplet grid stays there while it reads the same on either grid.
+      const onTriplets = editorBeatViews(state)[bar][beat].triplet && !beatViews(bars)[bar][beat].triplet
+      return { ...withBars(moved, bars), pendingGrid: withPending(state.pendingGrid, index, onTriplets) }
+    }
+    case 'setBeatGrid': {
+      const moved = moveTo(state, command.bar, command.beat)
+      const { bar, beat } = moved.cursor
+      if (editorBeatViews(state)[bar][beat].triplet === command.triplet) return moved
+      const bars = clearBeatToDownbeat(state.exercise.bars, bar, beat)
+      const pendingGrid = withPending(state.pendingGrid, bar * BEATS_PER_BAR + beat, command.triplet)
+      return { ...withBars(moved, bars), pendingGrid }
     }
     case 'toggleTie':
     case 'toggleCutShort': {
@@ -457,11 +515,12 @@ function selectedBars(state: EditorState, count = 1): BarSelection {
 }
 
 /**
- * Sets `count` beats from the cursor on, as many as there are, to a figure. A rest over a rest, or
- * a figure over the same figure (not cut short), is no change.
+ * Sets `count` beats from the cursor on, as many as there are, to a figure, which also takes them
+ * off the pending grid. A rest over a rest, or a figure over the same figure (not cut short), is
+ * no change.
  */
 function setBeats(state: EditorState, hits: string, count: number): EditorState {
-  const views = beatViews(state.exercise.bars)
+  const views = editorBeatViews(state)
   const from = state.cursor.bar * BEATS_PER_BAR + state.cursor.beat
   const to = Math.min(from + count, views.length * BEATS_PER_BAR)
   let { bars } = state.exercise
@@ -473,7 +532,9 @@ function setBeats(state: EditorState, hits: string, count: number): EditorState 
     const alreadySet = view.hits === hits && !view.cutShort
     if (!alreadyRest && !alreadySet) bars = setBeat(bars, bar, beat, hits)
   }
-  return bars === state.exercise.bars ? state : withBars(state, bars)
+  const pendingGrid = state.pendingGrid.filter((i) => i < from || i >= to)
+  const regridded = pendingGrid.length === state.pendingGrid.length ? state : { ...state, pendingGrid }
+  return bars === state.exercise.bars ? regridded : withBars(regridded, bars)
 }
 
 function withBars(state: EditorState, bars: Bar[]): EditorState {
