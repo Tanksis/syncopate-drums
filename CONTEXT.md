@@ -41,11 +41,11 @@ The standard drum-staff rendering of an exercise and its groove layer, with stic
 _Avoid_: Score, sheet
 
 **Hands part**:
-Everything on the staff played with the hands (snare, ride, hi-hat), written stems up as one rhythm: hits that land together share a stem, and a rest appears only where no hand plays.
+Everything on the staff played with the hands (snare, ride, hi-hat), written stems up as one rhythm: hits that land together share a stem, and a rest appears only where no hand plays. In a bar where the feet only play with the hands, the feet's notes hang on its stems too (one voice).
 _Avoid_: Upper voice
 
 **Feet part**:
-Everything on the staff played with the feet (bass drum, hi-hat foot), written stems down below the hands part.
+Everything on the staff played with the feet (bass drum, hi-hat foot), written stems down below the hands part with its own rests, in a bar where a foot plays without the hands. Otherwise the feet join the hands part.
 _Avoid_: Lower voice
 
 **Playhead**:
