@@ -108,7 +108,8 @@ const DURATION_TICKS: Record<Duration, number> = { quarter: 12, eighth: 6, sixte
  * - Hits at the same tick in a part share a chord. A chord holds until the part's next chord, or
  *   until all its notes' holds have ended if that is sooner. Groove notes hold as `grooveChords`
  *   writes them.
- * - An exercise note held on under a later chord is in that chord as a tied continuation.
+ * - An exercise note held past its part's next chord ends there, untied. Its exact hold and ties
+ *   are written only where nothing else in the part strikes before it ends.
  * - The part holding the exercise rests wherever it is silent; a part of groove notes alone has
  *   space there instead. Rests and notes are spelled as the speller spells them.
  * - Where the exercise and the groove strike the same drum at once, the exercise's note is written.
@@ -194,8 +195,8 @@ function writePart(sounds: Sound[], triplet: readonly boolean[], withRests: bool
     // The exercise wins where it strikes the same drum as the groove.
     const struck = new Map<Drum, Sound>()
     for (const s of sounds) if (s.start === start && (!struck.has(s.drum) || s.noteId)) struck.set(s.drum, s)
-    const held = sounds.filter((s) => s.noteId && s.start < start && s.end > start && !struck.has(s.drum))
-    const chord = [...struck.values(), ...held]
+    // A note held past the part's next chord ends there: it is not tied on through that chord.
+    const chord = [...struck.values()]
     const end = Math.min(starts[i + 1] ?? total, Math.max(...chord.map((s) => s.end)))
     spellSpan(start, end, true, triplet).forEach(({ start: at, value }, piece) => {
       const notes = chord
@@ -206,7 +207,7 @@ function writePart(sounds: Sound[], triplet: readonly boolean[], withRests: bool
           key: s.notation.key,
           notehead: s.notation.notehead,
           ...(s.noteId ? { noteId: s.noteId } : {}),
-          tied: piece > 0 || s.start < start,
+          tied: piece > 0,
         }))
       const heard = piece === 0 ? [...struck.values()].map((s) => s.heard % TICKS_PER_BAR) : []
       const strikes = [...new Set(heard)].sort((a, b) => a - b)
