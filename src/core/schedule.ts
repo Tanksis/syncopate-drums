@@ -55,6 +55,7 @@ export function schedule(
   window: number,
 ): ScheduleResult {
   const secondsPerTick = 60 / practice.bpm / TICKS_PER_BEAT
+  const swing = effectiveSwing(practice.swing, practice.bpm)
   const struck = struckTicks(exercise)
   const loop = loopBars(practice.loopRange, exercise.bars.length)
   let position: PlayPosition
@@ -63,8 +64,10 @@ export function schedule(
   let elapsed = 0
   const events: ScheduledEvent[] = []
   // Time is counted in whole ticks from the start position, so no rounding error builds up.
-  for (let time = 0; time < window; time = ++elapsed * secondsPerTick) {
+  // Swing moves an event off its straight time, but never moves where the window ends.
+  for (let straight = 0; straight < window; straight = ++elapsed * secondsPerTick) {
     const { bar, tick } = position
+    const time = straight + swingShift(tick % TICKS_PER_BEAT, swing) * secondsPerTick
     if (tick % TICKS_PER_BEAT === 0) {
       events.push({ time, kind: 'click', instrument: 'click', accent: tick === 0, position })
     }
@@ -75,6 +78,29 @@ export function schedule(
     position = advance(position, loop)
   }
   return { events, next: position, nextTime: elapsed * secondsPerTick }
+}
+
+/** Swing eases from the full amount at this tempo and below… */
+const FULL_SWING_BPM = 120
+/** …to straight at this tempo and above. */
+const STRAIGHT_BPM = 320
+
+/** The first eighth's share of the beat at a tempo: 0.5 is straight. */
+function effectiveSwing(amount: number, bpm: number): number {
+  const ease = Math.min(1, Math.max(0, (STRAIGHT_BPM - bpm) / (STRAIGHT_BPM - FULL_SWING_BPM)))
+  return 0.5 + (amount - 0.5) * ease
+}
+
+/**
+ * How many ticks swing moves a position in the beat. Binary-grid positions (every third tick:
+ * the e, & and a) stretch to put the & at the swing share, with the sixteenths halfway through
+ * each eighth. Triplet-grid positions are never moved.
+ */
+function swingShift(beatTick: number, swing: number): number {
+  if (beatTick % (TICKS_PER_BEAT / 4) !== 0) return 0
+  const x = beatTick / TICKS_PER_BEAT
+  const warped = x < 0.5 ? x * (swing / 0.5) : swing + (x - 0.5) * ((1 - swing) / 0.5)
+  return (warped - x) * TICKS_PER_BEAT
 }
 
 /** The next tick: from the count-in into the loop range, and from its last bar back to its first. */
