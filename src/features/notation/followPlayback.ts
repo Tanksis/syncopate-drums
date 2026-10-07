@@ -1,30 +1,35 @@
-// Following the playback in the notation: a rAF loop outside React that lights the note the
-// drummer is hearing and keeps its line in view.
+// Following the playback in the notation: a rAF loop outside React that draws the playhead line
+// on the hit the drummer is hearing and keeps its line of music in view.
 
 import { playhead } from '@/features/playback/engine'
 import type { Drawing, DrawnLine } from './staff'
 
-/** Overrides the note's own colours, including the cursor beat's, while it sounds. */
-const SOUNDING = ['[&_*]:fill-play', '[&_*]:stroke-play']
+const SVG_NS = 'http://www.w3.org/2000/svg'
 
 /**
  * Follows playback until the returned stop function is called. It reads the current drawing on
  * every frame, so a redraw while playing (an edit, a resize) is picked up at once.
  */
 export function followPlayback(scroller: HTMLElement, staff: HTMLElement, drawing: () => Drawing | undefined) {
-  let lit: SVGElement | undefined
+  const marker = document.createElementNS(SVG_NS, 'line')
+  marker.classList.add('stroke-play', 'pointer-events-none')
+  marker.setAttribute('stroke-width', '2')
+  marker.setAttribute('stroke-linecap', 'round')
   let shown: { drawing: Drawing; top: number } | undefined
   let frame = requestAnimationFrame(step)
 
   function step() {
     const head = playhead()
     const current = drawing()
-    const note = head?.noteId === undefined ? undefined : current?.noteElements.get(head.noteId)
-    if (note !== lit) {
-      lit?.classList.remove(...SOUNDING)
-      note?.classList.add(...SOUNDING)
-      lit = note
-    }
+    const mark = head?.hit && current?.playheadMark(head.hit)
+    if (mark && current?.svg) {
+      // A redraw replaces the SVG, so the line moves into the new one.
+      if (marker.parentNode !== current.svg) current.svg.append(marker)
+      marker.setAttribute('x1', String(mark.x))
+      marker.setAttribute('x2', String(mark.x))
+      marker.setAttribute('y1', String(mark.top))
+      marker.setAttribute('y2', String(mark.bottom))
+    } else marker.remove()
     // Scroll only when the playhead reaches a new line, or after a redraw (which can move the
     // lines), so the drummer can still scroll by hand.
     const bar = head?.position.bar ?? -1
@@ -38,7 +43,7 @@ export function followPlayback(scroller: HTMLElement, staff: HTMLElement, drawin
 
   return () => {
     cancelAnimationFrame(frame)
-    lit?.classList.remove(...SOUNDING)
+    marker.remove()
   }
 }
 
