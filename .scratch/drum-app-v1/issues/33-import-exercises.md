@@ -11,13 +11,13 @@ See [spec.md](../spec.md): `parseImport(json, appVersion)` and `planImport(incom
 
 **Blocked by:** 32 (Export exercises to JSON)
 
-**Status:** ready-for-agent
+**Status:** done (merged in PR #23, 2026-10-07)
 
-- [ ] `parseImport` validates the format marker and shape, migrates older versions through the same chain as the database, and refuses newer or malformed files with a reason (tests: a v0 file migrates; a v99 file is refused; JSON that isn't an export is refused)
-- [ ] `planImport` applies Replace / Keep both (new id, same name) / Skip to all conflicts and never deletes (tested)
-- [ ] The Import button opens a file picker; one conflict dialog with the count appears only when ids clash
-- [ ] A refused file shows a clear message and changes nothing
-- [ ] An exported file imports back into an empty library with its content and practice settings intact
+- [x] `parseImport` validates the format marker and shape, migrates older versions through the same chain as the database, and refuses newer or malformed files with a reason (tests: a v0 file migrates; a v99 file is refused; JSON that isn't an export is refused)
+- [x] `planImport` applies Replace / Keep both (new id, same name) / Skip to all conflicts and never deletes (tested)
+- [x] The Import button opens a file picker; one conflict dialog with the count appears only when ids clash
+- [x] A refused file shows a clear message and changes nothing
+- [x] An exported file imports back into an empty library with its content and practice settings intact
 
 ## Comments
 

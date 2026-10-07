@@ -6,12 +6,12 @@ See [spec.md](../spec.md): Export/import in the core. The file shape is `{ forma
 
 **Blocked by:** 23 (Select and delete exercises)
 
-**Status:** ready-for-agent
+**Status:** done (merged in PR #23, 2026-10-07)
 
-- [ ] The core builds the export file shape with the format marker and the current schema version, each exercise in its stored shape (tested)
-- [ ] The core derives the file name: the cleaned-up exercise name for one exercise, `drum-exercises-YYYY-MM-DD.json` for several (tested, including characters not allowed in file names)
-- [ ] "Export selected" and "Export all" in the library sidebar download the file
-- [ ] Device settings (volumes, mute, count-in, vim keys, last-opened id) are not in the file
+- [x] The core builds the export file shape with the format marker and the current schema version, each exercise in its stored shape (tested)
+- [x] The core derives the file name: the cleaned-up exercise name for one exercise, `drum-exercises-YYYY-MM-DD.json` for several (tested, including characters not allowed in file names)
+- [x] "Export selected" and "Export all" in the library sidebar download the file
+- [x] Device settings (volumes, mute, count-in, vim keys, last-opened id) are not in the file
 
 ## Comments
 
