@@ -90,22 +90,33 @@ describe('the staff parts: hands up, feet down', () => {
     expect(feet(line, 'off')).toEqual(['0 q space', '12 q space', '24 q space', '36 q space'])
   })
 
-  it('writes a snare note held on under later groove hits as tied continuations in their chords', () => {
-    const line = toggleTie(bar('x...', 'x.x.', '....', '....'), 0, 1)
-    expect(hands(line, 'jazz').slice(0, 3)).toEqual(['0 q ride+snare', '12 e ride+~snare', '18 e ride+snare'])
-    expect(hands(line, 'hihatEighths').slice(0, 4)).toEqual([
+  it("ends a held snare note at its part's next chord, with no tie, under a groove", () => {
+    // Decided 2026-10-07: a hold is not tied on through the groove's chords.
+    const quarters = bar('x...', 'x...', 'x...', 'x...')
+    expect(hands(quarters, 'hihatEighths')).toEqual([
       '0 e hihat+snare',
-      '6 e hihat+~snare',
-      '12 e hihat+~snare',
-      '18 e hihat+snare',
+      '6 e hihat',
+      '12 e hihat+snare',
+      '18 e hihat',
+      '24 e hihat+snare',
+      '30 e hihat',
+      '36 e hihat+snare',
+      '42 e hihat',
     ])
+    const tied = toggleTie(bar('x...', 'x.x.', '....', '....'), 0, 1)
+    expect(hands(tied, 'jazz').slice(0, 3)).toEqual(['0 q ride+snare', '12 e ride', '18 e ride+snare'])
+    expect(hands(tied, 'hihatEighths').slice(0, 4)).toEqual(['0 e hihat+snare', '6 e hihat', '12 e hihat', '18 e hihat+snare'])
   })
 
-  it("carries a snare note tied over the bar line into the next bar's first chord", () => {
-    const line = toggleTie(setBeat(setBeat([restBar(), restBar()], 0, 3, 'x...'), 1, 0, 'x...'), 1, 0)
-    expect(hands(line, 'jazz', 0).at(-1)).toBe('42 e ride+~snare')
-    expect(hands(line, 'jazz', 1)[0]).toBe('0 q ride+~snare')
-    expect(hands(line, 'off', 1)[0]).toBe('0 q ~snare')
+  it('keeps exact holds and ties where nothing else in the part strikes', () => {
+    const tied = toggleTie(bar('x...', 'x.x.', '....', '....'), 0, 1)
+    expect(hands(tied, 'off').slice(0, 2)).toEqual(['0 q. snare', '18 e snare'])
+    // Tied over the bar line: under jazz the snare stops at the ride on the & of 4; bare, it is tied on.
+    const overBar = toggleTie(setBeat(setBeat([restBar(), restBar()], 0, 3, 'x...'), 1, 0, 'x...'), 1, 0)
+    expect(hands(overBar, 'jazz', 0).slice(-2)).toEqual(['36 e ride+snare', '42 e ride'])
+    expect(hands(overBar, 'jazz', 1)[0]).toBe('0 q ride')
+    expect(hands(overBar, 'off', 0).at(-1)).toBe('36 q snare')
+    expect(hands(overBar, 'off', 1)[0]).toBe('0 q ~snare')
   })
 
   it('writes the groove on the triplet grid in a triplet beat of the line, struck where it sounds', () => {
@@ -133,6 +144,13 @@ describe('the staff parts: hands up, feet down', () => {
         }
         expect([...h, ...f].filter((e) => e.kind === 'rest')).toEqual([])
       }
+      // As a bass drum line, both parts still fill every bar and the hands part (groove only) never rests.
+      for (const { hands: h, feet: f } of staffParts(line, 'bass', groove)) {
+        for (const part of [h, f]) {
+          expect(part.reduce((ticks, e) => ticks + itemTicks({ ...e, kind: 'rest' }), 0)).toBe(TICKS_PER_BAR)
+        }
+        expect(h.filter((e) => e.kind === 'rest')).toEqual([])
+      }
     },
   )
 
@@ -143,5 +161,58 @@ describe('the staff parts: hands up, feet down', () => {
       { drum: 'ride', key: 'f/5', notehead: 'x', tied: false },
       { drum: 'snare', key: 'c/5', notehead: 'normal', noteId: '0:18', tied: false },
     ])
+  })
+})
+
+describe('a bass drum line: the feet part', () => {
+  const bassFeet = (bars: Bar[], groove: GroovePresetId) => show(staffParts(bars, 'bass', groove)[0].feet)
+  const bassHands = (bars: Bar[], groove: GroovePresetId) => show(staffParts(bars, 'bass', groove)[0].hands)
+  const line = bar('x...', '..x.', '....', 'xx.x')
+  const bare = ['0 q bass', '12 e rest', '18 e bass', '24 q rest', '36 s bass', '39 e bass', '45 s bass']
+
+  it('writes a bare bass drum line in the feet part with its rests, and the hands part as space', () => {
+    expect(bassFeet(line, 'off')).toEqual(bare)
+    expect(bassHands(line, 'off')).toEqual(['0 q space', '12 q space', '24 q space', '36 q space'])
+  })
+
+  it('shares stems with the jazz hi-hat foot, resting only where the feet are silent, with the ride above', () => {
+    expect(bassFeet(line, 'jazz')).toEqual([
+      '0 q bass',
+      '12 e hihatFoot',
+      '18 e bass',
+      '24 q rest',
+      '36 s bass+hihatFoot',
+      '39 e bass',
+      '45 s bass',
+    ])
+    expect(bassHands(line, 'jazz')).toEqual(['0 q ride', '12 e ride', '18 e ride', '24 q ride', '36 e ride', '42 e ride'])
+  })
+
+  it("writes one bass drum, the line's, where it meets the feathered bass drum", () => {
+    expect(bassFeet(line, 'jazzFeathered')).toEqual([
+      '0 q bass',
+      '12 e bass+hihatFoot',
+      '18 e bass',
+      '24 q bass',
+      '36 s bass+hihatFoot',
+      '39 e bass',
+      '45 s bass',
+    ])
+    const [first] = staffParts(bar('x...'), 'bass', 'jazzFeathered')[0].feet
+    expect(first).toMatchObject({ kind: 'chord', start: 0, strikes: [0] })
+    expect(first.kind === 'chord' && first.notes).toEqual([
+      { drum: 'bass', key: 'f/4', notehead: 'normal', noteId: '0:0', tied: false },
+    ])
+  })
+
+  it('leaves the feet part to the line under the hi-hat eighths, with the hi-hat above and no rests', () => {
+    expect(bassFeet(line, 'hihatEighths')).toEqual(bare)
+    expect(bassHands(line, 'hihatEighths')).toEqual([0, 6, 12, 18, 24, 30, 36, 42].map((t) => `${t} e hihat`))
+  })
+
+  it('ends a held bass drum note at the next chord of the feet part, untied', () => {
+    const held = toggleTie(bar('x...', 'x...', '....', '....'), 0, 1)
+    expect(bassFeet(held, 'off').slice(0, 3)).toEqual(['0 q. bass', '18 e ~bass', '24 q rest'])
+    expect(bassFeet(held, 'jazz').slice(0, 3)).toEqual(['0 q bass', '12 e hihatFoot', '18 e rest'])
   })
 })

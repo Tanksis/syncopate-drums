@@ -314,6 +314,26 @@ describe('the groove layer', () => {
       '1.667 exercise snare 0:20',
     ])
   })
+
+  it('plays one bass drum where a bass drum line and the feathered bass drum strike together', () => {
+    const ex = { ...line(['x...', '..x.', '....', '....'], 60), voice: 'bass' as const }
+    const feathered = { ...ex, practice: { ...ex.practice, groove: 'jazzFeathered' as const } }
+    const { events } = schedule(feathered, feathered.practice, device, { bar: 0, tick: 0 }, 2)
+    const bassDrums = show(events.filter((e) => e.instrument === 'kick' || e.instrument === 'kickFeathered'))
+    expect(bassDrums).toEqual(['0.000 exercise kick 0:0', '1.000 groove kickFeathered', '1.500 exercise kick 0:18'])
+  })
+
+  it('keeps the feathered bass drum under a snare line', () => {
+    const ex = line(['x...'], 60)
+    const feathered = { ...ex, practice: { ...ex.practice, groove: 'jazzFeathered' as const } }
+    const { events } = schedule(feathered, feathered.practice, device, { bar: 0, tick: 0 }, 0.1)
+    expect(show(events)).toEqual([
+      '0.000 click click accent',
+      '0.000 exercise snare 0:0',
+      '0.000 groove ride',
+      '0.000 groove kickFeathered',
+    ])
+  })
 })
 
 describe('holds', () => {
