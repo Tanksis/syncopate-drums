@@ -13,6 +13,7 @@ import {
   exampleExercises,
   exerciseToOpenAfterDelete,
   exerciseToOpenAtLaunch,
+  inKnownFolder,
   isExample,
   isUnchangedNew,
   launchListOrder,
@@ -241,8 +242,12 @@ export const useAppStore = create<AppState>()((set, get) => {
       const target = [...get().library, ...exampleExercises()].find((e) => e.id === id)
       if (target && id !== get().editor.exercise.id) switchTo(target, updatedInPlace)
     },
-    createExercise: () =>
-      switchTo(newExerciseBeside(get().editor.exercise, { id: crypto.randomUUID(), now: Date.now() }), addedOnTop),
+    createExercise: () => {
+      const created = newExerciseBeside(get().editor.exercise, { id: crypto.randomUUID(), now: Date.now() })
+      // A collapsed folder opens, so the new exercise shows in it.
+      if (created.folderId !== null) get().setFolderCollapsed(created.folderId, false)
+      switchTo(created, addedOnTop)
+    },
     createFolder: () => {
       const folder = newFolder({ id: crypto.randomUUID(), name: '' })
       set({ folders: [...get().folders, folder] })
@@ -257,23 +262,23 @@ export const useAppStore = create<AppState>()((set, get) => {
       storage?.folders.put(renamed).catch((error) => console.error('Saving the folder name failed', error))
     },
     deleteFolder: (id) => {
-      const { editor, library, device } = get()
+      get().setFolderCollapsed(id, false)
+      const { editor, library } = get()
       const { folders, library: kept, moved } = deleteFolder(get().folders, library, id)
       // The open exercise moves too (its list entry is kept in step with it), so its next autosave
       // doesn't file it back in the deleted folder.
       const open = moved.find((e) => e.id === editor.exercise.id)
-      const deviceNow = { ...device, collapsedFolderIds: device.collapsedFolderIds.filter((f) => f !== id) }
-      set({ folders, library: kept, device: deviceNow, ...(open && { editor: { ...editor, exercise: open } }) })
+      set({ folders, library: kept, ...(open && { editor: { ...editor, exercise: open } }) })
       dropPendingSave(moved.map((e) => e.id))
       // An unchanged new exercise isn't stored, and moving it doesn't change that.
       storage?.exercises
         .putMany(moved.filter((e) => !isUnchangedNew(e)))
         .then(() => storage?.folders.delete(id))
         .catch((error) => console.error('Deleting the folder failed', error))
-      saveDevice(deviceNow)
     },
     setFolderCollapsed: (id, collapsed) => {
       const { collapsedFolderIds } = get().device
+      if (collapsedFolderIds.includes(id) === collapsed) return
       const others = collapsedFolderIds.filter((f) => f !== id)
       get().setDeviceSettings({ collapsedFolderIds: collapsed ? [...others, id] : others })
     },
@@ -306,9 +311,7 @@ export const useAppStore = create<AppState>()((set, get) => {
       const { editor, library, folders } = get()
       const stored = planImport(
         // An example's id is the app's own; one in a file is never stored.
-        incoming
-          .filter((e) => !isExample(e.id))
-          .map((e) => (e.folderId === null || folders.some((f) => f.id === e.folderId) ? e : { ...e, folderId: null })),
+        incoming.filter((e) => !isExample(e.id)).map((e) => inKnownFolder(e, folders)),
         library.map((e) => e.id),
         choice,
         { newId: () => crypto.randomUUID() },

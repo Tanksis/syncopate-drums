@@ -61,7 +61,7 @@ export function LibrarySidebar() {
   /** The exercises waiting on the delete confirm, if it's showing. */
   const [toDelete, setToDelete] = useState<Exercise[] | null>(null)
   /** The folder waiting on the delete confirm, if it's showing. */
-  const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null)
+  const [folderToDelete, setFolderToDelete] = useState<{ folder: Folder; count: number } | null>(null)
   /** How many exercises the last import stored, shown until the next library action. */
   const [imported, setImported] = useState<number | null>(null)
   const view = libraryView({ library, folders, filter, collapsedIds })
@@ -109,8 +109,6 @@ export function LibrarySidebar() {
       )}
     </li>
   )
-
-  const folderToDeleteCount = folderToDelete ? library.filter((e) => e.folderId === folderToDelete.id).length : 0
 
   return (
     <aside
@@ -283,9 +281,11 @@ export function LibrarySidebar() {
                     type="button"
                     aria-expanded={expanded}
                     aria-label={`${expanded ? 'Collapse' : 'Expand'} ${folder.name}`}
+                    // The filter keeps folders with a match open.
+                    disabled={filter !== ''}
                     onMouseDown={keepFocus}
                     onClick={() => setFolderCollapsed(folder.id, expanded)}
-                    className="w-5 shrink-0 cursor-pointer border-0 bg-transparent p-0 text-mute hover:text-accent"
+                    className="w-5 shrink-0 cursor-pointer border-0 bg-transparent p-0 text-mute hover:text-accent disabled:cursor-default disabled:hover:text-mute"
                   >
                     {expanded ? '▾' : '▸'}
                   </button>
@@ -316,7 +316,7 @@ export function LibrarySidebar() {
                     aria-label={`Delete folder ${folder.name}`}
                     title="Delete the folder; its exercises are kept"
                     onMouseDown={keepFocus}
-                    onClick={() => setFolderToDelete(folder)}
+                    onClick={() => setFolderToDelete({ folder, count })}
                     className="shrink-0 cursor-pointer border-0 bg-transparent px-1 text-mute opacity-0 group-hover:opacity-100 hover:text-danger focus:opacity-100"
                   >
                     ×
@@ -338,17 +338,17 @@ export function LibrarySidebar() {
       )}
       {folderToDelete && (
         <ConfirmDialog
-          title={`Delete the folder “${folderToDelete.name}”?`}
+          title={`Delete the folder “${folderToDelete.folder.name}”?`}
           confirmLabel="Delete folder"
           onConfirm={() => {
-            deleteFolder(folderToDelete.id)
+            deleteFolder(folderToDelete.folder.id)
             setFolderToDelete(null)
           }}
           onCancel={() => setFolderToDelete(null)}
         >
-          {folderToDeleteCount === 0
+          {folderToDelete.count === 0
             ? 'It’s empty.'
-            : `Its ${exerciseCount(folderToDeleteCount)} ${folderToDeleteCount === 1 ? 'is' : 'are'} kept, moved out of the folder.`}
+            : `Its ${exerciseCount(folderToDelete.count)} ${folderToDelete.count === 1 ? 'is' : 'are'} kept, moved out of the folder.`}
         </ConfirmDialog>
       )}
       {toDelete && (

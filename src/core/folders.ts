@@ -37,6 +37,16 @@ export function deleteFolder<E extends Pick<Exercise, 'folderId'>>(
   return { folders: folders.filter((f) => f.id !== id), library: kept, moved }
 }
 
+/** Whether an exercise is filed in one of these folders, rather than in none or in one that's gone. */
+const isFiled = (exercise: Pick<Exercise, 'folderId'>, folderIds: ReadonlySet<string>) =>
+  exercise.folderId !== null && folderIds.has(exercise.folderId)
+
+/** The exercise as it is when these folders hold its folder, otherwise in no folder (an import's, say). */
+export function inKnownFolder<E extends Pick<Exercise, 'folderId'>>(exercise: E, folders: Folder[]): E {
+  if (exercise.folderId === null || isFiled(exercise, new Set(folders.map((f) => f.id)))) return exercise
+  return { ...exercise, folderId: null }
+}
+
 /** A folder as the Library tab shows it. */
 export interface FolderRow<E> {
   folder: Folder
@@ -81,7 +91,7 @@ export function libraryView<E extends Pick<Exercise, 'name' | 'folderId'>>({
   return {
     folders: filter === '' ? rows : rows.filter((row) => row.exercises.length > 0),
     loose: filterByName(
-      library.filter((e) => e.folderId === null || !folderIds.has(e.folderId)),
+      library.filter((e) => !isFiled(e, folderIds)),
       filter,
     ),
   }

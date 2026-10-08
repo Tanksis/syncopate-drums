@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deleteFolder, libraryView, newExercise, newFolder, renameFolder } from './index'
+import { deleteFolder, inKnownFolder, libraryView, newExercise, newFolder, renameFolder } from './index'
 
 const page38 = { id: 'f1', name: 'Syncopation p.38' }
 const warmUps = { id: 'f2', name: 'Warm-ups' }
@@ -72,5 +72,13 @@ describe('the library view', () => {
   it('lists an exercise whose folder is gone with the loose ones', () => {
     const stray = { ...loose, id: 'e5', name: 'Stray', folderId: 'gone' }
     expect(names(libraryView({ library: [stray, loose], folders, filter: '', collapsedIds: [] }).loose)).toEqual(['Stray', 'Loose'])
+  })
+})
+
+describe('an exercise from elsewhere, such as an import', () => {
+  it('stays in its folder when this library has it, and goes in no folder when it doesn’t', () => {
+    expect(inKnownFolder(line1, [page38])).toBe(line1)
+    expect(inKnownFolder(loose, [page38])).toBe(loose)
+    expect(inKnownFolder(singles, [page38])).toEqual({ ...singles, folderId: null })
   })
 })
