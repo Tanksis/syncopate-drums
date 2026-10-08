@@ -116,10 +116,10 @@ function SidebarSlot({ name, side, state, onOpen, onCollapse, children }: Sideba
       <SidebarRail name={name} side={side} expanded={state === 'overlay'} onOpen={onOpen} />
       {state === 'overlay' && (
         <>
-          {/* A click outside the overlay closes it. */}
+          {/* A click outside the overlay closes it; the rails stay uncovered, so the other one opens at once. */}
           <div
             aria-hidden
-            className="fixed inset-0 z-20"
+            className="fixed inset-y-0 right-8 left-8 z-20"
             onMouseDown={(e) => {
               e.preventDefault()
               onCollapse()

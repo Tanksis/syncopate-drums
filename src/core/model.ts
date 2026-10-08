@@ -288,3 +288,8 @@ export function withLoopRangeInBars(exercise: Exercise): Exercise {
   if (!range || range.last < exercise.bars.length) return exercise
   return withLoopRange(exercise, loopBars(range, exercise.bars.length))
 }
+
+/** Whether any row of any bar has a note. */
+export function hasHits(exercise: Exercise): boolean {
+  return exercise.bars.some((bar) => ROWS.some((row) => bar[row].some((item) => item.kind === 'note')))
+}

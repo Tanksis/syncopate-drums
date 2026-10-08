@@ -1,9 +1,6 @@
 // How big to draw the notation: short exercises are scaled up to fill the notation area, never
 // past MAX_NOTATION_SCALE and never onto more lines than at the usual size.
 
-import type { Exercise } from './model'
-import { ROWS } from './model'
-
 /** The notation's layout at scale 1, in pixels. */
 export const NOTATION_LAYOUT = {
   /** Bars on a line at most. */
@@ -50,9 +47,4 @@ export function notationFit({ bars, width, height, lineHeight }: { bars: number;
   }
   const scale = hundredths / 100
   return { scale, barsPerLine: barsPerLineAt(width, scale) }
-}
-
-/** Whether any row of any bar has a note. */
-export function hasHits(exercise: Exercise): boolean {
-  return exercise.bars.some((bar) => ROWS.some((row) => bar[row].some((item) => item.kind === 'note')))
 }

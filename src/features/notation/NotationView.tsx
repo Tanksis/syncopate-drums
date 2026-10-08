@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
-import { followPlayback, scrollLineIntoView } from './followPlayback'
 import { hasHits } from '@/core'
+import { followPlayback, scrollLineIntoView } from './followPlayback'
 import type { Drawing, NotationArea } from './staff'
 import { drawExercise, notationFontsReady } from './staff'
 
@@ -34,7 +34,8 @@ export function NotationView() {
     const measure = () => {
       const width = Math.floor(staff.getBoundingClientRect().width)
       // A pixel short, so rounding never makes a fitted staff scroll.
-      const height = Math.floor(scroller.clientHeight - parseFloat(getComputedStyle(scroller).paddingTop) * 2) - 1
+      const { paddingTop, paddingBottom } = getComputedStyle(scroller)
+      const height = Math.floor(scroller.clientHeight - parseFloat(paddingTop) - parseFloat(paddingBottom)) - 1
       setArea((old) => (old.width === width && old.height === height ? old : { width, height }))
     }
     const observer = new ResizeObserver(measure)
@@ -48,7 +49,10 @@ export function NotationView() {
     // While playing, the cursor isn't drawn, so only the playhead line marks the music, and the view
     // follows the playback rather than the cursor.
     const drawing = (drawingRef.current = drawExercise(staffRef.current!, exercise, playing ? null : cursor, area))
-    setHintBox((old) => (JSON.stringify(old) === JSON.stringify(drawing.firstStaff) ? old : drawing.firstStaff))
+    const box = drawing.firstStaff
+    setHintBox((old) =>
+      old && old.left === box.left && old.top === box.top && old.width === box.width && old.height === box.height ? old : box,
+    )
     // Keep the cursor's line in view as typing runs past the bottom.
     if (!playing) scrollLineIntoView(scrollerRef.current!, staffRef.current!, drawing.line(cursor.bar))
   }, [exercise, cursor, area, fontsReady, playing])

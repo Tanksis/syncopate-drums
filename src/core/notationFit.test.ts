@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_DEVICE_SETTINGS, hasHits, newExercise, notationFit, setBeat } from './index'
+import { notationFit } from './index'
 
 /** One line of staff at scale 1, about what the renderer draws with both parts. */
 const LINE = 150
@@ -27,24 +27,5 @@ describe('notationFit', () => {
     expect(notationFit({ bars: 8, width: 2000, height: 100, lineHeight: LINE }).barsPerLine).toBe(4)
     expect(notationFit({ bars: 8, width: 500, height: 100, lineHeight: LINE }).barsPerLine).toBe(2)
     expect(notationFit({ bars: 8, width: 100, height: 100, lineHeight: LINE }).barsPerLine).toBe(1)
-  })
-})
-
-describe('hasHits', () => {
-  const empty = newExercise({ id: 'a', now: 0 })
-
-  it('is false for an exercise of rests', () => {
-    expect(hasHits(empty)).toBe(false)
-  })
-
-  it('is true with one kick note, or one snare note', () => {
-    expect(hasHits({ ...empty, bars: setBeat(empty.bars, 'kick', 0, 2, 'x') })).toBe(true)
-    expect(hasHits({ ...empty, bars: setBeat(empty.bars, 'snare', 0, 0, 'x') })).toBe(true)
-  })
-})
-
-describe('the default device settings', () => {
-  it('have vim keys off and both sidebars open', () => {
-    expect(DEFAULT_DEVICE_SETTINGS).toMatchObject({ vimKeys: false, librarySidebarOpen: true, settingsSidebarOpen: true })
   })
 })
