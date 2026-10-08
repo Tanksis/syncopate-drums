@@ -42,7 +42,7 @@ There's no separate hotfix process: a fix is a `fix/` branch off `main`, merged 
 Deploys happen on every merge; a **release** is a named point on `main` for the user's own reference.
 
 - Version tags follow semver: `vMAJOR.MINOR.PATCH`, tagged on `main` after the merge that completes them, with a GitHub Release whose notes list the tickets and fixes since the last tag.
-- `v0.x` while v1 is being built: tag a minor version when a useful chunk works end to end (e.g. after tickets 16–18, you can enter, play and keep an exercise). `v1.0.0` when tickets 15–34 are all done.
+- `v0.x` while v1 is being built: tag a minor version when a useful chunk works end to end (e.g. after tickets 16–18, you can enter, play and keep an exercise). `v1.0.0` when tickets 15–33 are all done (34, the installable offline PWA, was dropped).
 - After 1.0: minor for new features, patch for fixes, major only if old exports can no longer be imported.
 - The app version is separate from the exercise **schema version**. A schema bump needs a migration in the core's shared chain, and gets called out in the release notes.
 
