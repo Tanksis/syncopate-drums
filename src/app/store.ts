@@ -19,6 +19,7 @@ import {
   launchListOrder,
   leftoverExamples,
   loopAt,
+  moveToFolder,
   newEditorState,
   newExercise,
   newExerciseBeside,
@@ -72,6 +73,8 @@ interface AppState {
   renameFolder: (id: string, name: string) => void
   /** Deletes a folder; its exercises move to no folder, and none is deleted. */
   deleteFolder: (id: string) => void
+  /** Moves exercises into a folder, or into none with `null`, each in its place in the list. */
+  moveToFolder: (ids: string[], folderId: string | null) => void
   /** Collapses or expands a folder, remembered on this device. */
   setFolderCollapsed: (id: string, collapsed: boolean) => void
   /**
@@ -187,6 +190,23 @@ export const useAppStore = create<AppState>()((set, get) => {
     saveDevice(deviceNow)
   }
 
+  /**
+   * Sets the library (and folders, if they changed) once exercises moved folder, and saves the
+   * `moved` ones. The open exercise moves too (its list entry is kept in step with it), so its next
+   * autosave doesn't file it back.
+   */
+  function saveRefiled(
+    changes: Pick<AppState, 'library'> & Partial<Pick<AppState, 'folders'>>,
+    moved: Exercise[],
+  ): Promise<void> {
+    const { editor } = get()
+    const open = moved.find((e) => e.id === editor.exercise.id)
+    set({ ...changes, ...(open && { editor: { ...editor, exercise: open } }) })
+    dropPendingSave(moved.map((e) => e.id))
+    // An unchanged new exercise isn't stored, and moving it doesn't change that.
+    return storage?.exercises.putMany(moved.filter((e) => !isUnchangedNew(e))) ?? Promise.resolve()
+  }
+
   return {
     // Replaced by launchApp before the first render.
     editor: newEditorState(initialExercise),
@@ -263,18 +283,15 @@ export const useAppStore = create<AppState>()((set, get) => {
     },
     deleteFolder: (id) => {
       get().setFolderCollapsed(id, false)
-      const { editor, library } = get()
-      const { folders, library: kept, moved } = deleteFolder(get().folders, library, id)
-      // The open exercise moves too (its list entry is kept in step with it), so its next autosave
-      // doesn't file it back in the deleted folder.
-      const open = moved.find((e) => e.id === editor.exercise.id)
-      set({ folders, library: kept, ...(open && { editor: { ...editor, exercise: open } }) })
-      dropPendingSave(moved.map((e) => e.id))
-      // An unchanged new exercise isn't stored, and moving it doesn't change that.
-      storage?.exercises
-        .putMany(moved.filter((e) => !isUnchangedNew(e)))
+      const { folders, library, moved } = deleteFolder(get().folders, get().library, id)
+      saveRefiled({ folders, library }, moved)
         .then(() => storage?.folders.delete(id))
         .catch((error) => console.error('Deleting the folder failed', error))
+    },
+    moveToFolder: (ids, folderId) => {
+      const { library, moved } = moveToFolder(get().library, ids, folderId)
+      if (moved.length === 0) return
+      saveRefiled({ library }, moved).catch((error) => console.error('Moving to the folder failed', error))
     },
     setFolderCollapsed: (id, collapsed) => {
       const { collapsedFolderIds } = get().device

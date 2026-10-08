@@ -5,10 +5,11 @@ import { NameInput } from '@/components/NameInput'
 import { PanelHeading } from '@/components/PanelHeading'
 import { keepFocus } from '@/components/keepFocus'
 import type { Exercise, Folder, LibraryTab } from '@/core'
-import { exampleExercises, isExample, libraryView, tabListing } from '@/core'
+import { exampleExercises, foldersByName, isExample, libraryView, tabListing } from '@/core'
 import { downloadExport } from './download'
 import { exerciseCount } from './exerciseCount'
 import { ImportButton } from './ImportButton'
+import { useExerciseDrop } from './useExerciseDrop'
 
 /** The built-in examples, the same every time; never stored (ADR 0008). */
 const EXAMPLES = exampleExercises()
@@ -25,6 +26,12 @@ const listButtonClass = (open: boolean) =>
     open ? 'bg-accent/10 font-semibold text-accent' : 'bg-transparent hover:bg-line'
   }`
 
+/** The Move to… menu's value for no folder, beside the folder ids (which are UUIDs). */
+const NO_FOLDER = 'no-folder'
+
+/** A drop target, outlined in the accent while an exercise is dragged over it; inset, as the list clips. */
+const dropTargetClass = (over: boolean) => `rounded-md ${over ? 'outline-2 -outline-offset-2 outline-accent' : ''}`
+
 const TABS: { id: LibraryTab; label: string }[] = [
   { id: 'library', label: 'Library' },
   { id: 'examples', label: 'Examples' },
@@ -34,7 +41,8 @@ const TABS: { id: LibraryTab; label: string }[] = [
  * The sidebar's two tabs. Library: New, Duplicate, Delete, Import, Export all, the filter and New
  * folder, and the list: the folders (chevron to collapse, double-click to rename, × to delete),
  * each with its exercises, then the exercises in no folder (click to open, double-click to rename,
- * tick to select). The selection stays through filtering and can be exported or deleted together.
+ * tick to select, drag onto a folder or "No folder" to move it there). The selection stays through
+ * filtering and can be exported, deleted or moved to a folder together.
  * Examples: the built-in examples, to open, and Copy to Library for the open one.
  */
 export function LibrarySidebar() {
@@ -54,6 +62,7 @@ export function LibrarySidebar() {
   const renameFolder = useAppStore((s) => s.renameFolder)
   const deleteFolder = useAppStore((s) => s.deleteFolder)
   const setFolderCollapsed = useAppStore((s) => s.setFolderCollapsed)
+  const moveToFolder = useAppStore((s) => s.moveToFolder)
   const [filter, setFilter] = useState('')
   /** The exercise or folder whose name is being edited in place. */
   const [renamingId, setRenamingId] = useState<string | null>(null)
@@ -75,8 +84,19 @@ export function LibrarySidebar() {
       return next
     })
 
+  /** Moves exercises to a folder, or none; a ticked one brings the other ticked ones with it. */
+  const { dropTarget, dragProps, dropProps } = useExerciseDrop((id, folderId) =>
+    moveToFolder(selectedIds.has(id) ? selected.map((e) => e.id) : [id], folderId),
+  )
+
   const exerciseRow = (exercise: Exercise, inFolder: boolean) => (
-    <li key={exercise.id} className={`flex items-center gap-1 ${inFolder ? 'pl-5' : 'pl-1'}`}>
+    <li
+      key={exercise.id}
+      // Not while renaming, so the name's text can be selected with the mouse.
+      draggable={renamingId !== exercise.id}
+      {...dragProps(exercise.id)}
+      className={`flex items-center gap-1 ${inFolder ? 'pl-5' : 'pl-1'}`}
+    >
       <input
         type="checkbox"
         aria-label={`Select ${exercise.name}`}
@@ -99,8 +119,12 @@ export function LibrarySidebar() {
           type="button"
           title="Click to open, double-click to rename"
           aria-current={exercise.id === openId}
-          onMouseDown={keepFocus}
-          onClick={() => openExercise(exercise.id)}
+          // Not keepFocus, whose mousedown preventDefault would stop the row being dragged: a mouse
+          // click lets the focus go afterwards instead (a keyboard one, detail 0, keeps it).
+          onClick={(e) => {
+            if (e.detail > 0) e.currentTarget.blur()
+            openExercise(exercise.id)
+          }}
           onDoubleClick={() => setRenamingId(exercise.id)}
           className={listButtonClass(exercise.id === openId)}
         >
@@ -252,6 +276,29 @@ export function LibrarySidebar() {
                   Clear
                 </button>
               </div>
+              <select
+                aria-label="Move the selected exercises to a folder"
+                value=""
+                onChange={(e) => {
+                  moveToFolder(
+                    selected.map((x) => x.id),
+                    e.target.value === NO_FOLDER ? null : e.target.value,
+                  )
+                  // Space and Enter belong to the editor.
+                  e.target.blur()
+                }}
+                className="cursor-pointer rounded-md border border-line bg-card px-1.5 py-1 font-semibold hover:border-accent"
+              >
+                <option value="" disabled hidden>
+                  Move to…
+                </option>
+                <option value={NO_FOLDER}>No folder</option>
+                {foldersByName(folders).map((folder) => (
+                  <option key={folder.id} value={folder.id}>
+                    {folder.name}
+                  </option>
+                ))}
+              </select>
               <div className="flex gap-1.5">
                 <button
                   type="button"
@@ -275,7 +322,7 @@ export function LibrarySidebar() {
           )}
           <ul className="m-0 flex min-h-0 list-none flex-col overflow-auto p-0">
             {view.folders.map(({ folder, count, expanded, exercises }) => (
-              <li key={folder.id} className="flex flex-col">
+              <li key={folder.id} {...dropProps(folder.id)} className={`flex flex-col ${dropTargetClass(dropTarget === folder.id)}`}>
                 <div className="group flex items-center gap-0.5">
                   <button
                     type="button"
@@ -327,7 +374,20 @@ export function LibrarySidebar() {
                 )}
               </li>
             ))}
-            {view.loose.map((e) => exerciseRow(e, false))}
+            {folders.length > 0 ? (
+              // Shown even with no exercise listed in it, to drag one out of its folder.
+              <li {...dropProps(null)} className={`flex flex-col ${dropTargetClass(dropTarget === null)}`}>
+                <span
+                  title="Drag an exercise here to take it out of its folder"
+                  className="py-1 pl-5 text-xs text-mute select-none"
+                >
+                  No folder
+                </span>
+                <ul className="m-0 flex list-none flex-col p-0">{view.loose.map((e) => exerciseRow(e, false))}</ul>
+              </li>
+            ) : (
+              view.loose.map((e) => exerciseRow(e, false))
+            )}
             {view.folders.length === 0 && view.loose.length === 0 && (
               <li className="px-2 py-1 text-mute">
                 {library.length === 0 && folders.length === 0 ? 'No exercises yet.' : 'No exercises match.'}

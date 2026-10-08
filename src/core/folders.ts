@@ -19,22 +19,35 @@ export function renameFolder(folders: Folder[], id: string, name: string): Folde
 }
 
 /**
+ * Moves exercises into a folder, or into none with `null`, each in its place in the list. `moved`
+ * is the ones whose folder changed, as they are now, to be saved.
+ */
+export function moveToFolder<E extends Pick<Exercise, 'id' | 'folderId'>>(
+  library: E[],
+  ids: readonly string[],
+  folderId: string | null,
+): { library: E[]; moved: E[] } {
+  const moved: E[] = []
+  const next = library.map((e) => {
+    if (!ids.includes(e.id) || e.folderId === folderId) return e
+    const filed = { ...e, folderId }
+    moved.push(filed)
+    return filed
+  })
+  return { library: next, moved }
+}
+
+/**
  * Deletes a folder. Its exercises move to no folder, in their places in the list, and none is
  * deleted; `moved` is them as they are now, to be saved.
  */
-export function deleteFolder<E extends Pick<Exercise, 'folderId'>>(
+export function deleteFolder<E extends Pick<Exercise, 'id' | 'folderId'>>(
   folders: Folder[],
   library: E[],
   id: string,
 ): { folders: Folder[]; library: E[]; moved: E[] } {
-  const moved: E[] = []
-  const kept = library.map((e) => {
-    if (e.folderId !== id) return e
-    const out = { ...e, folderId: null }
-    moved.push(out)
-    return out
-  })
-  return { folders: folders.filter((f) => f.id !== id), library: kept, moved }
+  const inFolder = library.filter((e) => e.folderId === id).map((e) => e.id)
+  return { folders: folders.filter((f) => f.id !== id), ...moveToFolder(library, inFolder, null) }
 }
 
 /** Whether an exercise is filed in one of these folders, rather than in none or in one that's gone. */
@@ -45,6 +58,11 @@ const isFiled = (exercise: Pick<Exercise, 'folderId'>, folderIds: ReadonlySet<st
 export function inKnownFolder<E extends Pick<Exercise, 'folderId'>>(exercise: E, folders: Folder[]): E {
   if (exercise.folderId === null || isFiled(exercise, new Set(folders.map((f) => f.id)))) return exercise
   return { ...exercise, folderId: null }
+}
+
+/** The folders by name, ignoring case, as the Library tab lists them. */
+export function foldersByName(folders: readonly Folder[]): Folder[] {
+  return [...folders].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
 }
 
 /** A folder as the Library tab shows it. */
@@ -81,9 +99,7 @@ export function libraryView<E extends Pick<Exercise, 'name' | 'folderId'>>({
   collapsedIds: readonly string[]
 }): LibraryView<E> {
   const folderIds = new Set(folders.map((f) => f.id))
-  const rows = [...folders]
-    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
-    .map((folder): FolderRow<E> => {
+  const rows = foldersByName(folders).map((folder): FolderRow<E> => {
       const inFolder = library.filter((e) => e.folderId === folder.id)
       const expanded = filter !== '' || !collapsedIds.includes(folder.id)
       return { folder, count: inFolder.length, expanded, exercises: expanded ? filterByName(inFolder, filter) : [] }
