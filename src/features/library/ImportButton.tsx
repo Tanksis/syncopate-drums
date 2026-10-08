@@ -3,9 +3,12 @@ import { useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { Dialog, DialogButton } from '@/components/Dialog'
 import { keepFocus } from '@/components/keepFocus'
-import type { Exercise, ImportChoice } from '@/core'
+import type { ImportChoice, ParsedImport } from '@/core'
 import { importConflicts, parseImport } from '@/core'
 import { exerciseCount } from './exerciseCount'
+
+/** A file's exercises and the folders they're in, as read. */
+type Read = Extract<ParsedImport, { ok: true }>
 
 /**
  * Import: picks a JSON file and adds its exercises to the library. When some are already there it
@@ -16,12 +19,12 @@ export function ImportButton({ className, onImported }: { className: string; onI
   const importExercises = useAppStore((s) => s.importExercises)
   const picker = useRef<HTMLInputElement>(null)
   /** An import waiting on the conflict choice. */
-  const [conflicting, setConflicting] = useState<{ exercises: Exercise[]; conflictCount: number } | null>(null)
+  const [conflicting, setConflicting] = useState<(Read & { conflictCount: number }) | null>(null)
   const [refusal, setRefusal] = useState<string | null>(null)
 
-  const finish = (exercises: Exercise[], choice: ImportChoice) => {
+  const finish = ({ exercises, folders }: Read, choice: ImportChoice) => {
     setConflicting(null)
-    onImported(importExercises(exercises, choice))
+    onImported(importExercises(exercises, folders, choice))
   }
 
   const read = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -34,8 +37,8 @@ export function ImportButton({ className, onImported }: { className: string; onI
     const ids = useAppStore.getState().library.map((existing) => existing.id)
     const conflictCount = importConflicts(parsed.exercises, ids)
     // With nothing in the library already, every choice imports the same.
-    if (conflictCount === 0) finish(parsed.exercises, 'skip')
-    else setConflicting({ exercises: parsed.exercises, conflictCount })
+    if (conflictCount === 0) finish(parsed, 'skip')
+    else setConflicting({ ...parsed, conflictCount })
   }
 
   return (
@@ -67,9 +70,9 @@ export function ImportButton({ className, onImported }: { className: string; onI
               <DialogButton autoFocus onClick={() => setConflicting(null)}>
                 Cancel
               </DialogButton>
-              <DialogButton onClick={() => finish(conflicting.exercises, 'skip')}>Skip</DialogButton>
-              <DialogButton onClick={() => finish(conflicting.exercises, 'keepBoth')}>Keep both</DialogButton>
-              <DialogButton danger onClick={() => finish(conflicting.exercises, 'replace')}>
+              <DialogButton onClick={() => finish(conflicting, 'skip')}>Skip</DialogButton>
+              <DialogButton onClick={() => finish(conflicting, 'keepBoth')}>Keep both</DialogButton>
+              <DialogButton danger onClick={() => finish(conflicting, 'replace')}>
                 Replace
               </DialogButton>
             </>
