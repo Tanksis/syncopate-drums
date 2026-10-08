@@ -5,8 +5,10 @@ import type { DeviceSettings, EditCommand, EditorState, Exercise, GroovePresetId
 import {
   DEFAULT_DEVICE_SETTINGS,
   addedOnTop,
+  addsExamplesAtLaunch,
   applyEdit,
   duplicateExercise,
+  exampleExercises,
   exerciseToOpenAfterDelete,
   exerciseToOpenAtLaunch,
   isUnchangedNew,
@@ -257,7 +259,8 @@ export const useAppStore = create<AppState>()((set, get) => {
 
 /**
  * Opens storage and the exercise to work on: the one last open, or a new Untitled one when the
- * library is empty. A new exercise isn't stored until it is first changed. If storage can't be
+ * library is empty. On a device's first launch the example exercises are stored instead, and the
+ * first one opens. A new exercise isn't stored until it is first changed. If storage can't be
  * opened, the app runs on an unsaved new exercise and says that it isn't saving.
  */
 export async function launchApp() {
@@ -265,15 +268,20 @@ export async function launchApp() {
   try {
     const opened = await openStorage()
     const device = await opened.device.load()
-    const stored = await opened.exercises.list()
-    const found = exerciseToOpenAtLaunch(stored, device.lastOpenedId)
     const now = Date.now()
+    const listed = await opened.exercises.list()
+    // Added only to an empty library, so the first example is the one to open.
+    const addingExamples = addsExamplesAtLaunch(listed, device)
+    const examples = addingExamples ? exampleExercises({ newId: () => crypto.randomUUID(), now }) : []
+    if (addingExamples) await opened.exercises.putMany(examples)
+    const stored = [...listed, ...examples]
+    const found = examples[0] ?? exerciseToOpenAtLaunch(stored, device.lastOpenedId)
     const exercise = found ? { ...found, lastOpened: now } : untitledExercise()
     if (found) await opened.exercises.put(exercise)
     // The order is taken before the open exercise's new last-opened time, and then kept all session.
     const order = launchListOrder(stored)
     const library = found ? updatedInPlace(order, exercise) : addedOnTop(order, exercise)
-    const deviceNow = { ...device, lastOpenedId: exercise.id }
+    const deviceNow = { ...device, lastOpenedId: exercise.id, examplesAdded: device.examplesAdded || addingExamples }
     await opened.device.save(deviceNow)
 
     // Only now does autosave start, so it never stores a placeholder from a launch that failed halfway.

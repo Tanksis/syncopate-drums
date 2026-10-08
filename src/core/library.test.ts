@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  DEFAULT_DEVICE_SETTINGS,
+  addsExamplesAtLaunch,
   applyEdit,
   duplicateExercise,
   exerciseToOpenAfterDelete,
@@ -131,5 +133,22 @@ describe('the library list order during a session', () => {
     expect(withNew.map((e) => e.id)).toEqual(['new-2', 'new-1', 'syncopation-p38', 'triplets', 'paradiddles'])
     const reopenedFirst = updatedInPlace(withNew, { id: 'new-1', lastOpened: 5000 })
     expect(reopenedFirst.map((e) => e.id)).toEqual(['new-2', 'new-1', 'syncopation-p38', 'triplets', 'paradiddles'])
+  })
+})
+
+describe('the examples added at launch', () => {
+  const fresh = { ...DEFAULT_DEVICE_SETTINGS }
+
+  it('are added on a device that has never had them, with an empty library', () => {
+    expect(fresh.examplesAdded).toBe(false)
+    expect(addsExamplesAtLaunch([], fresh)).toBe(true)
+  })
+
+  it('are not added when exercises are stored', () => {
+    expect(addsExamplesAtLaunch(library, fresh)).toBe(false)
+  })
+
+  it('are not added again once the device has had them, even with the library emptied', () => {
+    expect(addsExamplesAtLaunch([], { ...fresh, examplesAdded: true })).toBe(false)
   })
 })
