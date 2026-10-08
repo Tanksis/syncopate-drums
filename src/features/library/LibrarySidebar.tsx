@@ -16,6 +16,9 @@ const EXAMPLES = exampleExercises()
 const buttonClass =
   'flex-1 cursor-pointer rounded-md border border-line bg-card px-2 py-1 font-semibold hover:border-accent'
 
+/** A sidebar button that's disabled for an example, or with no example open. */
+const disablableButtonClass = `${buttonClass} disabled:cursor-default disabled:text-mute disabled:hover:border-line`
+
 /** An exercise's button in a list, marked when it's the open one. */
 const listButtonClass = (open: boolean) =>
   `min-w-0 flex-1 cursor-pointer truncate rounded-md border-0 px-2 py-1 text-left ${
@@ -30,7 +33,8 @@ const TABS: { id: LibraryTab; label: string }[] = [
 /**
  * The sidebar's two tabs. Library: filter, New, Duplicate, Delete, Import and Export all, and the
  * list (click to open, double-click to rename, tick to select). The selection stays through
- * filtering and can be exported or deleted together. Examples: the built-in examples, to open.
+ * filtering and can be exported or deleted together. Examples: the built-in examples, to open, and
+ * Copy to Library for the open one.
  */
 export function LibrarySidebar() {
   const library = useAppStore((s) => s.library)
@@ -86,22 +90,34 @@ export function LibrarySidebar() {
         ))}
       </div>
       {tab === 'examples' && (
-        <ul role="tabpanel" aria-label="Examples" className="m-0 flex min-h-0 list-none flex-col overflow-auto p-0">
-          {EXAMPLES.map((example) => (
-            <li key={example.id} className="flex">
-              <button
-                type="button"
-                title="Click to open"
-                aria-current={example.id === openId}
-                onMouseDown={keepFocus}
-                onClick={() => openExercise(example.id)}
-                className={listButtonClass(example.id === openId)}
-              >
-                {example.name}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <>
+          <button
+            type="button"
+            title={exampleOpen ? 'Make an editable copy of the open example' : 'Open an example to copy it'}
+            disabled={!exampleOpen}
+            onMouseDown={keepFocus}
+            onClick={duplicateOpenExercise}
+            className={`${disablableButtonClass} flex-none`}
+          >
+            Copy to Library
+          </button>
+          <ul role="tabpanel" aria-label="Examples" className="m-0 flex min-h-0 list-none flex-col overflow-auto p-0">
+            {EXAMPLES.map((example) => (
+              <li key={example.id} className="flex">
+                <button
+                  type="button"
+                  title="Click to open"
+                  aria-current={example.id === openId}
+                  onMouseDown={keepFocus}
+                  onClick={() => openExercise(example.id)}
+                  className={listButtonClass(example.id === openId)}
+                >
+                  {example.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
       {tab === 'library' && (
         <>
@@ -111,7 +127,7 @@ export function LibrarySidebar() {
             </button>
             <button
               type="button"
-              title="Copy the open exercise"
+              title={exampleOpen ? 'Copy the open example to the Library' : 'Copy the open exercise'}
               onMouseDown={keepFocus}
               onClick={duplicateOpenExercise}
               className={buttonClass}
@@ -124,7 +140,7 @@ export function LibrarySidebar() {
               disabled={exampleOpen}
               onMouseDown={keepFocus}
               onClick={() => setToDelete(library.filter((e) => e.id === openId))}
-              className={`${buttonClass} disabled:cursor-default disabled:text-mute disabled:hover:border-line`}
+              className={disablableButtonClass}
             >
               Delete
             </button>

@@ -6,6 +6,7 @@ import {
   TICKS_PER_BAR,
   TRIPLET_SWING,
   applyEdit,
+  copyExample,
   exampleAccepts,
   exampleExercises,
   isExample,
@@ -179,6 +180,37 @@ describe('the edits an example accepts', () => {
 
   it('refuses undo, redo and repeating a change, having no changes of its own', () => {
     expect(accepts({ type: 'undo' }, { type: 'redo' }, { type: 'repeatChange' })).toEqual([false, false, false])
+  })
+})
+
+describe('copying an example to the library', () => {
+  const [eighths] = examples
+  const slowed = withBpm(eighths, 60)
+  const copy = copyExample(slowed, { id: 'mine', now: 7000 })
+
+  it('gives an ordinary exercise under a new id, opened now', () => {
+    expect(copy.id).toBe('mine')
+    expect(isExample(copy.id)).toBe(false)
+    expect(copy.lastOpened).toBe(7000)
+  })
+
+  it('drops the "Example: " prefix from the name', () => {
+    expect(copy.name).toBe('syncopated eighths')
+  })
+
+  it('keeps the notes, sticking and the practice settings as they are now', () => {
+    expect(copy.bars).toEqual(eighths.bars)
+    expect(copy.sticking).toBe('natural')
+    expect(copy.leadHand).toBe(eighths.leadHand)
+    expect(copy.practice).toEqual({ ...eighths.practice, bpm: 60 })
+  })
+
+  it('leaves the example it was copied from as it was', () => {
+    expect(slowed).toEqual({ ...eighths, practice: { ...eighths.practice, bpm: 60 } })
+  })
+
+  it('is not taken for a leftover example', () => {
+    expect(leftoverExamples([copyExample(eighths, { id: 'mine', now: 1 })])).toEqual([])
   })
 })
 

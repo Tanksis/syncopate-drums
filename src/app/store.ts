@@ -59,7 +59,10 @@ interface AppState {
   openExercise: (id: string) => void
   /** Opens a new Untitled exercise, on top of the list. */
   createExercise: () => void
-  /** Opens a copy of the open exercise, on top of the list. */
+  /**
+   * Opens a copy of the open exercise, on top of the list. For an example this is Copy to Library:
+   * an ordinary, editable exercise, and the sidebar switches to the Library tab.
+   */
   duplicateOpenExercise: () => void
   /** Empty or blank names are ignored, as is an example, whose name is fixed. */
   renameExercise: (id: string, name: string) => void

@@ -16,10 +16,13 @@ type Example = Pick<Exercise, 'id' | 'name' | 'sticking'> &
 /** Starts every example's id, so it can never match a stored exercise's UUID. */
 const EXAMPLE_PREFIX = 'example:'
 
+/** Starts every example's name, so a copy in the Library is easy to tell from its source. */
+const EXAMPLE_NAME_PREFIX = 'Example: '
+
 const EXAMPLES: readonly Example[] = [
   {
     id: `${EXAMPLE_PREFIX}syncopated-eighths`,
-    name: 'Example: syncopated eighths',
+    name: `${EXAMPLE_NAME_PREFIX}syncopated eighths`,
     bpm: 80,
     groove: 'off',
     swing: MIN_SWING,
@@ -28,7 +31,7 @@ const EXAMPLES: readonly Example[] = [
   },
   {
     id: `${EXAMPLE_PREFIX}jazz-comping`,
-    name: 'Example: jazz comping',
+    name: `${EXAMPLE_NAME_PREFIX}jazz comping`,
     bpm: 100,
     groove: 'jazz',
     swing: TRIPLET_SWING,
@@ -40,7 +43,7 @@ const EXAMPLES: readonly Example[] = [
   },
   {
     id: `${EXAMPLE_PREFIX}rock-beat`,
-    name: 'Example: rock beat',
+    name: `${EXAMPLE_NAME_PREFIX}rock beat`,
     bpm: 90,
     groove: 'hihatEighths',
     swing: MIN_SWING,
@@ -52,7 +55,7 @@ const EXAMPLES: readonly Example[] = [
   },
   {
     id: `${EXAMPLE_PREFIX}triplets`,
-    name: 'Example: triplets',
+    name: `${EXAMPLE_NAME_PREFIX}triplets`,
     bpm: 70,
     groove: 'off',
     swing: MIN_SWING,
@@ -78,6 +81,16 @@ export function exampleExercises(): Exercise[] {
 /** Whether an id is one of the examples', rather than a stored exercise's. */
 export function isExample(id: string): boolean {
   return EXAMPLES.some((e) => e.id === id)
+}
+
+/**
+ * Copy to Library: an ordinary exercise under a new id, opened now, named without the "Example: "
+ * prefix, with the example's notes, sticking and practice settings as they are now (a slowed tempo
+ * carries over).
+ */
+export function copyExample(example: Exercise, { id, now }: { id: string; now: number }): Exercise {
+  const name = example.name.startsWith(EXAMPLE_NAME_PREFIX) ? example.name.slice(EXAMPLE_NAME_PREFIX.length) : example.name
+  return { ...example, id, name, lastOpened: now }
 }
 
 /** The sidebar tab that lists an exercise: Examples for an example, otherwise Library. */
