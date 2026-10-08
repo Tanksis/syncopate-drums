@@ -181,6 +181,11 @@ export function withBpm(exercise: Exercise, bpm: number): Exercise {
   return { ...exercise, practice: { ...exercise.practice, bpm: clampBpm(bpm) } }
 }
 
+/** Whether the swing feel is on: a swing amount above straight, which the notation writes as triplets (ADR 0006). */
+export function swingOn(practice: PracticeSettings): boolean {
+  return practice.swing > MIN_SWING
+}
+
 /** Keeps a swing amount inside the supported 50–75% range. */
 export function clampSwing(swing: number): number {
   if (Number.isNaN(swing)) return MIN_SWING

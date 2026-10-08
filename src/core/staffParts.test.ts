@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Bar, GroovePresetId, StaffEvent } from './index'
-import { FIGURES, TICKS_PER_BAR, itemTicks, restBar, restItems, setBeat, staffParts, toggleCutShort, toggleTie } from './index'
+import { FIGURES, TICKS_PER_BAR, itemTicks, restBar, restItems, setBeat, setHold, staffParts, toggleCutShort, toggleTie } from './index'
 
 /**
  * A part in shorthand, one event per entry: its start tick, its value (q e s, `.` for a dot, 3 for
@@ -282,4 +282,105 @@ describe('the snare row and the kick row together (ADRs 0004, 0005)', () => {
     expect(show(parts.hands).slice(0, 3)).toEqual(['0 e3 rest', '4 e3 snare', '8 e3 snare'])
     expect(show(parts.feet).slice(0, 2)).toEqual(['0 q bass', '12 q rest'])
   })
+})
+
+describe('swing written as triplets (ADR 0006)', () => {
+  const swung = (bars: Bar[], groove: GroovePresetId, b = 0) => staffParts(bars, groove, { swung: true })[b]
+
+  it("writes the jazz ride's beat 2 as a triplet group: ride, rest, ride", () => {
+    const parts = swung([restBar()], 'jazz')
+    expect(show(parts.hands)).toEqual([
+      '0 q ride',
+      '12 e3 ride+hihatFoot',
+      '16 e3 rest',
+      '20 e3 ride',
+      '24 q ride',
+      '36 e3 ride+hihatFoot',
+      '40 e3 rest',
+      '44 e3 ride',
+    ])
+    expect(parts.hands.find((e) => e.start === 20)).toMatchObject({ strikes: [18] })
+  })
+
+  it('writes snare quarters under the jazz ride as Groove Scribe does: one voice, chord, rest, ride on 2 and 4', () => {
+    const parts = swung(bar('x...', 'x...', 'x...', 'x...'), 'jazz')
+    expect(show(parts.hands)).toEqual([
+      '0 q ride+snare',
+      '12 e3 ride+snare+hihatFoot',
+      '16 e3 rest',
+      '20 e3 ride',
+      '24 q ride+snare',
+      '36 e3 ride+snare+hihatFoot',
+      '40 e3 rest',
+      '44 e3 ride',
+    ])
+    expect(parts.feet).toEqual([])
+  })
+
+  it('writes the snare row and the kick row swung too, sharing a chord on the let', () => {
+    const line = setBeat(bar('x.x.', 'x...'), 'kick', 0, 0, '..x.')
+    const parts = swung(line, 'off')
+    expect(show(parts.hands)).toEqual(['0 e3 snare', '4 e3 rest', '8 e3 snare+bass', '12 q snare', '24 q rest', '36 q rest'])
+    expect(parts.feet).toEqual([])
+    expect(parts.hands.find((e) => e.start === 8)).toMatchObject({ strikes: [6] })
+  })
+
+  it('writes a kick on the & of 2 in the feet part on the let', () => {
+    const line = setBeat(bar('x...', 'x...', 'x...', 'x...'), 'kick', 0, 1, '..x.')
+    const parts = swung(line, 'off')
+    expect(show(parts.hands)).toEqual(['0 q snare', '12 q snare', '24 q snare', '36 q snare'])
+    expect(show(parts.feet).slice(1, 3)).toEqual(['12 q3 rest', '20 e3 bass'])
+  })
+
+  it('keeps a beat on sixteenths for every source when any has an e or an a', () => {
+    expect(hands(bar('....', 'x.xx'), 'jazz').slice(1, 4)).toEqual([
+      '12 e ride+snare+hihatFoot',
+      '18 s ride+snare',
+      '21 s snare',
+    ])
+    expect(show(swung(bar('....', 'x.xx'), 'jazz').hands).slice(1, 4)).toEqual(hands(bar('....', 'x.xx'), 'jazz').slice(1, 4))
+    expect(show(swung(bar('....', '...x'), 'off').hands)).toEqual(hands(bar('....', '...x'), 'off'))
+  })
+
+  it('writes beats with only a downbeat, and beats entered on the triplet grid, as entered', () => {
+    const line = bar('x...', 'x.x', 'xxx', '.x.')
+    expect(show(swung(line, 'off').hands)).toEqual(hands(line, 'off'))
+  })
+
+  it('moves holds to the nearest triplet position, and ties on across the beat', () => {
+    // The downbeat held one sixteenth, the & held into beat 2.
+    const point = (beat: number, position: number) => ({ row: 'snare' as const, bar: 0, beat, position })
+    const line = toggleTie(setHold(bar('x.x.', 'x...'), point(0, 0), point(0, 1)), 'snare', 0, 1)
+    expect(show(swung(line, 'off').hands).slice(0, 4)).toEqual(['0 e3 snare', '4 e3 rest', '8 e3 snare', '12 q ~snare'])
+  })
+
+  it('writes exactly the current notation with swing off', () => {
+    const line = setBeat(bar('x.x.', '..x.', 'x.xx', 'x.x'), 'kick', 0, 1, 'x.x.')
+    for (const groove of ['off', 'jazz', 'jazzFeathered', 'hihatEighths'] as const) {
+      expect(staffParts(line, groove, { swung: false })).toEqual(staffParts(line, groove))
+    }
+    expect(hands(bar('x.x.'), 'off').slice(0, 2)).toEqual(['0 e snare', '6 e snare'])
+  })
+
+  it('writes the straight hi-hat eighths swung, and still fills every bar', () => {
+    const parts = swung([restBar()], 'hihatEighths')
+    expect(show(parts.hands).slice(0, 3)).toEqual(['0 e3 hihat', '4 e3 rest', '8 e3 hihat'])
+    expect(parts.hands.reduce((ticks, e) => ticks + itemTicks(e), 0)).toBe(TICKS_PER_BAR)
+  })
+
+  it.each(['off', 'jazz', 'jazzFeathered', 'hihatEighths'] as const)(
+    'fills every bar of each part swung under the %s groove, whatever the figures in either row',
+    (groove) => {
+      const line = FIGURES.reduce<Bar[]>(
+        (bars, figure, i) => setBeat(bars, 'snare', Math.floor(i / 4), i % 4, figure.hits),
+        Array.from({ length: Math.ceil(FIGURES.length / 4) }, restBar),
+      )
+      for (const bars of [line, asKicks(line)]) {
+        for (const { hands: h, feet: f } of staffParts(bars, groove, { swung: true })) {
+          expect(h.reduce((ticks, e) => ticks + itemTicks(e), 0)).toBe(TICKS_PER_BAR)
+          expect([0, TICKS_PER_BAR]).toContain(f.reduce((ticks, e) => ticks + itemTicks(e), 0))
+        }
+      }
+    },
+  )
 })

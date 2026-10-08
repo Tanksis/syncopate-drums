@@ -6,7 +6,7 @@
 import type { StemmableNote } from 'vexflow/bravura'
 import { Beam, Dot, Formatter, Fraction, GhostNote, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
 import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, NoteSticking, PlayPosition, StaffEvent } from '@/core'
-import { TICKS_PER_BEAT, inLoopRange, restBar, setBeat, staffParts, sticking } from '@/core'
+import { TICKS_PER_BEAT, inLoopRange, restBar, setBeat, staffParts, sticking, swingOn } from '@/core'
 
 // Mirror the accent, a light tint of it and the loop range's ink and shade from the design tokens in styles/index.css.
 const ACCENT_COLOUR = '#2563eb'
@@ -39,6 +39,8 @@ const STEMS_UP_SPACE = 3
 const HAND_ROW_HANDS = 6.5
 /** ...or under the feet part's stems down, when it is drawn. */
 const HAND_ROW_FEET = 9.5
+/** ...or under the feet part's triplet "3"s, when it has a triplet group. */
+const HAND_ROW_FEET_TRIPLETS = 12
 const STAVE_LINE_GAP = 10
 /** Pixels of clickable space around a printed hand. */
 const HAND_HIT_PAD = 3
@@ -116,7 +118,13 @@ function drawParts(stave: Stave, parts: readonly PartDrawing[], beats: number, w
   const beams = groups.flatMap(({ limb, groups: g }) =>
     g.flatMap((group) => {
       const notes = group.notes.filter((n): n is StaveNote => n instanceof StaveNote)
-      return Beam.generateBeams(notes, { groups: [new Fraction(1, 4)], stemDirection: STEM_DIRECTION[limb] })
+      // A triplet group's beam runs over a rest in its middle, as a swung ride is written (ADR 0006).
+      return Beam.generateBeams(notes, {
+        groups: [new Fraction(1, 4)],
+        stemDirection: STEM_DIRECTION[limb],
+        beamRests: group.triplet,
+        beamMiddleOnly: true,
+      })
     }),
   )
   tuplets.forEach((t) => t.setBracketed(t.getNotes().some((n) => !(n as StaveNote).hasBeam?.())))
@@ -170,12 +178,13 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   const barsPerLine = Math.max(1, Math.min(BARS_PER_LINE, Math.floor(available / MIN_BAR_WIDTH)))
   const barWidth = Math.floor(available / barsPerLine)
   const lines = Math.ceil(bars.length / barsPerLine)
-  const parts = staffParts(bars, exercise.practice.groove)
+  const parts = staffParts(bars, exercise.practice.groove, { swung: swingOn(exercise.practice) })
   /** A part is drawn when it has a note or a rest anywhere. */
   const drawnLimbs = (['hands', 'feet'] as const).filter((limb) =>
     parts.some((bar) => bar[limb].some((e) => e.kind !== 'space')),
   )
-  const handRow = drawnLimbs.includes('feet') ? HAND_ROW_FEET : HAND_ROW_HANDS
+  const feetTriplets = parts.some((bar) => bar.feet.some((e) => e.triplet))
+  const handRow = !drawnLimbs.includes('feet') ? HAND_ROW_HANDS : feetTriplets ? HAND_ROW_FEET_TRIPLETS : HAND_ROW_FEET
   const spaceAbove = SPACE_ABOVE_STAVE + (drawnLimbs.includes('hands') ? STEMS_UP_SPACE : 0)
   /** The bar number's line above the stave, clear of the hands part's stems. */
   const barNumberLine = drawnLimbs.includes('hands') ? STEMS_UP_SPACE : 0
