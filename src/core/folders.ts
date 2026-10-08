@@ -28,13 +28,13 @@ export function moveToFolder<E extends Pick<Exercise, 'id' | 'folderId'>>(
   folderId: string | null,
 ): { library: E[]; moved: E[] } {
   const moved: E[] = []
-  const out = library.map((e) => {
+  const next = library.map((e) => {
     if (!ids.includes(e.id) || e.folderId === folderId) return e
     const filed = { ...e, folderId }
     moved.push(filed)
     return filed
   })
-  return { library: out, moved }
+  return { library: next, moved }
 }
 
 /**
@@ -61,8 +61,9 @@ export function inKnownFolder<E extends Pick<Exercise, 'folderId'>>(exercise: E,
 }
 
 /** The folders by name, ignoring case, as the Library tab lists them. */
-export const foldersByName = (folders: readonly Folder[]): Folder[] =>
-  [...folders].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+export function foldersByName(folders: readonly Folder[]): Folder[] {
+  return [...folders].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+}
 
 /** A folder as the Library tab shows it. */
 export interface FolderRow<E> {

@@ -191,13 +191,17 @@ export const useAppStore = create<AppState>()((set, get) => {
   }
 
   /**
-   * Takes the library once exercises moved folder, and saves the `moved` ones. The open exercise
-   * moves too (its list entry is kept in step with it), so its next autosave doesn't file it back.
+   * Sets the library (and folders, if they changed) once exercises moved folder, and saves the
+   * `moved` ones. The open exercise moves too (its list entry is kept in step with it), so its next
+   * autosave doesn't file it back.
    */
-  function refiled(library: Exercise[], moved: Exercise[]): Promise<void> {
+  function saveRefiled(
+    changes: Pick<AppState, 'library'> & Partial<Pick<AppState, 'folders'>>,
+    moved: Exercise[],
+  ): Promise<void> {
     const { editor } = get()
     const open = moved.find((e) => e.id === editor.exercise.id)
-    set({ library, ...(open && { editor: { ...editor, exercise: open } }) })
+    set({ ...changes, ...(open && { editor: { ...editor, exercise: open } }) })
     dropPendingSave(moved.map((e) => e.id))
     // An unchanged new exercise isn't stored, and moving it doesn't change that.
     return storage?.exercises.putMany(moved.filter((e) => !isUnchangedNew(e))) ?? Promise.resolve()
@@ -280,15 +284,14 @@ export const useAppStore = create<AppState>()((set, get) => {
     deleteFolder: (id) => {
       get().setFolderCollapsed(id, false)
       const { folders, library, moved } = deleteFolder(get().folders, get().library, id)
-      set({ folders })
-      refiled(library, moved)
+      saveRefiled({ folders, library }, moved)
         .then(() => storage?.folders.delete(id))
         .catch((error) => console.error('Deleting the folder failed', error))
     },
     moveToFolder: (ids, folderId) => {
       const { library, moved } = moveToFolder(get().library, ids, folderId)
       if (moved.length === 0) return
-      refiled(library, moved).catch((error) => console.error('Moving to the folder failed', error))
+      saveRefiled({ library }, moved).catch((error) => console.error('Moving to the folder failed', error))
     },
     setFolderCollapsed: (id, collapsed) => {
       const { collapsedFolderIds } = get().device

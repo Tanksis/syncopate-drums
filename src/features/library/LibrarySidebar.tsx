@@ -1,5 +1,4 @@
-import type { DragEvent } from 'react'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { NameInput } from '@/components/NameInput'
@@ -10,6 +9,7 @@ import { exampleExercises, foldersByName, isExample, libraryView, tabListing } f
 import { downloadExport } from './download'
 import { exerciseCount } from './exerciseCount'
 import { ImportButton } from './ImportButton'
+import { useExerciseDrop } from './useExerciseDrop'
 
 /** The built-in examples, the same every time; never stored (ADR 0008). */
 const EXAMPLES = exampleExercises()
@@ -26,11 +26,8 @@ const listButtonClass = (open: boolean) =>
     open ? 'bg-accent/10 font-semibold text-accent' : 'bg-transparent hover:bg-line'
   }`
 
-/** The drag data type of an exercise being dragged to a folder; its value is the exercise's id. */
-const EXERCISE_DRAG_TYPE = 'application/x-syncopate-exercise'
-
-/** The drop target key of the "No folder" zone, beside the folder ids. */
-const NO_FOLDER = ''
+/** The Move to… menu's value for no folder, beside the folder ids (which are UUIDs). */
+const NO_FOLDER = 'no-folder'
 
 /** A drop target, outlined in the accent while an exercise is dragged over it; inset, as the list clips. */
 const dropTargetClass = (over: boolean) => `rounded-md ${over ? 'outline-2 -outline-offset-2 outline-accent' : ''}`
@@ -76,17 +73,6 @@ export function LibrarySidebar() {
   const [folderToDelete, setFolderToDelete] = useState<{ folder: Folder; count: number } | null>(null)
   /** How many exercises the last import stored, shown until the next library action. */
   const [imported, setImported] = useState<number | null>(null)
-  /** The folder id, or NO_FOLDER, that a dragged exercise is over, to outline it. */
-  const [dropTarget, setDropTarget] = useState<string | null>(null)
-  /**
-   * How many of each drop target's elements the drag is in: dragenter on a child comes before
-   * dragleave on the one it left, and a drag has left a target only when its count is back to 0.
-   */
-  const dragDepth = useRef(new Map<string, number>())
-  const endDrag = () => {
-    dragDepth.current.clear()
-    setDropTarget(null)
-  }
   const view = libraryView({ library, folders, filter, collapsedIds })
   // Exercises discarded or deleted since they were ticked drop out here.
   const selected = library.filter((e) => selectedIds.has(e.id))
@@ -98,46 +84,17 @@ export function LibrarySidebar() {
       return next
     })
 
-  /**
-   * Makes an element a drop target for a dragged exercise, moving it to the folder `folderId`
-   * (NO_FOLDER for none). A ticked exercise brings the other ticked ones with it.
-   */
-  const dropProps = (folderId: string) => ({
-    onDragEnter: (event: DragEvent) => {
-      if (!event.dataTransfer.types.includes(EXERCISE_DRAG_TYPE)) return
-      dragDepth.current.set(folderId, (dragDepth.current.get(folderId) ?? 0) + 1)
-      setDropTarget(folderId)
-    },
-    onDragOver: (event: DragEvent) => {
-      if (!event.dataTransfer.types.includes(EXERCISE_DRAG_TYPE)) return
-      event.preventDefault()
-      event.dataTransfer.dropEffect = 'move'
-    },
-    onDragLeave: (event: DragEvent) => {
-      if (!event.dataTransfer.types.includes(EXERCISE_DRAG_TYPE)) return
-      const depth = (dragDepth.current.get(folderId) ?? 1) - 1
-      dragDepth.current.set(folderId, depth)
-      if (depth === 0) setDropTarget((target) => (target === folderId ? null : target))
-    },
-    onDrop: (event: DragEvent) => {
-      event.preventDefault()
-      endDrag()
-      const id = event.dataTransfer.getData(EXERCISE_DRAG_TYPE)
-      if (!id) return
-      moveToFolder(selectedIds.has(id) ? selected.map((e) => e.id) : [id], folderId === NO_FOLDER ? null : folderId)
-    },
-  })
+  /** Moves exercises to a folder, or none; a ticked one brings the other ticked ones with it. */
+  const { dropTarget, dragProps, dropProps } = useExerciseDrop((id, folderId) =>
+    moveToFolder(selectedIds.has(id) ? selected.map((e) => e.id) : [id], folderId),
+  )
 
   const exerciseRow = (exercise: Exercise, inFolder: boolean) => (
     <li
       key={exercise.id}
       // Not while renaming, so the name's text can be selected with the mouse.
       draggable={renamingId !== exercise.id}
-      onDragStart={(event) => {
-        event.dataTransfer.setData(EXERCISE_DRAG_TYPE, exercise.id)
-        event.dataTransfer.effectAllowed = 'move'
-      }}
-      onDragEnd={endDrag}
+      {...dragProps(exercise.id)}
       className={`flex items-center gap-1 ${inFolder ? 'pl-5' : 'pl-1'}`}
     >
       <input
@@ -322,7 +279,14 @@ export function LibrarySidebar() {
               <select
                 aria-label="Move the selected exercises to a folder"
                 value=""
-                onChange={(e) => moveToFolder(selected.map((x) => x.id), e.target.value === NO_FOLDER ? null : e.target.value)}
+                onChange={(e) => {
+                  moveToFolder(
+                    selected.map((x) => x.id),
+                    e.target.value === NO_FOLDER ? null : e.target.value,
+                  )
+                  // Space and Enter belong to the editor.
+                  e.target.blur()
+                }}
                 className="cursor-pointer rounded-md border border-line bg-card px-1.5 py-1 font-semibold hover:border-accent"
               >
                 <option value="" disabled hidden>
@@ -410,8 +374,9 @@ export function LibrarySidebar() {
                 )}
               </li>
             ))}
-            {folders.length > 0 && (filter === '' || view.loose.length > 0) ? (
-              <li {...dropProps(NO_FOLDER)} className={`flex flex-col ${dropTargetClass(dropTarget === NO_FOLDER)}`}>
+            {folders.length > 0 ? (
+              // Shown even with no exercise listed in it, to drag one out of its folder.
+              <li {...dropProps(null)} className={`flex flex-col ${dropTargetClass(dropTarget === null)}`}>
                 <span
                   title="Drag an exercise here to take it out of its folder"
                   className="py-1 pl-5 text-xs text-mute select-none"
