@@ -4,8 +4,8 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { NameInput } from '@/components/NameInput'
 import { PanelHeading } from '@/components/PanelHeading'
 import { keepFocus } from '@/components/keepFocus'
-import type { Exercise, LibraryTab } from '@/core'
-import { exampleExercises, filterByName, isExample, tabListing } from '@/core'
+import type { Exercise, Folder, LibraryTab } from '@/core'
+import { exampleExercises, isExample, libraryView, tabListing } from '@/core'
 import { downloadExport } from './download'
 import { exerciseCount } from './exerciseCount'
 import { ImportButton } from './ImportButton'
@@ -31,10 +31,11 @@ const TABS: { id: LibraryTab; label: string }[] = [
 ]
 
 /**
- * The sidebar's two tabs. Library: filter, New, Duplicate, Delete, Import and Export all, and the
- * list (click to open, double-click to rename, tick to select). The selection stays through
- * filtering and can be exported or deleted together. Examples: the built-in examples, to open, and
- * Copy to Library for the open one.
+ * The sidebar's two tabs. Library: New, Duplicate, Delete, Import, Export all, the filter and New
+ * folder, and the list: the folders (chevron to collapse, double-click to rename, × to delete),
+ * each with its exercises, then the exercises in no folder (click to open, double-click to rename,
+ * tick to select). The selection stays through filtering and can be exported or deleted together.
+ * Examples: the built-in examples, to open, and Copy to Library for the open one.
  */
 export function LibrarySidebar() {
   const library = useAppStore((s) => s.library)
@@ -47,14 +48,23 @@ export function LibrarySidebar() {
   const duplicateOpenExercise = useAppStore((s) => s.duplicateOpenExercise)
   const renameExercise = useAppStore((s) => s.renameExercise)
   const deleteExercises = useAppStore((s) => s.deleteExercises)
+  const folders = useAppStore((s) => s.folders)
+  const collapsedIds = useAppStore((s) => s.device.collapsedFolderIds)
+  const createFolder = useAppStore((s) => s.createFolder)
+  const renameFolder = useAppStore((s) => s.renameFolder)
+  const deleteFolder = useAppStore((s) => s.deleteFolder)
+  const setFolderCollapsed = useAppStore((s) => s.setFolderCollapsed)
   const [filter, setFilter] = useState('')
+  /** The exercise or folder whose name is being edited in place. */
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set())
   /** The exercises waiting on the delete confirm, if it's showing. */
   const [toDelete, setToDelete] = useState<Exercise[] | null>(null)
+  /** The folder waiting on the delete confirm, if it's showing. */
+  const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null)
   /** How many exercises the last import stored, shown until the next library action. */
   const [imported, setImported] = useState<number | null>(null)
-  const shown = filterByName(library, filter)
+  const view = libraryView({ library, folders, filter, collapsedIds })
   // Exercises discarded or deleted since they were ticked drop out here.
   const selected = library.filter((e) => selectedIds.has(e.id))
 
@@ -64,6 +74,43 @@ export function LibrarySidebar() {
       if (!next.delete(id)) next.add(id)
       return next
     })
+
+  const exerciseRow = (exercise: Exercise, inFolder: boolean) => (
+    <li key={exercise.id} className={`flex items-center gap-1 ${inFolder ? 'pl-5' : 'pl-1'}`}>
+      <input
+        type="checkbox"
+        aria-label={`Select ${exercise.name}`}
+        checked={selectedIds.has(exercise.id)}
+        onMouseDown={keepFocus}
+        onChange={() => toggleSelected(exercise.id)}
+        className="shrink-0 cursor-pointer accent-accent"
+      />
+      {renamingId === exercise.id ? (
+        <NameInput
+          name={exercise.name}
+          onDone={(name) => {
+            if (name !== null) renameExercise(exercise.id, name)
+            setRenamingId(null)
+          }}
+          className="w-full flex-1 py-1"
+        />
+      ) : (
+        <button
+          type="button"
+          title="Click to open, double-click to rename"
+          aria-current={exercise.id === openId}
+          onMouseDown={keepFocus}
+          onClick={() => openExercise(exercise.id)}
+          onDoubleClick={() => setRenamingId(exercise.id)}
+          className={listButtonClass(exercise.id === openId)}
+        >
+          {exercise.name}
+        </button>
+      )}
+    </li>
+  )
+
+  const folderToDeleteCount = folderToDelete ? library.filter((e) => e.folderId === folderToDelete.id).length : 0
 
   return (
     <aside
@@ -171,14 +218,29 @@ export function LibrarySidebar() {
               </button>
             </p>
           )}
-          <input
-            type="search"
-            aria-label="Filter exercises"
-            placeholder="Filter…"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="rounded-md border border-line bg-card px-2 py-1 outline-none focus:border-accent"
-          />
+          <div className="flex gap-1.5">
+            <input
+              type="search"
+              aria-label="Filter exercises"
+              placeholder="Filter…"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="min-w-0 flex-1 rounded-md border border-line bg-card px-2 py-1 outline-none focus:border-accent"
+            />
+            <button
+              type="button"
+              title="Make a folder in the Library"
+              onMouseDown={keepFocus}
+              onClick={() => {
+                // The filter would hide the new, empty folder.
+                setFilter('')
+                setRenamingId(createFolder())
+              }}
+              className={`${buttonClass} flex-none`}
+            >
+              New folder
+            </button>
+          </div>
           {selected.length > 0 && (
             <div className="flex flex-col gap-1.5 text-xs whitespace-nowrap">
               <div className="flex items-center gap-1.5">
@@ -214,45 +276,80 @@ export function LibrarySidebar() {
             </div>
           )}
           <ul className="m-0 flex min-h-0 list-none flex-col overflow-auto p-0">
-            {shown.map((exercise) => (
-              <li key={exercise.id} className="flex items-center gap-1 pl-1">
-                <input
-                  type="checkbox"
-                  aria-label={`Select ${exercise.name}`}
-                  checked={selectedIds.has(exercise.id)}
-                  onMouseDown={keepFocus}
-                  onChange={() => toggleSelected(exercise.id)}
-                  className="shrink-0 cursor-pointer accent-accent"
-                />
-                {renamingId === exercise.id ? (
-                  <NameInput
-                    name={exercise.name}
-                    onDone={(name) => {
-                      if (name !== null) renameExercise(exercise.id, name)
-                      setRenamingId(null)
-                    }}
-                    className="w-full flex-1 py-1"
-                  />
-                ) : (
+            {view.folders.map(({ folder, count, expanded, exercises }) => (
+              <li key={folder.id} className="flex flex-col">
+                <div className="group flex items-center gap-0.5">
                   <button
                     type="button"
-                    title="Click to open, double-click to rename"
-                    aria-current={exercise.id === openId}
+                    aria-expanded={expanded}
+                    aria-label={`${expanded ? 'Collapse' : 'Expand'} ${folder.name}`}
                     onMouseDown={keepFocus}
-                    onClick={() => openExercise(exercise.id)}
-                    onDoubleClick={() => setRenamingId(exercise.id)}
-                    className={listButtonClass(exercise.id === openId)}
+                    onClick={() => setFolderCollapsed(folder.id, expanded)}
+                    className="w-5 shrink-0 cursor-pointer border-0 bg-transparent p-0 text-mute hover:text-accent"
                   >
-                    {exercise.name}
+                    {expanded ? '▾' : '▸'}
                   </button>
+                  {renamingId === folder.id ? (
+                    <NameInput
+                      name={folder.name}
+                      label="Folder name"
+                      onDone={(name) => {
+                        if (name !== null) renameFolder(folder.id, name)
+                        setRenamingId(null)
+                      }}
+                      className="w-full flex-1 py-1 font-semibold"
+                    />
+                  ) : (
+                    <span
+                      title="Double-click to rename"
+                      onDoubleClick={() => setRenamingId(folder.id)}
+                      className="min-w-0 flex-1 cursor-default truncate py-1 font-semibold select-none"
+                    >
+                      {folder.name}
+                    </span>
+                  )}
+                  <span title={exerciseCount(count)} className="shrink-0 px-1 text-xs text-mute">
+                    {count}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={`Delete folder ${folder.name}`}
+                    title="Delete the folder; its exercises are kept"
+                    onMouseDown={keepFocus}
+                    onClick={() => setFolderToDelete(folder)}
+                    className="shrink-0 cursor-pointer border-0 bg-transparent px-1 text-mute opacity-0 group-hover:opacity-100 hover:text-danger focus:opacity-100"
+                  >
+                    ×
+                  </button>
+                </div>
+                {exercises.length > 0 && (
+                  <ul className="m-0 flex list-none flex-col p-0">{exercises.map((e) => exerciseRow(e, true))}</ul>
                 )}
               </li>
             ))}
-            {shown.length === 0 && (
-              <li className="px-2 py-1 text-mute">{library.length === 0 ? 'No exercises yet.' : 'No exercises match.'}</li>
+            {view.loose.map((e) => exerciseRow(e, false))}
+            {view.folders.length === 0 && view.loose.length === 0 && (
+              <li className="px-2 py-1 text-mute">
+                {library.length === 0 && folders.length === 0 ? 'No exercises yet.' : 'No exercises match.'}
+              </li>
             )}
           </ul>
         </>
+      )}
+      {folderToDelete && (
+        <ConfirmDialog
+          title={`Delete the folder “${folderToDelete.name}”?`}
+          confirmLabel="Delete folder"
+          onConfirm={() => {
+            deleteFolder(folderToDelete.id)
+            setFolderToDelete(null)
+          }}
+          onCancel={() => setFolderToDelete(null)}
+        >
+          {folderToDeleteCount === 0
+            ? 'It’s empty.'
+            : `Its ${exerciseCount(folderToDeleteCount)} ${folderToDeleteCount === 1 ? 'is' : 'are'} kept, moved out of the folder.`}
+        </ConfirmDialog>
       )}
       {toDelete && (
         <ConfirmDialog

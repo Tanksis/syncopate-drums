@@ -23,7 +23,7 @@ export const MAX_SWING = 0.75
 export const TRIPLET_SWING = 2 / 3
 
 /** Bumped whenever the stored shape changes; storage and import migrate through it. */
-export const SCHEMA_VERSION = 2
+export const SCHEMA_VERSION = 3
 
 export type Hand = 'R' | 'L'
 
@@ -103,6 +103,14 @@ export interface Exercise {
   practice: PracticeSettings
   /** Epoch milliseconds. */
   lastOpened: number
+  /** The Library folder it's filed in, or null for none. */
+  folderId: string | null
+}
+
+/** A Library folder: one level deep, holding exercises by their `folderId`. */
+export interface Folder {
+  id: string
+  name: string
 }
 
 /** Settings kept per device rather than per exercise, and never exported. */
@@ -124,6 +132,8 @@ export interface DeviceSettings {
   lastOpenedId: string | null
   /** The library sidebar's tab: the drummer's own exercises, or the built-in examples. */
   libraryTab: LibraryTab
+  /** The Library folders shown collapsed on this device. */
+  collapsedFolderIds: string[]
 }
 
 /** The library sidebar's tabs: the drummer's own exercises, and the built-in examples. */
@@ -139,6 +149,7 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   figuresPanelOpen: false,
   lastOpenedId: null,
   libraryTab: 'library',
+  collapsedFolderIds: [],
 }
 
 /** The device settings that are a playback layer's volume. */
@@ -164,8 +175,8 @@ export function restBar(): Bar {
   return { snare: restItems(), kick: restItems() }
 }
 
-/** A new exercise always starts from the same fixed defaults. */
-export function newExercise({ id, now }: { id: string; now: number }): Exercise {
+/** A new exercise always starts from the same fixed defaults, in the folder given (none by default). */
+export function newExercise({ id, now, folderId = null }: { id: string; now: number; folderId?: string | null }): Exercise {
   return {
     id,
     name: 'Untitled',
@@ -175,6 +186,7 @@ export function newExercise({ id, now }: { id: string; now: number }): Exercise 
     leadHand: 'R',
     practice: { bpm: 80, loopRange: null, groove: 'off', swing: MIN_SWING },
     lastOpened: now,
+    folderId,
   }
 }
 

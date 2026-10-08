@@ -2,11 +2,12 @@
 // change, unless it is an example, which is never stored (ADR 0008).
 
 import { create } from 'zustand'
-import type { DeviceSettings, EditCommand, EditorState, Exercise, GroovePresetId, ImportChoice } from '@/core'
+import type { DeviceSettings, EditCommand, EditorState, Exercise, Folder, GroovePresetId, ImportChoice } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
   addedOnTop,
   applyEdit,
+  deleteFolder,
   duplicateExercise,
   exampleAccepts,
   exampleExercises,
@@ -19,7 +20,10 @@ import {
   loopAt,
   newEditorState,
   newExercise,
+  newExerciseBeside,
+  newFolder,
   planImport,
+  renameFolder,
   tabListing,
   updatedInPlace,
   withBpm,
@@ -34,6 +38,8 @@ interface AppState {
   editor: EditorState
   /** Every exercise, in the session's list order; the open one as it is now. */
   library: Exercise[]
+  /** The Library's folders, in no particular order (the sidebar sorts them). */
+  folders: Folder[]
   device: DeviceSettings
   /** False when storage couldn't be opened, so changes are not being saved. */
   saving: boolean
@@ -57,8 +63,16 @@ interface AppState {
   loopAll: () => void
   /** Opens a stored exercise or an example, switching the sidebar to the tab that lists it. */
   openExercise: (id: string) => void
-  /** Opens a new Untitled exercise, on top of the list. */
+  /** Opens a new Untitled exercise, on top of the list, in the open exercise's folder. */
   createExercise: () => void
+  /** Makes an empty folder called "New folder" and returns its id. */
+  createFolder: () => string
+  /** Empty or blank names are ignored. */
+  renameFolder: (id: string, name: string) => void
+  /** Deletes a folder; its exercises move to no folder, and none is deleted. */
+  deleteFolder: (id: string) => void
+  /** Collapses or expands a folder, remembered on this device. */
+  setFolderCollapsed: (id: string, collapsed: boolean) => void
   /**
    * Opens a copy of the open exercise, on top of the list. For an example this is Copy to Library:
    * an ordinary, editable exercise, and the sidebar switches to the Library tab.
@@ -74,7 +88,8 @@ interface AppState {
   /**
    * Stores exercises read from an import file, with `choice` for those the library already holds,
    * and returns how many were stored. New ones go on top of the list; replaced ones stay in place,
-   * and a replaced open exercise reopens as imported. Nothing is deleted. The sidebar switches to
+   * and a replaced open exercise reopens as imported. Nothing is deleted. One filed in a folder this
+   * library doesn't have goes in no folder. The sidebar switches to
    * the Library tab, to show them.
    */
   importExercises: (incoming: Exercise[], choice: ImportChoice) => number
@@ -175,6 +190,7 @@ export const useAppStore = create<AppState>()((set, get) => {
     // Replaced by launchApp before the first render.
     editor: newEditorState(initialExercise),
     library: [initialExercise],
+    folders: [],
     device: DEFAULT_DEVICE_SETTINGS,
     saving: false,
     playing: false,
@@ -225,7 +241,42 @@ export const useAppStore = create<AppState>()((set, get) => {
       const target = [...get().library, ...exampleExercises()].find((e) => e.id === id)
       if (target && id !== get().editor.exercise.id) switchTo(target, updatedInPlace)
     },
-    createExercise: () => switchTo(untitledExercise(), addedOnTop),
+    createExercise: () =>
+      switchTo(newExerciseBeside(get().editor.exercise, { id: crypto.randomUUID(), now: Date.now() }), addedOnTop),
+    createFolder: () => {
+      const folder = newFolder({ id: crypto.randomUUID(), name: '' })
+      set({ folders: [...get().folders, folder] })
+      storage?.folders.put(folder).catch((error) => console.error('Saving the folder failed', error))
+      return folder.id
+    },
+    renameFolder: (id, name) => {
+      const folders = renameFolder(get().folders, id, name)
+      const renamed = folders.find((f) => f.id === id)
+      if (folders === get().folders || !renamed) return
+      set({ folders })
+      storage?.folders.put(renamed).catch((error) => console.error('Saving the folder name failed', error))
+    },
+    deleteFolder: (id) => {
+      const { editor, library, device } = get()
+      const { folders, library: kept, moved } = deleteFolder(get().folders, library, id)
+      // The open exercise moves too (its list entry is kept in step with it), so its next autosave
+      // doesn't file it back in the deleted folder.
+      const open = moved.find((e) => e.id === editor.exercise.id)
+      const deviceNow = { ...device, collapsedFolderIds: device.collapsedFolderIds.filter((f) => f !== id) }
+      set({ folders, library: kept, device: deviceNow, ...(open && { editor: { ...editor, exercise: open } }) })
+      dropPendingSave(moved.map((e) => e.id))
+      // An unchanged new exercise isn't stored, and moving it doesn't change that.
+      storage?.exercises
+        .putMany(moved.filter((e) => !isUnchangedNew(e)))
+        .then(() => storage?.folders.delete(id))
+        .catch((error) => console.error('Deleting the folder failed', error))
+      saveDevice(deviceNow)
+    },
+    setFolderCollapsed: (id, collapsed) => {
+      const { collapsedFolderIds } = get().device
+      const others = collapsedFolderIds.filter((f) => f !== id)
+      get().setDeviceSettings({ collapsedFolderIds: collapsed ? [...others, id] : others })
+    },
     duplicateOpenExercise: () =>
       switchTo(duplicateExercise(get().editor.exercise, { id: crypto.randomUUID(), now: Date.now() }), addedOnTop),
     renameExercise: (id, name) => {
@@ -252,10 +303,12 @@ export const useAppStore = create<AppState>()((set, get) => {
       else switchTo(untitledExercise(), addedOnTop, remaining)
     },
     importExercises: (incoming, choice) => {
-      const { editor, library } = get()
+      const { editor, library, folders } = get()
       const stored = planImport(
         // An example's id is the app's own; one in a file is never stored.
-        incoming.filter((e) => !isExample(e.id)),
+        incoming
+          .filter((e) => !isExample(e.id))
+          .map((e) => (e.folderId === null || folders.some((f) => f.id === e.folderId) ? e : { ...e, folderId: null })),
         library.map((e) => e.id),
         choice,
         { newId: () => crypto.randomUUID() },
@@ -290,6 +343,7 @@ export async function launchApp() {
   try {
     const opened = await openStorage()
     const device = await opened.device.load()
+    const folders = await opened.folders.list()
     const now = Date.now()
     const listed = await opened.exercises.list()
     const leftovers = leftoverExamples(listed)
@@ -310,7 +364,7 @@ export async function launchApp() {
 
     // Only now does autosave start, so it never stores a placeholder from a launch that failed halfway.
     storage = opened
-    useAppStore.setState({ editor: newEditorState(exercise), library, device: deviceNow, saving: true })
+    useAppStore.setState({ editor: newEditorState(exercise), library, folders, device: deviceNow, saving: true })
   } catch (error) {
     console.error('Could not open saved exercises', error)
   }
