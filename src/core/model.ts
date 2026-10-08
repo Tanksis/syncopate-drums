@@ -134,6 +134,10 @@ export interface DeviceSettings {
   libraryTab: LibraryTab
   /** The Library folders shown collapsed on this device. */
   collapsedFolderIds: string[]
+  /** The library sidebar is open, not a rail, in a wide window. */
+  librarySidebarOpen: boolean
+  /** The settings sidebar is open, not a rail, in a wide window. */
+  settingsSidebarOpen: boolean
 }
 
 /** The library sidebar's tabs: the drummer's own exercises, and the built-in examples. */
@@ -145,11 +149,13 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   exerciseVolume: 1,
   grooveVolume: 1,
   exerciseMuted: false,
-  vimKeys: true,
+  vimKeys: false,
   figuresPanelOpen: false,
   lastOpenedId: null,
   libraryTab: 'library',
   collapsedFolderIds: [],
+  librarySidebarOpen: true,
+  settingsSidebarOpen: true,
 }
 
 /** The device settings that are a playback layer's volume. */

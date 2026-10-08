@@ -31,8 +31,19 @@ export function GridEditor() {
       </div>
       {helpOpen && <CheatSheet onClose={toggleHelp} />}
       <BeatStrip />
+      <FigureKeyLegend />
       <FiguresPanel />
     </section>
+  )
+}
+
+/** What the letter on each beat card is: one quiet line, close under the cards. */
+function FigureKeyLegend() {
+  return (
+    <p className="-mt-2 mb-0 text-xs text-mute">
+      Letters show each beat's figure key: type it to enter that figure.{' '}
+      <kbd className="rounded border border-b-2 border-line px-1 font-mono text-[10px]/[14px]">?</kbd> for all keys.
+    </p>
   )
 }
 

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { NameInput } from '@/components/NameInput'
-import { PanelHeading } from '@/components/PanelHeading'
+import { SidebarHeading } from '@/components/Sidebar'
 import { keepFocus } from '@/components/keepFocus'
 import type { Exercise, Folder, LibraryTab } from '@/core'
 import { exampleExercises, foldersByName, isExample, libraryView, tabListing } from '@/core'
@@ -45,7 +45,7 @@ const TABS: { id: LibraryTab; label: string }[] = [
  * filtering and can be exported, deleted or moved to a folder together.
  * Examples: the built-in examples, to open, and Copy to Library for the open one.
  */
-export function LibrarySidebar() {
+export function LibrarySidebar({ onCollapse }: { onCollapse: () => void }) {
   const library = useAppStore((s) => s.library)
   const openId = useAppStore((s) => s.editor.exercise.id)
   const tab = useAppStore((s) => s.device.libraryTab)
@@ -137,9 +137,9 @@ export function LibrarySidebar() {
   return (
     <aside
       aria-label="Exercise library"
-      className="flex min-h-0 flex-col gap-2 border-r border-line bg-panel px-2.5 py-3"
+      className="flex min-h-0 w-[230px] flex-col gap-2 border-r border-line bg-panel px-2.5 py-3"
     >
-      <PanelHeading>Exercises</PanelHeading>
+      <SidebarHeading name="Exercises" side="left" onCollapse={onCollapse} />
       <div role="tablist" aria-label="Exercise lists" className="flex border-b border-line">
         {TABS.map(({ id, label }) => (
           <button
