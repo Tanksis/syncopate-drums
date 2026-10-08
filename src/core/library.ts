@@ -21,7 +21,7 @@ export function exerciseToOpenAtLaunch<E extends Pick<Exercise, 'id' | 'lastOpen
  * Whether a launch adds the example exercises: only to an empty library, on a device that hasn't
  * had them. Once added they are never added again by themselves, so deleting them is final.
  */
-export function addsExamplesAtLaunch(library: readonly unknown[], device: Pick<DeviceSettings, 'examplesAdded'>): boolean {
+export function addsExamplesAtLaunch(library: readonly Pick<Exercise, 'id'>[], device: Pick<DeviceSettings, 'examplesAdded'>): boolean {
   return library.length === 0 && !device.examplesAdded
 }
 

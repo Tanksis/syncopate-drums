@@ -7,7 +7,7 @@
 **Status:** done
 
 - [x] `exampleExercises({ newId, now })` returns the four examples in the spec's order, named "Example: …", built through `setBeat`. Tested: every bar adds up to four beats in both rows; two calls differ only in ids
-- [x] Musical facts tested: the jazz comping example, with swing on, writes the snare's & of 2 in bar 1 on the let; the triplets example's alternate sticking alternates through every note; the rock beat's kick row is in the feet part under the hi-hat
+- [x] Musical facts tested: the jazz comping example, with swing on, writes the snare's & of 2 in bar 1 on the let; the triplets example's alternate sticking alternates through every note; the rock beat's kicks hang on the hi-hat's stems in bar 1, and the kick off the hi-hat in bar 2 is in the feet part
 - [x] `DeviceSettings.examplesAdded` (default false); existing stored device settings load with it false
 - [x] A pure launch rule: add examples only when the library is empty and `examplesAdded` is false. Tested for all three cases
 - [x] `launchApp` stores the examples, sets `examplesAdded`, and opens the first example; storage failure still gives an unsaved Untitled exercise

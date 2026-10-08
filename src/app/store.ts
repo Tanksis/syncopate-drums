@@ -270,8 +270,10 @@ export async function launchApp() {
     const device = await opened.device.load()
     const now = Date.now()
     const listed = await opened.exercises.list()
-    const examples = addsExamplesAtLaunch(listed, device) ? exampleExercises({ newId: () => crypto.randomUUID(), now }) : []
-    if (examples.length > 0) await opened.exercises.putMany(examples)
+    // Added only to an empty library, so the first example is the one to open.
+    const addingExamples = addsExamplesAtLaunch(listed, device)
+    const examples = addingExamples ? exampleExercises({ newId: () => crypto.randomUUID(), now }) : []
+    if (addingExamples) await opened.exercises.putMany(examples)
     const stored = [...listed, ...examples]
     const found = examples[0] ?? exerciseToOpenAtLaunch(stored, device.lastOpenedId)
     const exercise = found ? { ...found, lastOpened: now } : untitledExercise()
@@ -279,7 +281,7 @@ export async function launchApp() {
     // The order is taken before the open exercise's new last-opened time, and then kept all session.
     const order = launchListOrder(stored)
     const library = found ? updatedInPlace(order, exercise) : addedOnTop(order, exercise)
-    const deviceNow = { ...device, lastOpenedId: exercise.id, examplesAdded: device.examplesAdded || examples.length > 0 }
+    const deviceNow = { ...device, lastOpenedId: exercise.id, examplesAdded: device.examplesAdded || addingExamples }
     await opened.device.save(deviceNow)
 
     // Only now does autosave start, so it never stores a placeholder from a launch that failed halfway.
