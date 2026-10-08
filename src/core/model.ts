@@ -122,6 +122,8 @@ export interface DeviceSettings {
   figuresPanelOpen: boolean
   /** The exercise open when the app was last used, reopened at launch. */
   lastOpenedId: string | null
+  /** This device has had the example exercises, so a launch never adds them again by itself. */
+  examplesAdded: boolean
 }
 
 export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
@@ -133,6 +135,7 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   vimKeys: true,
   figuresPanelOpen: false,
   lastOpenedId: null,
+  examplesAdded: false,
 }
 
 /** The device settings that are a playback layer's volume. */

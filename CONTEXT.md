@@ -29,7 +29,7 @@ The span of bars within an exercise that repeats during practice; the whole exer
 How an exercise is practiced rather than what it contains: BPM, loop range, groove preset and swing amount. Remembered per exercise.
 
 **Device settings**:
-How the app is set up on this computer rather than how an exercise is practiced: volumes, the exercise mute, the count-in toggle, vim keys and which exercise was last open. Kept per device and never exported.
+How the app is set up on this computer rather than how an exercise is practiced: volumes, the exercise mute, the count-in toggle, vim keys, which exercise was last open, and whether the device has had the example exercises. Kept per device and never exported.
 
 **Snare row**:
 One of an exercise's two rhythms over the same bars: the notes played on the snare with the hands, written in the hands part. Sticking labels this row only.

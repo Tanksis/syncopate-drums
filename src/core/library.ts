@@ -1,6 +1,6 @@
-// Library rules: which exercise opens (at launch or after a delete), list order, filter, duplicate and discard.
+// Library rules: which exercise opens (at launch or after a delete), when the examples are added, list order, filter, duplicate and discard.
 
-import type { Exercise } from './model'
+import type { DeviceSettings, Exercise } from './model'
 import { newExercise } from './model'
 
 /**
@@ -15,6 +15,14 @@ export function exerciseToOpenAtLaunch<E extends Pick<Exercise, 'id' | 'lastOpen
     library.find((e) => e.id === lastOpenedId) ??
     library.reduce<E | null>((latest, e) => (latest === null || e.lastOpened > latest.lastOpened ? e : latest), null)
   )
+}
+
+/**
+ * Whether a launch adds the example exercises: only to an empty library, on a device that hasn't
+ * had them. Once added they are never added again by themselves, so deleting them is final.
+ */
+export function addsExamplesAtLaunch(library: readonly unknown[], device: Pick<DeviceSettings, 'examplesAdded'>): boolean {
+  return library.length === 0 && !device.examplesAdded
 }
 
 /**
