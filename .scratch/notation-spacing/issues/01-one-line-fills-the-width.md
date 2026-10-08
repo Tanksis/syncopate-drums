@@ -4,9 +4,13 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done (merged in PR #49, 2026-10-08)
 
-- [ ] `notationFit` returns `barWidth` too, and `NOTATION_LAYOUT.maxBarWidth` is 475. Tested: one bar fills the line, two bars split it, one bar in a very wide area is capped, five bars all get a quarter of the line, and the existing `notationFit` tests still pass
-- [ ] `drawExercise` draws at that bar width (the first bar still adds the clef's width), left aligned
-- [ ] The playhead line, the current-bar shade, the loop band and the empty-exercise hint line up with the wider bars
-- [ ] Checked in the browser with real mouse clicks: one bar of sixteenth hi-hats (e.g. the rock beat example cut to one bar, or a new exercise) at 1280 px and 900 px, two bars, and five bars; clicking a note, a hand and a bar number in a filled bar works
+- [x] `notationFit` returns `barWidth` too, and `NOTATION_LAYOUT.maxBarWidth` is 475. Tested: one bar fills the line, two bars split it, one bar in a very wide area is capped, five bars all get a quarter of the line, and the existing `notationFit` tests still pass
+- [x] `drawExercise` draws at that bar width (the first bar still adds the clef's width), left aligned
+- [x] The playhead line, the current-bar shade, the loop band and the empty-exercise hint line up with the wider bars
+- [x] Checked in the browser with real mouse clicks: one bar of sixteenth hi-hats (e.g. the rock beat example cut to one bar, or a new exercise) at 1280 px and 900 px, two bars, and five bars; clicking a note, a hand and a bar number in a filled bar works
+
+## Comments
+
+Where the spec was silent: the bar width is rounded down to a whole unit, as `drawExercise` did before. The browser check ran in headless Chromium with real mouse events; the by-ear check is left to the user.
