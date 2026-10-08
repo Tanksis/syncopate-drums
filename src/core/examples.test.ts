@@ -5,18 +5,18 @@ import {
   SCHEMA_VERSION,
   TICKS_PER_BAR,
   TRIPLET_SWING,
+  applyEdit,
   exampleAccepts,
   exampleExercises,
   isExample,
-  applyEdit,
-  newEditorState,
   isUnchangedNew,
   itemTicks,
   leftoverExamples,
+  newEditorState,
   newExercise,
-  withBpm,
   staffParts,
   sticking,
+  withBpm,
 } from './index'
 
 const examples = exampleExercises()

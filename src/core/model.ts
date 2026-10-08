@@ -126,6 +126,7 @@ export interface DeviceSettings {
   libraryTab: LibraryTab
 }
 
+/** The library sidebar's tabs: the drummer's own exercises, and the built-in examples. */
 export type LibraryTab = 'library' | 'examples'
 
 export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {

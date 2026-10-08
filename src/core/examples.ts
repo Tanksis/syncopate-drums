@@ -2,7 +2,7 @@
 // a syncopation method book (never copied from one), each showing one part of the app.
 
 import type { EditCommand } from './editor'
-import type { Bar, Exercise, PracticeSettings, Row } from './model'
+import type { Bar, Exercise, LibraryTab, PracticeSettings, Row } from './model'
 import { BEATS_PER_BAR, MIN_SWING, TRIPLET_SWING, newExercise, restBar } from './model'
 import { setBeat } from './speller'
 
@@ -13,7 +13,7 @@ type Example = Pick<Exercise, 'id' | 'name' | 'sticking'> &
     rows: Partial<Record<Row, string[]>>
   }
 
-/** Every example's id starts so; a stored exercise's id is a UUID. */
+/** Starts every example's id, so it can never match a stored exercise's UUID. */
 const EXAMPLE_PREFIX = 'example:'
 
 const EXAMPLES: readonly Example[] = [
@@ -78,6 +78,11 @@ export function exampleExercises(): Exercise[] {
 /** Whether an id is one of the examples', rather than a stored exercise's. */
 export function isExample(id: string): boolean {
   return EXAMPLES.some((e) => e.id === id)
+}
+
+/** The sidebar tab that lists an exercise: Examples for an example, otherwise Library. */
+export function tabListing(id: string): LibraryTab {
+  return isExample(id) ? 'examples' : 'library'
 }
 
 /**

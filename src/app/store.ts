@@ -2,7 +2,7 @@
 // change, unless it is an example, which is never stored (ADR 0008).
 
 import { create } from 'zustand'
-import type { DeviceSettings, EditCommand, EditorState, Exercise, GroovePresetId, ImportChoice, LibraryTab } from '@/core'
+import type { DeviceSettings, EditCommand, EditorState, Exercise, GroovePresetId, ImportChoice } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
   addedOnTop,
@@ -20,6 +20,7 @@ import {
   newEditorState,
   newExercise,
   planImport,
+  tabListing,
   updatedInPlace,
   withBpm,
   withGroove,
@@ -138,9 +139,6 @@ function leave(exercise: Exercise, library: Exercise[]): Exercise[] {
   return remove([exercise.id], library)
 }
 
-/** The sidebar tab that lists an exercise. */
-const tabListing = (id: string): LibraryTab => (isExample(id) ? 'examples' : 'library')
-
 /** A new Untitled exercise, made now. */
 const untitledExercise = () => newExercise({ id: crypto.randomUUID(), now: Date.now() })
 const initialExercise = untitledExercise()
@@ -253,7 +251,8 @@ export const useAppStore = create<AppState>()((set, get) => {
     importExercises: (incoming, choice) => {
       const { editor, library } = get()
       const stored = planImport(
-        incoming,
+        // An example's id is the app's own; one in a file is never stored.
+        incoming.filter((e) => !isExample(e.id)),
         library.map((e) => e.id),
         choice,
         { newId: () => crypto.randomUUID() },
@@ -301,6 +300,7 @@ export async function launchApp() {
     if (found && !example) await opened.exercises.put(exercise)
     // The order is taken before the open exercise's new last-opened time, and then kept all session.
     const order = launchListOrder(stored)
+    // An example isn't listed; a new Untitled exercise goes on top.
     const library = example ? order : found ? updatedInPlace(order, exercise) : addedOnTop(order, exercise)
     const deviceNow = { ...device, lastOpenedId: exercise.id, libraryTab: tabListing(exercise.id) }
     await opened.device.save(deviceNow)

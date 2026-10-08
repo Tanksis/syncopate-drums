@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   applyEdit,
   duplicateExercise,
+  exampleExercises,
   exerciseToOpenAfterDelete,
   exerciseToOpenAtLaunch,
   filterByName,
@@ -11,7 +12,6 @@ import {
   isUnchangedNew,
   newEditorState,
   newExercise,
-  exampleExercises,
   withBpm,
 } from './index'
 

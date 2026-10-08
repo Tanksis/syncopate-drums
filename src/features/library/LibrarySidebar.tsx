@@ -5,7 +5,7 @@ import { NameInput } from '@/components/NameInput'
 import { PanelHeading } from '@/components/PanelHeading'
 import { keepFocus } from '@/components/keepFocus'
 import type { Exercise, LibraryTab } from '@/core'
-import { exampleExercises, filterByName, isExample } from '@/core'
+import { exampleExercises, filterByName, isExample, tabListing } from '@/core'
 import { downloadExport } from './download'
 import { exerciseCount } from './exerciseCount'
 import { ImportButton } from './ImportButton'
@@ -15,6 +15,12 @@ const EXAMPLES = exampleExercises()
 
 const buttonClass =
   'flex-1 cursor-pointer rounded-md border border-line bg-card px-2 py-1 font-semibold hover:border-accent'
+
+/** An exercise's button in a list, marked when it's the open one. */
+const listButtonClass = (open: boolean) =>
+  `min-w-0 flex-1 cursor-pointer truncate rounded-md border-0 px-2 py-1 text-left ${
+    open ? 'bg-accent/10 font-semibold text-accent' : 'bg-transparent hover:bg-line'
+  }`
 
 const TABS: { id: LibraryTab; label: string }[] = [
   { id: 'library', label: 'Library' },
@@ -73,7 +79,7 @@ export function LibrarySidebar() {
             className="-mb-px flex flex-1 cursor-pointer items-center justify-center gap-1.5 border-0 border-b-2 border-transparent bg-transparent px-2 py-1 font-semibold text-mute hover:text-ink aria-selected:border-accent aria-selected:text-accent"
           >
             {label}
-            {(id === 'examples') === exampleOpen && (
+            {id === tabListing(openId) && (
               <span title="The open exercise is here" className="size-1.5 rounded-full bg-accent" />
             )}
           </button>
@@ -89,9 +95,7 @@ export function LibrarySidebar() {
                 aria-current={example.id === openId}
                 onMouseDown={keepFocus}
                 onClick={() => openExercise(example.id)}
-                className={`min-w-0 flex-1 cursor-pointer truncate rounded-md border-0 px-2 py-1 text-left ${
-                  example.id === openId ? 'bg-accent/10 font-semibold text-accent' : 'bg-transparent hover:bg-line'
-                }`}
+                className={listButtonClass(example.id === openId)}
               >
                 {example.name}
               </button>
@@ -221,9 +225,7 @@ export function LibrarySidebar() {
                     onMouseDown={keepFocus}
                     onClick={() => openExercise(exercise.id)}
                     onDoubleClick={() => setRenamingId(exercise.id)}
-                    className={`min-w-0 flex-1 cursor-pointer truncate rounded-md border-0 px-2 py-1 text-left ${
-                      exercise.id === openId ? 'bg-accent/10 font-semibold text-accent' : 'bg-transparent hover:bg-line'
-                    }`}
+                    className={listButtonClass(exercise.id === openId)}
                   >
                     {exercise.name}
                   </button>
