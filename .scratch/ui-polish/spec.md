@@ -1,6 +1,6 @@
 # Spec: UI polish
 
-Status: ready-for-agent
+Status: done (PR #47)
 
 Source: the ideas parked in the UX review after [ticket 04 of kick-row-and-beat-cards](../kick-row-and-beat-cards/issues/04-swing-written-as-triplets.md), listed as out of scope in the [first-run-examples spec](../first-run-examples/spec.md) ("an empty-state hint… the notation size, narrow-window layout and vim-off-by-default ideas"). Decided with the user on 2026-10-08, after `v1.0.0`: auto-fit notation with a cap, collapsible sidebars that become overlays in a narrow window, a legend line for the figure keycaps, and a hint over the staff for an empty exercise. Vocabulary follows [`CONTEXT.md`](../../CONTEXT.md).
 

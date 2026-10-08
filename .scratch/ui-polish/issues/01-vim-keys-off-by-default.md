@@ -4,8 +4,12 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done (merged in PR #47, 2026-10-08)
 
-- [ ] `DEFAULT_DEVICE_SETTINGS.vimKeys` is `false`. Tested: the defaults have vim keys off. Stored settings are merged over the defaults (`repository.ts`), so a stored `vimKeys: true` is kept
-- [ ] The editor header's `vim on/off` switch and the settings sidebar show off on a fresh profile, and the editor is in Insert mode with no Normal mode
-- [ ] Checked in the browser on a fresh profile, and on one with vim keys stored on
+- [x] `DEFAULT_DEVICE_SETTINGS.vimKeys` is `false`. Tested: the defaults have vim keys off. Stored settings are merged over the defaults (`repository.ts`), so a stored `vimKeys: true` is kept
+- [x] The editor header's `vim on/off` switch and the settings sidebar show off on a fresh profile, and the editor is in Insert mode with no Normal mode
+- [x] Checked in the browser on a fresh profile, and on one with vim keys stored on
+
+## Comments
+
+Checked headless: a fresh profile shows `vim off` and no mode line, and a stored `on` survives a reload.

@@ -4,9 +4,13 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done (merged in PR #47, 2026-10-08)
 
-- [ ] `hasHits(exercise)` says whether any row of any bar has a note. Tested: all rests has none, and one kick note, or one snare note, is a hit
-- [ ] The hint shows in the notation area for an exercise with no hits, centred over the staff, in muted text, and doesn't take clicks
-- [ ] It goes as soon as a hit is entered (by a click or a figure key) and comes back if every hit is removed or undone
-- [ ] Checked in the browser with real mouse clicks: New shows the hint, a click on a grid position clears it, undo brings it back
+- [x] `hasHits(exercise)` says whether any row of any bar has a note. Tested: all rests has none, and one kick note, or one snare note, is a hit
+- [x] The hint shows in the notation area for an exercise with no hits, centred over the staff, in muted text, and doesn't take clicks
+- [x] It goes as soon as a hit is entered (by a click or a figure key) and comes back if every hit is removed or undone
+- [x] Checked in the browser with real mouse clicks: New shows the hint, a click on a grid position clears it, undo brings it back
+
+## Comments
+
+Where the spec was silent: the hint is centred over the first line's staff (the drawing reports that box), on a light card so it reads over the stave lines.

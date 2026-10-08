@@ -4,10 +4,14 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done (merged in PR #47, 2026-10-08)
 
-- [ ] Device settings gain `librarySidebarOpen` and `settingsSidebarOpen`, both default `true`. Tested: the defaults. Stored settings without them load with both open, by the existing merge over the defaults
-- [ ] The library and settings sidebars each have a collapse button (a chevron) in their heading
-- [ ] A collapsed sidebar is a rail about 32 px wide, with an open button and the sidebar's name written vertically, and the notation and beat cards take the room
-- [ ] Collapsing and opening keep focus off the buttons, so Space still enters a rest
-- [ ] Checked in the browser at 1280 px with real mouse clicks: collapse each, reload, they stay collapsed, open them again
+- [x] Device settings gain `librarySidebarOpen` and `settingsSidebarOpen`, both default `true`. Tested: the defaults. Stored settings without them load with both open, by the existing merge over the defaults
+- [x] The library and settings sidebars each have a collapse button (a chevron) in their heading
+- [x] A collapsed sidebar is a rail about 32 px wide, with an open button and the sidebar's name written vertically, and the notation and beat cards take the room
+- [x] Collapsing and opening keep focus off the buttons, so Space still enters a rest
+- [x] Checked in the browser at 1280 px with real mouse clicks: collapse each, reload, they stay collapsed, open them again
+
+## Comments
+
+Where the spec was silent: the settings sidebar gains a "Settings" heading to carry its chevron. The rail's whole button (chevron and name) opens it.
