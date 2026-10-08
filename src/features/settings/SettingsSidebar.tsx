@@ -4,7 +4,7 @@ import { useAppStore } from '@/app/store'
 import { PanelHeading } from '@/components/PanelHeading'
 import { keepFocus } from '@/components/keepFocus'
 import type { ExerciseSettings, GroovePresetId, VolumeSetting } from '@/core'
-import { GROOVE_PRESETS, MAX_SWING, MAX_VOLUME, MIN_SWING, groovePreset, overrideCount } from '@/core'
+import { GROOVE_PRESETS, MAX_SWING, MAX_VOLUME, MIN_SWING, TRIPLET_SWING, groovePreset, overrideCount } from '@/core'
 
 export function SettingsSidebar() {
   return (
@@ -77,7 +77,7 @@ const SWING_PRESETS = [
   { name: 'off', swing: MIN_SWING },
   { name: 'light', swing: 0.58 },
   { name: 'medium', swing: 0.62 },
-  { name: 'triplet', swing: 2 / 3 },
+  { name: 'triplet', swing: TRIPLET_SWING },
   { name: 'dotted', swing: 0.75 },
 ]
 
