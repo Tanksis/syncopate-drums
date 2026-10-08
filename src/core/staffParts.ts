@@ -30,6 +30,14 @@ const DRUM_OF_INSTRUMENT: Partial<Record<Instrument, Drum>> = {
   hihatPedal: 'hihatFoot',
 }
 
+/** Ticks into a beat of the &, of a triplet eighth, and of the let (a triplet beat's last position). */
+const AND = TICKS_PER_BEAT / 2
+const TRIPLET_EIGHTH = TICKS_PER_BEAT / 3
+const LET = 2 * TRIPLET_EIGHTH
+
+/** The beat a tick falls in, across the whole exercise. */
+const beatOf = (tick: number) => Math.floor(tick / TICKS_PER_BEAT)
+
 /** The drum each row is written on. */
 const ROW_DRUM: Record<Row, Drum> = { snare: 'snare', kick: 'bass' }
 
@@ -161,9 +169,10 @@ export function staffParts(bars: readonly Bar[], groove: GroovePresetId, { swung
     ),
   )
 
-  const swing = swungBeats([...snare.sounds, ...kick.sounds, ...grooveStruck], triplet, swung)
-  const exercise = [...snare.sounds, ...kick.sounds].map((s) => respell(s, swing))
-  const grooveSounds = grooveStruck.map((s) => respell(s, swing))
+  const lines = [...snare.sounds, ...kick.sounds]
+  const swungBeat = swung ? swungBeats([...lines, ...grooveStruck], triplet) : triplet.map(() => false)
+  const exercise = lines.map((s) => respell(s, swungBeat))
+  const grooveSounds = grooveStruck.map((s) => respell(s, swungBeat))
 
   const barOf = (s: Sound) => Math.floor(s.start / TICKS_PER_BAR)
   // Every sound on the grid of the hands part as it would be in a bar of one voice, which holds the exercise.
@@ -180,24 +189,19 @@ export function staffParts(bars: readonly Bar[], groove: GroovePresetId, { swung
   // Each part's sounds and triplet beats: in a bar of one voice the hands part holds both rows.
   const [hands, feet] = (['hands', 'feet'] as const).map((limb) => {
     const own = limb === 'hands' ? snare : kick
-    const rowBeats = triplet.map((t, beat) => (oneVoice[barOfBeat(beat)] ? limb === 'hands' && t : own.triplet[beat]))
+    const tripletBeats = triplet.map((t, beat) => (oneVoice[barOfBeat(beat)] ? limb === 'hands' && t : own.triplet[beat]))
     const struck = [
       ...exercise.filter((s) => limbOf(s) === limb),
-      ...grooveSounds.filter((s) => limbOf(s) === limb).map((s) => onGrid(s, rowBeats)),
+      ...grooveSounds.filter((s) => limbOf(s) === limb).map((s) => onGrid(s, tripletBeats)),
     ]
     // A swung downbeat leaves the middle of the triplet silent where its part strikes on the let.
-    const lets = new Set(struck.map((s) => s.start).filter((t) => swing[Math.floor(t / TICKS_PER_BEAT)] && t % TICKS_PER_BEAT === 8))
-    const sounds = struck.map((s) => (lets.has(s.start + 8) ? { ...s, end: Math.min(s.end, s.start + 4) } : s))
+    const lets = new Set(struck.map((s) => s.start).filter((t) => swungBeat[beatOf(t)] && t % TICKS_PER_BEAT === LET))
+    const sounds = struck.map((s) => (lets.has(s.start + LET) ? { ...s, end: Math.min(s.end, s.start + TRIPLET_EIGHTH) } : s))
     // A swung beat is a triplet group in a part only where the part has a note off the downbeat.
-    const offBeat = (tick: number) => tick % TICKS_PER_BEAT !== 0
-    const beats = rowBeats.map(
-      (t, beat) =>
-        t ||
-        (swing[beat] &&
-          sounds.some((s) =>
-            [s.start, s.end].some((tick) => offBeat(tick) && Math.floor(tick / TICKS_PER_BEAT) === beat),
-          )),
+    const offBeat = new Set(
+      sounds.flatMap((s) => [s.start, s.end]).filter((tick) => tick % TICKS_PER_BEAT !== 0).map(beatOf),
     )
+    const beats = tripletBeats.map((t, beat) => t || (swungBeat[beat] && offBeat.has(beat)))
     return { beats, sounds, inBar: (b: number) => sounds.some((s) => barOf(s) === b) }
   })
   /** The part that rests wherever it is silent, in a bar of two voices. */
@@ -216,39 +220,34 @@ export function staffParts(bars: readonly Bar[], groove: GroovePresetId, { swung
   })
 }
 
-/**
- * The beats written swung: with the swing feel on, each sixteenth-grid beat with a hit on the & and
- * none on the e or the a.
- */
-function swungBeats(sounds: readonly Sound[], triplet: readonly boolean[], swung: boolean): boolean[] {
+/** The beats written swung: each sixteenth-grid beat with a hit on the & and none on the e or the a. */
+function swungBeats(sounds: readonly Sound[], triplet: readonly boolean[]): boolean[] {
   return triplet.map((t, beat) => {
-    if (!swung || t) return false
-    const offsets = sounds
-      .filter((s) => Math.floor(s.start / TICKS_PER_BEAT) === beat)
-      .map((s) => s.start % TICKS_PER_BEAT)
-    return offsets.includes(TICKS_PER_BEAT / 2) && offsets.every((o) => o % (TICKS_PER_BEAT / 2) === 0)
+    if (t) return false
+    const offsets = sounds.filter((s) => beatOf(s.start) === beat).map((s) => s.start % TICKS_PER_BEAT)
+    return offsets.includes(AND) && offsets.every((o) => o % AND === 0)
   })
 }
 
-/** A sound in swung beats moved to the triplet grid: the & on the last position, holds to the nearest. */
-function respell(sound: Sound, swing: readonly boolean[]): Sound {
-  const move = (tick: number) => {
-    const beatStart = tick - (tick % TICKS_PER_BEAT)
-    return swing[beatStart / TICKS_PER_BEAT] ? beatStart + Math.round((tick - beatStart) / 4) * 4 : tick
-  }
+/** A tick moved onto the triplet grid in the given beats, by `round` (to the nearest, or the next). */
+function toTripletGrid(tick: number, beats: readonly boolean[], round: (x: number) => number): number {
+  const beatStart = tick - (tick % TICKS_PER_BEAT)
+  return beats[beatOf(tick)] ? beatStart + round((tick - beatStart) / TRIPLET_EIGHTH) * TRIPLET_EIGHTH : tick
+}
+
+/** A sound in swung beats moved to the triplet grid: the & on the let, holds to the nearest position. */
+function respell(sound: Sound, swungBeat: readonly boolean[]): Sound {
+  const move = (tick: number) => toTripletGrid(tick, swungBeat, Math.round)
   const start = move(sound.start)
   if (start === sound.start && move(sound.end) === sound.end) return sound
   // A hold of one sixteenth after the & still lasts a triplet position.
-  const end = swing[Math.floor(sound.start / TICKS_PER_BEAT)] ? Math.max(move(sound.end), start + 4) : move(sound.end)
+  const end = swungBeat[beatOf(sound.start)] ? Math.max(move(sound.end), start + TRIPLET_EIGHTH) : move(sound.end)
   return { ...sound, start, end }
 }
 
 /** A groove sound in a triplet beat, its start and end moved on to the next triplet position. */
 function onGrid(sound: Sound, triplet: readonly boolean[]): Sound {
-  const snap = (tick: number) => {
-    const beatStart = tick - (tick % TICKS_PER_BEAT)
-    return triplet[beatStart / TICKS_PER_BEAT] ? beatStart + Math.ceil((tick - beatStart) / 4) * 4 : tick
-  }
+  const snap = (tick: number) => toTripletGrid(tick, triplet, Math.ceil)
   // A hold ending on a beat line belongs to the beat before it.
   const end = sound.end % TICKS_PER_BEAT === 0 ? sound.end : snap(sound.end)
   return { ...sound, start: snap(sound.start), end }

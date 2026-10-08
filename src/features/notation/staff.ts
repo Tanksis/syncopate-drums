@@ -6,7 +6,7 @@
 import type { StemmableNote } from 'vexflow/bravura'
 import { Beam, Dot, Formatter, Fraction, GhostNote, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
 import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, NoteSticking, PlayPosition, StaffEvent } from '@/core'
-import { MIN_SWING, TICKS_PER_BEAT, inLoopRange, restBar, setBeat, staffParts, sticking } from '@/core'
+import { TICKS_PER_BEAT, inLoopRange, restBar, setBeat, staffParts, sticking, swingOn } from '@/core'
 
 // Mirror the accent, a light tint of it and the loop range's ink and shade from the design tokens in styles/index.css.
 const ACCENT_COLOUR = '#2563eb'
@@ -178,8 +178,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   const barsPerLine = Math.max(1, Math.min(BARS_PER_LINE, Math.floor(available / MIN_BAR_WIDTH)))
   const barWidth = Math.floor(available / barsPerLine)
   const lines = Math.ceil(bars.length / barsPerLine)
-  // Swing on (above straight) writes the swung eighths as triplets (ADR 0006).
-  const parts = staffParts(bars, exercise.practice.groove, { swung: exercise.practice.swing > MIN_SWING })
+  const parts = staffParts(bars, exercise.practice.groove, { swung: swingOn(exercise.practice) })
   /** A part is drawn when it has a note or a rest anywhere. */
   const drawnLimbs = (['hands', 'feet'] as const).filter((limb) =>
     parts.some((bar) => bar[limb].some((e) => e.kind !== 'space')),
