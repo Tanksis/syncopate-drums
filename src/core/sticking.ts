@@ -1,8 +1,9 @@
-// Sticking: which hand plays each struck note. Computed once over the whole exercise from bar 1,
-// so it never depends on the loop range or which pass is playing.
+// Sticking: which hand plays each struck note of the snare row (the kick row is played with the
+// feet). Computed once over the whole exercise from bar 1, so it never depends on the loop range or
+// which pass is playing.
 
 import type { Exercise, Hand } from './model'
-import { BEATS_PER_BAR, TICKS_PER_BEAT } from './model'
+import { BEATS_PER_BAR, TICKS_PER_BEAT, noteId } from './model'
 import type { PlacedItem } from './speller'
 import { placeItems } from './speller'
 
@@ -16,25 +17,24 @@ export interface NoteSticking {
   /** The hand the sticking mode gives this note; null with sticking off. */
   computed: Hand | null
   override?: Hand
-  /** The hand printed under the note: null with sticking off or under the bass drum voice. */
+  /** The hand printed under the note: null with sticking off. */
   shown: Hand | null
 }
 
 const other = (hand: Hand): Hand => (hand === 'R' ? 'L' : 'R')
 
-/** A hand for each struck note, in order. Rests and tied continuations get none. */
+/** A hand for each struck note of the snare row, in order. Rests and tied continuations get none. */
 export function sticking(exercise: Exercise): NoteSticking[] {
   const { leadHand, sticking: mode } = exercise
-  const placed = placeItems(exercise.bars)
+  const placed = placeItems(exercise.bars, 'snare')
   const hands = mode === 'alternate' ? alternate(placed, leadHand) : natural(placed, leadHand)
-  // Hidden hands keep their overrides, so switching back brings them back.
-  const hidden = mode === 'off' || exercise.voice === 'bass'
   return placed.flatMap((p, i) => {
     if (p.item.kind !== 'note' || p.continuation) return []
+    // Hidden hands keep their overrides, so switching back brings them back.
     const computed = mode === 'off' ? null : hands[i]
     const { override } = p.item
-    const shown = hidden ? null : (override ?? computed)
-    return [{ noteId: `${p.bar}:${p.start}`, bar: p.bar, start: p.start, computed, override, shown }]
+    const shown = computed && (override ?? computed)
+    return [{ noteId: noteId('snare', p.bar, p.start), bar: p.bar, start: p.start, computed, override, shown }]
   })
 }
 

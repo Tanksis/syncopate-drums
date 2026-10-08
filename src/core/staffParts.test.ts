@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Bar, GroovePresetId, StaffEvent } from './index'
-import { FIGURES, TICKS_PER_BAR, itemTicks, restBar, setBeat, staffParts, toggleCutShort, toggleTie } from './index'
+import { FIGURES, TICKS_PER_BAR, itemTicks, restBar, restItems, setBeat, staffParts, toggleCutShort, toggleTie } from './index'
 
 /**
  * A part in shorthand, one event per entry: its start tick, its value (q e s, `.` for a dot, 3 for
@@ -16,15 +16,18 @@ function show(events: readonly StaffEvent[]): string[] {
 
 /** One bar written beat by beat with figure hits. */
 function bar(...hits: string[]): Bar[] {
-  return hits.reduce<Bar[]>((bars, h, beat) => setBeat(bars, 0, beat, h), [restBar()])
+  return hits.reduce<Bar[]>((bars, h, beat) => setBeat(bars, 'snare', 0, beat, h), [restBar()])
 }
 
-const hands = (bars: Bar[], groove: GroovePresetId, b = 0) => show(staffParts(bars, 'snare', groove)[b].hands)
-const feet = (bars: Bar[], groove: GroovePresetId, b = 0) => show(staffParts(bars, 'snare', groove)[b].feet)
+/** The same line in the kick row, over a resting snare row. */
+const asKicks = (bars: Bar[]): Bar[] => bars.map((b) => ({ snare: restItems(), kick: b.snare }))
+
+const hands = (bars: Bar[], groove: GroovePresetId, b = 0) => show(staffParts(bars, groove)[b].hands)
+const feet = (bars: Bar[], groove: GroovePresetId, b = 0) => show(staffParts(bars, groove)[b].feet)
 
 describe('one voice where the feet only play with the hands (ADR 0004)', () => {
   it("hangs the jazz hi-hat foot on the ride's stems, with no feet part", () => {
-    const parts = staffParts(bar('....', '..x.', '....', 'x...'), 'snare', 'jazz')[0]
+    const parts = staffParts(bar('....', '..x.', '....', 'x...'), 'jazz')[0]
     expect(show(parts.hands)).toEqual([
       '0 q ride',
       '12 e ride+hihatFoot',
@@ -36,8 +39,8 @@ describe('one voice where the feet only play with the hands (ADR 0004)', () => {
     expect(parts.feet).toEqual([])
   })
 
-  it("hangs a bass drum line on the hi-hat's stems where every kick lands with the hands", () => {
-    const parts = staffParts(bar('x...', '..x.', 'x...', '..x.'), 'bass', 'hihatEighths')[0]
+  it("hangs a kick row on the hi-hat's stems where every kick lands with the hands", () => {
+    const parts = staffParts(asKicks(bar('x...', '..x.', 'x...', '..x.')), 'hihatEighths')[0]
     expect(show(parts.hands).slice(0, 4)).toEqual(['0 e hihat+bass', '6 e hihat', '12 e hihat', '18 e hihat+bass'])
     expect(parts.feet).toEqual([])
   })
@@ -46,7 +49,7 @@ describe('one voice where the feet only play with the hands (ADR 0004)', () => {
 describe('two voices where a foot plays on its own (ADR 0004)', () => {
   it("holds the hi-hat foot until the feet part's next note, not the ride's, and rests the feet where they are silent", () => {
     // The kick on the e of 3 falls between the ride's notes, so the feet keep their own voice.
-    expect(show(staffParts(bar('....', '....', '.x..', '....'), 'bass', 'jazz')[0].feet)).toEqual([
+    expect(show(staffParts(asKicks(bar('....', '....', '.x..', '....')), 'jazz')[0].feet)).toEqual([
       '0 q rest',
       '12 q hihatFoot',
       '24 s rest',
@@ -83,7 +86,7 @@ describe('the staff parts: hands up, feet down', () => {
 
   it("shares the hi-hat eighths' stems with the snare, with no rests", () => {
     // An eighth on 1, cut short, so the & of 1 is the hi-hat's alone.
-    const line = toggleCutShort(bar('x...', '....', 'xxxx', '....'), 0, 0)
+    const line = toggleCutShort(bar('x...', '....', 'xxxx', '....'), 'snare', 0, 0)
     expect(hands(line, 'hihatEighths')).toEqual([
       '0 e hihat+snare',
       '6 e hihat',
@@ -126,16 +129,16 @@ describe('the staff parts: hands up, feet down', () => {
       '36 e hihat+snare',
       '42 e hihat',
     ])
-    const tied = toggleTie(bar('x...', 'x.x.', '....', '....'), 0, 1)
+    const tied = toggleTie(bar('x...', 'x.x.', '....', '....'), 'snare', 0, 1)
     expect(hands(tied, 'jazz').slice(0, 3)).toEqual(['0 q ride+snare', '12 e ride+hihatFoot', '18 e ride+snare'])
     expect(hands(tied, 'hihatEighths').slice(0, 4)).toEqual(['0 e hihat+snare', '6 e hihat', '12 e hihat', '18 e hihat+snare'])
   })
 
   it('keeps exact holds and ties where nothing else in the part strikes', () => {
-    const tied = toggleTie(bar('x...', 'x.x.', '....', '....'), 0, 1)
+    const tied = toggleTie(bar('x...', 'x.x.', '....', '....'), 'snare', 0, 1)
     expect(hands(tied, 'off').slice(0, 2)).toEqual(['0 q. snare', '18 e snare'])
     // Tied over the bar line: under jazz the snare stops at the ride on the & of 4; bare, it is tied on.
-    const overBar = toggleTie(setBeat(setBeat([restBar(), restBar()], 0, 3, 'x...'), 1, 0, 'x...'), 1, 0)
+    const overBar = toggleTie(setBeat(setBeat([restBar(), restBar()], 'snare', 0, 3, 'x...'), 'snare', 1, 0, 'x...'), 'snare', 1, 0)
     expect(hands(overBar, 'jazz', 0).slice(-2)).toEqual(['36 e ride+snare+hihatFoot', '42 e ride'])
     expect(hands(overBar, 'jazz', 1)[0]).toBe('0 q ride')
     expect(hands(overBar, 'off', 0).at(-1)).toBe('36 q snare')
@@ -143,7 +146,7 @@ describe('the staff parts: hands up, feet down', () => {
   })
 
   it('writes the groove on the triplet grid in a triplet beat of the line, struck where it sounds', () => {
-    const parts = staffParts(bar('....', 'xxx', '....', '....'), 'snare', 'jazz')[0]
+    const parts = staffParts(bar('....', 'xxx', '....', '....'), 'jazz')[0]
     expect(show(parts.hands).slice(1, 4)).toEqual(['12 e3 ride+snare+hihatFoot', '16 e3 snare', '20 e3 ride+snare'])
     expect(parts.hands.find((e) => e.start === 20)).toMatchObject({ strikes: [18, 20] })
     expect(hands(bar('x.x', '....', '....', '....'), 'hihatEighths').slice(0, 2)).toEqual([
@@ -156,17 +159,17 @@ describe('the staff parts: hands up, feet down', () => {
     'fills every bar of each part it writes and never rests the hands under the %s groove, whatever the figures',
     (groove) => {
       const line = FIGURES.reduce<Bar[]>(
-        (bars, figure, i) => setBeat(bars, Math.floor(i / 4), i % 4, figure.hits),
+        (bars, figure, i) => setBeat(bars, 'snare', Math.floor(i / 4), i % 4, figure.hits),
         Array.from({ length: Math.ceil(FIGURES.length / 4) }, restBar),
       )
       const fills = (part: StaffEvent[]) => expect([0, TICKS_PER_BAR]).toContain(part.reduce((ticks, e) => ticks + itemTicks(e), 0))
-      for (const { hands: h, feet: f } of staffParts(line, 'snare', groove)) {
+      for (const { hands: h, feet: f } of staffParts(line, groove)) {
         expect(h.reduce((ticks, e) => ticks + itemTicks(e), 0)).toBe(TICKS_PER_BAR)
         fills(f)
         expect([...h, ...f].filter((e) => e.kind === 'rest')).toEqual([])
       }
-      // As a bass drum line, the parts still fill every bar and the hands part never rests.
-      for (const { hands: h, feet: f } of staffParts(line, 'bass', groove)) {
+      // As a kick row alone, the parts still fill every bar and the hands part never rests.
+      for (const { hands: h, feet: f } of staffParts(asKicks(line), groove)) {
         expect(h.reduce((ticks, e) => ticks + itemTicks(e), 0)).toBe(TICKS_PER_BAR)
         fills(f)
         expect(h.filter((e) => e.kind === 'rest')).toEqual([])
@@ -175,7 +178,7 @@ describe('the staff parts: hands up, feet down', () => {
   )
 
   it("labels only the exercise's notes with their ids, and each chord with the ticks it strikes", () => {
-    const chord = staffParts(bar('....', '..x.', '....', '....'), 'snare', 'jazz')[0].hands[2]
+    const chord = staffParts(bar('....', '..x.', '....', '....'), 'jazz')[0].hands[2]
     expect(chord).toMatchObject({ kind: 'chord', start: 18, strikes: [18] })
     expect(chord.kind === 'chord' && chord.notes).toEqual([
       { drum: 'ride', key: 'f/5', notehead: 'x', tied: false },
@@ -184,13 +187,19 @@ describe('the staff parts: hands up, feet down', () => {
   })
 })
 
-describe('a bass drum line: the feet part', () => {
-  const bassFeet = (bars: Bar[], groove: GroovePresetId) => show(staffParts(bars, 'bass', groove)[0].feet)
-  const bassHands = (bars: Bar[], groove: GroovePresetId) => show(staffParts(bars, 'bass', groove)[0].hands)
+describe('a kick row alone: the feet part', () => {
+  const bassFeet = (bars: Bar[], groove: GroovePresetId) => show(staffParts(asKicks(bars), groove)[0].feet)
+  const bassHands = (bars: Bar[], groove: GroovePresetId) => show(staffParts(asKicks(bars), groove)[0].hands)
   const line = bar('x...', '..x.', '....', 'xx.x')
   const bare = ['0 q bass', '12 e rest', '18 e bass', '24 q rest', '36 s bass', '39 e bass', '45 s bass']
 
-  it('writes a bare bass drum line in the feet part with its rests, and the hands part as space', () => {
+  it('rests a kick row alone in the feet part, even in a bar where it is silent, as a bass drum line was', () => {
+    const [, silent] = staffParts(asKicks(setBeat([restBar(), restBar()], 'snare', 0, 0, 'x...')), 'off')
+    expect(show(silent.feet)).toEqual(['0 q rest', '12 q rest', '24 q rest', '36 q rest'])
+    expect(show(silent.hands)).toEqual(['0 q space', '12 q space', '24 q space', '36 q space'])
+  })
+
+  it('writes a bare kick row in the feet part with its rests, and the hands part as space', () => {
     expect(bassFeet(line, 'off')).toEqual(bare)
     expect(bassHands(line, 'off')).toEqual(['0 q space', '12 q space', '24 q space', '36 q space'])
   })
@@ -219,11 +228,11 @@ describe('a bass drum line: the feet part', () => {
       '45 s bass',
     ])
     // One voice: the line's bass drum on 1 hangs on the ride's stem.
-    const [first] = staffParts(bar('x...'), 'bass', 'jazzFeathered')[0].hands
+    const [first] = staffParts(asKicks(bar('x...')), 'jazzFeathered')[0].hands
     expect(first).toMatchObject({ kind: 'chord', start: 0, strikes: [0] })
     expect(first.kind === 'chord' && first.notes).toEqual([
       { drum: 'ride', key: 'f/5', notehead: 'x', tied: false },
-      { drum: 'bass', key: 'f/4', notehead: 'normal', noteId: '0:0', tied: false },
+      { drum: 'bass', key: 'f/4', notehead: 'normal', noteId: 'kick:0:0', tied: false },
     ])
   })
 
@@ -233,12 +242,44 @@ describe('a bass drum line: the feet part', () => {
   })
 
   it('ends a held bass drum note at the next chord of the feet part, untied', () => {
-    const held = toggleTie(bar('x...', 'x...', '....', '....'), 0, 1)
+    const held = toggleTie(bar('x...', 'x...', '....', '....'), 'snare', 0, 1)
     expect(bassFeet(held, 'off').slice(0, 3)).toEqual(['0 q. bass', '18 e ~bass', '24 q rest'])
     // A kick on the e of 3 keeps the feet apart under the jazz groove.
-    const apart = setBeat(held, 0, 2, '.x..')
+    const apart = setBeat(held, 'snare', 0, 2, '.x..')
     expect(bassFeet(apart, 'jazz').slice(0, 3)).toEqual(['0 q bass', '12 q hihatFoot', '24 s rest'])
     // Every kick with the ride: one voice, and the held bass drum ends at the ride's next stem.
     expect(bassHands(held, 'jazz').slice(0, 3)).toEqual(['0 q ride+bass', '12 e ride+hihatFoot', '18 e ride'])
+  })
+})
+
+describe('the snare row and the kick row together (ADRs 0004, 0005)', () => {
+  /** The bars with kick-row figures, one per beat of bar 1. */
+  const withKicks = (bars: Bar[], ...hits: string[]) => hits.reduce((b, h, beat) => setBeat(b, 'kick', 0, beat, h), bars)
+  const quarters = bar('x...', 'x...', 'x...', 'x...')
+
+  it('writes a kick off the snare\'s hits in a feet part, stems down, with its rests: two voices', () => {
+    const parts = staffParts(withKicks(quarters, '....', '..x.'), 'off')[0]
+    expect(show(parts.hands)).toEqual(['0 q snare', '12 q snare', '24 q snare', '36 q snare'])
+    expect(show(parts.feet)).toEqual(['0 q rest', '12 e rest', '18 e bass', '24 q rest', '36 q rest'])
+    expect(parts.feet.find((e) => e.kind === 'chord')).toMatchObject({ notes: [{ noteId: 'kick:0:18' }] })
+  })
+
+  it("hangs kicks that land on the snare's hits on its stems: one voice", () => {
+    const parts = staffParts(withKicks(quarters, 'x...', '....', 'x...'), 'off')[0]
+    expect(show(parts.hands)).toEqual(['0 q snare+bass', '12 q snare', '24 q snare+bass', '36 q snare'])
+    expect(parts.feet).toEqual([])
+  })
+
+  it('rests the snare row in a bar where only the kick plays, once the snare row has notes elsewhere', () => {
+    const twoBars = withKicks(setBeat([restBar(), restBar()], 'snare', 1, 0, 'x...'), '.x..')
+    const [first] = staffParts(twoBars, 'off')
+    expect(show(first.hands)).toEqual(['0 q rest', '12 q rest', '24 q rest', '36 q rest'])
+    expect(show(first.feet).slice(0, 2)).toEqual(['0 s rest', '3 e. bass'])
+  })
+
+  it('writes each row on its own grid in a beat they share: triplets in the snare, a quarter kick', () => {
+    const parts = staffParts(withKicks(bar('.xx'), 'x...'), 'off')[0]
+    expect(show(parts.hands).slice(0, 3)).toEqual(['0 e3 rest', '4 e3 snare', '8 e3 snare'])
+    expect(show(parts.feet).slice(0, 2)).toEqual(['0 q bass', '12 q rest'])
   })
 })

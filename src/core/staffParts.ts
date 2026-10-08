@@ -1,14 +1,14 @@
 // The staff parts: the exercise and its groove layer written by limb, as drum-set charts are (ADRs
-// 0002 and 0004). Everything played with the hands is one part, stems up; everything played with
-// the feet is the other, stems down, unless the feet only ever play with the hands in a bar: then
-// the bar is one voice and the feet hang on the hands' stems. Hits at the same tick share a stem.
+// 0002, 0004 and 0005). Everything played with the hands (the snare row among it) is one part, stems
+// up; everything played with the feet (the kick row among it) is the other, stems down, unless the
+// feet only ever play with the hands in a bar: then the bar is one voice and the feet hang on the
+// hands' stems. Hits at the same tick share a stem.
 
-import type { Bar, Duration, GroovePresetId, Limb, Voice } from './model'
-import { TICKS_PER_BAR, TICKS_PER_BEAT, VOICE_LIMB, itemTicks } from './model'
+import type { Bar, Duration, GroovePresetId, Limb, Row } from './model'
+import { ROWS, TICKS_PER_BAR, TICKS_PER_BEAT, itemTicks, noteId } from './model'
 import type { GrooveNotation } from './groove'
 import { grooveHitsByTick } from './groove'
 import type { Instrument } from './schedule'
-import { VOICE_INSTRUMENT } from './schedule'
 import { placeItems, spellSpan } from './speller'
 
 /** A drum of the kit as the notation writes it. */
@@ -30,10 +30,13 @@ const DRUM_OF_INSTRUMENT: Partial<Record<Instrument, Drum>> = {
   hihatPedal: 'hihatFoot',
 }
 
-/** Where an exercise voice's notes sit on the percussion staff: snare on the third space, bass drum on the first. */
-const VOICE_NOTATION: Record<Voice, GrooveNotation> = {
+/** The drum each row is written on. */
+const ROW_DRUM: Record<Row, Drum> = { snare: 'snare', kick: 'bass' }
+
+/** Where each row's notes sit on the percussion staff: snare on the third space, bass drum on the first. */
+const ROW_NOTATION: Record<Row, GrooveNotation> = {
   snare: { key: 'c/5', notehead: 'normal' },
-  bass: { key: 'f/4', notehead: 'normal' },
+  kick: { key: 'f/4', notehead: 'normal' },
 }
 
 /** One notehead of a chord. */
@@ -42,7 +45,7 @@ export interface StaffNote {
   /** Where VexFlow places it on the percussion staff, and its notehead. */
   key: string
   notehead: 'x' | 'normal'
-  /** Set only on the exercise's notes: the struck note's id, `bar:tick`, for sticking and overrides. */
+  /** Set only on the exercise's notes: the struck note's id (see `noteId`), for sticking and overrides. */
   noteId?: string
   /** A tied continuation of this drum's note in the part's previous chord: drawn, not struck. */
   tied: boolean
@@ -69,7 +72,7 @@ export interface StaffChord extends Value {
   strikes: number[]
 }
 
-/** A rest, written where the part holding the exercise is silent. */
+/** A rest, written where a part that has notes in the bar, or holds the exercise, is silent. */
 export interface StaffRest extends Value {
   kind: 'rest'
 }
@@ -102,37 +105,44 @@ interface Sound {
 
 /**
  * The exercise and its groove preset as the notation writes them, bar by bar: a hands part (stems
- * up) and a feet part (stems down) of chords, rests and space.
+ * up) and a feet part (stems down) of chords, rests and space. The snare row is in the hands part
+ * and the kick row in the feet part.
  *
- * - A bar where the feet play, but only ever together with the hands, is one voice: the feet's
- *   notes join the hands' chords and the feet part is empty. Otherwise the bar is two voices.
+ * - A bar where the feet play (the kick row or the groove), but only ever together with the hands,
+ *   is one voice: the feet's notes join the hands' chords and the feet part is empty. Otherwise the
+ *   bar is two voices.
  * - Hits at the same tick in a part share a chord. A chord holds until the part's next chord, or
  *   until all its notes' holds have ended if that is sooner. A groove note holds to the end of its
  *   beat.
  * - An exercise note held past its part's next chord ends there, untied. Its exact hold and ties
  *   are written only where nothing else in the part strikes before it ends.
- * - A part rests wherever it is silent if it holds the exercise or has a note in the bar; otherwise
- *   it has space there. Rests and notes are spelled as the speller spells them.
+ * - A part rests wherever it is silent if it has a note in the bar or holds the exercise: the hands
+ *   part does, unless only the kick row has notes, when the feet part does (as a bass drum line
+ *   was written before it had a snare row). Otherwise a part has space there. Rests and notes are
+ *   spelled as the speller spells them.
  * - Where the exercise and the groove strike the same drum at once, the exercise's note is written.
- * - In a triplet beat of the exercise, a groove hit off the triplet grid is written on the next
- *   triplet position.
+ * - In a part's triplet beat (one its row writes as a triplet group), a groove hit off the triplet
+ *   grid is written on the next triplet position.
  */
-export function staffParts(bars: readonly Bar[], voice: Voice, groove: GroovePresetId): StaffBar[] {
+export function staffParts(bars: readonly Bar[], groove: GroovePresetId): StaffBar[] {
   const total = bars.length * TICKS_PER_BAR
-  const exerciseDrum = DRUM_OF_INSTRUMENT[VOICE_INSTRUMENT[voice]]!
-  const exerciseLimb = VOICE_LIMB[voice]
 
-  // The exercise's struck notes, each held through its tied continuations.
-  const exercise: Sound[] = []
-  const triplet = Array.from({ length: total / TICKS_PER_BEAT }, () => false)
-  for (const p of placeItems(bars)) {
-    const start = p.bar * TICKS_PER_BAR + p.start
-    if (p.item.kind !== 'note') continue
-    if (p.item.triplet) triplet[Math.floor(start / TICKS_PER_BEAT)] = true
-    const end = start + itemTicks(p.item)
-    if (p.continuation && exercise.length) exercise.at(-1)!.end = end
-    else exercise.push({ drum: exerciseDrum, notation: VOICE_NOTATION[voice], start, end, heard: start, noteId: `${p.bar}:${p.start}` })
-  }
+  // Each row's struck notes, each held through its tied continuations, and its triplet beats.
+  const [snare, kick] = ROWS.map((row) => {
+    const sounds: Sound[] = []
+    const triplet = Array.from({ length: total / TICKS_PER_BEAT }, () => false)
+    for (const p of placeItems(bars, row)) {
+      const start = p.bar * TICKS_PER_BAR + p.start
+      if (p.item.kind !== 'note') continue
+      if (p.item.triplet) triplet[Math.floor(start / TICKS_PER_BEAT)] = true
+      const end = start + itemTicks(p.item)
+      if (p.continuation && sounds.length) sounds.at(-1)!.end = end
+      else sounds.push({ drum: ROW_DRUM[row], notation: ROW_NOTATION[row], start, end, heard: start, noteId: noteId(row, p.bar, p.start) })
+    }
+    return { sounds, triplet }
+  })
+  const exercise = [...snare.sounds, ...kick.sounds]
+  const triplet = snare.triplet.map((t, beat) => t || kick.triplet[beat])
 
   const grooveSounds: Sound[] = bars.flatMap((_, b) =>
     [...grooveHitsByTick(groove)].flatMap(([tick, hits]) =>
@@ -156,17 +166,24 @@ export function staffParts(bars: readonly Bar[], voice: Voice, groove: GroovePre
     return feet.length > 0 && feet.every((s) => handStarts.has(s.start))
   })
   const limbOf = (s: Sound): Limb => (oneVoice[barOf(s)] ? 'hands' : LIMB[s.drum])
+  const barOfBeat = (beat: number) => Math.floor((beat * TICKS_PER_BEAT) / TICKS_PER_BAR)
 
-  const parts = (['hands', 'feet'] as const).map((limb) => {
-    const holdsExercise = (b: number) => (oneVoice[b] ? limb === 'hands' : limb === exerciseLimb)
-    const beats = triplet.map((t, beat) => t && holdsExercise(Math.floor((beat * TICKS_PER_BEAT) / TICKS_PER_BAR)))
+  // Each part's sounds and triplet beats: in a bar of one voice the hands part holds both rows.
+  const [hands, feet] = (['hands', 'feet'] as const).map((limb) => {
+    const own = limb === 'hands' ? snare : kick
+    const beats = triplet.map((t, beat) => (oneVoice[barOfBeat(beat)] ? limb === 'hands' && t : own.triplet[beat]))
     const sounds = [
       ...exercise.filter((s) => limbOf(s) === limb),
       ...grooveSounds.filter((s) => limbOf(s) === limb).map((s) => onGrid(s, beats)),
     ]
-    const rests = bars.map((_, b) => holdsExercise(b) || sounds.some((s) => barOf(s) === b))
-    return writePart(sounds, beats, rests, total)
+    return { beats, sounds, inBar: (b: number) => sounds.some((s) => barOf(s) === b) }
   })
+  /** The part that rests wherever it is silent, in a bar of two voices. */
+  const holdsExercise: Limb = snare.sounds.length === 0 && kick.sounds.length > 0 ? 'feet' : 'hands'
+  const parts = [
+    writePart(hands.sounds, hands.beats, bars.map((_, b) => hands.inBar(b) || holdsExercise === 'hands'), total),
+    writePart(feet.sounds, feet.beats, bars.map((_, b) => feet.inBar(b) || holdsExercise === 'feet'), total),
+  ]
 
   return bars.map((_, b) => {
     const inBar = (events: StaffEvent[]) =>

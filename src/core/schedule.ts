@@ -2,8 +2,8 @@
 // Musical position (bar, tick) is the source of truth. Each call converts ticks to seconds from
 // the position it is given, at the BPM it is given, so a tempo change only affects what comes next.
 
-import type { DeviceSettings, Exercise, LoopRange, PracticeSettings, Voice } from './model'
-import { TICKS_PER_BAR, TICKS_PER_BEAT, loopBars } from './model'
+import type { DeviceSettings, Exercise, LoopRange, PracticeSettings, Row } from './model'
+import { ROWS, TICKS_PER_BAR, TICKS_PER_BEAT, loopBars, noteId } from './model'
 import { grooveHitsByTick } from './groove'
 import { placeItems } from './speller'
 
@@ -31,7 +31,7 @@ export interface ScheduledEvent {
   accent: boolean
   /** How hard a groove hit is played, 0–1 of the instrument's usual level; other events always play at 1. */
   velocity?: number
-  /** The struck note, as `bar:tick`. */
+  /** The struck note's id (see `noteId`). */
   noteId?: string
   position: PlayPosition
 }
@@ -60,7 +60,7 @@ export function schedule(
 ): ScheduleResult {
   const secondsPerTick = 60 / practice.bpm / TICKS_PER_BEAT
   const swing = effectiveSwing(practice.swing, practice.bpm)
-  const struck = struckTicks(exercise)
+  const struck = ROWS.map((row) => ({ row, ticks: struckTicks(exercise, row) }))
   const groove = grooveHitsByTick(practice.groove)
   const loop = loopBars(practice.loopRange, exercise.bars.length)
   let position: PlayPosition
@@ -76,15 +76,15 @@ export function schedule(
     if (tick % TICKS_PER_BEAT === 0) {
       events.push({ time, kind: 'click', instrument: 'click', accent: tick === 0, position })
     }
-    const exerciseStrikes = bar >= 0 && struck[bar]?.has(tick)
-    if (exerciseStrikes) {
-      const instrument = VOICE_INSTRUMENT[exercise.voice]
-      events.push({ time, kind: 'exercise', instrument, accent: false, noteId: `${bar}:${tick}`, position })
+    const strikes = bar >= 0 ? struck.filter(({ ticks }) => ticks[bar]?.has(tick)).map(({ row }) => row) : []
+    for (const row of strikes) {
+      const instrument = ROW_INSTRUMENT[row]
+      events.push({ time, kind: 'exercise', instrument, accent: false, noteId: noteId(row, bar, tick), position })
     }
     if (bar >= 0) {
       for (const { instrument, velocity } of groove.get(tick) ?? []) {
-        // One drum is played once: a bass drum line's hit replaces the groove's bass drum there.
-        if (exerciseStrikes && exercise.voice === 'bass' && BASS_DRUMS.has(instrument)) continue
+        // One drum is played once: a kick row's hit replaces the groove's bass drum there.
+        if (strikes.includes('kick') && BASS_DRUMS.has(instrument)) continue
         events.push({ time, kind: 'groove', instrument, accent: false, velocity, position })
       }
     }
@@ -124,15 +124,15 @@ function advance({ bar, tick }: PlayPosition, loop: LoopRange): PlayPosition {
   return { bar: bar < 0 || bar >= loop.last ? loop.first : bar + 1, tick: 0 }
 }
 
-/** The instrument an exercise in each voice is played on. */
-export const VOICE_INSTRUMENT: Record<Voice, Instrument> = { snare: 'snare', bass: 'kick' }
+/** The instrument each row is played on. */
+export const ROW_INSTRUMENT: Record<Row, Instrument> = { snare: 'snare', kick: 'kick' }
 
 const BASS_DRUMS: ReadonlySet<Instrument> = new Set(['kick', 'kickFeathered'])
 
-/** Per bar, the ticks where a note is struck (tied continuations are held, not struck). */
-function struckTicks(exercise: Exercise): Set<number>[] {
+/** Per bar, the ticks where a row strikes a note (tied continuations are held, not struck). */
+function struckTicks(exercise: Exercise, row: Row): Set<number>[] {
   const struck = exercise.bars.map(() => new Set<number>())
-  for (const p of placeItems(exercise.bars)) {
+  for (const p of placeItems(exercise.bars, row)) {
     if (p.item.kind === 'note' && !p.continuation) struck[p.bar].add(p.start)
   }
   return struck

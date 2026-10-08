@@ -42,10 +42,16 @@ const line = (beats: string[], bpm = 120): Exercise => {
   beats.forEach((hits, i) => {
     const bar = Math.floor(i / 4)
     while (bars.length <= bar) bars = [...bars, ...newExercise({ id: 'x', now: 0 }).bars]
-    bars = setBeat(bars, bar, i % 4, hits)
+    bars = setBeat(bars, 'snare', bar, i % 4, hits)
   })
   return { ...ex, bars }
 }
+
+/** The exercise with kick-row figures, one string per beat of bar 1. */
+const withKicks = (ex: Exercise, beats: string[]): Exercise => ({
+  ...ex,
+  bars: beats.reduce((bars, hits, beat) => setBeat(bars, 'kick', 0, beat, hits), ex.bars),
+})
 
 describe('playing the exercise', () => {
   it('clicks every quarter with beat 1 accented and strikes the notes on the snare', () => {
@@ -82,10 +88,17 @@ describe('playing the exercise', () => {
     ])
   })
 
-  it('plays the bass drum when that is the voice', () => {
-    const ex = { ...line(['x...']), voice: 'bass' as const }
-    const { events } = schedule(ex, ex.practice, device, { bar: 0, tick: 0 }, 0.1)
-    expect(show(events)).toEqual(['0.000 click click accent', '0.000 exercise kick 0:0'])
+  it('plays the kick row on the bass drum, with the snare row', () => {
+    const ex = withKicks(line(['x...', 'x...']), ['x...', '..x.'])
+    const { events } = schedule(ex, ex.practice, device, { bar: 0, tick: 0 }, 1)
+    expect(show(events)).toEqual([
+      '0.000 click click accent',
+      '0.000 exercise snare 0:0',
+      '0.000 exercise kick kick:0:0',
+      '0.500 click click',
+      '0.500 exercise snare 0:12',
+      '0.750 exercise kick kick:0:18',
+    ])
   })
 
   it('goes straight from the count-in into bar 1', () => {
@@ -147,7 +160,7 @@ describe('starting playback', () => {
 describe('ties', () => {
   it("doesn't strike tied continuations, also across a bar line", () => {
     const ex = line(['x...', '..x.', 'x...', '..x.', 'x.x.'], 60)
-    const bars = toggleTie(toggleTie(ex.bars, 0, 2), 1, 0)
+    const bars = toggleTie(toggleTie(ex.bars, 'snare', 0, 2), 'snare', 1, 0)
     const tied = { ...ex, bars }
     const { events } = schedule(tied, tied.practice, device, { bar: 0, tick: 0 }, 5)
     expect(events.filter((e) => e.kind === 'exercise').map((e) => e.noteId)).toEqual(['0:0', '0:18', '0:42', '1:6'])
@@ -315,12 +328,12 @@ describe('the groove layer', () => {
     ])
   })
 
-  it('plays one bass drum where a bass drum line and the feathered bass drum strike together', () => {
-    const ex = { ...line(['x...', '..x.', '....', '....'], 60), voice: 'bass' as const }
+  it('plays one bass drum where the kick row and the feathered bass drum strike together', () => {
+    const ex = withKicks(line(['x...', 'x...'], 60), ['x...', '..x.'])
     const feathered = { ...ex, practice: { ...ex.practice, groove: 'jazzFeathered' as const } }
     const { events } = schedule(feathered, feathered.practice, device, { bar: 0, tick: 0 }, 2)
     const bassDrums = show(events.filter((e) => e.instrument === 'kick' || e.instrument === 'kickFeathered'))
-    expect(bassDrums).toEqual(['0.000 exercise kick 0:0', '1.000 groove kickFeathered', '1.500 exercise kick 0:18'])
+    expect(bassDrums).toEqual(['0.000 exercise kick kick:0:0', '1.000 groove kickFeathered', '1.500 exercise kick kick:0:18'])
   })
 
   it('keeps the feathered bass drum under a snare line', () => {
@@ -339,7 +352,7 @@ describe('the groove layer', () => {
 describe('holds', () => {
   it('change how a note is written, not how it sounds', () => {
     const ex = line(['x.x.', 'x...', 'xxx', 'x..x'])
-    const held = { ...ex, bars: setHold(setHold(ex.bars, { bar: 0, beat: 0, position: 0 }, { bar: 0, beat: 0, position: 1 }), { bar: 0, beat: 1, position: 0 }, { bar: 0, beat: 1, position: 1 }) }
+    const held = { ...ex, bars: setHold(setHold(ex.bars, { row: 'snare', bar: 0, beat: 0, position: 0 }, { row: 'snare', bar: 0, beat: 0, position: 1 }), { row: 'snare', bar: 0, beat: 1, position: 0 }, { row: 'snare', bar: 0, beat: 1, position: 1 }) }
     expect(held.bars).not.toEqual(ex.bars)
     const play = (e: Exercise) => show(schedule(e, e.practice, device, { bar: 0, tick: 0 }, 2).events)
     expect(play(held)).toEqual(play(ex))

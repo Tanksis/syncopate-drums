@@ -2,9 +2,10 @@
 // turns a key press into a command, so the UI only dispatches.
 
 import { FIGURES, REST_FIGURE } from './figures'
-import type { Bar, Exercise, Hand, LoopRange } from './model'
+import type { Bar, Exercise, Hand, Item, LoopRange, Row } from './model'
 import {
   BEATS_PER_BAR,
+  ROWS,
   TICKS_PER_BEAT,
   beatIndex,
   itemTicks,
@@ -14,7 +15,7 @@ import {
   withLoopRange,
   withLoopRangeInBars,
 } from './model'
-import type { BeatView, GridPoint } from './speller'
+import type { BeatView, GridPoint, RowView } from './speller'
 import { beatViews, clearBeatToDownbeat, setBeat, setHold, toggleCutShort, toggleHit, toggleTie } from './speller'
 import type { NoteSticking } from './sticking'
 import { overrideCount, sticking } from './sticking'
@@ -57,9 +58,12 @@ export interface EditorState {
 }
 
 /** The exercise settings that are edited like its notes: every change to them can be undone. */
-export type ExerciseSettings = Pick<Exercise, 'sticking' | 'leadHand' | 'voice'>
+export type ExerciseSettings = Pick<Exercise, 'sticking' | 'leadHand'>
 
-const SETTING_KEYS: readonly (keyof ExerciseSettings)[] = ['sticking', 'leadHand', 'voice']
+const SETTING_KEYS: readonly (keyof ExerciseSettings)[] = ['sticking', 'leadHand']
+
+/** The row the keyboard's edits act on. */
+const KEYBOARD_ROW: Row = 'snare'
 
 /** The bars, settings and cursor as they were before a change, to go back to. */
 interface Snapshot {
@@ -82,20 +86,20 @@ const UNDO_LIMIT = 200
 export type EditCommand =
   | { type: 'enterFigure'; hits: string }
   /**
-   * A click on a beat's grid position (from 0, on the beat's grid): turns a hit there on or off, and
-   * moves the cursor to that beat without advancing. Never repeated by `.`.
+   * A click on a beat's grid position in a row (from 0, on the beat's grid): turns a hit there on
+   * or off, and moves the cursor to that beat without advancing. Never repeated by `.`.
    */
-  | { type: 'toggleGridPosition'; bar: number; beat: number; position: number }
+  | ({ type: 'toggleGridPosition' } & GridPoint)
   /**
    * A drag on a note in the beat strip: sets where the hold of the note sounding at `from` ends (at
-   * `to`, which is not held), and moves the cursor to `from`'s beat without advancing. Never
-   * repeated by `.`.
+   * `to` in the same row, which is not held), and moves the cursor to `from`'s beat without
+   * advancing. Never repeated by `.`.
    */
   | { type: 'setHold'; from: GridPoint; to: GridPoint }
   /**
-   * The 3/16 toggle or a right-click on a beat box: puts the beat on the triplet or the sixteenth
-   * grid, keeping a note on the downbeat and clearing the others, and moves the cursor to that beat
-   * without advancing. Never repeated by `.`.
+   * The 16ths | trip switch or a right-click on a beat card: puts the beat on the triplet or the
+   * sixteenth grid, keeping each row's note on the downbeat and clearing the others, and moves the
+   * cursor to that beat without advancing. Never repeated by `.`.
    */
   | { type: 'setBeatGrid'; bar: number; beat: number; triplet: boolean }
   | { type: 'toggleTie' }
@@ -304,12 +308,16 @@ function withPendingGridChecked(before: EditorState, after: EditorState, command
 
 /** Two views of a beat that read the same. Figures are compared as the palette's own objects. */
 function sameBeatView(a: BeatView, b: BeatView): boolean {
+  return a.triplet === b.triplet && ROWS.every((row) => sameRowView(a[row], b[row]))
+}
+
+/** Two views of one row of a beat that read the same. */
+function sameRowView(a: RowView, b: RowView): boolean {
   return (
     a.figure === b.figure &&
     a.hits === b.hits &&
     a.tiedInto === b.tiedInto &&
     a.cutShort === b.cutShort &&
-    a.triplet === b.triplet &&
     a.positions.length === b.positions.length &&
     a.positions.every((position, i) => position === b.positions[i])
   )
@@ -360,7 +368,7 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
   switch (command.type) {
     case 'enterFigure': {
       const { bar, beat } = state.cursor
-      let bars = setBeat(state.exercise.bars, bar, beat, command.hits)
+      let bars = setBeat(state.exercise.bars, KEYBOARD_ROW, bar, beat, command.hits)
       let cursor: Cursor
       if (beat < BEATS_PER_BAR - 1) cursor = { bar, beat: beat + 1 }
       else {
@@ -377,7 +385,7 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
       const { bar, beat } = moved.cursor
       const index = beatIndex(bar, beat)
       const pending = state.pendingGrid.includes(index)
-      const bars = toggleHit(state.exercise.bars, bar, beat, command.position, pending || undefined)
+      const bars = toggleHit(state.exercise.bars, command.row, bar, beat, command.position, pending || undefined)
       if (bars === state.exercise.bars) return moved
       // A beat on the triplet grid stays there while it reads the same on either grid.
       return { ...withBars(moved, bars), pendingGrid: pendingGridAfter(state, bars, index, index) }
@@ -401,7 +409,7 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
     case 'toggleCutShort': {
       const { bar, beat } = state.cursor
       const toggle = command.type === 'toggleTie' ? toggleTie : toggleCutShort
-      const bars = toggle(state.exercise.bars, bar, beat)
+      const bars = toggle(state.exercise.bars, KEYBOARD_ROW, bar, beat)
       return bars === state.exercise.bars ? state : withBars(state, bars)
     }
     case 'rest': {
@@ -484,7 +492,8 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
       const { bars } = state.exercise
       if (overrideCount(state.exercise) === 0) return state
       const cleared = bars.map((bar) => ({
-        items: bar.items.map((item) => (item.kind === 'note' && item.override ? withoutOverride(item) : item)),
+        ...bar,
+        snare: bar.snare.map((item) => (item.kind === 'note' && item.override ? withoutOverride(item) : item)),
       }))
       return withBars(state, cleared)
     }
@@ -518,16 +527,16 @@ function overrideTarget(state: EditorState, note: OverrideTarget): NoteSticking 
   return notes.filter((n) => n.bar === bar && Math.floor(n.start / TICKS_PER_BEAT) === beat)[note.index]
 }
 
-/** The bars with the override on the note starting at `start` in `bar` set, or cleared. */
+/** The bars with the override on the snare note starting at `start` in `bar` set, or cleared. */
 function withOverride(bars: Bar[], { bar, start }: Pick<NoteSticking, 'bar' | 'start'>, hand: Hand | undefined): Bar[] {
   let tick = 0
-  const items = bars[bar].items.map((item) => {
+  const snare = bars[bar].snare.map((item) => {
     const at = tick
     tick += itemTicks(item)
     if (at !== start || item.kind !== 'note') return item
     return hand ? { ...item, override: hand } : withoutOverride(item)
   })
-  return bars.map((b, i) => (i === bar ? { items } : b))
+  return bars.map((b, i) => (i === bar ? { ...b, snare } : b))
 }
 
 function withoutOverride<N extends { override?: Hand }>({ override: _, ...rest }: N): Omit<N, 'override'> {
@@ -566,10 +575,10 @@ function setBeats(state: EditorState, hits: string, count: number): EditorState 
   for (let i = from; i < to; i++) {
     const bar = Math.floor(i / BEATS_PER_BAR)
     const beat = i % BEATS_PER_BAR
-    const view = views[bar][beat]
+    const view = views[bar][beat][KEYBOARD_ROW]
     const alreadyRest = hits === REST_FIGURE.hits && !view.hits.includes('x')
     const alreadySet = view.figure?.hits === hits && !view.cutShort
-    if (!alreadyRest && !alreadySet) bars = setBeat(bars, bar, beat, hits)
+    if (!alreadyRest && !alreadySet) bars = setBeat(bars, KEYBOARD_ROW, bar, beat, hits)
   }
   const pendingGrid = state.pendingGrid.filter((i) => i < from || i >= to)
   const regridded = pendingGrid.length === state.pendingGrid.length ? state : { ...state, pendingGrid }
@@ -594,21 +603,27 @@ function insertBars(state: EditorState, at: number, inserted: Bar[]): EditorStat
 }
 
 /**
- * The bars with the last one's final note no longer tied over, for when whatever follows it
- * changes: a tie must not run on into a bar that was never tied into.
+ * The bars with the last one's final note in each row no longer tied over, for when whatever
+ * follows it changes: a tie must not run on into a bar that was never tied into.
  */
 function untieLast(bars: Bar[]): Bar[] {
   const last = bars.at(-1)
-  const item = last?.items.at(-1)
-  if (!last || item?.kind !== 'note' || !item.tiedToNext) return bars
-  return [...bars.slice(0, -1), { items: [...last.items.slice(0, -1), { ...item, tiedToNext: false }] }]
+  if (!last) return bars
+  const untied = { snare: untie(last.snare), kick: untie(last.kick) }
+  return untied.snare === last.snare && untied.kick === last.kick ? bars : [...bars.slice(0, -1), untied]
+}
+
+/** A row's items with the last one no longer tied over, as they were if it isn't. */
+function untie(items: Item[]): Item[] {
+  const item = items.at(-1)
+  return item?.kind === 'note' && item.tiedToNext ? [...items.slice(0, -1), { ...item, tiedToNext: false }] : items
 }
 
 /** Deletes bars `first` to `last`; deleting every bar leaves one bar of rests. */
 function deleteBars(state: EditorState, first: number, last: number): EditorState {
   const { bars } = state.exercise
   // A lone bar of rests is already what deleting it would leave.
-  if (bars.length === 1 && bars[0].items.every((item) => item.kind === 'rest')) return state
+  if (bars.length === 1 && ROWS.every((row) => bars[0][row].every((item) => item.kind === 'rest'))) return state
   const kept = [...untieLast(bars.slice(0, first)), ...bars.slice(last + 1)]
   const next = kept.length > 0 ? kept : [restBar()]
   const loopRange = loopRangeAfterDelete(state.exercise.practice.loopRange, first, last)

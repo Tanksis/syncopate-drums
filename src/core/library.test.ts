@@ -60,7 +60,6 @@ describe('an unchanged new exercise', () => {
 
   it('stops being unchanged once a setting changes', () => {
     expect(isUnchangedNew(withBpm(untitled, 81))).toBe(false)
-    expect(isUnchangedNew({ ...untitled, voice: 'bass' })).toBe(false)
     expect(isUnchangedNew({ ...untitled, sticking: 'alternate' })).toBe(false)
     expect(isUnchangedNew({ ...untitled, leadHand: 'L' })).toBe(false)
     expect(isUnchangedNew({ ...untitled, practice: { ...untitled.practice, swing: 0.58 } })).toBe(false)
@@ -69,6 +68,8 @@ describe('an unchanged new exercise', () => {
   it('stops being unchanged once a note is entered', () => {
     const edited = applyEdit(newEditorState(untitled), { type: 'enterFigure', hits: 'x...' })
     expect(isUnchangedNew(edited.exercise)).toBe(false)
+    const kicked = applyEdit(newEditorState(untitled), { type: 'toggleGridPosition', row: 'kick', bar: 0, beat: 0, position: 0 })
+    expect(isUnchangedNew(kicked.exercise)).toBe(false)
   })
 
   it('stops being unchanged once it is renamed', () => {

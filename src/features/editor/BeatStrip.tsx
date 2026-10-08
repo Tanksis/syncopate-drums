@@ -2,7 +2,7 @@ import type { PointerEvent } from 'react'
 import { useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { keepFocus } from '@/components/keepFocus'
-import type { BeatView, GridPoint, PositionState } from '@/core'
+import type { BeatView, Figure, GridPoint, PositionState, Row, RowView } from '@/core'
 import { REST_FIGURE, applyEdit, editorBeatViews, inLoopRange } from '@/core'
 
 /** A press on a grid position, and (once it moves to another position) the hold end it drags to. */
@@ -17,10 +17,11 @@ interface Press {
 }
 
 /**
- * The grid position under the pointer, anywhere in the strip: in the beat card nearest the pointer
- * (so a drag follows the strip onto the bars below), kept to that card's first and last position.
+ * The grid position of a row under the pointer, anywhere in the strip: in the beat card nearest the
+ * pointer (so a drag follows the strip onto the bars below), kept to that card's first and last
+ * position in the row.
  */
-function pointUnder(strip: Element, clientX: number, clientY: number): GridPoint | null {
+function pointUnder(strip: Element, row: Row, clientX: number, clientY: number): GridPoint | null {
   let nearest: { box: HTMLElement; distance: number } | null = null
   for (const box of strip.querySelectorAll<HTMLElement>('[data-beat-box]')) {
     const r = box.getBoundingClientRect()
@@ -28,25 +29,32 @@ function pointUnder(strip: Element, clientX: number, clientY: number): GridPoint
     if (!nearest || distance < nearest.distance) nearest = { box, distance }
   }
   if (!nearest) return null
-  const positions = [...nearest.box.querySelectorAll('[data-position]')]
+  const positions = [...nearest.box.querySelectorAll(`[data-position][data-row="${row}"]`)]
   const i = positions.findIndex((position) => clientX < position.getBoundingClientRect().right)
   const { bar, beat } = nearest.box.dataset
-  return { bar: Number(bar), beat: Number(beat), position: i === -1 ? positions.length - 1 : i }
+  return { row, bar: Number(bar), beat: Number(beat), position: i === -1 ? positions.length - 1 : i }
 }
 
 const samePoint = (a: GridPoint | null, b: GridPoint | null) =>
-  a?.bar === b?.bar && a?.beat === b?.beat && a?.position === b?.position
+  a?.row === b?.row && a?.bar === b?.bar && a?.beat === b?.beat && a?.position === b?.position
+
+/** How each row is named and coloured: the kick row in its own colour, apart from the snare row's ink. */
+const ROW_LOOK: Record<Row, { name: string; disc: string; hold: string; keycap: string }> = {
+  snare: { name: 'Snare', disc: 'bg-ink', hold: 'bg-ink/70', keycap: 'border-line text-mute' },
+  kick: { name: 'Kick', disc: 'bg-kick', hold: 'bg-kick/70', keycap: 'border-kick/40 text-kick' },
+}
 
 /** What each grid position of a beat is counted as: 1 e & a, or 1 trip let. */
 const countLabels = (beat: number, triplet: boolean) =>
   triplet ? [`${beat + 1}`, 'trip', 'let'] : [`${beat + 1}`, 'e', '&', 'a']
 
 /**
- * The bars and beats of the exercise, the main editor: one bar per row, under a header with its
- * number and delete button, and each beat a card. A card shows its grid positions as big cells (a
- * hit, a hold bar for a note still sounding, or a ghost hit on hover) over their count labels.
- * Clicking a cell turns a hit on or off; pressing on a note and dragging sets where its hold ends,
- * on into later beats and bars (tied), shown live and written on release.
+ * The bars and beats of the exercise, the main editor: one bar per line of cards, under a header with its
+ * number and delete button, and each beat a card. A card shows the snare row's grid positions as
+ * big cells (a hit, a hold bar for a note still sounding, or a ghost hit on hover), their count
+ * labels, and the kick row's cells under them, as the staff writes hands over feet. Clicking a
+ * cell turns a hit on or off in its row; pressing on a note and dragging sets where its hold ends,
+ * on into later beats and bars (tied) in the same row, shown live and written on release.
  * Clicking elsewhere on a card moves the cursor to it. A card's 16ths | trip switch, or a
  * right-click on it, switches it between the sixteenth and the triplet grid. The cursor's card is
  * outlined, and the bar selection and a set loop range are shaded.
@@ -75,7 +83,7 @@ export function BeatStrip() {
   /** The press followed to the pointer: the hold runs through the position under it, in this beat or a later one. */
   const follow = (e: PointerEvent<HTMLElement>, press: Press): Press => {
     const strip = e.currentTarget.closest('[data-beat-strip]')
-    const under = strip && pointUnder(strip, e.clientX, e.clientY)
+    const under = strip && pointUnder(strip, press.from.row, e.clientX, e.clientY)
     if (!under) return press
     const moved = press.moved || !samePoint(under, press.from)
     const to = press.onNote && moved ? { ...under, position: under.position + 1 } : null
@@ -99,6 +107,35 @@ export function BeatStrip() {
   /** The beat after this one, if any, to run a hold bar on into it. */
   const nextBeat = (b: number, beat: number): BeatView | undefined =>
     beat < views[b].length - 1 ? views[b][beat + 1] : views[b + 1]?.[0]
+
+  /** One row of a card's cells, its ⌒ mark at the start when the beat is tied into. */
+  const rowCells = (row: Row, view: RowView, b: number, beat: number) => {
+    const tiedOn = nextBeat(b, beat)?.[row].positions[0] === 'hold'
+    return (
+      <div
+        aria-label={`${ROW_LOOK[row].name} row`}
+        title={[view.tiedInto && 'tied into', view.cutShort && 'cut short'].filter(Boolean).join(', ') || undefined}
+        className="relative flex gap-1"
+      >
+        {view.tiedInto && <span className="absolute -top-3 -left-3.5 text-base text-accent">⌒</span>}
+        {view.positions.map((position, i) => (
+          <Cell
+            key={i}
+            row={row}
+            label={`Bar ${b + 1}, beat ${beat + 1}, ${row} position ${i + 1}: ${position}`}
+            position={position}
+            holdsOn={i < view.positions.length - 1 ? view.positions[i + 1] === 'hold' : tiedOn}
+            first={i === 0}
+            last={i === view.positions.length - 1}
+            onPointerDown={(e) => startPress(e, { row, bar: b, beat, position: i }, position)}
+            onPointerMove={movePress}
+            onPointerUp={endPress}
+            onPointerCancel={() => track(null)}
+          />
+        ))}
+      </div>
+    )
+  }
 
   return (
     // The strip's right-click switches grids, so the browser's menu stays shut over it.
@@ -135,7 +172,6 @@ export function BeatStrip() {
             <div className="grid grid-cols-4 gap-2">
               {beats.map((view, beat) => {
                 const current = cursor.bar === b && cursor.beat === beat
-                const tiedOn = nextBeat(b, beat)?.positions[0] === 'hold'
                 const switchGrid = () => dispatch({ type: 'setBeatGrid', bar: b, beat, triplet: !view.triplet })
                 return (
                   <div
@@ -145,42 +181,19 @@ export function BeatStrip() {
                     data-bar={b}
                     data-beat={beat}
                     aria-current={current || undefined}
-                    title={[view.tiedInto && 'tied into', view.cutShort && 'cut short'].filter(Boolean).join(', ') || undefined}
                     onClick={() => dispatch({ type: 'moveTo', bar: b, beat })}
                     onContextMenu={switchGrid}
                     className={`relative flex min-w-0 cursor-pointer flex-col gap-1 rounded-xl border p-2 ${looped || selected ? 'bg-card/60' : 'bg-card'} ${
                       current ? 'border-accent ring-2 ring-accent' : 'border-line'
                     }`}
                   >
-                    {view.tiedInto && <span className="absolute -top-2.5 -left-1.5 text-base text-accent">⌒</span>}
                     <div className="flex items-center gap-1.5">
                       <span className="text-lg/none font-bold">{beat + 1}</span>
-                      {view.figure && view.figure !== REST_FIGURE && (
-                        <kbd
-                          title={`Figure key ${view.figure.key.toUpperCase()}`}
-                          className="rounded border border-b-2 border-line px-1 font-mono text-[10px]/[14px] text-mute"
-                        >
-                          {view.figure.key.toUpperCase()}
-                        </kbd>
-                      )}
+                      <FigureKey row="snare" figure={view.snare.figure} />
+                      <FigureKey row="kick" figure={view.kick.figure} />
                       <GridSwitch bar={b} beat={beat} triplet={view.triplet} onSwitch={switchGrid} />
                     </div>
-                    <div className="flex gap-1">
-                      {view.positions.map((position, i) => (
-                        <Cell
-                          key={i}
-                          label={`Bar ${b + 1}, beat ${beat + 1}, position ${i + 1}: ${position}`}
-                          position={position}
-                          holdsOn={i < view.positions.length - 1 ? view.positions[i + 1] === 'hold' : tiedOn}
-                          first={i === 0}
-                          last={i === view.positions.length - 1}
-                          onPointerDown={(e) => startPress(e, { bar: b, beat, position: i }, position)}
-                          onPointerMove={movePress}
-                          onPointerUp={endPress}
-                          onPointerCancel={() => track(null)}
-                        />
-                      ))}
-                    </div>
+                    {rowCells('snare', view.snare, b, beat)}
                     <div aria-hidden className="flex gap-1">
                       {countLabels(beat, view.triplet).map((label, i) => (
                         <span key={i} className={`flex-1 text-center font-mono text-[11px] ${i === 0 ? 'font-bold text-ink' : 'text-mute'}`}>
@@ -188,6 +201,7 @@ export function BeatStrip() {
                         </span>
                       ))}
                     </div>
+                    {rowCells('kick', view.kick, b, beat)}
                   </div>
                 )
               })}
@@ -196,6 +210,20 @@ export function BeatStrip() {
         )
       })}
     </div>
+  )
+}
+
+/** The key of a row's figure in the beat, as a keycap; none for a rest or a beat no figure writes. */
+function FigureKey({ row, figure }: { row: Row; figure: Figure | undefined }) {
+  if (!figure || figure === REST_FIGURE) return null
+  const key = figure.key.toUpperCase()
+  return (
+    <kbd
+      title={`${ROW_LOOK[row].name} figure key ${key}`}
+      className={`rounded border border-b-2 px-1 font-mono text-[10px]/[14px] ${ROW_LOOK[row].keycap}`}
+    >
+      {key}
+    </kbd>
   )
 }
 
@@ -236,6 +264,7 @@ function GridSwitch({ bar, beat, triplet, onSwitch }: { bar: number; beat: numbe
  * after. At the card's edges the bar runs on to meet the next card's.
  */
 function Cell({
+  row,
   label,
   position,
   holdsOn,
@@ -243,6 +272,8 @@ function Cell({
   last,
   ...pointer
 }: {
+  /** The kick row's hits are drawn in its own colour. */
+  row: Row
   label: string
   position: PositionState
   /** The note here (struck or held) still sounds at the next position, so the bar runs on. */
@@ -258,12 +289,14 @@ function Cell({
 }) {
   const sounding = position !== 'empty'
   // To the middle of the 4px gap between cells, or across the card's padding and border to the middle of the gap between cards.
-  const holdLine = 'pointer-events-none absolute top-1/2 h-1.5 -translate-y-1/2 bg-ink/70'
+  const holdLine = `pointer-events-none absolute top-1/2 h-1.5 -translate-y-1/2 ${ROW_LOOK[row].hold}`
+  const disc = `relative size-4 rounded-full ${ROW_LOOK[row].disc}`
   return (
     <button
       type="button"
       aria-label={label}
       data-position
+      data-row={row}
       tabIndex={-1}
       // Keep focus off the cell, so Space and Enter go to the editor rather than clicking it.
       onMouseDown={keepFocus}
@@ -275,9 +308,9 @@ function Cell({
       {position === 'hold' && <span className={`${holdLine} right-1/2 ${first ? '-left-[14px]' : '-left-[3px]'}`} />}
       {sounding && holdsOn && <span className={`${holdLine} left-1/2 ${last ? '-right-[14px]' : '-right-[3px]'}`} />}
       {position === 'hit' ? (
-        <span className="relative size-4 rounded-full bg-ink group-hover/cell:bg-accent" />
+        <span className={`${disc} group-hover/cell:bg-accent`} />
       ) : position === 'empty' ? (
-        <span className="relative size-4 rounded-full bg-ink opacity-0 group-hover/cell:opacity-25" />
+        <span className={`${disc} opacity-0 group-hover/cell:opacity-25`} />
       ) : null}
     </button>
   )

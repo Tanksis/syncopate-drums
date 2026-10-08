@@ -21,16 +21,25 @@ export const MIN_SWING = 0.5
 export const MAX_SWING = 0.75
 
 /** Bumped whenever the stored shape changes; storage and import migrate through it. */
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 2
 
 export type Hand = 'R' | 'L'
-export type Voice = 'snare' | 'bass'
+
+/** An exercise's two rhythms over the same bars: the snare row on top, the kick row under it (ADR 0005). */
+export type Row = 'snare' | 'kick'
+
+export const ROWS: readonly Row[] = ['snare', 'kick']
 
 /** A limb of the drummer, and the part of the staff it plays: hands stems up, feet stems down. */
 export type Limb = 'hands' | 'feet'
 
-/** The limb that plays an exercise in each voice. */
-export const VOICE_LIMB: Record<Voice, Limb> = { snare: 'hands', bass: 'feet' }
+/**
+ * A struck note's id: `bar:tick` in the snare row, which sticking overrides are keyed by, and
+ * `kick:bar:tick` in the kick row.
+ */
+export function noteId(row: Row, bar: number, tick: number): string {
+  return row === 'snare' ? `${bar}:${tick}` : `${row}:${bar}:${tick}`
+}
 export type StickingMode = 'natural' | 'alternate' | 'off'
 export type Duration = 'quarter' | 'eighth' | 'sixteenth'
 
@@ -57,10 +66,8 @@ export interface Rest extends ItemBase {
 
 export type Item = Note | Rest
 
-/** One measure: items in order, adding up to four beats. */
-export interface Bar {
-  items: Item[]
-}
+/** One measure: each row's items in order, each row adding up to four beats. */
+export type Bar = Record<Row, Item[]>
 
 /** First and last bar index, inclusive. */
 export interface LoopRange {
@@ -89,7 +96,6 @@ export interface Exercise {
   name: string
   schemaVersion: number
   bars: Bar[]
-  voice: Voice
   sticking: StickingMode
   leadHand: Hand
   practice: PracticeSettings
@@ -141,15 +147,13 @@ export function itemTicks(item: Pick<Item, 'duration' | 'dotted' | 'triplet'>): 
   return item.triplet ? (ticks * 2) / 3 : ticks
 }
 
+/** A row's four beats of quarter rests. */
+export function restItems(): Item[] {
+  return Array.from({ length: BEATS_PER_BAR }, () => ({ kind: 'rest', duration: 'quarter', dotted: false, triplet: false }))
+}
+
 export function restBar(): Bar {
-  return {
-    items: Array.from({ length: BEATS_PER_BAR }, () => ({
-      kind: 'rest',
-      duration: 'quarter',
-      dotted: false,
-      triplet: false,
-    })),
-  }
+  return { snare: restItems(), kick: restItems() }
 }
 
 /** A new exercise always starts from the same fixed defaults. */
@@ -159,7 +163,6 @@ export function newExercise({ id, now }: { id: string; now: number }): Exercise 
     name: 'Untitled',
     schemaVersion: SCHEMA_VERSION,
     bars: [restBar()],
-    voice: 'snare',
     sticking: 'natural',
     leadHand: 'R',
     practice: { bpm: 80, loopRange: null, groove: 'off', swing: 2 / 3 },
