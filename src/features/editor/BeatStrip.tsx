@@ -17,9 +17,8 @@ interface Press {
 }
 
 /**
- * The grid position under the pointer, anywhere in the strip: in the beat box nearest the pointer
- * (so a drag follows the strip onto the lines it wraps to), kept to that box's first and last
- * position.
+ * The grid position under the pointer, anywhere in the strip: in the beat card nearest the pointer
+ * (so a drag follows the strip onto the bars below), kept to that card's first and last position.
  */
 function pointUnder(strip: Element, clientX: number, clientY: number): GridPoint | null {
   let nearest: { box: HTMLElement; distance: number } | null = null
@@ -38,14 +37,19 @@ function pointUnder(strip: Element, clientX: number, clientY: number): GridPoint
 const samePoint = (a: GridPoint | null, b: GridPoint | null) =>
   a?.bar === b?.bar && a?.beat === b?.beat && a?.position === b?.position
 
+/** What each grid position of a beat is counted as: 1 e & a, or 1 trip let. */
+const countLabels = (beat: number, triplet: boolean) =>
+  triplet ? [`${beat + 1}`, 'trip', 'let'] : [`${beat + 1}`, 'e', '&', 'a']
+
 /**
- * The bars and beats of the exercise, the main editor. Each beat box shows its grid positions: a
- * hit, a hold bar for a note still sounding, or an empty dot. Clicking a position turns a hit on or
- * off; pressing on a note and dragging sets where its hold ends, on into later beats and bars (tied),
- * shown live and written on release.
- * Clicking elsewhere on a beat moves the cursor to it. A beat's 3/16 toggle, or a right-click on
- * its box, switches it between the triplet and the sixteenth grid. The cursor, the bar selection
- * and a set loop range are shaded, and a bar's ✕ (shown on hover) deletes it.
+ * The bars and beats of the exercise, the main editor: one bar per row, under a header with its
+ * number and delete button, and each beat a card. A card shows its grid positions as big cells (a
+ * hit, a hold bar for a note still sounding, or a ghost hit on hover) over their count labels.
+ * Clicking a cell turns a hit on or off; pressing on a note and dragging sets where its hold ends,
+ * on into later beats and bars (tied), shown live and written on release.
+ * Clicking elsewhere on a card moves the cursor to it. A card's 16ths | trip switch, or a
+ * right-click on it, switches it between the sixteenth and the triplet grid. The cursor's card is
+ * outlined, and the bar selection and a set loop range are shaded.
  */
 export function BeatStrip() {
   const editor = useAppStore((s) => s.editor)
@@ -98,89 +102,96 @@ export function BeatStrip() {
 
   return (
     // The strip's right-click switches grids, so the browser's menu stays shut over it.
-    <div aria-label="Beat strip" data-beat-strip className="flex flex-wrap gap-2" onContextMenu={(e) => e.preventDefault()}>
+    <div aria-label="Beat strip" data-beat-strip className="flex flex-col gap-2" onContextMenu={(e) => e.preventDefault()}>
       {views.map((beats, b) => {
         const selected = selection !== null && b >= selection.first && b <= selection.last
         const looped = inLoopRange(loopRange, b)
         return (
           <div
             key={b}
+            aria-label={`Bar ${b + 1}`}
             aria-selected={selected || undefined}
             title={looped ? 'In the loop range' : undefined}
             // A selected bar in the loop range keeps the loop shading inside the selection's border.
-            className={`group relative flex items-center gap-0.5 rounded-lg border px-1 pt-1 pb-3 ${
+            className={`flex flex-col gap-1.5 rounded-lg border px-2 pt-1 pb-2 ${
               selected ? 'border-accent' : looped ? 'border-loop-line' : 'border-line'
-            } ${looped ? 'bg-loop' : selected ? 'bg-sky-100' : 'bg-card'}`}
+            } ${looped ? 'bg-loop' : selected ? 'bg-sky-100' : 'bg-panel'}`}
           >
-            <span className="w-5 text-center font-mono text-[11px] text-mute">{b + 1}</span>
-            {beats.map((view, beat) => {
-              const current = cursor.bar === b && cursor.beat === beat
-              const tiedOn = nextBeat(b, beat)?.positions[0] === 'hold'
-              const switchGrid = () => dispatch({ type: 'setBeatGrid', bar: b, beat, triplet: !view.triplet })
-              return (
-                <div
-                  key={beat}
-                  aria-label={`Bar ${b + 1}, beat ${beat + 1}`}
-                  data-beat-box
-                  data-bar={b}
-                  data-beat={beat}
-                  aria-current={current || undefined}
-                  title={[view.tiedInto && 'tied into', view.cutShort && 'cut short'].filter(Boolean).join(', ') || undefined}
-                  onClick={() => dispatch({ type: 'moveTo', bar: b, beat })}
-                  onContextMenu={switchGrid}
-                  className={`relative flex h-9 w-16 cursor-pointer items-stretch rounded-md border border-stone-300 bg-card ${
-                    current ? 'outline-3 -outline-offset-2 outline-accent' : ''
-                  }`}
-                >
-                  {view.tiedInto && <span className="absolute -top-2 -left-2 text-sm text-accent">⌒</span>}
-                  {view.figure && view.figure !== REST_FIGURE && (
-                    <span className="pointer-events-none absolute top-0 right-0.5 font-mono text-[9px]/[1] text-mute">
-                      {view.figure.key.toUpperCase()}
-                    </span>
-                  )}
-                  {view.positions.map((position, i) => (
-                    <GridPositionButton
-                      key={i}
-                      label={`Bar ${b + 1}, beat ${beat + 1}, position ${i + 1}: ${position}`}
-                      position={position}
-                      holdsOn={i < view.positions.length - 1 ? view.positions[i + 1] === 'hold' : tiedOn}
-                      onPointerDown={(e) => startPress(e, { bar: b, beat, position: i }, position)}
-                      onPointerMove={movePress}
-                      onPointerUp={endPress}
-                      onPointerCancel={() => track(null)}
-                    />
-                  ))}
-                  <button
-                    type="button"
-                    aria-label={`Bar ${b + 1}, beat ${beat + 1}: ${view.triplet ? 'triplet' : 'sixteenth'} grid`}
-                    title={`On the ${view.triplet ? 'triplet' : 'sixteenth'} grid: switch to ${view.triplet ? 'sixteenths' : 'triplets'} (or right-click the beat)`}
-                    tabIndex={-1}
-                    onMouseDown={keepFocus}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      switchGrid()
-                    }}
-                    className={`absolute -bottom-2 left-1/2 min-w-4 -translate-x-1/2 cursor-pointer rounded border bg-card px-0.5 font-mono text-[9px]/[11px] hover:border-accent hover:text-accent ${
-                      view.triplet ? 'border-accent text-accent' : 'border-line text-mute'
+            <div className="flex items-center text-xs">
+              <span className={`font-semibold ${looped ? 'text-loop-ink' : 'text-ink'}`}>Bar {b + 1}</span>
+              <button
+                type="button"
+                title={`Delete bar ${b + 1} (Ctrl+Backspace)`}
+                aria-label={`Delete bar ${b + 1}`}
+                tabIndex={-1}
+                // Keep focus off the button, so Space and Enter go to the editor rather than clicking it.
+                onMouseDown={keepFocus}
+                onClick={() => dispatch({ type: 'deleteBar', bar: b })}
+                className="ml-auto cursor-pointer rounded px-1.5 text-mute hover:bg-line hover:text-danger"
+              >
+                ✕ delete
+              </button>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {beats.map((view, beat) => {
+                const current = cursor.bar === b && cursor.beat === beat
+                const tiedOn = nextBeat(b, beat)?.positions[0] === 'hold'
+                const switchGrid = () => dispatch({ type: 'setBeatGrid', bar: b, beat, triplet: !view.triplet })
+                return (
+                  <div
+                    key={beat}
+                    aria-label={`Bar ${b + 1}, beat ${beat + 1}`}
+                    data-beat-box
+                    data-bar={b}
+                    data-beat={beat}
+                    aria-current={current || undefined}
+                    title={[view.tiedInto && 'tied into', view.cutShort && 'cut short'].filter(Boolean).join(', ') || undefined}
+                    onClick={() => dispatch({ type: 'moveTo', bar: b, beat })}
+                    onContextMenu={switchGrid}
+                    className={`relative flex min-w-0 cursor-pointer flex-col gap-1 rounded-xl border bg-card p-2 ${
+                      current ? 'border-accent ring-2 ring-accent' : 'border-line'
                     }`}
                   >
-                    {view.triplet ? '3' : '16'}
-                  </button>
-                </div>
-              )
-            })}
-            <button
-              type="button"
-              title={`Delete bar ${b + 1} (Ctrl+Backspace)`}
-              aria-label={`Delete bar ${b + 1}`}
-              tabIndex={-1}
-              // Keep focus off the button, so Space and Enter go to the editor rather than clicking it.
-              onMouseDown={keepFocus}
-              onClick={() => dispatch({ type: 'deleteBar', bar: b })}
-              className="absolute -top-2 -right-2 hidden size-5 cursor-pointer items-center justify-center rounded-full border border-line bg-card text-[10px] text-mute group-hover:flex hover:border-accent hover:text-accent"
-            >
-              ✕
-            </button>
+                    {view.tiedInto && <span className="absolute -top-2.5 -left-1.5 text-base text-accent">⌒</span>}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-lg/none font-bold">{beat + 1}</span>
+                      {view.figure && view.figure !== REST_FIGURE && (
+                        <kbd
+                          title={`Figure key ${view.figure.key.toUpperCase()}`}
+                          className="rounded border border-b-2 border-line px-1 font-mono text-[10px]/[14px] text-mute"
+                        >
+                          {view.figure.key.toUpperCase()}
+                        </kbd>
+                      )}
+                      <GridSwitch bar={b} beat={beat} triplet={view.triplet} onSwitch={switchGrid} />
+                    </div>
+                    <div className="flex gap-1">
+                      {view.positions.map((position, i) => (
+                        <Cell
+                          key={i}
+                          label={`Bar ${b + 1}, beat ${beat + 1}, position ${i + 1}: ${position}`}
+                          position={position}
+                          holdsOn={i < view.positions.length - 1 ? view.positions[i + 1] === 'hold' : tiedOn}
+                          first={i === 0}
+                          last={i === view.positions.length - 1}
+                          onPointerDown={(e) => startPress(e, { bar: b, beat, position: i }, position)}
+                          onPointerMove={movePress}
+                          onPointerUp={endPress}
+                          onPointerCancel={() => track(null)}
+                        />
+                      ))}
+                    </div>
+                    <div aria-hidden className="flex gap-1">
+                      {countLabels(beat, view.triplet).map((label, i) => (
+                        <span key={i} className={`flex-1 text-center font-mono text-[11px] ${i === 0 ? 'font-bold text-ink' : 'text-mute'}`}>
+                          {label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )
       })}
@@ -188,20 +199,57 @@ export function BeatStrip() {
   )
 }
 
+/** A beat's 16ths | trip switch, its current grid lit. */
+function GridSwitch({ bar, beat, triplet, onSwitch }: { bar: number; beat: number; triplet: boolean; onSwitch: () => void }) {
+  const segment = (grid: 'sixteenth' | 'triplet', label: string) => {
+    const on = (grid === 'triplet') === triplet
+    return (
+      <button
+        type="button"
+        aria-label={`Bar ${bar + 1}, beat ${beat + 1}: ${grid} grid`}
+        aria-pressed={on}
+        title={on ? `On the ${grid} grid` : `Switch to the ${grid} grid (or right-click the beat)`}
+        tabIndex={-1}
+        // Keep focus off the button, so Space and Enter go to the editor rather than clicking it.
+        onMouseDown={keepFocus}
+        onClick={(e) => {
+          e.stopPropagation()
+          if (!on) onSwitch()
+        }}
+        className={`cursor-pointer px-1.5 ${on ? 'bg-accent text-white' : 'text-mute hover:text-accent'}`}
+      >
+        {label}
+      </button>
+    )
+  }
+  return (
+    <span className="ml-auto inline-flex overflow-hidden rounded border border-line bg-card text-[10px] leading-5">
+      {segment('sixteenth', '16ths')}
+      {segment('triplet', 'trip')}
+    </span>
+  )
+}
+
 /**
- * One grid position: a hit's dot, a plain dot when empty, and the hold bar running in from the
- * left where the note sounds on here and out to the right where it sounds on after.
+ * One grid position, a big cell: a hit's disc, a ghost hit on hover when empty, and the hold bar
+ * running in from the left where the note sounds on here and out to the right where it sounds on
+ * after. At the card's edges the bar runs on to meet the next card's.
  */
-function GridPositionButton({
+function Cell({
   label,
   position,
   holdsOn,
+  first,
+  last,
   ...pointer
 }: {
   label: string
   position: PositionState
   /** The note here (struck or held) still sounds at the next position, so the bar runs on. */
   holdsOn: boolean
+  /** The beat's first or last cell, whose bar runs on across the card's edge. */
+  first: boolean
+  last: boolean
   /** A press here is a click on release, or a drag of the note's hold once it moves. */
   onPointerDown: (e: PointerEvent<HTMLElement>) => void
   onPointerMove: (e: PointerEvent<HTMLElement>) => void
@@ -209,28 +257,28 @@ function GridPositionButton({
   onPointerCancel: () => void
 }) {
   const sounding = position !== 'empty'
+  // Across the 4px gap between cells, or the card's padding, border and half the gap between cards.
+  const bar = 'pointer-events-none absolute top-1/2 h-1.5 -translate-y-1/2 bg-ink/70'
   return (
     <button
       type="button"
       aria-label={label}
       data-position
       tabIndex={-1}
-      // Keep focus off the position, so Space and Enter go to the editor rather than clicking it.
+      // Keep focus off the cell, so Space and Enter go to the editor rather than clicking it.
       onMouseDown={keepFocus}
       {...pointer}
-      // The press handles the click; the beat box's own click (moving the cursor) must not follow.
+      // The press handles the click; the card's own click (moving the cursor) must not follow.
       onClick={(e) => e.stopPropagation()}
-      className="group/pos relative flex flex-1 cursor-pointer touch-none items-center justify-center"
+      className="group/cell relative flex h-10 min-w-0 flex-1 cursor-pointer touch-none items-center justify-center rounded border border-line bg-card hover:border-accent"
     >
-      {position === 'hold' && <span className="absolute top-1/2 left-0 h-1 w-1/2 -translate-y-1/2 bg-ink/70" />}
-      {sounding && holdsOn && <span className="absolute top-1/2 right-0 h-1 w-1/2 -translate-y-1/2 bg-ink/70" />}
+      {position === 'hold' && <span className={`${bar} right-1/2 ${first ? '-left-[14px]' : '-left-[5px]'}`} />}
+      {sounding && holdsOn && <span className={`${bar} left-1/2 ${last ? '-right-[14px]' : '-right-[5px]'}`} />}
       {position === 'hit' ? (
-        <span className="relative size-2.5 rounded-full bg-ink group-hover/pos:bg-accent" />
+        <span className="relative size-4 rounded-full bg-ink group-hover/cell:bg-accent" />
       ) : position === 'empty' ? (
-        <span className="relative size-1 rounded-full bg-mute/70 group-hover/pos:size-2 group-hover/pos:bg-accent" />
-      ) : (
-        <span className="relative size-2 rounded-full group-hover/pos:bg-accent/60" />
-      )}
+        <span className="relative size-4 rounded-full bg-ink opacity-0 group-hover/cell:opacity-25" />
+      ) : null}
     </button>
   )
 }
