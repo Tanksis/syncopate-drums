@@ -12,6 +12,8 @@
   --color-danger: #b91c1c;
   /* The playhead line during playback, apart from the blue cursor and the amber loop. */
   --color-play: #059669;
+  /* The kick row's hits in the beat cards, apart from the snare row's ink. */
+  --color-kick: #ea580c;
   /* The loop range: its shading, border and bar numbers. */
   --color-loop: #fde68a;
   --color-loop-line: #f59e0b;

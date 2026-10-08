@@ -9,7 +9,7 @@ const line = (beats: string[], options: { mode?: StickingMode; lead?: Hand } = {
   beats.forEach((hits, i) => {
     const bar = Math.floor(i / 4)
     while (bars.length <= bar) bars = [...bars, ...newExercise({ id: 'x', now: 0 }).bars]
-    bars = setBeat(bars, bar, i % 4, hits)
+    bars = setBeat(bars, 'snare', bar, i % 4, hits)
   })
   return { ...ex, bars, sticking: options.mode ?? 'natural', leadHand: options.lead ?? 'R' }
 }
@@ -17,7 +17,7 @@ const line = (beats: string[], options: { mode?: StickingMode; lead?: Hand } = {
 /** The beat's first note tied to the previous beat's last note. */
 const tiedInto = (ex: Exercise, bar: number, beat: number): Exercise => ({
   ...ex,
-  bars: toggleTie(ex.bars, bar, beat),
+  bars: toggleTie(ex.bars, 'snare', bar, beat),
 })
 
 /** The shown hands in order, with `-` for a note that shows none. */
@@ -67,8 +67,8 @@ describe('alternate sticking', () => {
 
 /** The exercise with an override on the given item of bar 1. */
 const overridden = (ex: Exercise, item: number, hand: Hand): Exercise => {
-  const items = ex.bars[0].items.map((it, i) => (i === item && it.kind === 'note' ? { ...it, override: hand } : it))
-  return { ...ex, bars: [{ items }, ...ex.bars.slice(1)] }
+  const snare = ex.bars[0].snare.map((it, i) => (i === item && it.kind === 'note' ? { ...it, override: hand } : it))
+  return { ...ex, bars: [{ ...ex.bars[0], snare }, ...ex.bars.slice(1)] }
 }
 
 describe('overrides and hidden sticking', () => {
@@ -90,12 +90,15 @@ describe('overrides and hidden sticking', () => {
     ])
   })
 
-  it('shows no hands under the bass drum voice, but keeps what they would be', () => {
-    const ex = { ...overridden(line(['x.x.']), 1, 'R'), voice: 'bass' as const }
-    expect(sticking(ex).map((n) => [n.computed, n.override ?? null, n.shown])).toEqual([
-      ['R', null, null],
-      ['L', 'R', null],
-    ])
+})
+
+describe('sticking and the kick row', () => {
+  it('labels only the snare row: kicks get no hand and leave the snare hands as they were', () => {
+    const ex = line(['x.x.', 'xxxx'], { mode: 'alternate' })
+    const kicks = ['x.x.', '.x.x'].reduce((bars, hits, beat) => setBeat(bars, 'kick', 0, beat, hits), ex.bars)
+    const withKicks = { ...ex, bars: kicks }
+    expect(shown(withKicks)).toBe('RLRLRL')
+    expect(sticking(withKicks).map((n) => n.noteId)).toEqual(sticking(ex).map((n) => n.noteId))
   })
 })
 

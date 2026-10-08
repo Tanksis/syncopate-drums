@@ -5,8 +5,8 @@
 
 import type { StemmableNote } from 'vexflow/bravura'
 import { Beam, Dot, Formatter, Fraction, GhostNote, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
-import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, NoteSticking, PlayPosition, StaffEvent, Voice as DrumVoice } from '@/core'
-import { TICKS_PER_BEAT, VOICE_LIMB, inLoopRange, restBar, setBeat, staffParts, sticking } from '@/core'
+import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, NoteSticking, PlayPosition, StaffEvent } from '@/core'
+import { TICKS_PER_BEAT, inLoopRange, restBar, setBeat, staffParts, sticking } from '@/core'
 
 // Mirror the accent, a light tint of it and the loop range's ink and shade from the design tokens in styles/index.css.
 const ACCENT_COLOUR = '#2563eb'
@@ -39,8 +39,6 @@ const STEMS_UP_SPACE = 3
 const HAND_ROW_HANDS = 6.5
 /** ...or under the feet part's stems down, when it is drawn. */
 const HAND_ROW_FEET = 9.5
-/** ...or further down, under the bass drum line's stems and its tuplets. */
-const HAND_ROW_BASS = 11.5
 const STAVE_LINE_GAP = 10
 /** Pixels of clickable space around a printed hand. */
 const HAND_HIT_PAD = 3
@@ -161,8 +159,8 @@ const PLAYHEAD_OVERHANG = 1.5
 const noteCentre = (note: StaveNote) => (note.getNoteHeadBeginX() + note.getNoteHeadEndX()) / 2
 
 /**
- * Draws the whole exercise into `el`, replacing what was there, at the given width. Each of the
- * exercise part's notes carries `data-bar` and `data-beat`, the beat it sits in; each bar number
+ * Draws the whole exercise into `el`, replacing what was there, at the given width. Each struck
+ * chord carries `data-bar` and `data-beat`, the beat it sits in; each bar number
  * carries `data-loop-bar`, its bar. With no cursor, no beat or bar is highlighted.
  */
 export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor | null, width: number): Drawing {
@@ -172,13 +170,12 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   const barsPerLine = Math.max(1, Math.min(BARS_PER_LINE, Math.floor(available / MIN_BAR_WIDTH)))
   const barWidth = Math.floor(available / barsPerLine)
   const lines = Math.ceil(bars.length / barsPerLine)
-  const parts = staffParts(bars, exercise.voice, exercise.practice.groove)
-  const exerciseLimb = VOICE_LIMB[exercise.voice]
+  const parts = staffParts(bars, exercise.practice.groove)
   /** A part is drawn when it has a note or a rest anywhere. */
   const drawnLimbs = (['hands', 'feet'] as const).filter((limb) =>
     parts.some((bar) => bar[limb].some((e) => e.kind !== 'space')),
   )
-  const handRow = exerciseLimb === 'feet' ? HAND_ROW_BASS : drawnLimbs.includes('feet') ? HAND_ROW_FEET : HAND_ROW_HANDS
+  const handRow = drawnLimbs.includes('feet') ? HAND_ROW_FEET : HAND_ROW_HANDS
   const spaceAbove = SPACE_ABOVE_STAVE + (drawnLimbs.includes('hands') ? STEMS_UP_SPACE : 0)
   /** The bar number's line above the stave, clear of the hands part's stems. */
   const barNumberLine = drawnLimbs.includes('hands') ? STEMS_UP_SPACE : 0
@@ -224,11 +221,9 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
     const drawings = drawnLimbs
       .filter((limb) => parts[b][limb].length)
       .map((limb): PartDrawing => ({ limb, drawn: parts[b][limb].map((event) => ({ event, note: eventNote(event, limb) })) }))
-    /** The part holding the exercise in this bar: the hands, in a bar of one voice. */
-    const exercisePart = parts[b][exerciseLimb].length ? exerciseLimb : 'hands'
-    // The cursor's beat is lit in the part holding the exercise.
-    for (const { limb, drawn } of drawings) {
-      if (limb !== exercisePart || b !== cursor?.bar) continue
+    // The cursor's beat is lit in both parts, which hold the snare row and the kick row.
+    for (const { drawn } of drawings) {
+      if (b !== cursor?.bar) continue
       for (const { event, note } of drawn) {
         if (Math.floor(event.start / TICKS_PER_BEAT) === cursor.beat) note.setStyle({ fillStyle: ACCENT_COLOUR, strokeStyle: ACCENT_COLOUR })
       }
@@ -237,17 +232,15 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
 
     const top = stave.getYForLine(-PLAYHEAD_OVERHANG)
     const bottom = stave.getYForLine(4 + PLAYHEAD_OVERHANG)
-    for (const { limb, drawn } of drawings) {
+    for (const { drawn } of drawings) {
       for (const { event, note } of drawn) {
         if (event.kind !== 'chord' || !(note instanceof StaveNote)) continue
         for (const tick of event.strikes) marks.set(`${b}:${tick}`, { x: noteCentre(note), top, bottom })
-        if (limb === exercisePart) {
-          // Tagged with its beat, so a click on it can move the cursor there.
-          const svg = note.getSVGElement()
-          svg?.setAttribute('data-bar', String(b))
-          svg?.setAttribute('data-beat', String(Math.floor(event.start / TICKS_PER_BEAT)))
-          svg?.classList.add('cursor-pointer')
-        }
+        // Tagged with its beat, so a click on it can move the cursor there.
+        const svg = note.getSVGElement()
+        svg?.setAttribute('data-bar', String(b))
+        svg?.setAttribute('data-beat', String(Math.floor(event.start / TICKS_PER_BEAT)))
+        svg?.classList.add('cursor-pointer')
         for (const n of event.notes) {
           const index = keyIndex(event, n.drum)
           const previous = lastOf.get(n.drum)
@@ -344,8 +337,7 @@ function drawHand(stave: Stave, note: StaveNote, { noteId, shown: hand, override
 export function drawFigure(el: HTMLElement, hits: string, width: number, height: number) {
   el.replaceChildren()
   const scale = 0.55
-  const voice: DrumVoice = 'snare'
-  const [{ hands }] = staffParts(setBeat([restBar()], 0, 0, hits), voice, 'off')
+  const [{ hands }] = staffParts(setBeat([restBar()], 'snare', 0, 0, hits), 'off')
   const renderer = new Renderer(el as HTMLDivElement, Renderer.Backends.SVG)
   renderer.resize(width, height)
   const ctx = renderer.getContext()

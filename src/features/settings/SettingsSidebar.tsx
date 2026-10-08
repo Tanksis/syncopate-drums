@@ -21,9 +21,6 @@ export function SettingsSidebar() {
         <Choice label="Lead hand" setting="leadHand" options={['R', 'L']} />
         <ResetOverrides />
       </SettingGroup>
-      <SettingGroup title="Exercise">
-        <Choice label="Voice" setting="voice" options={['snare', 'bass']} names={{ bass: 'bass drum' }} />
-      </SettingGroup>
       <SettingGroup title="Editor">
         <VimKeys />
       </SettingGroup>
@@ -236,12 +233,10 @@ function Choice<K extends keyof ExerciseSettings>({
   label,
   setting,
   options,
-  names = {},
 }: {
   label: string
   setting: K
   options: ExerciseSettings[K][]
-  names?: Partial<Record<ExerciseSettings[K], string>>
 }) {
   const value = useAppStore((s) => s.editor.exercise[setting])
   const dispatch = useAppStore((s) => s.dispatch)
@@ -259,7 +254,7 @@ function Choice<K extends keyof ExerciseSettings>({
             onClick={() => dispatch({ type: 'setExerciseSettings', settings: { [setting]: option } })}
             className="cursor-pointer border-l border-line bg-card px-2 py-0.5 first:border-l-0 hover:text-accent aria-pressed:bg-accent aria-pressed:text-white aria-pressed:hover:text-white"
           >
-            {names[option] ?? option}
+            {option}
           </button>
         ))}
       </div>

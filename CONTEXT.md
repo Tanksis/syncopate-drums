@@ -31,8 +31,13 @@ How an exercise is practiced rather than what it contains: BPM, loop range, groo
 **Device settings**:
 How the app is set up on this computer rather than how an exercise is practiced: volumes, the exercise mute, the count-in toggle, vim keys and which exercise was last open. Kept per device and never exported.
 
-**Voice**:
-The drum an exercise's notes are played on (snare by default, or bass drum).
+**Snare row**:
+One of an exercise's two rhythms over the same bars: the notes played on the snare with the hands, written in the hands part. Sticking labels this row only.
+_Avoid_: Voice, lane, track
+
+**Kick row**:
+The exercise's other rhythm: the notes played on the bass drum with the feet, written in the feet part. A beat's grid (sixteenths or triplets) is shared by both rows.
+_Avoid_: Voice, lane, track
 
 ### Practice
 
@@ -93,7 +98,7 @@ _Avoid_: Hand-to-hand
 The hand that plays the first grid position under natural sticking, or the first note under alternate sticking; R by default.
 
 **Sticking override**:
-A hand the user has set manually on one note, replacing the computed sticking; always the hand opposite the one computed when it was set. Hidden but kept when sticking is off or the voice is bass drum.
+A hand the user has set manually on one note, replacing the computed sticking; always the hand opposite the one computed when it was set. Hidden but kept when sticking is off. Only the snare row's notes carry one.
 
 ### Groove
 

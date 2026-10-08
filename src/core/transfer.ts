@@ -2,8 +2,8 @@
 
 import { GROOVE_PRESETS } from './groove'
 import { migrateExercise } from './migrate'
-import type { Duration, Exercise, Hand, Item, StickingMode, Voice } from './model'
-import { MAX_BPM, MAX_SWING, MIN_BPM, MIN_SWING, SCHEMA_VERSION, TICKS_PER_BAR, itemTicks } from './model'
+import type { Duration, Exercise, Hand, Item, StickingMode } from './model'
+import { MAX_BPM, MAX_SWING, MIN_BPM, MIN_SWING, ROWS, SCHEMA_VERSION, TICKS_PER_BAR, itemTicks } from './model'
 
 /** Marks a file as an exercise export. Chosen before the app was named, and kept. */
 export const EXPORT_FORMAT = 'drum-app-exercises'
@@ -130,8 +130,7 @@ function exerciseProblem(exercise: Exercise): string | null {
   if (typeof e.id !== 'string' || e.id === '') return 'has no id'
   if (typeof e.name !== 'string') return 'has no name'
   if (!Array.isArray(e.bars) || e.bars.length === 0) return 'has no bars'
-  if (!e.bars.every(isBar)) return "has a bar that isn't four beats of notes and rests"
-  if (!oneOf(e.voice, VOICES)) return 'has an unknown voice'
+  if (!e.bars.every(isBar)) return "has a bar that isn't four beats of notes and rests in each row"
   if (!oneOf(e.sticking, STICKING_MODES)) return 'has an unknown sticking mode'
   if (!oneOf(e.leadHand, HANDS)) return 'has an unknown lead hand'
   if (!isFiniteNumber(e.lastOpened)) return 'has no last-opened time'
@@ -158,8 +157,12 @@ function practiceProblem(practice: unknown, barCount: number): string | null {
 }
 
 function isBar(bar: unknown): boolean {
-  if (!isRecord(bar) || !Array.isArray(bar.items) || !bar.items.every(isItem)) return false
-  return bar.items.reduce((ticks: number, item: Item) => ticks + itemTicks(item), 0) === TICKS_PER_BAR
+  return isRecord(bar) && ROWS.every((row) => isRowOfBar(bar[row]))
+}
+
+function isRowOfBar(items: unknown): boolean {
+  if (!Array.isArray(items) || !items.every(isItem)) return false
+  return items.reduce((ticks: number, item: Item) => ticks + itemTicks(item), 0) === TICKS_PER_BAR
 }
 
 function isItem(item: unknown): item is Item {
@@ -170,7 +173,6 @@ function isItem(item: unknown): item is Item {
   return kind === 'note' && typeof item.tiedToNext === 'boolean' && (item.override === undefined || oneOf(item.override, HANDS))
 }
 
-const VOICES: Voice[] = ['snare', 'bass']
 const STICKING_MODES: StickingMode[] = ['natural', 'alternate', 'off']
 const HANDS: Hand[] = ['R', 'L']
 const DURATIONS: Duration[] = ['quarter', 'eighth', 'sixteenth']

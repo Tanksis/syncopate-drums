@@ -2,7 +2,7 @@
 // current one. The database and import both go through it.
 
 import type { Exercise } from './model'
-import { SCHEMA_VERSION } from './model'
+import { SCHEMA_VERSION, restItems } from './model'
 
 type Stored = Record<string, unknown>
 
@@ -10,6 +10,23 @@ type Stored = Record<string, unknown>
 const steps: Record<number, (exercise: Stored) => Stored> = {
   // Version 0 is the shape from before exercises carried a schema version.
   0: (exercise) => ({ ...exercise, schemaVersion: 1 }),
+  // Version 1 was one rhythm on one drum, its voice. A snare exercise becomes the snare row over a
+  // resting kick row; a bass drum exercise becomes the kick row, which has no sticking, under a
+  // resting snare row (ADR 0005).
+  1: ({ voice, ...exercise }) => {
+    const bass = voice === 'bass'
+    const bars = Array.isArray(exercise.bars)
+      ? exercise.bars.map((bar: unknown) => {
+          // A malformed bar is left for import to refuse.
+          if (typeof bar !== 'object' || bar === null || !Array.isArray((bar as Stored).items)) return bar
+          const items = (bar as { items: Stored[] }).items
+          return bass
+            ? { snare: restItems(), kick: items.map(({ override: _, ...item }) => item) }
+            : { snare: items, kick: restItems() }
+        })
+      : exercise.bars
+    return { ...exercise, bars, schemaVersion: 2 }
+  },
 }
 
 /** The stored exercise in the current shape; throws for one from a newer version of the app. */

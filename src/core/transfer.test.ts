@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Exercise, Item, Note } from './index'
-import { SCHEMA_VERSION, exportFile, exportFileName, importConflicts, newExercise, parseImport, planImport } from './index'
+import { SCHEMA_VERSION, exportFile, exportFileName, importConflicts, newExercise, parseImport, planImport, restItems } from './index'
 
 const note = (duration: Item['duration'], { tied = false } = {}): Note => ({
   kind: 'note',
@@ -11,13 +11,19 @@ const note = (duration: Item['duration'], { tied = false } = {}): Note => ({
 })
 const rest: Item = { kind: 'rest', duration: 'quarter', dotted: false, triplet: false }
 
-/** Two bars with a tie across the bar line, practised in a loop with a groove and swing. */
+/** Two bars with a tie across the bar line and a kick row, practised in a loop with a groove and swing. */
 const paradiddles: Exercise = {
   ...newExercise({ id: 'paradiddles', now: 300 }),
   name: 'Paradiddles',
   bars: [
-    { items: [note('quarter'), note('eighth'), note('eighth'), rest, note('quarter', { tied: true })] },
-    { items: [note('quarter'), rest, { ...note('sixteenth'), override: 'L' }, note('sixteenth'), note('eighth'), rest] },
+    {
+      snare: [note('quarter'), note('eighth'), note('eighth'), rest, note('quarter', { tied: true })],
+      kick: [note('quarter'), rest, rest, rest],
+    },
+    {
+      snare: [note('quarter'), rest, { ...note('sixteenth'), override: 'L' }, note('sixteenth'), note('eighth'), rest],
+      kick: restItems(),
+    },
   ],
   sticking: 'alternate',
   leadHand: 'L',
@@ -67,11 +73,23 @@ describe('parsing an import', () => {
     })
   })
 
-  it('migrates a file from before exercises carried a schema version', () => {
-    const { schemaVersion: _, ...v0 } = paradiddles
-    expect(parseImport(asJson({ format: 'drum-app-exercises', version: 0, exercises: [v0] }))).toEqual({
+  /** Paradiddles as version 1 stored it: one rhythm, its snare row, on one drum, its voice. */
+  const { schemaVersion: _, bars, ...settings } = paradiddles
+  const v1 = (voice: 'snare' | 'bass') => ({ ...settings, voice, bars: bars.map((bar) => ({ items: bar.snare })) })
+
+  it('migrates a snare exercise from before exercises carried a schema version into the snare row', () => {
+    expect(parseImport(asJson({ format: 'drum-app-exercises', version: 0, exercises: [v1('snare')] }))).toEqual({
       ok: true,
-      exercises: [{ ...v0, schemaVersion: SCHEMA_VERSION }],
+      exercises: [{ ...paradiddles, bars: bars.map((bar) => ({ snare: bar.snare, kick: restItems() })) }],
+    })
+  })
+
+  it('migrates a version 1 bass drum exercise into the kick row, its overrides dropped', () => {
+    const file = { format: 'drum-app-exercises', version: 1, exercises: [{ ...v1('bass'), schemaVersion: 1 }] }
+    const kick = [note('quarter'), rest, note('sixteenth'), note('sixteenth'), note('eighth'), rest]
+    expect(parseImport(asJson(file))).toEqual({
+      ok: true,
+      exercises: [{ ...paradiddles, bars: [{ snare: restItems(), kick: bars[0].snare }, { snare: restItems(), kick }] }],
     })
   })
 
@@ -100,11 +118,12 @@ describe('parsing an import', () => {
     ['an exercise without an id', { ...paradiddles, id: undefined }],
     ['an exercise without a name', { ...paradiddles, name: 7 }],
     ['an exercise without bars', { ...paradiddles, bars: [] }],
-    ['a bar that is not four beats long', { ...paradiddles, bars: [{ items: bar1.items.slice(1) }, bar2] }],
-    ['an item of an unknown duration', { ...paradiddles, bars: [{ items: [{ ...rest, duration: 'half' }] }] }],
-    ['a note without its tie flag', { ...paradiddles, bars: [{ items: [{ ...rest, kind: 'note' }, rest, rest, rest] }] }],
-    ['an unknown sticking override', { ...paradiddles, bars: [{ items: [{ ...note('quarter'), override: 'X' }, rest, rest, rest] }] }],
-    ['an unknown voice', { ...paradiddles, voice: 'cowbell' }],
+    ['a bar that is not four beats long', { ...paradiddles, bars: [{ ...bar1, snare: bar1.snare.slice(1) }, bar2] }],
+    ['a kick row that is not four beats long', { ...paradiddles, bars: [bar1, { ...bar2, kick: bar2.kick.slice(1) }] }],
+    ['a bar without its kick row', { ...paradiddles, bars: [{ snare: bar1.snare }, bar2] }],
+    ['an item of an unknown duration', { ...paradiddles, bars: [{ ...bar1, snare: [{ ...rest, duration: 'half' }] }] }],
+    ['a note without its tie flag', { ...paradiddles, bars: [{ ...bar1, kick: [{ ...rest, kind: 'note' }, rest, rest, rest] }] }],
+    ['an unknown sticking override', { ...paradiddles, bars: [{ ...bar1, snare: [{ ...note('quarter'), override: 'X' }, rest, rest, rest] }] }],
     ['an unknown sticking mode', { ...paradiddles, sticking: 'paradiddle' }],
     ['an unknown lead hand', { ...paradiddles, leadHand: 'both' }],
     ['a BPM out of range', { ...paradiddles, practice: { ...paradiddles.practice, bpm: 900 } }],

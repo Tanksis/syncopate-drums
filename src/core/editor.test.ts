@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { EditorState, ExerciseSettings, KeyPress } from './index'
+import type { Bar, EditorState, ExerciseSettings, KeyPress } from './index'
 import { applyEdit, beatViews, commandForKey, editorBeatViews, loopAt, newEditorState, newExercise, sticking, withBpm, withGroove, withLoopRange, withSwing } from './index'
 
 const press = (key: string, mods: Partial<KeyPress> = {}): KeyPress => ({
@@ -26,7 +26,15 @@ function type(keys: string[], state = newEditorState(newExercise({ id: 'e1', now
   }, state)
 }
 
-const figureKeys = (state: EditorState) => beatViews(state.exercise.bars).map((bar) => bar.map((v) => v.figure?.key).join(''))
+/** The snare row's beats as the editor shows them, each with the beat's shared grid. */
+const snareViews = (bars: Bar[], tripletBeats?: number[]) =>
+  beatViews(bars, tripletBeats).map((beats) => beats.map((v) => ({ ...v.snare, triplet: v.triplet })))
+
+/** As `snareViews`, with the editor's pending grid. */
+const editorSnareViews = (state: EditorState) =>
+  editorBeatViews(state).map((beats) => beats.map((v) => ({ ...v.snare, triplet: v.triplet })))
+
+const figureKeys = (state: EditorState) => snareViews(state.exercise.bars).map((bar) => bar.map((v) => v.figure?.key).join(''))
 
 describe('a new exercise', () => {
   it('starts from the fixed defaults', () => {
@@ -34,7 +42,6 @@ describe('a new exercise', () => {
     expect(ex).toMatchObject({
       id: 'e1',
       name: 'Untitled',
-      voice: 'snare',
       sticking: 'natural',
       leadHand: 'R',
       practice: { bpm: 80, loopRange: null, groove: 'off' },
@@ -42,7 +49,9 @@ describe('a new exercise', () => {
     })
     expect(ex.practice.swing).toBeCloseTo(0.667, 3)
     expect(ex.bars).toHaveLength(1)
-    expect(ex.bars[0].items.every((i) => i.kind === 'rest')).toBe(true)
+    expect(ex.bars[0].snare.every((i) => i.kind === 'rest')).toBe(true)
+    expect(ex.bars[0].kick.every((i) => i.kind === 'rest')).toBe(true)
+    expect(ex).not.toHaveProperty('voice')
   })
 })
 
@@ -199,7 +208,7 @@ describe('the loop range', () => {
 })
 
 describe('ties and cut short', () => {
-  const views = (state: EditorState) => beatViews(state.exercise.bars)[state.cursor.bar]
+  const views = (state: EditorState) => snareViews(state.exercise.bars)[state.cursor.bar]
 
   it('T ties the cursor beat into the one before it, without moving the cursor', () => {
     const state = { ...type(['1', '1']), cursor: { bar: 0, beat: 1 } }
@@ -292,7 +301,7 @@ describe('turning beats into rests', () => {
 describe('reshaping bars', () => {
   // Bars 1111 | 2222 | 3333, cursor on bar 2.
   const three = () => ({ ...type('111122223333'.split('')), cursor: { bar: 1, beat: 2 } })
-  const tiedInto = (state: EditorState) => beatViews(state.exercise.bars).map((bar) => bar.map((v) => (v.tiedInto ? '⌒' : '-')).join(''))
+  const tiedInto = (state: EditorState) => snareViews(state.exercise.bars).map((bar) => bar.map((v) => (v.tiedInto ? '⌒' : '-')).join(''))
 
   it('Ctrl+Enter adds a bar of rests after the current one and moves to it', () => {
     const state = keys(three(), ctrl('Enter'))
@@ -462,21 +471,21 @@ describe('undo and redo', () => {
   })
 })
 
-describe('sticking and voice settings', () => {
+describe('sticking settings', () => {
   const set = (state: EditorState, settings: Partial<ExerciseSettings>) =>
     applyEdit(state, { type: 'setExerciseSettings', settings })
 
   it('change the exercise, each as one undoable step', () => {
     const start = type(['1', '2'])
-    const edited = set(set(set(start, { sticking: 'alternate' }), { leadHand: 'L' }), { voice: 'bass' })
-    expect(edited.exercise).toMatchObject({ sticking: 'alternate', leadHand: 'L', voice: 'bass' })
+    const edited = set(set(start, { sticking: 'alternate' }), { leadHand: 'L' })
+    expect(edited.exercise).toMatchObject({ sticking: 'alternate', leadHand: 'L' })
     expect(edited.exercise.bars).toBe(start.exercise.bars)
 
     const undone = keys(edited, ctrl('z'))
-    expect(undone.exercise).toMatchObject({ sticking: 'alternate', leadHand: 'L', voice: 'snare' })
-    expect(keys(undone, ctrl('z'), ctrl('z')).exercise).toMatchObject({ sticking: 'natural', leadHand: 'R' })
-    expect(keys(undone, ctrl('z'), ctrl('z'), ctrl('z')).exercise.bars).not.toBe(start.exercise.bars)
-    expect(keys(undone, ctrl('Z', { shiftKey: true })).exercise.voice).toBe('bass')
+    expect(undone.exercise).toMatchObject({ sticking: 'alternate', leadHand: 'R' })
+    expect(keys(undone, ctrl('z')).exercise).toMatchObject({ sticking: 'natural', leadHand: 'R' })
+    expect(keys(undone, ctrl('z'), ctrl('z')).exercise.bars).not.toBe(start.exercise.bars)
+    expect(keys(undone, ctrl('Z', { shiftKey: true })).exercise.leadHand).toBe('L')
   })
 
   it('setting what is already set is not a change', () => {
@@ -536,7 +545,7 @@ describe('sticking overrides', () => {
     expect(overrides(neighbour)).toBe('----' + '--L-')
     // `xxxx` → `x...`: the overridden first sixteenth becomes a quarter.
     const longer = keys({ ...keys(start(), alt('1')), cursor: { bar: 0, beat: 1 } }, press('1'))
-    expect(beatViews(longer.exercise.bars)[0][1].hits).toBe('x...')
+    expect(snareViews(longer.exercise.bars)[0][1].hits).toBe('x...')
     expect(overrides(longer)).toBe('--' + 'L')
   })
 
@@ -547,7 +556,7 @@ describe('sticking overrides', () => {
     expect(overrides(keys({ ...rested, cursor: { bar: 0, beat: 1 } }, press('4')))).toBe('------')
   })
 
-  it('is kept across mode switches, and hidden but kept with sticking off or the bass drum voice', () => {
+  it('is kept across mode switches, and hidden but kept with sticking off', () => {
     const set = (state: EditorState, settings: Partial<ExerciseSettings>) =>
       applyEdit(state, { type: 'setExerciseSettings', settings })
     const flipped = keys(start(), alt('2'))
@@ -555,15 +564,13 @@ describe('sticking overrides', () => {
     expect(overrides(alternate)).toBe('--' + '-R--')
     expect(hands(set(flipped, { sticking: 'off' }))).toBe('------')
     expect(hands(set(set(flipped, { sticking: 'off' }), { sticking: 'natural' }))).toBe('RL' + 'RRRL')
-    expect(hands(set(flipped, { voice: 'bass' }))).toBe('------')
-    expect(overrides(set(flipped, { voice: 'bass' }))).toBe('--' + '-R--')
+    expect(overrides(set(flipped, { sticking: 'off' }))).toBe('--' + '-R--')
   })
 
   it('cannot be flipped while sticking is hidden', () => {
     const off = applyEdit(start(), { type: 'setExerciseSettings', settings: { sticking: 'off' } })
     expect(keys(off, alt('1'))).toBe(off)
-    const bass = applyEdit(start(), { type: 'setExerciseSettings', settings: { voice: 'bass' } })
-    expect(applyEdit(bass, { type: 'flipOverride', note: { id: '0:0' } })).toBe(bass)
+    expect(applyEdit(off, { type: 'flipOverride', note: { id: '0:0' } })).toBe(off)
   })
 
   it('reset clears every override in one undoable step, and is not a change with none set', () => {
@@ -809,7 +816,7 @@ describe('vim Normal mode', () => {
 
 describe('clicking grid positions', () => {
   const click = (state: EditorState, bar: number, beat: number, position: number) =>
-    applyEdit(state, { type: 'toggleGridPosition', bar, beat, position })
+    applyEdit(state, { type: 'toggleGridPosition', row: 'snare', bar, beat, position })
   const fresh = () => newEditorState(newExercise({ id: 'e1', now: 0 }))
 
   it('clicks several positions in one beat, the cursor moving to that beat without advancing', () => {
@@ -843,16 +850,16 @@ describe('clicking grid positions', () => {
 
   it('strikes the downbeat of a tied-into beat again', () => {
     const tied = keys(type(['1', '1']), press('ArrowLeft'), press('t'))
-    expect(beatViews(tied.exercise.bars)[0][1].tiedInto).toBe(true)
+    expect(snareViews(tied.exercise.bars)[0][1].tiedInto).toBe(true)
     const struck = click(tied, 0, 1, 0)
-    expect(beatViews(struck.exercise.bars)[0][1]).toMatchObject({ tiedInto: false, figure: { key: '1' } })
+    expect(snareViews(struck.exercise.bars)[0][1]).toMatchObject({ tiedInto: false, figure: { key: '1' } })
   })
 })
 
 describe('dragging a hold', () => {
   const drag = (state: EditorState, bar: number, beat: number, position: number, end: number) =>
-    applyEdit(state, { type: 'setHold', from: { bar, beat, position }, to: { bar, beat, position: end } })
-  const text = (state: EditorState) => beatViews(state.exercise.bars)[0].map((v) => v.positions.map((p) => p[0]).join(''))
+    applyEdit(state, { type: 'setHold', from: { row: 'snare', bar, beat, position }, to: { row: 'snare', bar, beat, position: end } })
+  const text = (state: EditorState) => snareViews(state.exercise.bars)[0].map((v) => v.positions.map((p) => p[0]).join(''))
 
   it('sets the hold, moving the cursor to the beat without advancing or changing the mode', () => {
     const state = drag(vim(type(['2', '2']), '<Esc>'), 0, 0, 0, 1)
@@ -882,7 +889,7 @@ describe('dragging a hold', () => {
 
   it('a figure key over a beat with custom holds resets them', () => {
     const custom = drag(type(['2']), 0, 0, 0, 1)
-    expect(beatViews(custom.exercise.bars)[0][0].figure).toBeUndefined()
+    expect(snareViews(custom.exercise.bars)[0][0].figure).toBeUndefined()
     const retyped = type(['2'], { ...custom, cursor: { bar: 0, beat: 0 } })
     expect(figureKeys(retyped)).toEqual(['2   '])
     const replaced = vim({ ...custom, cursor: { bar: 0, beat: 0 } }, '<Esc>r2')
@@ -892,34 +899,34 @@ describe('dragging a hold', () => {
   it('drags on the pending triplet grid, which the beat then keeps on its own', () => {
     const pending = applyEdit(type(['1']), { type: 'setBeatGrid', bar: 0, beat: 0, triplet: true })
     const state = drag(pending, 0, 0, 0, 1)
-    expect(beatViews(state.exercise.bars)[0][0]).toMatchObject({ triplet: true, positions: ['hit', 'empty', 'empty'] })
+    expect(snareViews(state.exercise.bars)[0][0]).toMatchObject({ triplet: true, positions: ['hit', 'empty', 'empty'] })
     expect(state.pendingGrid).toEqual([])
     // Held to the end again, it reads the same on either grid, and stays on triplets in the editor.
     const back = drag(state, 0, 0, 0, 3)
-    expect(beatViews(back.exercise.bars)[0][0]).toMatchObject({ triplet: false, figure: { key: '1' } })
-    expect(editorBeatViews(back)[0][0]).toMatchObject({ triplet: true, positions: ['hit', 'hold', 'hold'] })
+    expect(snareViews(back.exercise.bars)[0][0]).toMatchObject({ triplet: false, figure: { key: '1' } })
+    expect(editorSnareViews(back)[0][0]).toMatchObject({ triplet: true, positions: ['hit', 'hold', 'hold'] })
   })
 
   it('drags into a later beat on its pending triplet grid, which it keeps', () => {
     const pending = applyEdit(type(['1']), { type: 'setBeatGrid', bar: 0, beat: 1, triplet: true })
     const into = (state: EditorState, position: number) =>
-      applyEdit(state, { type: 'setHold', from: { bar: 0, beat: 0, position: 0 }, to: { bar: 0, beat: 1, position } })
+      applyEdit(state, { type: 'setHold', from: { row: 'snare', bar: 0, beat: 0, position: 0 }, to: { row: 'snare', bar: 0, beat: 1, position } })
     const state = into(pending, 1)
-    expect(beatViews(state.exercise.bars)[0][1]).toMatchObject({ triplet: true, tiedInto: true, positions: ['hold', 'empty', 'empty'] })
+    expect(snareViews(state.exercise.bars)[0][1]).toMatchObject({ triplet: true, tiedInto: true, positions: ['hold', 'empty', 'empty'] })
     expect(state.cursor).toEqual({ bar: 0, beat: 0 })
     // Held right through, it reads the same on either grid, and stays on triplets in the editor.
     const through = into(pending, 3)
-    expect(beatViews(through.exercise.bars)[0][1].triplet).toBe(false)
-    expect(editorBeatViews(through)[0][1]).toMatchObject({ triplet: true, positions: ['hold', 'hold', 'hold'] })
+    expect(snareViews(through.exercise.bars)[0][1].triplet).toBe(false)
+    expect(editorSnareViews(through)[0][1]).toMatchObject({ triplet: true, positions: ['hold', 'hold', 'hold'] })
   })
 })
 describe('switching a beat between the sixteenth and triplet grid', () => {
   const grid = (state: EditorState, bar: number, beat: number, triplet: boolean) =>
     applyEdit(state, { type: 'setBeatGrid', bar, beat, triplet })
   const click = (state: EditorState, bar: number, beat: number, position: number) =>
-    applyEdit(state, { type: 'toggleGridPosition', bar, beat, position })
+    applyEdit(state, { type: 'toggleGridPosition', row: 'snare', bar, beat, position })
   const fresh = () => newEditorState(newExercise({ id: 'e1', now: 0 }))
-  const view = (state: EditorState, bar: number, beat: number) => editorBeatViews(state)[bar][beat]
+  const view = (state: EditorState, bar: number, beat: number) => editorSnareViews(state)[bar][beat]
 
   it('puts an empty beat on the triplet grid, with three empty positions', () => {
     const state = grid(fresh(), 0, 1, true)
@@ -929,14 +936,14 @@ describe('switching a beat between the sixteenth and triplet grid', () => {
 
   it('takes clicks on triplet positions: positions 1 and 3 make the beat triplet x.x', () => {
     const state = click(click(grid(fresh(), 0, 1, true), 0, 1, 0), 0, 1, 2)
-    expect(beatViews(state.exercise.bars)[0][1]).toMatchObject({ triplet: true, hits: 'x.x', figure: { key: 's' } })
+    expect(snareViews(state.exercise.bars)[0][1]).toMatchObject({ triplet: true, hits: 'x.x', figure: { key: 's' } })
     expect(state.pendingGrid).toEqual([])
   })
 
   it('keeps the beat on the triplet grid while only its downbeat is clicked, without saving it', () => {
     const state = click(grid(fresh(), 0, 1, true), 0, 1, 0)
     expect(view(state, 0, 1)).toMatchObject({ triplet: true, positions: ['hit', 'hold', 'hold'] })
-    expect(beatViews(state.exercise.bars)[0][1]).toMatchObject({ triplet: false, figure: { key: '1' } })
+    expect(snareViews(state.exercise.bars)[0][1]).toMatchObject({ triplet: false, figure: { key: '1' } })
   })
 
   it('shows no sixteenth figure for a beat on the pending grid, for the palette to light', () => {
@@ -1003,5 +1010,72 @@ describe('switching a beat between the sixteenth and triplet grid', () => {
     const state = click(type(['s']), 0, 0, 2)
     expect(view(state, 0, 0)).toMatchObject({ triplet: true, positions: ['hit', 'hold', 'hold'] })
     expect(figureKeys(state)).toEqual(['1   '])
+  })
+})
+
+describe('the kick row (ADR 0005)', () => {
+  const kick = (state: EditorState, bar: number, beat: number, position: number) =>
+    applyEdit(state, { type: 'toggleGridPosition', row: 'kick', bar, beat, position })
+  /** Each bar's kick row, as hits per beat. */
+  const kickHits = (state: EditorState) => editorBeatViews(state).map((bar) => bar.map((v) => v.kick.hits).join(' '))
+  /** Snare figures 1 2 3 4 in bar 1, and a kick on the & of beat 1. */
+  const start = () => kick(type(['1', '2', '3', '4']), 0, 0, 2)
+
+  it('takes a click without touching the snare row, moving the cursor to its beat', () => {
+    const snared = type(['1', '2', '3', '4'])
+    const state = kick(snared, 0, 0, 2)
+    expect(state.exercise.bars[0].snare).toBe(snared.exercise.bars[0].snare)
+    expect(kickHits(state)).toEqual(['..x. .... .... ....', '.... .... .... ....'])
+    expect(state.cursor).toEqual({ bar: 0, beat: 0 })
+    expect(figureKeys(keys(state, ctrl('z')))).toEqual(figureKeys(snared))
+    expect(kickHits(keys(state, ctrl('z')))[0]).toBe('.... .... .... ....')
+  })
+
+  it('drags a kick hold in the kick row', () => {
+    const state = applyEdit(start(), {
+      type: 'setHold',
+      from: { row: 'kick', bar: 0, beat: 0, position: 2 },
+      to: { row: 'kick', bar: 0, beat: 1, position: 2 },
+    })
+    expect(editorBeatViews(state)[0][1].kick).toMatchObject({ tiedInto: true, positions: ['hold', 'hold', 'empty', 'empty'] })
+    expect(figureKeys(state)).toEqual(figureKeys(start()))
+  })
+
+  it('switches a beat to triplets in both rows at once, keeping each downbeat', () => {
+    const state = kick(kick(type(['5']), 0, 0, 0), 0, 0, 2)
+    expect(kickHits(state)[0].slice(0, 4)).toBe('x.x.')
+    const switched = applyEdit(state, { type: 'setBeatGrid', bar: 0, beat: 0, triplet: true })
+    expect(editorBeatViews(switched)[0][0]).toMatchObject({ triplet: true, snare: { hits: 'x..' }, kick: { hits: 'x..' } })
+    // A click on the kick's "let" lands on the shared triplet grid.
+    expect(editorBeatViews(kick(switched, 0, 0, 2))[0][0]).toMatchObject({ triplet: true, kick: { hits: 'x.x' }, snare: { hits: 'x..' } })
+  })
+
+  it('carries both rows with every bar command', () => {
+    const state = start()
+    const kicks = kickHits(state)[0]
+    expect(kickHits(keys(state, ctrl('d')))).toEqual([kicks, kicks, '.... .... .... ....'])
+    expect(kickHits(keys(state, ctrl('c'), press('ArrowDown'), ctrl('v')))).toEqual([kicks, kicks])
+    const yanked = vim(state, '<Esc>yyp')
+    expect(kickHits(yanked)).toEqual([kicks, kicks, '.... .... .... ....'])
+    expect(figureKeys(yanked)).toEqual(['1234', '1234', '    '])
+    expect(kickHits(keys(state, ctrl('Backspace')))).toEqual(['.... .... .... ....'])
+  })
+
+  it('deletes a lone bar with only kicks in it, leaving a bar of rests', () => {
+    const only = kick(newEditorState(newExercise({ id: 'e1', now: 0 })), 0, 0, 0)
+    expect(kickHits(applyEdit(only, { type: 'deleteBar' }))).toEqual(['.... .... .... ....'])
+  })
+
+  it('cuts a kick tie that would run into an added bar', () => {
+    const twoBars = applyEdit(newEditorState(newExercise({ id: 'e1', now: 0 })), { type: 'addBar' })
+    const tied = applyEdit(kick(twoBars, 0, 3, 0), {
+      type: 'setHold',
+      from: { row: 'kick', bar: 0, beat: 3, position: 0 },
+      to: { row: 'kick', bar: 1, beat: 0, position: 2 },
+    })
+    expect(editorBeatViews(tied)[1][0].kick.tiedInto).toBe(true)
+    const added = applyEdit({ ...tied, cursor: { bar: 0, beat: 0 } }, { type: 'addBar' })
+    expect(editorBeatViews(added)[1][0].kick.tiedInto).toBe(false)
+    expect(added.exercise.bars[0].kick.at(-1)).toMatchObject({ tiedToNext: false })
   })
 })

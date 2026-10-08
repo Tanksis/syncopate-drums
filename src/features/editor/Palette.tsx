@@ -14,7 +14,7 @@ export function Palette() {
   // The beat as the editor shows it: on the pending grid, no sixteenth figure is lit.
   const current = useAppStore((s) => {
     const { cursor } = s.editor
-    return editorBeatViews(s.editor)[cursor.bar][cursor.beat].figure
+    return editorBeatViews(s.editor)[cursor.bar][cursor.beat].snare.figure
   })
 
   const tile = (figure: Figure, wide = false) => (
