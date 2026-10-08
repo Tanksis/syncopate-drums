@@ -1,7 +1,8 @@
 // The notation renderer: draws an exercise straight from the model with VexFlow (no MusicXML in
 // between). We do the line wrapping ourselves: 4 bars per line, fewer on a narrow window, and a
-// short last line keeps the bar width and stays left aligned. A short exercise is drawn bigger, at
-// the scale the core's notationFit picks for the notation area. What to draw comes from the core's
+// short last line keeps the bar width and stays left aligned. An exercise on one line spreads its
+// bars across it, and a short exercise is drawn bigger, at the bar width and scale the core's
+// notationFit picks for the notation area. What to draw comes from the core's
 // staff parts: the hands part stems up, the feet part stems down, or one voice stems up (ADRs 0002, 0004).
 
 import type { StemmableNote } from 'vexflow/bravura'
@@ -191,10 +192,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   /** The bar number's line above the stave, clear of the hands part's stems. */
   const barNumberLine = drawnLimbs.includes('hands') ? STEMS_UP_SPACE : 0
   const height = (spaceAbove + handRow + 1) * STAVE_LINE_GAP
-  const { scale, barsPerLine } = notationFit({ bars: bars.length, ...area, lineHeight: height })
-  /** The width drawn in, before scaling. */
-  const width = area.width / scale
-  const barWidth = Math.floor((width - 2 * MARGIN - CLEF_WIDTH) / barsPerLine)
+  const { scale, barsPerLine, barWidth } = notationFit({ bars: bars.length, ...area, lineHeight: height })
   const lines = Math.ceil(bars.length / barsPerLine)
 
   const renderer = new Renderer(el as HTMLDivElement, Renderer.Backends.SVG)
