@@ -16,6 +16,9 @@ const EXAMPLES = exampleExercises()
 const buttonClass =
   'flex-1 cursor-pointer rounded-md border border-line bg-card px-2 py-1 font-semibold hover:border-accent'
 
+/** A sidebar button that's disabled for an example, or with no example open. */
+const disablableButtonClass = `${buttonClass} disabled:cursor-default disabled:text-mute disabled:hover:border-line`
+
 /** An exercise's button in a list, marked when it's the open one. */
 const listButtonClass = (open: boolean) =>
   `min-w-0 flex-1 cursor-pointer truncate rounded-md border-0 px-2 py-1 text-left ${
@@ -94,7 +97,7 @@ export function LibrarySidebar() {
             disabled={!exampleOpen}
             onMouseDown={keepFocus}
             onClick={duplicateOpenExercise}
-            className={`${buttonClass} flex-none disabled:cursor-default disabled:text-mute disabled:hover:border-line`}
+            className={`${disablableButtonClass} flex-none`}
           >
             Copy to Library
           </button>
@@ -137,7 +140,7 @@ export function LibrarySidebar() {
               disabled={exampleOpen}
               onMouseDown={keepFocus}
               onClick={() => setToDelete(library.filter((e) => e.id === openId))}
-              className={`${buttonClass} disabled:cursor-default disabled:text-mute disabled:hover:border-line`}
+              className={disablableButtonClass}
             >
               Delete
             </button>

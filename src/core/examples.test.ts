@@ -205,9 +205,8 @@ describe('copying an example to the library', () => {
     expect(copy.practice).toEqual({ ...eighths.practice, bpm: 60 })
   })
 
-  it('leaves the example as it was', () => {
-    expect(exampleExercises()[0]).toEqual(eighths)
-    expect(slowed.practice.bpm).toBe(60)
+  it('leaves the example it was copied from as it was', () => {
+    expect(slowed).toEqual({ ...eighths, practice: { ...eighths.practice, bpm: 60 } })
   })
 
   it('is not taken for a leftover example', () => {

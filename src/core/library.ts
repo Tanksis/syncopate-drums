@@ -2,7 +2,7 @@
 
 import type { Exercise } from './model'
 import { newExercise } from './model'
-import { exampleExercises } from './examples'
+import { copyExample, exampleExercises, isExample } from './examples'
 
 /**
  * The exercise to open at launch: the one last open if it still exists, an example among them,
@@ -75,8 +75,12 @@ function sameValue(a: unknown, b: unknown): boolean {
   )
 }
 
-/** A copy under a new id, named "<name> (copy)", with the same content and practice settings. */
+/**
+ * A copy under a new id, named "<name> (copy)", with the same content and practice settings. An
+ * example's copy is Copy to Library's, an ordinary exercise without the "Example: " prefix.
+ */
 export function duplicateExercise(exercise: Exercise, { id, now }: { id: string; now: number }): Exercise {
+  if (isExample(exercise.id)) return copyExample(exercise, { id, now })
   return { ...exercise, id, name: `${exercise.name} (copy)`, lastOpened: now }
 }
 

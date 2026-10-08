@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyEdit,
+  copyExample,
   duplicateExercise,
   exampleExercises,
   exerciseToOpenAfterDelete,
@@ -106,6 +107,13 @@ describe('duplicating an exercise', () => {
     expect(copy.bars).toEqual(original.bars)
     expect(copy.sticking).toBe('alternate')
     expect(copy.practice).toEqual({ bpm: 132, loopRange: { first: 0, last: 0 }, groove: 'off', swing: 0.58 })
+  })
+
+  it('copies an example to the library, as Copy to Library does', () => {
+    const [eighths] = exampleExercises()
+    const duplicate = duplicateExercise(eighths, { id: 'mine', now: 900 })
+    expect(duplicate).toEqual(copyExample(eighths, { id: 'mine', now: 900 }))
+    expect(duplicate.name).toBe('syncopated eighths')
   })
 })
 

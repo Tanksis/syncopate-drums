@@ -7,7 +7,6 @@ import {
   DEFAULT_DEVICE_SETTINGS,
   addedOnTop,
   applyEdit,
-  copyExample,
   duplicateExercise,
   exampleAccepts,
   exampleExercises,
@@ -227,11 +226,8 @@ export const useAppStore = create<AppState>()((set, get) => {
       if (target && id !== get().editor.exercise.id) switchTo(target, updatedInPlace)
     },
     createExercise: () => switchTo(untitledExercise(), addedOnTop),
-    duplicateOpenExercise: () => {
-      const open = get().editor.exercise
-      const copy = isExample(open.id) ? copyExample : duplicateExercise
-      switchTo(copy(open, { id: crypto.randomUUID(), now: Date.now() }), addedOnTop)
-    },
+    duplicateOpenExercise: () =>
+      switchTo(duplicateExercise(get().editor.exercise, { id: crypto.randomUUID(), now: Date.now() }), addedOnTop),
     renameExercise: (id, name) => {
       const trimmed = name.trim()
       const { editor, library } = get()
