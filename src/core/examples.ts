@@ -1,19 +1,24 @@
-// The example exercises a first launch opens with: originals in the style of a syncopation method
-// book (never copied from one), each showing one part of the app.
+// The example exercises, built into the app and never stored (ADR 0008): originals in the style of
+// a syncopation method book (never copied from one), each showing one part of the app.
 
+import type { EditCommand } from './editor'
 import type { Bar, Exercise, PracticeSettings, Row } from './model'
 import { BEATS_PER_BAR, MIN_SWING, TRIPLET_SWING, newExercise, restBar } from './model'
 import { setBeat } from './speller'
 
 /** One example as written here; everything else is a new exercise's default, the lead hand R among it. */
-type Example = Pick<Exercise, 'name' | 'sticking'> &
+type Example = Pick<Exercise, 'id' | 'name' | 'sticking'> &
   Pick<PracticeSettings, 'bpm' | 'groove' | 'swing'> & {
     /** Each row bar by bar, as four beat figures' hits separated by spaces; a missing row rests. */
     rows: Partial<Record<Row, string[]>>
   }
 
+/** Every example's id starts so; a stored exercise's id is a UUID. */
+const EXAMPLE_PREFIX = 'example:'
+
 const EXAMPLES: readonly Example[] = [
   {
+    id: `${EXAMPLE_PREFIX}syncopated-eighths`,
     name: 'Example: syncopated eighths',
     bpm: 80,
     groove: 'off',
@@ -22,6 +27,7 @@ const EXAMPLES: readonly Example[] = [
     rows: { snare: ['x... x.x. x... x.x.', '..x. x... ..x. x...', 'x.x. ..x. x.x. ..x.', 'x... ..x. ..x. x...'] },
   },
   {
+    id: `${EXAMPLE_PREFIX}jazz-comping`,
     name: 'Example: jazz comping',
     bpm: 100,
     groove: 'jazz',
@@ -33,6 +39,7 @@ const EXAMPLES: readonly Example[] = [
     },
   },
   {
+    id: `${EXAMPLE_PREFIX}rock-beat`,
     name: 'Example: rock beat',
     bpm: 90,
     groove: 'hihatEighths',
@@ -44,6 +51,7 @@ const EXAMPLES: readonly Example[] = [
     },
   },
   {
+    id: `${EXAMPLE_PREFIX}triplets`,
     name: 'Example: triplets',
     bpm: 70,
     groove: 'off',
@@ -53,10 +61,10 @@ const EXAMPLES: readonly Example[] = [
   },
 ]
 
-/** The example exercises, in order, each under a new id; every call makes a fresh set. */
-export function exampleExercises({ newId, now }: { newId: () => string; now: number }): Exercise[] {
-  return EXAMPLES.map(({ name, bpm, groove, swing, sticking, rows }) => {
-    const base = newExercise({ id: newId(), now })
+/** The example exercises, in order, under their fixed ids and never opened; every call gives an equal set. */
+export function exampleExercises(): Exercise[] {
+  return EXAMPLES.map(({ id, name, bpm, groove, swing, sticking, rows }) => {
+    const base = newExercise({ id, now: 0 })
     return {
       ...base,
       name,
@@ -65,6 +73,57 @@ export function exampleExercises({ newId, now }: { newId: () => string; now: num
       practice: { ...base.practice, bpm, groove, swing },
     }
   })
+}
+
+/** Whether an id is one of the examples', rather than a stored exercise's. */
+export function isExample(id: string): boolean {
+  return EXAMPLES.some((e) => e.id === id)
+}
+
+/**
+ * Which edit commands an example takes: those that move the cursor, select or copy bars, or change
+ * mode. Every command that would change its bars, sticking, lead hand or overrides is refused, and
+ * so are undo, redo and `.`, since it has no changes to go back over or repeat. A new command must
+ * be listed here, so it can't slip past the read-only rule. (Practice settings aren't edit commands.)
+ */
+const EXAMPLE_ACCEPTS: Record<EditCommand['type'], boolean> = {
+  move: true,
+  moveTo: true,
+  moveRow: true,
+  jump: true,
+  goToBar: true,
+  moveWord: true,
+  selectBars: true,
+  copyBars: true,
+  normal: true,
+  insert: true,
+  pending: true,
+  enterFigure: false,
+  toggleGridPosition: false,
+  setHold: false,
+  setBeatGrid: false,
+  toggleTie: false,
+  toggleCutShort: false,
+  rest: false,
+  addBar: false,
+  openBar: false,
+  duplicateBar: false,
+  deleteBar: false,
+  pasteBars: false,
+  putBars: false,
+  replaceBars: false,
+  repeatChange: false,
+  replaceBeats: false,
+  setExerciseSettings: false,
+  flipOverride: false,
+  resetOverrides: false,
+  undo: false,
+  redo: false,
+}
+
+/** Whether an open example takes this edit command; a refused one leaves it as it is. */
+export function exampleAccepts(command: EditCommand): boolean {
+  return EXAMPLE_ACCEPTS[command.type]
 }
 
 /** The bars, each beat written through the speller so the spelling is the app's own. */

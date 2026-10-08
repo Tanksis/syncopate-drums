@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { GridEditor } from '@/features/editor/GridEditor'
+import { ExampleNotice } from '@/features/library/ExampleNotice'
 import { LibrarySidebar } from '@/features/library/LibrarySidebar'
 import { NotationView } from '@/features/notation/NotationView'
 import { TransportControls } from '@/features/playback/TransportControls'
@@ -9,6 +10,7 @@ import { SettingsSidebar } from '@/features/settings/SettingsSidebar'
 import { useAppStore } from '@/app/store'
 import { NameInput } from '@/components/NameInput'
 import { keepFocus } from '@/components/keepFocus'
+import { isExample } from '@/core'
 
 export function App() {
   const saving = useAppStore((s) => s.saving)
@@ -27,6 +29,7 @@ export function App() {
           )}
           <TransportControls />
         </header>
+        <ExampleNotice />
         <NotationView />
         <GridEditor />
       </main>
@@ -36,11 +39,12 @@ export function App() {
   )
 }
 
-/** The open exercise's name; click it to rename it in place. */
+/** The open exercise's name; click it to rename it in place. An example's name is fixed. */
 function ExerciseName() {
   const { id, name } = useAppStore((s) => s.editor.exercise)
   const renameExercise = useAppStore((s) => s.renameExercise)
   const [renaming, setRenaming] = useState(false)
+  if (isExample(id)) return <span className="truncate px-1 text-mute">{name}</span>
   if (renaming)
     return (
       <NameInput

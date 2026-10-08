@@ -122,9 +122,11 @@ export interface DeviceSettings {
   figuresPanelOpen: boolean
   /** The exercise open when the app was last used, reopened at launch. */
   lastOpenedId: string | null
-  /** This device has had the example exercises, so a launch never adds them again by itself. */
-  examplesAdded: boolean
+  /** The library sidebar's tab: the drummer's own exercises, or the built-in examples. */
+  libraryTab: LibraryTab
 }
+
+export type LibraryTab = 'library' | 'examples'
 
 export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   countIn: true,
@@ -135,7 +137,7 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   vimKeys: true,
   figuresPanelOpen: false,
   lastOpenedId: null,
-  examplesAdded: false,
+  libraryTab: 'library',
 }
 
 /** The device settings that are a playback layer's volume. */
