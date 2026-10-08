@@ -14,6 +14,14 @@ _Avoid_: Line, pattern, piece
 All the exercises saved on this device.
 _Avoid_: Collection, playlist
 
+**Folder**:
+A named group of exercises in the exercise library, made by the user; one level deep. An exercise is in one folder or in none.
+_Avoid_: Category, tag, collection
+
+**Example**:
+One of the exercises built into the app to show what it does, listed in the sidebar's Examples tab. Never stored and read-only: its practice settings can be changed to try it but aren't kept, and Copy to Library makes an ordinary exercise from it.
+_Avoid_: Demo, template, preset
+
 **Bar**:
 One measure within an exercise.
 _Avoid_: Measure
