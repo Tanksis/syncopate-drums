@@ -1106,6 +1106,19 @@ describe("the cursor's row", () => {
     expect(vim(down, 'kk').cursor.row).toBe('snare')
   })
 
+  it('undo takes the cursor back to the row of the change, and redo to where undo left it', () => {
+    const state = keys(fresh(), press('Tab'), press('2'), press('Tab'))
+    const undone = keys(state, ctrl('z'))
+    expect(undone.cursor).toEqual(cursorAt(0, 0, 'kick'))
+    expect(kickHits(undone)[0]).toBe('.... .... .... ....')
+    expect(keys(undone, ctrl('z', { shiftKey: true })).cursor).toEqual(cursorAt(0, 1, 'snare'))
+  })
+
+  it('Tab and j / k keep a bar selection in Normal mode', () => {
+    const state = vim({ ...type('11112222'.split('')), cursor: cursorAt(0, 0) }, '<Esc>Vlj')
+    expect(state).toMatchObject({ selection: { first: 0, last: 0 }, cursor: cursorAt(0, 1, 'kick') })
+  })
+
   it('Tab then 2 gives two eighths in the kick row, leaving the snare row alone', () => {
     const state = keys(fresh(), press('Tab'), press('2'))
     expect(kickHits(state)).toEqual(['x.x. .... .... ....'])

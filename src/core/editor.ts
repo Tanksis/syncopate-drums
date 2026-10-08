@@ -369,8 +369,8 @@ function travel(state: EditorState, direction: 'undo' | 'redo'): EditorState {
 function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'undo' | 'redo' }>): EditorState {
   switch (command.type) {
     case 'enterFigure': {
-      const { bar, beat } = state.cursor
-      let bars = setBeat(state.exercise.bars, state.cursor.row, bar, beat, command.hits)
+      const { bar, beat, row } = state.cursor
+      let bars = setBeat(state.exercise.bars, row, bar, beat, command.hits)
       let cursor: Cursor
       if (beat < BEATS_PER_BAR - 1) cursor = { ...state.cursor, beat: beat + 1 }
       else {
@@ -425,7 +425,7 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
     case 'addBar':
     case 'openBar': {
       const at = command.type === 'openBar' && command.above ? state.cursor.bar : state.cursor.bar + 1
-      const added = { ...insertBars(state, at, [restBar()]), cursor: { ...state.cursor, bar: at, beat: 0 } }
+      const added = moveTo(insertBars(state, at, [restBar()]), at, 0)
       return command.type === 'openBar' ? { ...added, mode: 'insert' } : added
     }
     case 'duplicateBar': {
@@ -449,7 +449,7 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
       if (!clip) return state
       const at = command.before ? state.cursor.bar : state.cursor.bar + 1
       const copies = Array.from({ length: command.count ?? 1 }, () => untieLast(clip)).flat()
-      return { ...insertBars(state, at, copies), cursor: { ...state.cursor, bar: at, beat: 0 } }
+      return moveTo(insertBars(state, at, copies), at, 0)
     }
     case 'replaceBars': {
       const clip = state.clipboard
@@ -458,7 +458,7 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
       const { bars, practice } = state.exercise
       const next = [...untieLast(bars.slice(0, first)), ...untieLast(clip), ...bars.slice(last + 1)]
       const loopRange = loopRangeAfterInsert(loopRangeAfterDelete(practice.loopRange, first, last), first, clip.length)
-      return { ...state, exercise: withLoopRange({ ...state.exercise, bars: next }, loopRange), cursor: { ...state.cursor, bar: first, beat: 0 } }
+      return moveTo({ ...state, exercise: withLoopRange({ ...state.exercise, bars: next }, loopRange) }, first, 0)
     }
     case 'pasteBars': {
       if (!state.clipboard) return state
@@ -466,7 +466,7 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
       const { bars } = state.exercise
       const clip = state.clipboard
       const next = [...untieLast(bars.slice(0, bar)), ...untieLast(clip), ...bars.slice(bar + clip.length)]
-      return { ...withBars(state, next), cursor: { ...state.cursor, beat: 0 } }
+      return moveTo(withBars(state, next), bar, 0)
     }
     case 'move': {
       const { bar, beat } = state.cursor
@@ -575,16 +575,17 @@ function selectedBars(state: EditorState, count = 1): BarSelection {
  */
 function setBeats(state: EditorState, hits: string, count: number): EditorState {
   const views = editorBeatViews(state)
+  const { row } = state.cursor
   const from = beatIndex(state.cursor.bar, state.cursor.beat)
   const to = Math.min(from + count, views.length * BEATS_PER_BAR)
   let { bars } = state.exercise
   for (let i = from; i < to; i++) {
     const bar = Math.floor(i / BEATS_PER_BAR)
     const beat = i % BEATS_PER_BAR
-    const view = views[bar][beat][state.cursor.row]
+    const view = views[bar][beat][row]
     const alreadyRest = hits === REST_FIGURE.hits && !view.hits.includes('x')
     const alreadySet = view.figure?.hits === hits && !view.cutShort
-    if (!alreadyRest && !alreadySet) bars = setBeat(bars, state.cursor.row, bar, beat, hits)
+    if (!alreadyRest && !alreadySet) bars = setBeat(bars, row, bar, beat, hits)
   }
   const pendingGrid = state.pendingGrid.filter((i) => i < from || i >= to)
   const regridded = pendingGrid.length === state.pendingGrid.length ? state : { ...state, pendingGrid }
@@ -638,7 +639,7 @@ function deleteBars(state: EditorState, first: number, last: number): EditorStat
   return moveTo({ ...state, exercise: withLoopRange({ ...state.exercise, bars: next }, loopRange) }, cursorBar, beat)
 }
 
-/** Puts the cursor on a beat, kept inside the exercise, in the same row or `row`. */
+/** Puts the cursor on a beat, kept inside the exercise, in `row` or else the row it was in. */
 function moveTo(state: EditorState, bar: number, beat: number, row = state.cursor.row): EditorState {
   const last = state.exercise.bars.length - 1
   return { ...state, cursor: { bar: clamp(bar, 0, last), beat: clamp(beat, 0, BEATS_PER_BAR - 1), row } }

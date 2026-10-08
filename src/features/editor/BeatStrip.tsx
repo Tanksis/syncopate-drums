@@ -114,15 +114,15 @@ export function BeatStrip() {
    */
   const rowCells = (row: Row, view: RowView, b: number, beat: number) => {
     const tiedOn = nextBeat(b, beat)?.[row].positions[0] === 'hold'
-    const current = cursor.bar === b && cursor.beat === beat && cursor.row === row
+    const cursorHere = cursor.bar === b && cursor.beat === beat && cursor.row === row
     return (
       <div
         aria-label={`${ROW_LOOK[row].name} row`}
-        aria-current={current || undefined}
+        aria-current={cursorHere || undefined}
         title={[view.tiedInto && 'tied into', view.cutShort && 'cut short'].filter(Boolean).join(', ') || undefined}
         className="relative flex gap-1"
       >
-        {current && <span aria-hidden className="absolute inset-y-1 -left-1.5 w-1 rounded-full bg-accent" />}
+        {cursorHere && <span aria-hidden className="absolute inset-y-1 -left-1.5 w-1 rounded-full bg-accent" />}
         {view.tiedInto && <span className="absolute -top-3 -left-3.5 text-base text-accent">⌒</span>}
         {view.positions.map((position, i) => (
           <Cell
