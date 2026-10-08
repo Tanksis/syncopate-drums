@@ -4,7 +4,7 @@
 
 **Blocked by:** 03
 
-**Status:** needs-triage
+**Status:** ready-for-agent
 
 - [ ] The export file lists the folders of the exported exercises. Device settings (collapsed folders, the tab) are not exported
 - [ ] Import matches a folder by name, ignoring case, or creates it. Tested: importing into a library with "syncopation p.38" files "Syncopation p.38" exercises there, without a second folder

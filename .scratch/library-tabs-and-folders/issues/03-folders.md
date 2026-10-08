@@ -4,7 +4,7 @@
 
 **Blocked by:** 01
 
-**Status:** needs-triage
+**Status:** ready-for-agent
 
 - [ ] `SCHEMA_VERSION` 3: the migration step from 2 sets `folderId: null`. Tested
 - [ ] Pure folder functions: create, rename (blank names ignored), and delete (its exercises' `folderId` becomes null, and none are deleted). Tested

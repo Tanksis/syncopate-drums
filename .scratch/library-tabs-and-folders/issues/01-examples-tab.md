@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** needs-triage
+**Status:** ready-for-agent
 
 - [ ] `exampleExercises()` gives the four examples with fixed ids and `lastOpened` 0; `isExample(id)` recognises them. Tested: two calls give equal examples
 - [ ] A pure rule for which edit commands an example accepts (practice settings, cursor, selection, mode) and which it refuses (bars, sticking, lead hand, overrides, name). Tested for each kind

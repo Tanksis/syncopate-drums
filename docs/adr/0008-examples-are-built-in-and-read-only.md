@@ -2,7 +2,7 @@
 
 Date: 2026-10-08
 
-Status: proposed (reverses "examples are ordinary exercises" in the [first-run-examples spec](../../.scratch/first-run-examples/spec.md))
+Status: accepted (reverses "examples are ordinary exercises" in the [first-run-examples spec](../../.scratch/first-run-examples/spec.md))
 
 Ticket 02 of first-run-examples stored the four example exercises in the library at a device's first launch, as ordinary exercises. The user found that they crowd the one exercise list. They can also be deleted for good, which needed an `examplesAdded` flag and an "Add examples" button to bring them back. The user asked for the examples in their own tab, and chose to make them built in and read-only rather than ordinary exercises filed in a tab.
 

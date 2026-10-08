@@ -1,6 +1,6 @@
 # Spec: Library tabs, folders, and built-in examples
 
-Status: needs-triage
+Status: ready-for-agent
 
 Source: the user's review after [ticket 02 of first-run-examples](../first-run-examples/issues/02-examples-on-first-launch.md) (2026-10-08). The four examples were stored as ordinary exercises at the top of the one exercise list, and they bloat it. The user asked for a separate Examples tab and some way to keep the sidebar organised, "similar to other apps' sidebars". Decisions from that conversation: Library and Examples tabs, user-made folders in Library, and examples built in and read-only, copied to edit. See [ADR 0008](../../docs/adr/0008-examples-are-built-in-and-read-only.md). Vocabulary follows [`CONTEXT.md`](../../CONTEXT.md).
 
