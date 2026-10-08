@@ -7,6 +7,7 @@ import {
   DEFAULT_DEVICE_SETTINGS,
   addedOnTop,
   applyEdit,
+  copyExample,
   duplicateExercise,
   exampleAccepts,
   exampleExercises,
@@ -59,7 +60,10 @@ interface AppState {
   openExercise: (id: string) => void
   /** Opens a new Untitled exercise, on top of the list. */
   createExercise: () => void
-  /** Opens a copy of the open exercise, on top of the list. */
+  /**
+   * Opens a copy of the open exercise, on top of the list. For an example this is Copy to Library:
+   * an ordinary, editable exercise, and the sidebar switches to the Library tab.
+   */
   duplicateOpenExercise: () => void
   /** Empty or blank names are ignored, as is an example, whose name is fixed. */
   renameExercise: (id: string, name: string) => void
@@ -223,8 +227,11 @@ export const useAppStore = create<AppState>()((set, get) => {
       if (target && id !== get().editor.exercise.id) switchTo(target, updatedInPlace)
     },
     createExercise: () => switchTo(untitledExercise(), addedOnTop),
-    duplicateOpenExercise: () =>
-      switchTo(duplicateExercise(get().editor.exercise, { id: crypto.randomUUID(), now: Date.now() }), addedOnTop),
+    duplicateOpenExercise: () => {
+      const open = get().editor.exercise
+      const copy = isExample(open.id) ? copyExample : duplicateExercise
+      switchTo(copy(open, { id: crypto.randomUUID(), now: Date.now() }), addedOnTop)
+    },
     renameExercise: (id, name) => {
       const trimmed = name.trim()
       const { editor, library } = get()
