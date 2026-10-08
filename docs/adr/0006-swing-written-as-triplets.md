@@ -15,4 +15,4 @@ So when the **swing feel is on** (swing amount above 50%), the notation writes e
 - A beat entered on the triplet grid is never swung, as before.
 - Holds keep working through the rewrite. A note held to the end of a swung beat ends on the triplet's last position, or ties on as before.
 - Holds go to the nearest triplet position, except that a note on a swung downbeat holds one triplet position where its part strikes on the let. The middle of the triplet is then a rest under the beam, as Groove Scribe writes the jazz ride (ride, rest, ride), and as snare quarters under it read (chord, rest, ride).
-- A beat with an & and no downbeat is swung too (written rest-rest-let, or with the downbeat's rest folded in). Only a beat with nothing but a downbeat stays as it is, since nothing in it is swung.
+- A beat with an & and no downbeat is swung too (a rest of two triplet positions, then the let). Only a beat with nothing but a downbeat stays as it is, since nothing in it is swung.
