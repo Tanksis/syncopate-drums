@@ -47,10 +47,9 @@ describe('a new exercise', () => {
       name: 'Untitled',
       sticking: 'natural',
       leadHand: 'R',
-      practice: { bpm: 80, loopRange: null, groove: 'off' },
+      practice: { bpm: 80, loopRange: null, groove: 'off', swing: 0.5 },
       lastOpened: 1234,
     })
-    expect(ex.practice.swing).toBeCloseTo(0.667, 3)
     expect(ex.bars).toHaveLength(1)
     expect(ex.bars[0].snare.every((i) => i.kind === 'rest')).toBe(true)
     expect(ex.bars[0].kick.every((i) => i.kind === 'rest')).toBe(true)
@@ -120,9 +119,28 @@ describe('the tempo', () => {
 
 describe('the groove preset', () => {
   it('is set on the exercise, leaving the other practice settings alone', () => {
-    const ex = newExercise({ id: 'e1', now: 0 })
+    const ex = withSwing(newExercise({ id: 'e1', now: 0 }), 0.58)
     expect(withGroove(ex, 'jazzFeathered').practice).toEqual({ ...ex.practice, groove: 'jazzFeathered' })
     expect(withGroove(ex, 'off')).toBe(ex)
+  })
+
+  it('turns swing to triplet when a jazz groove is picked on a straight exercise', () => {
+    const straight = newExercise({ id: 'e1', now: 0 })
+    expect(withGroove(straight, 'jazz').practice).toEqual({ ...straight.practice, groove: 'jazz', swing: 2 / 3 })
+    expect(withGroove(straight, 'jazzFeathered').practice.swing).toBe(2 / 3)
+    const overHihat = withGroove(straight, 'hihatEighths')
+    expect(withGroove(overHihat, 'jazz').practice.swing).toBe(2 / 3)
+  })
+
+  it('leaves swing alone for any other swing amount, groove or change', () => {
+    const straight = newExercise({ id: 'e1', now: 0 })
+    expect(withGroove(withSwing(straight, 0.58), 'jazz').practice.swing).toBe(0.58)
+    expect(withGroove(withSwing(straight, 0.75), 'jazzFeathered').practice.swing).toBe(0.75)
+    expect(withGroove(straight, 'hihatEighths').practice.swing).toBe(0.5)
+    const jazzStraightened = withSwing(withGroove(straight, 'jazz'), 0.5)
+    expect(withGroove(jazzStraightened, 'jazzFeathered').practice.swing).toBe(0.5)
+    expect(withGroove(jazzStraightened, 'off').practice.swing).toBe(0.5)
+    expect(withGroove(withGroove(straight, 'jazz'), 'off').practice.swing).toBe(2 / 3)
   })
 })
 

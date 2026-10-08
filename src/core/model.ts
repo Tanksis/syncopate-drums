@@ -165,7 +165,7 @@ export function newExercise({ id, now }: { id: string; now: number }): Exercise 
     bars: [restBar()],
     sticking: 'natural',
     leadHand: 'R',
-    practice: { bpm: 80, loopRange: null, groove: 'off', swing: 2 / 3 },
+    practice: { bpm: 80, loopRange: null, groove: 'off', swing: MIN_SWING },
     lastOpened: now,
   }
 }
@@ -197,10 +197,18 @@ export function withSwing(exercise: Exercise, swing: number): Exercise {
   return { ...exercise, practice: { ...exercise.practice, swing: clampSwing(swing) } }
 }
 
-/** The exercise with a groove preset, as it was if it already has that one. */
+const JAZZ_GROOVES: readonly GroovePresetId[] = ['jazz', 'jazzFeathered']
+
+/**
+ * The exercise with a groove preset, as it was if it already has that one. Moving to a jazz groove
+ * on a straight exercise also turns swing to triplet, since a jazz ride is never played straight
+ * (ADR 0007); any other swing amount is left as the drummer set it.
+ */
 export function withGroove(exercise: Exercise, groove: GroovePresetId): Exercise {
-  if (groove === exercise.practice.groove) return exercise
-  return { ...exercise, practice: { ...exercise.practice, groove } }
+  const { practice } = exercise
+  if (groove === practice.groove) return exercise
+  const swingsIn = JAZZ_GROOVES.includes(groove) && !JAZZ_GROOVES.includes(practice.groove) && !swingOn(practice)
+  return { ...exercise, practice: { ...practice, groove, swing: swingsIn ? 2 / 3 : practice.swing } }
 }
 
 /** The exercise with a new loop range; `null` loops the whole exercise. */
