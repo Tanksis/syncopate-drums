@@ -1,23 +1,25 @@
 import { describe, expect, it } from 'vitest'
-import type { StaffEvent } from './index'
+import type { EditCommand, StaffEvent } from './index'
 import {
   ROWS,
   SCHEMA_VERSION,
   TICKS_PER_BAR,
   TRIPLET_SWING,
+  applyEdit,
+  exampleAccepts,
   exampleExercises,
+  isExample,
   isUnchangedNew,
   itemTicks,
+  leftoverExamples,
+  newEditorState,
+  newExercise,
   staffParts,
   sticking,
+  withBpm,
 } from './index'
 
-const ids = () => {
-  let n = 0
-  return () => `id-${++n}`
-}
-
-const examples = exampleExercises({ newId: ids(), now: 1000 })
+const examples = exampleExercises()
 
 describe('the example exercises', () => {
   it('are four, named for what they show, in order', () => {
@@ -29,17 +31,26 @@ describe('the example exercises', () => {
     ])
   })
 
-  it('come out the same from two calls, but under new ids', () => {
-    const again = exampleExercises({ newId: () => crypto.randomUUID(), now: 1000 })
-    const ids = new Set([...examples, ...again].map((e) => e.id))
-    expect(ids.size).toBe(8)
-    expect(again.map(({ id: _, ...rest }) => rest)).toEqual(examples.map(({ id: _, ...rest }) => rest))
+  it('each have a fixed id that isExample recognises, and come out the same from two calls', () => {
+    expect(examples.map((e) => e.id)).toEqual([
+      'example:syncopated-eighths',
+      'example:jazz-comping',
+      'example:rock-beat',
+      'example:triplets',
+    ])
+    expect(examples.every((e) => isExample(e.id))).toBe(true)
+    expect(exampleExercises()).toEqual(examples)
   })
 
-  it('are valid exercises of this version, ready to store', () => {
+  it('tells a stored exercise from an example by its id', () => {
+    expect(isExample(crypto.randomUUID())).toBe(false)
+    expect(isExample('example:unknown')).toBe(false)
+  })
+
+  it('are valid exercises of this version, never opened', () => {
     for (const exercise of examples) {
       expect(exercise.schemaVersion).toBe(SCHEMA_VERSION)
-      expect(exercise.lastOpened).toBe(1000)
+      expect(exercise.lastOpened).toBe(0)
       expect(isUnchangedNew(exercise)).toBe(false)
     }
   })
@@ -95,5 +106,96 @@ describe('what each example shows', () => {
     const hands = sticking(triplets).map((n) => n.shown)
     expect(hands).toHaveLength(18)
     expect(hands.join('')).toBe('RLRLRLRLRLRLRLRLRL')
+  })
+})
+
+describe('the edits an example accepts', () => {
+  const accepts = (...commands: EditCommand[]) => commands.map(exampleAccepts)
+
+  it('accepts cursor moves', () => {
+    expect(
+      accepts(
+        { type: 'move', by: 'beat', step: 1 },
+        { type: 'moveTo', bar: 1, beat: 2 },
+        { type: 'moveRow' },
+        { type: 'jump', to: 'end' },
+        { type: 'goToBar', bar: 2 },
+        { type: 'moveWord', step: -1 },
+      ),
+    ).toEqual([true, true, true, true, true, true])
+  })
+
+  it('accepts selecting and copying bars, and changing mode', () => {
+    expect(
+      accepts(
+        { type: 'selectBars', step: 1 },
+        { type: 'copyBars' },
+        { type: 'normal' },
+        { type: 'insert', after: true },
+        { type: 'pending', keys: '2' },
+      ),
+    ).toEqual([true, true, true, true, true])
+  })
+
+  it('refuses a figure key, a hit toggle, a hold drag and a grid switch', () => {
+    expect(
+      accepts(
+        { type: 'enterFigure', hits: 'x...' },
+        { type: 'toggleGridPosition', row: 'snare', bar: 0, beat: 0, position: 0 },
+        { type: 'setHold', from: { row: 'snare', bar: 0, beat: 0, position: 0 }, to: { row: 'snare', bar: 0, beat: 1, position: 0 } },
+        { type: 'setBeatGrid', bar: 0, beat: 0, triplet: true },
+        { type: 'replaceBeats', hits: 'x.x.' },
+        { type: 'rest', stepBack: true },
+        { type: 'toggleTie' },
+        { type: 'toggleCutShort' },
+      ),
+    ).toEqual([false, false, false, false, false, false, false, false])
+  })
+
+  it('refuses adding, deleting and pasting bars', () => {
+    expect(
+      accepts(
+        { type: 'addBar' },
+        { type: 'openBar', above: false },
+        { type: 'duplicateBar' },
+        { type: 'deleteBar' },
+        { type: 'pasteBars' },
+        { type: 'putBars', before: false },
+        { type: 'replaceBars' },
+      ),
+    ).toEqual([false, false, false, false, false, false, false])
+  })
+
+  it('refuses a sticking or lead hand change and sticking overrides', () => {
+    expect(
+      accepts(
+        { type: 'setExerciseSettings', settings: { sticking: 'alternate' } },
+        { type: 'setExerciseSettings', settings: { leadHand: 'L' } },
+        { type: 'flipOverride', note: { id: '0:0' } },
+        { type: 'resetOverrides' },
+      ),
+    ).toEqual([false, false, false, false])
+  })
+
+  it('refuses undo, redo and repeating a change, having no changes of its own', () => {
+    expect(accepts({ type: 'undo' }, { type: 'redo' }, { type: 'repeatChange' })).toEqual([false, false, false])
+  })
+})
+
+describe('examples left in the library by an earlier version', () => {
+  // As the first-run-examples build stored them: under new ids, opened since.
+  const [eighths, comping, rock, triplets] = examples.map((e, i) => ({ ...e, id: `stored-${i}`, lastOpened: 5000 + i }))
+  const own = { ...newExercise({ id: 'own', now: 100 }), name: 'p.38 #2' }
+
+  it('are found under any id and any last-opened time', () => {
+    expect(leftoverExamples([own, eighths, comping, rock, triplets])).toEqual(['stored-0', 'stored-1', 'stored-2', 'stored-3'])
+  })
+
+  it('are not found once a bar, the name or a practice setting changed', () => {
+    const edited = applyEdit(newEditorState(eighths), { type: 'enterFigure', hits: 'xxxx' }).exercise
+    const renamed = { ...comping, name: 'My comping' }
+    const slowed = withBpm(rock, 60)
+    const leftHanded = { ...triplets, leadHand: 'L' as const }
+    expect(leftoverExamples([edited, renamed, slowed, leftHanded])).toEqual([])
   })
 })

@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
-  DEFAULT_DEVICE_SETTINGS,
-  addsExamplesAtLaunch,
   applyEdit,
   duplicateExercise,
+  exampleExercises,
   exerciseToOpenAfterDelete,
   exerciseToOpenAtLaunch,
   filterByName,
@@ -31,9 +30,18 @@ describe('the exercise opened at launch', () => {
     expect(exerciseToOpenAtLaunch(library, null)).toBe(syncopation)
   })
 
-  it('is none with an empty library, so a new Untitled exercise opens', () => {
+  it('is the example that was open, under its fixed id', () => {
+    const [, comping] = exampleExercises()
+    expect(exerciseToOpenAtLaunch(library, 'example:jazz-comping')).toEqual(comping)
+    expect(exerciseToOpenAtLaunch([], 'example:jazz-comping')).toEqual(comping)
+  })
+
+  it('is the first example on a fresh device: nothing ever open, and an empty library', () => {
+    expect(exerciseToOpenAtLaunch([], null)).toEqual(exampleExercises()[0])
+  })
+
+  it('is none on a device that emptied its library, so a new Untitled exercise opens', () => {
     expect(exerciseToOpenAtLaunch([], 'deleted')).toBeNull()
-    expect(exerciseToOpenAtLaunch([], null)).toBeNull()
   })
 })
 
@@ -133,22 +141,5 @@ describe('the library list order during a session', () => {
     expect(withNew.map((e) => e.id)).toEqual(['new-2', 'new-1', 'syncopation-p38', 'triplets', 'paradiddles'])
     const reopenedFirst = updatedInPlace(withNew, { id: 'new-1', lastOpened: 5000 })
     expect(reopenedFirst.map((e) => e.id)).toEqual(['new-2', 'new-1', 'syncopation-p38', 'triplets', 'paradiddles'])
-  })
-})
-
-describe('the examples added at launch', () => {
-  const fresh = { ...DEFAULT_DEVICE_SETTINGS }
-
-  it('are added on a device that has never had them, with an empty library', () => {
-    expect(fresh.examplesAdded).toBe(false)
-    expect(addsExamplesAtLaunch([], fresh)).toBe(true)
-  })
-
-  it('are not added when exercises are stored', () => {
-    expect(addsExamplesAtLaunch(library, fresh)).toBe(false)
-  })
-
-  it('are not added again once the device has had them, even with the library emptied', () => {
-    expect(addsExamplesAtLaunch([], { ...fresh, examplesAdded: true })).toBe(false)
   })
 })

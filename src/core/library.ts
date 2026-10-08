@@ -1,28 +1,31 @@
-// Library rules: which exercise opens (at launch or after a delete), when the examples are added, list order, filter, duplicate and discard.
+// Library rules: which exercise opens (at launch or after a delete), leftover examples, list order, filter, duplicate and discard.
 
-import type { DeviceSettings, Exercise } from './model'
+import type { Exercise } from './model'
 import { newExercise } from './model'
+import { exampleExercises } from './examples'
 
 /**
- * The exercise to open at launch: the one last open if it still exists, otherwise the most
- * recently opened. Null for an empty library, where a new Untitled exercise opens instead.
+ * The exercise to open at launch: the one last open if it still exists, an example among them,
+ * otherwise the most recently opened. A fresh device (nothing ever open, an empty library) opens
+ * the first example. Null for a library emptied since, where a new Untitled exercise opens instead.
  */
 export function exerciseToOpenAtLaunch<E extends Pick<Exercise, 'id' | 'lastOpened'>>(
   library: E[],
   lastOpenedId: string | null,
-): E | null {
-  return (
-    library.find((e) => e.id === lastOpenedId) ??
-    library.reduce<E | null>((latest, e) => (latest === null || e.lastOpened > latest.lastOpened ? e : latest), null)
-  )
+): E | Exercise | null {
+  const examples = exampleExercises()
+  const example = examples.find((e) => e.id === lastOpenedId)
+  if (example) return example
+  if (library.length === 0 && lastOpenedId === null) return examples[0]
+  return lastOpenOrLatest(library, lastOpenedId)
 }
 
-/**
- * Whether a launch adds the example exercises: only to an empty library, on a device that hasn't
- * had them. Once added they are never added again by themselves, so deleting them is final.
- */
-export function addsExamplesAtLaunch(library: readonly Pick<Exercise, 'id'>[], device: Pick<DeviceSettings, 'examplesAdded'>): boolean {
-  return library.length === 0 && !device.examplesAdded
+/** The exercise with that id, otherwise the most recently opened one; null for an empty list. */
+function lastOpenOrLatest<E extends Pick<Exercise, 'id' | 'lastOpened'>>(library: E[], id: string | null): E | null {
+  return (
+    library.find((e) => e.id === id) ??
+    library.reduce<E | null>((latest, e) => (latest === null || e.lastOpened > latest.lastOpened ? e : latest), null)
+  )
 }
 
 /**
@@ -36,7 +39,7 @@ export function exerciseToOpenAfterDelete<E extends Pick<Exercise, 'id' | 'lastO
   deletedIds: string[],
 ): E | null {
   const deleted = new Set(deletedIds)
-  return exerciseToOpenAtLaunch(library.filter((e) => !deleted.has(e.id)), openId)
+  return lastOpenOrLatest(library.filter((e) => !deleted.has(e.id)), openId)
 }
 
 /**
@@ -45,6 +48,18 @@ export function exerciseToOpenAfterDelete<E extends Pick<Exercise, 'id' | 'lastO
  */
 export function isUnchangedNew(exercise: Exercise): boolean {
   return sameValue(exercise, newExercise({ id: exercise.id, now: exercise.lastOpened }))
+}
+
+/**
+ * The stored exercises that are still exactly an example as the first-run-examples build added it
+ * to the library (same name, bars, sticking, lead hand and practice settings, under any id), in
+ * list order. The built-in examples replace them, so launch deletes them; one the drummer changed
+ * is theirs and stays (ADR 0008).
+ */
+export function leftoverExamples(stored: readonly Exercise[]): string[] {
+  const content = ({ name, bars, sticking, leadHand, practice }: Exercise) => ({ name, bars, sticking, leadHand, practice })
+  const examples = exampleExercises().map(content)
+  return stored.filter((e) => examples.some((example) => sameValue(content(e), example))).map((e) => e.id)
 }
 
 /** Deep equality of plain data, whatever order its keys were written in. */
