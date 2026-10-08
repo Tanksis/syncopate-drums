@@ -19,6 +19,8 @@ export const MAX_BPM = 300
 /** Swing amounts, as the first eighth's share of the beat: 0.5 is straight. */
 export const MIN_SWING = 0.5
 export const MAX_SWING = 0.75
+/** Triplet swing: the first eighth takes two thirds of the beat. */
+export const TRIPLET_SWING = 2 / 3
 
 /** Bumped whenever the stored shape changes; storage and import migrate through it. */
 export const SCHEMA_VERSION = 2
@@ -200,15 +202,16 @@ export function withSwing(exercise: Exercise, swing: number): Exercise {
 const JAZZ_GROOVES: readonly GroovePresetId[] = ['jazz', 'jazzFeathered']
 
 /**
- * The exercise with a groove preset, as it was if it already has that one. Moving to a jazz groove
- * on a straight exercise also turns swing to triplet, since a jazz ride is never played straight
- * (ADR 0007); any other swing amount is left as the drummer set it.
+ * The exercise with a groove preset, as it was if it already has that one. Moving from another
+ * groove to a jazz one on a straight exercise also sets triplet swing, since a jazz ride is never
+ * played straight (ADR 0007). Any other swing amount, or a straight feel chosen while already on a
+ * jazz groove, is left as the drummer set it.
  */
 export function withGroove(exercise: Exercise, groove: GroovePresetId): Exercise {
   const { practice } = exercise
   if (groove === practice.groove) return exercise
-  const swingsIn = JAZZ_GROOVES.includes(groove) && !JAZZ_GROOVES.includes(practice.groove) && !swingOn(practice)
-  return { ...exercise, practice: { ...practice, groove, swing: swingsIn ? 2 / 3 : practice.swing } }
+  const turnsSwingOn = JAZZ_GROOVES.includes(groove) && !JAZZ_GROOVES.includes(practice.groove) && !swingOn(practice)
+  return { ...exercise, practice: { ...practice, groove, swing: turnsSwingOn ? TRIPLET_SWING : practice.swing } }
 }
 
 /** The exercise with a new loop range; `null` loops the whole exercise. */
