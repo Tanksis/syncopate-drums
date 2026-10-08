@@ -33,9 +33,6 @@ export const ROWS: readonly Row[] = ['snare', 'kick']
 /** A limb of the drummer, and the part of the staff it plays: hands stems up, feet stems down. */
 export type Limb = 'hands' | 'feet'
 
-/** The limb that plays each row: the snare row with the hands, the kick row with the feet. */
-export const ROW_LIMB: Record<Row, Limb> = { snare: 'hands', kick: 'feet' }
-
 /**
  * A struck note's id: `bar:tick` in the snare row, which sticking overrides are keyed by, and
  * `kick:bar:tick` in the kick row.

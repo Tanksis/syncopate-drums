@@ -311,6 +311,7 @@ function sameBeatView(a: BeatView, b: BeatView): boolean {
   return a.triplet === b.triplet && ROWS.every((row) => sameRowView(a[row], b[row]))
 }
 
+/** Two views of one row of a beat that read the same. */
 function sameRowView(a: RowView, b: RowView): boolean {
   return (
     a.figure === b.figure &&

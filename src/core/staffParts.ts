@@ -72,7 +72,7 @@ export interface StaffChord extends Value {
   strikes: number[]
 }
 
-/** A rest, written where a part that has notes in the bar, or holds the snare row, is silent. */
+/** A rest, written where a part that has notes in the bar, or holds the exercise, is silent. */
 export interface StaffRest extends Value {
   kind: 'rest'
 }
@@ -116,9 +116,10 @@ interface Sound {
  *   beat.
  * - An exercise note held past its part's next chord ends there, untied. Its exact hold and ties
  *   are written only where nothing else in the part strikes before it ends.
- * - A part rests wherever it is silent if it has a note in the bar; the hands part also rests in a
- *   bar where the feet part has none, or once the snare row has a note anywhere. Otherwise a part
- *   has space there. Rests and notes are spelled as the speller spells them.
+ * - A part rests wherever it is silent if it has a note in the bar or holds the exercise: the hands
+ *   part does, unless only the kick row has notes, when the feet part does (as a bass drum line
+ *   was written before it had a snare row). Otherwise a part has space there. Rests and notes are
+ *   spelled as the speller spells them.
  * - Where the exercise and the groove strike the same drum at once, the exercise's note is written.
  * - In a part's triplet beat (one its row writes as a triplet group), a groove hit off the triplet
  *   grid is written on the next triplet position.
@@ -177,10 +178,11 @@ export function staffParts(bars: readonly Bar[], groove: GroovePresetId): StaffB
     ]
     return { beats, sounds, inBar: (b: number) => sounds.some((s) => barOf(s) === b) }
   })
-  const snareRowPlays = snare.sounds.length > 0
+  /** The part that rests wherever it is silent, in a bar of two voices. */
+  const holdsExercise: Limb = snare.sounds.length === 0 && kick.sounds.length > 0 ? 'feet' : 'hands'
   const parts = [
-    writePart(hands.sounds, hands.beats, bars.map((_, b) => hands.inBar(b) || !feet.inBar(b) || snareRowPlays), total),
-    writePart(feet.sounds, feet.beats, bars.map((_, b) => feet.inBar(b)), total),
+    writePart(hands.sounds, hands.beats, bars.map((_, b) => hands.inBar(b) || holdsExercise === 'hands'), total),
+    writePart(feet.sounds, feet.beats, bars.map((_, b) => feet.inBar(b) || holdsExercise === 'feet'), total),
   ]
 
   return bars.map((_, b) => {

@@ -36,13 +36,15 @@ export type PositionState = 'hit' | 'hold' | 'empty'
 type Cell = { state: 'hit'; override?: Hand } | { state: 'hold' } | { state: 'rest' }
 
 /** One row's items, bar by bar. */
-type Line = readonly (readonly Item[])[]
+type RowBars = readonly (readonly Item[])[]
 
-const lineOf = (bars: readonly Bar[], row: Row): Line => bars.map((bar) => bar[row])
+/** One row's items out of the bars. */
+const rowOf = (bars: readonly Bar[], row: Row): RowBars => bars.map((bar) => bar[row])
 
 /** The bars with one row's items replaced. */
-const withLine = (bars: readonly Bar[], row: Row, line: Item[][]): Bar[] => bars.map((bar, b) => ({ ...bar, [row]: line[b] }))
+const withRow = (bars: readonly Bar[], row: Row, items: Item[][]): Bar[] => bars.map((bar, b) => ({ ...bar, [row]: items[b] }))
 
+/** The row a beat shares its grid with. */
 const otherRow = (row: Row): Row => (row === 'snare' ? 'kick' : 'snare')
 
 /** One row of the bars as a timeline: one cell per tick, and which beats are triplet groups. */
@@ -62,13 +64,14 @@ export interface PlacedItem {
 
 /** One row's items, each placed in its bar. */
 export function placeItems(bars: readonly Bar[], row: Row): PlacedItem[] {
-  return placeLine(lineOf(bars, row))
+  return placeRow(rowOf(bars, row))
 }
 
-function placeLine(line: Line): PlacedItem[] {
+/** A row's items, each placed in its bar, each a tied continuation or not. */
+function placeRow(row: RowBars): PlacedItem[] {
   const placed: PlacedItem[] = []
   let previous: Item | undefined
-  line.forEach((items, b) => {
+  row.forEach((items, b) => {
     let start = 0
     for (const item of items) {
       const continuation = item.kind === 'note' && previous?.kind === 'note' && previous.tiedToNext
@@ -80,17 +83,17 @@ function placeLine(line: Line): PlacedItem[] {
   return placed
 }
 
-function toTimeline(line: Line): Timeline {
+function toTimeline(row: RowBars): Timeline {
   const cells: Cell[] = []
-  const triplet = Array.from({ length: line.length * BEATS_PER_BAR }, () => false)
-  const placed = placeLine(line)
+  const triplet = Array.from({ length: row.length * BEATS_PER_BAR }, () => false)
+  const placed = placeRow(row)
   const at = (p: PlacedItem) => p.bar * TICKS_PER_BAR + p.start
   // A triplet group of rests alone is just a rest beat.
   for (const p of placed) {
     if (p.item.triplet && p.item.kind === 'note') triplet[Math.floor(at(p) / TICKS_PER_BEAT)] = true
   }
   let i = 0
-  for (let tick = 0; tick < line.length * TICKS_PER_BAR; tick++) {
+  for (let tick = 0; tick < row.length * TICKS_PER_BAR; tick++) {
     while (i + 1 < placed.length && at(placed[i + 1]) <= tick) i++
     const p = placed[i]
     if (p.item.kind === 'rest') cells.push({ state: 'rest' })
@@ -115,7 +118,7 @@ function tripletBeatsOf({ triplet }: Timeline): number[] {
 
 /** The beats the other row writes as triplet groups, whose grid this row's beats share. */
 function sharedTripletBeats(bars: readonly Bar[], row: Row): number[] {
-  return tripletBeatsOf(toTimeline(lineOf(bars, otherRow(row))))
+  return tripletBeatsOf(toTimeline(rowOf(bars, otherRow(row))))
 }
 
 /**
@@ -273,7 +276,7 @@ const POSITION_OF: Record<Cell['state'], PositionState> = { hit: 'hit', hold: 'h
  * say: the editor's pending grid, for beats that read the same on either grid.
  */
 export function beatViews(bars: readonly Bar[], tripletBeats: readonly number[] = []): BeatView[][] {
-  const timelines = ROWS.map((row) => toTimeline(lineOf(bars, row)))
+  const timelines = ROWS.map((row) => toTimeline(rowOf(bars, row)))
   const shared = [...tripletBeats, ...timelines.flatMap(tripletBeatsOf)]
   for (const timeline of timelines) readAsTriplets(timeline, shared)
   const [snare, kick] = timelines
@@ -285,6 +288,7 @@ export function beatViews(bars: readonly Bar[], tripletBeats: readonly number[] 
   )
 }
 
+/** One row of a beat as the editor shows it, read on the grid its timeline gives the beat. */
 function rowView(timeline: Timeline, index: number): RowView {
   const hits = hitsOf(timeline, index)
   const cells = beatCells(timeline, index)
@@ -305,7 +309,7 @@ function rowView(timeline: Timeline, index: number): RowView {
  * cleared to its downbeat, as a grid switch does: a beat never mixes grids.
  */
 export function setBeat(bars: readonly Bar[], row: Row, bar: number, beat: number, hits: string): Bar[] {
-  const timeline = toTimeline(lineOf(bars, row))
+  const timeline = toTimeline(rowOf(bars, row))
   const { cells } = timeline
   const index = beatIndex(bar, beat)
   const first = index * TICKS_PER_BEAT
@@ -325,8 +329,8 @@ export function setBeat(bars: readonly Bar[], row: Row, bar: number, beat: numbe
       cells[first + t] = { state: sounding ? 'hold' : 'rest' }
     }
   }
-  const written = withLine(bars, row, fromTimeline(timeline))
-  const other = toTimeline(lineOf(written, otherRow(row)))
+  const written = withRow(bars, row, fromTimeline(timeline))
+  const other = toTimeline(rowOf(written, otherRow(row)))
   const clash = !readsOnEitherGrid(timeline, index) && !readsOnEitherGrid(other, index) && other.triplet[index] !== triplet
   return clash ? clearRowToDownbeat(written, otherRow(row), bar, beat) : written
 }
@@ -349,7 +353,7 @@ export function setBeat(bars: readonly Bar[], row: Row, bar: number, beat: numbe
  * plain beat.
  */
 export function toggleHit(bars: Bar[], row: Row, bar: number, beat: number, position: number, triplet?: boolean): Bar[] {
-  const timeline = toTimeline(lineOf(bars, row))
+  const timeline = toTimeline(rowOf(bars, row))
   const { cells } = timeline
   const index = beatIndex(bar, beat)
   if (index >= timeline.triplet.length) return bars
@@ -368,7 +372,7 @@ export function toggleHit(bars: Bar[], row: Row, bar: number, beat: number, posi
     for (let t = tick + 1; t < first + TICKS_PER_BEAT && cells[t].state === 'rest'; t++) cells[t] = { state: 'hold' }
   }
   if (onTriplets) timeline.triplet[index] = hitsOf(timeline, index).slice(1).includes('x')
-  return withLine(bars, row, fromTimeline(timeline))
+  return withRow(bars, row, fromTimeline(timeline))
 }
 
 /** A grid position of one beat in a row: bar, beat in the bar, and position on the beat's grid (from 0). */
@@ -398,7 +402,7 @@ export interface GridPoint {
  */
 export function setHold(bars: Bar[], from: GridPoint, to: GridPoint, tripletBeats: readonly number[] = []): Bar[] {
   const { row } = from
-  const timeline = toTimeline(lineOf(bars, row))
+  const timeline = toTimeline(rowOf(bars, row))
   const { cells } = timeline
   const written = [...timeline.triplet]
   readAsTriplets(timeline, [...tripletBeats, ...sharedTripletBeats(bars, row)])
@@ -438,7 +442,7 @@ export function setHold(bars: Bar[], from: GridPoint, to: GridPoint, tripletBeat
       timeline.triplet[index] = !silent && (offBeat || beat.at(-1)!.state === 'rest')
     }
   })
-  return withLine(bars, row, fromTimeline(timeline))
+  return withRow(bars, row, fromTimeline(timeline))
 }
 
 /**
@@ -452,8 +456,9 @@ export function clearBeatToDownbeat(bars: readonly Bar[], bar: number, beat: num
   return ROWS.reduce((cleared, row) => clearRowToDownbeat(cleared, row, bar, beat), [...bars])
 }
 
+/** Clears one row's beat for a grid switch: its note on the downbeat is kept, held to the end of the beat. */
 function clearRowToDownbeat(bars: readonly Bar[], row: Row, bar: number, beat: number): Bar[] {
-  const downbeat = hitsOf(toTimeline(lineOf(bars, row)), beatIndex(bar, beat))[0] === 'x'
+  const downbeat = hitsOf(toTimeline(rowOf(bars, row)), beatIndex(bar, beat))[0] === 'x'
   return setBeat(bars, row, bar, beat, downbeat ? 'x...' : '....')
 }
 
@@ -463,14 +468,14 @@ function clearRowToDownbeat(bars: readonly Bar[], row: Row, bar: number, beat: n
  * are returned.
  */
 export function toggleTie(bars: Bar[], row: Row, bar: number, beat: number): Bar[] {
-  const timeline = toTimeline(lineOf(bars, row))
+  const timeline = toTimeline(rowOf(bars, row))
   const first = beatIndex(bar, beat) * TICKS_PER_BEAT
   const cell = timeline.cells[first]
   if (cell.state === 'hold') timeline.cells[first] = { state: 'hit' }
   else if (cell.state === 'hit' && first > 0 && timeline.cells[first - 1].state !== 'rest') {
     timeline.cells[first] = { state: 'hold' }
   } else return bars
-  return withLine(bars, row, fromTimeline(timeline))
+  return withRow(bars, row, fromTimeline(timeline))
 }
 
 const EIGHTH = 6
@@ -484,7 +489,7 @@ const TRIPLET_EIGHTH = 4
  * rest after it. A note already that short can't be cut, so the same bars are returned.
  */
 export function toggleCutShort(bars: Bar[], row: Row, bar: number, beat: number): Bar[] {
-  const timeline = toTimeline(lineOf(bars, row))
+  const timeline = toTimeline(rowOf(bars, row))
   const index = beatIndex(bar, beat)
   if (sharedTripletBeats(bars, row).includes(index)) timeline.triplet[index] = true
   const first = index * TICKS_PER_BEAT
@@ -504,5 +509,5 @@ export function toggleCutShort(bars: Bar[], row: Row, bar: number, beat: number)
   }
   // Rung on to its end again, a beat that reads the same on either grid is written as a plain beat.
   if (readsOnEitherGrid(timeline, index)) timeline.triplet[index] = false
-  return withLine(bars, row, fromTimeline(timeline))
+  return withRow(bars, row, fromTimeline(timeline))
 }

@@ -38,14 +38,18 @@ function pointUnder(strip: Element, row: Row, clientX: number, clientY: number):
 const samePoint = (a: GridPoint | null, b: GridPoint | null) =>
   a?.row === b?.row && a?.bar === b?.bar && a?.beat === b?.beat && a?.position === b?.position
 
-const ROW_NAME: Record<Row, string> = { snare: 'Snare', kick: 'Kick' }
+/** How each row is named and coloured: the kick row in its own colour, apart from the snare row's ink. */
+const ROW_LOOK: Record<Row, { name: string; disc: string; hold: string; keycap: string }> = {
+  snare: { name: 'Snare', disc: 'bg-ink', hold: 'bg-ink/70', keycap: 'border-line text-mute' },
+  kick: { name: 'Kick', disc: 'bg-kick', hold: 'bg-kick/70', keycap: 'border-kick/40 text-kick' },
+}
 
 /** What each grid position of a beat is counted as: 1 e & a, or 1 trip let. */
 const countLabels = (beat: number, triplet: boolean) =>
   triplet ? [`${beat + 1}`, 'trip', 'let'] : [`${beat + 1}`, 'e', '&', 'a']
 
 /**
- * The bars and beats of the exercise, the main editor: one bar per row, under a header with its
+ * The bars and beats of the exercise, the main editor: one bar per line of cards, under a header with its
  * number and delete button, and each beat a card. A card shows the snare row's grid positions as
  * big cells (a hit, a hold bar for a note still sounding, or a ghost hit on hover), their count
  * labels, and the kick row's cells under them, as the staff writes hands over feet. Clicking a
@@ -109,7 +113,7 @@ export function BeatStrip() {
     const tiedOn = nextBeat(b, beat)?.[row].positions[0] === 'hold'
     return (
       <div
-        aria-label={`${ROW_NAME[row]} row`}
+        aria-label={`${ROW_LOOK[row].name} row`}
         title={[view.tiedInto && 'tied into', view.cutShort && 'cut short'].filter(Boolean).join(', ') || undefined}
         className="relative flex gap-1"
       >
@@ -215,8 +219,8 @@ function FigureKey({ row, figure }: { row: Row; figure: Figure | undefined }) {
   const key = figure.key.toUpperCase()
   return (
     <kbd
-      title={`${ROW_NAME[row]} figure key ${key}`}
-      className={`rounded border border-b-2 px-1 font-mono text-[10px]/[14px] ${row === 'kick' ? 'border-kick/40 text-kick' : 'border-line text-mute'}`}
+      title={`${ROW_LOOK[row].name} figure key ${key}`}
+      className={`rounded border border-b-2 px-1 font-mono text-[10px]/[14px] ${ROW_LOOK[row].keycap}`}
     >
       {key}
     </kbd>
@@ -285,8 +289,8 @@ function Cell({
 }) {
   const sounding = position !== 'empty'
   // To the middle of the 4px gap between cells, or across the card's padding and border to the middle of the gap between cards.
-  const holdLine = `pointer-events-none absolute top-1/2 h-1.5 -translate-y-1/2 ${row === 'kick' ? 'bg-kick/70' : 'bg-ink/70'}`
-  const disc = `relative size-4 rounded-full ${row === 'kick' ? 'bg-kick' : 'bg-ink'}`
+  const holdLine = `pointer-events-none absolute top-1/2 h-1.5 -translate-y-1/2 ${ROW_LOOK[row].hold}`
+  const disc = `relative size-4 rounded-full ${ROW_LOOK[row].disc}`
   return (
     <button
       type="button"

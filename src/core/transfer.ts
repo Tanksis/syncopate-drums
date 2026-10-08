@@ -160,6 +160,7 @@ function isBar(bar: unknown): boolean {
   return isRecord(bar) && ROWS.every((row) => isRowOfBar(bar[row]))
 }
 
+/** One row of a bar: notes and rests adding up to four beats. */
 function isRowOfBar(items: unknown): boolean {
   if (!Array.isArray(items) || !items.every(isItem)) return false
   return items.reduce((ticks: number, item: Item) => ticks + itemTicks(item), 0) === TICKS_PER_BAR

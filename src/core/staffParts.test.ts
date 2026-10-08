@@ -193,6 +193,12 @@ describe('a kick row alone: the feet part', () => {
   const line = bar('x...', '..x.', '....', 'xx.x')
   const bare = ['0 q bass', '12 e rest', '18 e bass', '24 q rest', '36 s bass', '39 e bass', '45 s bass']
 
+  it('rests a kick row alone in the feet part, even in a bar where it is silent, as a bass drum line was', () => {
+    const [, silent] = staffParts(asKicks(setBeat([restBar(), restBar()], 'snare', 0, 0, 'x...')), 'off')
+    expect(show(silent.feet)).toEqual(['0 q rest', '12 q rest', '24 q rest', '36 q rest'])
+    expect(show(silent.hands)).toEqual(['0 q space', '12 q space', '24 q space', '36 q space'])
+  })
+
   it('writes a bare kick row in the feet part with its rests, and the hands part as space', () => {
     expect(bassFeet(line, 'off')).toEqual(bare)
     expect(bassHands(line, 'off')).toEqual(['0 q space', '12 q space', '24 q space', '36 q space'])
