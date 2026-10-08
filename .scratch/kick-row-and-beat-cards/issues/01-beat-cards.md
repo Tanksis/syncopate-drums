@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done (merged in PR #28, 2026-10-08)
 
 - [x] Each beat is a card: the beat number large in its corner, a 16ths | trip segmented switch (right-click still switches), cells about 40px tall, and count labels (1 e & a / 1 trip let) with the beat number in bold
 - [x] Cells show a filled hit, a hold bar (running on across card and bar edges when tied), or a faint ghost hit on hover
