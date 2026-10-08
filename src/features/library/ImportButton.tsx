@@ -8,7 +8,7 @@ import { importConflicts, parseImport } from '@/core'
 import { exerciseCount } from './exerciseCount'
 
 /** A file's exercises and the folders they're in, as read. */
-type Read = Extract<ParsedImport, { ok: true }>
+type ReadImport = Extract<ParsedImport, { ok: true }>
 
 /**
  * Import: picks a JSON file and adds its exercises to the library. When some are already there it
@@ -19,10 +19,10 @@ export function ImportButton({ className, onImported }: { className: string; onI
   const importExercises = useAppStore((s) => s.importExercises)
   const picker = useRef<HTMLInputElement>(null)
   /** An import waiting on the conflict choice. */
-  const [conflicting, setConflicting] = useState<(Read & { conflictCount: number }) | null>(null)
+  const [conflicting, setConflicting] = useState<(ReadImport & { conflictCount: number }) | null>(null)
   const [refusal, setRefusal] = useState<string | null>(null)
 
-  const finish = ({ exercises, folders }: Read, choice: ImportChoice) => {
+  const finish = ({ exercises, folders }: ReadImport, choice: ImportChoice) => {
     setConflicting(null)
     onImported(importExercises(exercises, folders, choice))
   }

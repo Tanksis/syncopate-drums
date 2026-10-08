@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Exercise, Folder, Item, Note } from './index'
-import { SCHEMA_VERSION, exportFile, exportFileName, fileIntoFolders, importConflicts, newExercise, parseImport, planImport, restItems } from './index'
+import { SCHEMA_VERSION, exportFile, exportFileName, importConflicts, newExercise, parseImport, planImport, restItems } from './index'
 
 const note = (duration: Item['duration'], { tied = false } = {}): Note => ({
   kind: 'note',
@@ -228,35 +228,5 @@ describe('planning an import', () => {
     for (const choice of ['replace', 'keepBoth', 'skip'] as const) {
       expect(planImport(incoming, ['warm-up'], choice, { newId })).toEqual(incoming)
     }
-  })
-})
-
-describe('filing an import into folders', () => {
-  let made = 0
-  const newId = () => `new-folder-${++made}`
-  const triplets = { ...newExercise({ id: 'triplets', now: 500 }), name: 'Triplets', folderId: page38.id }
-
-  it('files exercises into the folder of the same name, ignoring case, without making a second', () => {
-    const mine: Folder = { id: 'my-p38', name: 'syncopation p.38' }
-    expect(fileIntoFolders([paradiddles, filedSyncopation, triplets], [page38], [warmUps, mine], { newId })).toEqual({
-      exercises: [paradiddles, { ...filedSyncopation, folderId: 'my-p38' }, { ...triplets, folderId: 'my-p38' }],
-      created: [],
-    })
-  })
-
-  it('makes one folder for exercises whose folder the library lacks', () => {
-    made = 0
-    const created: Folder = { id: 'new-folder-1', name: 'Syncopation p.38' }
-    expect(fileIntoFolders([filedSyncopation, triplets], [page38], [warmUps], { newId })).toEqual({
-      exercises: [
-        { ...filedSyncopation, folderId: created.id },
-        { ...triplets, folderId: created.id },
-      ],
-      created: [created],
-    })
-  })
-
-  it('makes no folder when no exercise is in one', () => {
-    expect(fileIntoFolders([paradiddles], [page38], [], { newId })).toEqual({ exercises: [paradiddles], created: [] })
   })
 })

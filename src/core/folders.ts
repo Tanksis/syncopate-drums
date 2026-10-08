@@ -60,9 +60,41 @@ export function inKnownFolder<E extends Pick<Exercise, 'folderId'>>(exercise: E,
   return { ...exercise, folderId: null }
 }
 
+/** Folder names in order, ignoring case (and accents): equal when they're the same name. */
+const compareNames = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: 'base' })
+
 /** The folders by name, ignoring case, as the Library tab lists them. */
 export function foldersByName(folders: readonly Folder[]): Folder[] {
-  return [...folders].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+  return [...folders].sort((a, b) => compareNames(a.name, b.name))
+}
+
+/**
+ * Files imported exercises into this library's folders: each one in a folder of the file goes in
+ * the library's folder of the same name, ignoring case, or in a new one made with that name.
+ * `created` is the folders made, one per name, to be stored.
+ */
+export function fileIntoFolders<E extends Pick<Exercise, 'folderId'>>(
+  exercises: E[],
+  fileFolders: readonly Folder[],
+  libraryFolders: readonly Folder[],
+  { newId }: { newId: () => string },
+): { exercises: E[]; created: Folder[] } {
+  const known = [...libraryFolders]
+  const created: Folder[] = []
+  const filed = exercises.map((exercise) => {
+    const from = fileFolders.find((f) => f.id === exercise.folderId)
+    if (!from) return exercise
+    // Named as a folder made here would be, so a blank name finds "New folder".
+    const { name } = newFolder({ id: '', name: from.name })
+    let folder = known.find((f) => compareNames(f.name, name) === 0)
+    if (!folder) {
+      folder = newFolder({ id: newId(), name })
+      known.push(folder)
+      created.push(folder)
+    }
+    return { ...exercise, folderId: folder.id }
+  })
+  return { exercises: filed, created }
 }
 
 /** A folder as the Library tab shows it. */

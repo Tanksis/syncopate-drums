@@ -1,6 +1,6 @@
 // Export and import: the JSON file that moves exercises between computers.
 
-import { inKnownFolder, newFolder } from './folders'
+import { inKnownFolder } from './folders'
 import { GROOVE_PRESETS } from './groove'
 import { migrateExercise } from './migrate'
 import type { Duration, Exercise, Folder, Hand, Item, StickingMode } from './model'
@@ -86,34 +86,6 @@ export function parseImport(json: string, appVersion: number = SCHEMA_VERSION): 
     read.push(inKnownFolder(exercise, folders))
   }
   return { ok: true, exercises: read, folders }
-}
-
-/**
- * Files imported exercises into this library's folders: each one in a folder goes in the library's
- * folder of the same name, ignoring case, or in a new one made with that name. `created` is the
- * folders made, one per name, to be stored.
- */
-export function fileIntoFolders(
-  exercises: Exercise[],
-  fileFolders: readonly Folder[],
-  libraryFolders: readonly Folder[],
-  { newId }: { newId: () => string },
-): { exercises: Exercise[]; created: Folder[] } {
-  const key = (name: string) => name.trim().toLocaleLowerCase()
-  const byName = new Map(libraryFolders.map((f) => [key(f.name), f]))
-  const created: Folder[] = []
-  const filed = exercises.map((exercise) => {
-    const from = fileFolders.find((f) => f.id === exercise.folderId)
-    if (!from) return exercise
-    let folder = byName.get(key(from.name))
-    if (!folder) {
-      folder = newFolder({ id: newId(), name: from.name })
-      byName.set(key(from.name), folder)
-      created.push(folder)
-    }
-    return { ...exercise, folderId: folder.id }
-  })
-  return { exercises: filed, created }
 }
 
 /** How many of the imported exercises the library already holds, matched by id only. */
