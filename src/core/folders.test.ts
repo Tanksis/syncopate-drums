@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deleteFolder, inKnownFolder, libraryView, moveToFolder, newExercise, newFolder, renameFolder } from './index'
+import { deleteFolder, fileIntoFolders, inKnownFolder, libraryView, moveToFolder, newExercise, newFolder, renameFolder } from './index'
 
 const page38 = { id: 'f1', name: 'Syncopation p.38' }
 const warmUps = { id: 'f2', name: 'Warm-ups' }
@@ -96,5 +96,47 @@ describe('an exercise from elsewhere, such as an import', () => {
     expect(inKnownFolder(line1, [page38])).toBe(line1)
     expect(inKnownFolder(loose, [page38])).toBe(loose)
     expect(inKnownFolder(singles, [page38])).toEqual({ ...singles, folderId: null })
+  })
+})
+
+describe('filing an import into folders', () => {
+  let made = 0
+  const newId = () => `new-folder-${++made}`
+  /** The book page folder as the file holds it, with a third line of the page. */
+  const filePage38 = { id: 'file-p38', name: 'Syncopation p.38' }
+  const filedLine1 = { ...line1, folderId: filePage38.id }
+  const filedLine2 = { ...line2, folderId: filePage38.id }
+
+  it('files exercises into the folder of the same name, ignoring case, without making a second', () => {
+    const mine = { id: 'my-p38', name: 'syncopation P.38' }
+    expect(fileIntoFolders([loose, filedLine1, filedLine2], [filePage38], [warmUps, mine], { newId })).toEqual({
+      exercises: [loose, { ...line1, folderId: 'my-p38' }, { ...line2, folderId: 'my-p38' }],
+      created: [],
+    })
+  })
+
+  it('makes one folder for exercises whose folder the library lacks', () => {
+    made = 0
+    const created = { id: 'new-folder-1', name: 'Syncopation p.38' }
+    expect(fileIntoFolders([filedLine1, filedLine2], [filePage38], [warmUps], { newId })).toEqual({
+      exercises: [
+        { ...line1, folderId: created.id },
+        { ...line2, folderId: created.id },
+      ],
+      created: [created],
+    })
+  })
+
+  it('makes no folder when no exercise is in one', () => {
+    expect(fileIntoFolders([loose], [filePage38], [], { newId })).toEqual({ exercises: [loose], created: [] })
+  })
+
+  it('files an exercise from an unnamed folder in "New folder"', () => {
+    const unnamed = { id: 'file-unnamed', name: ' ' }
+    const mine = { id: 'my-new', name: 'New folder' }
+    expect(fileIntoFolders([{ ...loose, folderId: unnamed.id }], [unnamed], [mine], { newId })).toEqual({
+      exercises: [{ ...loose, folderId: 'my-new' }],
+      created: [],
+    })
   })
 })

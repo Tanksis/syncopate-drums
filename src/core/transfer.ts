@@ -1,8 +1,9 @@
 // Export and import: the JSON file that moves exercises between computers.
 
+import { inKnownFolder } from './folders'
 import { GROOVE_PRESETS } from './groove'
 import { migrateExercise } from './migrate'
-import type { Duration, Exercise, Hand, Item, StickingMode } from './model'
+import type { Duration, Exercise, Folder, Hand, Item, StickingMode } from './model'
 import { MAX_BPM, MAX_SWING, MIN_BPM, MIN_SWING, ROWS, SCHEMA_VERSION, TICKS_PER_BAR, itemTicks } from './model'
 
 /** Marks a file as an exercise export. Chosen before the app was named, and kept. */
@@ -12,12 +13,18 @@ export interface ExportFile {
   format: typeof EXPORT_FORMAT
   /** The schema version the exercises are stored in. */
   version: number
+  /** The folders the exercises are in, so an import can file them by name. From version 3. */
+  folders: Folder[]
   exercises: Exercise[]
 }
 
-/** The export file for some exercises, each in its stored shape. Device settings are never in it. */
-export function exportFile(exercises: Exercise[]): ExportFile {
-  return { format: EXPORT_FORMAT, version: SCHEMA_VERSION, exercises }
+/**
+ * The export file for some exercises, each in its stored shape, with the folders they're in.
+ * Device settings (the tab, collapsed folders) are never in it.
+ */
+export function exportFile(exercises: Exercise[], folders: readonly Folder[]): ExportFile {
+  const used = new Set(exercises.map((e) => e.folderId))
+  return { format: EXPORT_FORMAT, version: SCHEMA_VERSION, folders: folders.filter((f) => used.has(f.id)), exercises }
 }
 
 /** Characters Windows, macOS or Linux don't allow in a file name, and control characters. */
@@ -40,12 +47,14 @@ export function exportFileName(exercises: Pick<Exercise, 'name'>[], today: Date)
   return `${name || 'drum-exercise'}.json`
 }
 
-export type ParsedImport = { ok: true; exercises: Exercise[] } | { ok: false; reason: string }
+export type ParsedImport = { ok: true; exercises: Exercise[]; folders: Folder[] } | { ok: false; reason: string }
 
 /**
  * The exercises in an import file, brought up to the current schema through the same migration
- * chain as the database. A file from a newer version of the app, a malformed one, or one that
- * isn't an exercise export is refused whole, with a reason to show the drummer.
+ * chain as the database, and the folders they're in. One whose folder the file doesn't list is in
+ * no folder; a file from before folders has none. A file from a newer version of the app, a
+ * malformed one, or one that isn't an exercise export is refused whole, with a reason to show the
+ * drummer.
  */
 export function parseImport(json: string, appVersion: number = SCHEMA_VERSION): ParsedImport {
   const file = parseJson(json)
@@ -54,6 +63,13 @@ export function parseImport(json: string, appVersion: number = SCHEMA_VERSION): 
   if (!isWholeNumber(version) || !Array.isArray(exercises)) return refuse(NOT_AN_EXPORT)
   if (version > appVersion) return refuse(NEWER)
   if (exercises.length === 0) return refuse('This file holds no exercises, so nothing was imported.')
+  const folders = file.folders ?? []
+  if (!Array.isArray(folders)) return refuse(damaged("its folders aren't a list"))
+  for (const [index, folder] of folders.entries()) {
+    if (!isRecord(folder) || typeof folder.id !== 'string' || typeof folder.name !== 'string') {
+      return refuse(damaged(`folder ${index + 1} has no id or name`))
+    }
+  }
 
   const read: Exercise[] = []
   for (const [index, stored] of exercises.entries()) {
@@ -67,9 +83,9 @@ export function parseImport(json: string, appVersion: number = SCHEMA_VERSION): 
     const problem = exerciseProblem(exercise)
     if (problem) return refuse(damaged(`${which}${named(exercise)} ${problem}`))
     if (read.some((e) => e.id === exercise.id)) return refuse(damaged(`${which}${named(exercise)} has the same id as another`))
-    read.push(exercise)
+    read.push(inKnownFolder(exercise, folders))
   }
-  return { ok: true, exercises: read }
+  return { ok: true, exercises: read, folders }
 }
 
 /** How many of the imported exercises the library already holds, matched by id only. */
@@ -134,6 +150,7 @@ function exerciseProblem(exercise: Exercise): string | null {
   if (!oneOf(e.sticking, STICKING_MODES)) return 'has an unknown sticking mode'
   if (!oneOf(e.leadHand, HANDS)) return 'has an unknown lead hand'
   if (!isFiniteNumber(e.lastOpened)) return 'has no last-opened time'
+  if (e.folderId !== null && typeof e.folderId !== 'string') return 'has an unknown folder'
   return practiceProblem(e.practice, e.bars.length)
 }
 

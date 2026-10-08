@@ -13,7 +13,7 @@ import {
   exampleExercises,
   exerciseToOpenAfterDelete,
   exerciseToOpenAtLaunch,
-  inKnownFolder,
+  fileIntoFolders,
   isExample,
   isUnchangedNew,
   launchListOrder,
@@ -92,11 +92,11 @@ interface AppState {
   /**
    * Stores exercises read from an import file, with `choice` for those the library already holds,
    * and returns how many were stored. New ones go on top of the list; replaced ones stay in place,
-   * and a replaced open exercise reopens as imported. Nothing is deleted. One filed in a folder this
-   * library doesn't have goes in no folder. The sidebar switches to
-   * the Library tab, to show them.
+   * and a replaced open exercise reopens as imported. Nothing is deleted. One in a folder of the
+   * file (`fileFolders`) goes in the library's folder of that name, made if it's missing. The
+   * sidebar switches to the Library tab, to show them.
    */
-  importExercises: (incoming: Exercise[], choice: ImportChoice) => number
+  importExercises: (incoming: Exercise[], fileFolders: Folder[], choice: ImportChoice) => number
 }
 
 /** How long a slider must rest before its value is saved. */
@@ -324,17 +324,22 @@ export const useAppStore = create<AppState>()((set, get) => {
       if (next) switchTo(next, updatedInPlace, remaining)
       else switchTo(untitledExercise(), addedOnTop, remaining)
     },
-    importExercises: (incoming, choice) => {
+    importExercises: (incoming, fileFolders, choice) => {
       const { editor, library, folders } = get()
-      const stored = planImport(
+      const newId = () => crypto.randomUUID()
+      const planned = planImport(
         // An example's id is the app's own; one in a file is never stored.
-        incoming.filter((e) => !isExample(e.id)).map((e) => inKnownFolder(e, folders)),
+        incoming.filter((e) => !isExample(e.id)),
         library.map((e) => e.id),
         choice,
-        { newId: () => crypto.randomUUID() },
+        { newId },
       )
-      if (stored.length === 0) return 0
+      if (planned.length === 0) return 0
+      const { exercises: stored, created } = fileIntoFolders(planned, fileFolders, folders, { newId })
       dropPendingSave(stored.map((e) => e.id))
+      for (const folder of created) {
+        storage?.folders.put(folder).catch((error) => console.error('Saving the folder failed', error))
+      }
       storage?.exercises.putMany(stored).catch((error) => console.error('Import failed', error))
       const device: DeviceSettings = { ...get().device, libraryTab: 'library' }
       saveDevice(device)
@@ -343,6 +348,7 @@ export const useAppStore = create<AppState>()((set, get) => {
       const open = replaced.get(editor.exercise.id)
       set({
         library: [...added, ...library.map((e) => replaced.get(e.id) ?? e)],
+        folders: [...folders, ...created],
         device,
         ...(open && { editor: newEditorState(open) }),
       })

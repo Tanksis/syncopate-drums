@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Exercise, Item, Note } from './index'
+import type { Exercise, Folder, Item, Note } from './index'
 import { SCHEMA_VERSION, exportFile, exportFileName, importConflicts, newExercise, parseImport, planImport, restItems } from './index'
 
 const note = (duration: Item['duration'], { tied = false } = {}): Note => ({
@@ -31,13 +31,23 @@ const paradiddles: Exercise = {
 }
 const syncopation = { ...newExercise({ id: 'syncopation-p38', now: 900 }), name: 'Syncopation p.38' }
 
+/** The book page folder, and a warm-ups folder none of the exported exercises is in. */
+const page38: Folder = { id: 'folder-p38', name: 'Syncopation p.38' }
+const warmUps: Folder = { id: 'folder-warm-ups', name: 'Warm-ups' }
+const filedSyncopation = { ...syncopation, folderId: page38.id }
+
 describe('the export file', () => {
   it('holds the format marker, the schema version and each exercise as stored', () => {
-    expect(exportFile([paradiddles, syncopation])).toEqual({
+    expect(exportFile([paradiddles, syncopation], [])).toEqual({
       format: 'drum-app-exercises',
       version: SCHEMA_VERSION,
+      folders: [],
       exercises: [paradiddles, syncopation],
     })
+  })
+
+  it('lists only the folders the exported exercises are in', () => {
+    expect(exportFile([paradiddles, filedSyncopation], [warmUps, page38]).folders).toEqual([page38])
   })
 })
 
@@ -67,10 +77,42 @@ const asJson = (file: unknown) => JSON.stringify(file)
 
 describe('parsing an import', () => {
   it('reads back an exported file with its content and practice settings intact', () => {
-    expect(parseImport(asJson(exportFile([paradiddles, syncopation])))).toEqual({
+    expect(parseImport(asJson(exportFile([paradiddles, syncopation], [])))).toEqual({
       ok: true,
+      folders: [],
       exercises: [paradiddles, syncopation],
     })
+  })
+
+  it('reads back the folders the exercises were in', () => {
+    expect(parseImport(asJson(exportFile([paradiddles, filedSyncopation], [page38])))).toEqual({
+      ok: true,
+      folders: [page38],
+      exercises: [paradiddles, filedSyncopation],
+    })
+  })
+
+  it('reads a version 2 export, from before folders, with every exercise in no folder', () => {
+    const { folderId: _, ...v2 } = { ...paradiddles, schemaVersion: 2 }
+    expect(parseImport(asJson({ format: 'drum-app-exercises', version: 2, exercises: [v2] }))).toEqual({
+      ok: true,
+      folders: [],
+      exercises: [paradiddles],
+    })
+  })
+
+  it('puts an exercise in no folder when the file does not list its folder', () => {
+    const file = { ...exportFile([filedSyncopation], [page38]), folders: [] }
+    expect(parseImport(asJson(file))).toEqual({ ok: true, folders: [], exercises: [syncopation] })
+  })
+
+  it.each([
+    ['folders that are not a list', { id: 'f', name: 'F' }],
+    ['a folder without an id', [{ name: 'F' }]],
+    ['a folder without a name', [{ id: 'f', name: 3 }]],
+  ])('refuses a file with %s', (_, folders) => {
+    const file = { ...exportFile([syncopation], []), folders }
+    expect(parseImport(asJson(file))).toEqual({ ok: false, reason: expect.stringMatching(/damaged/) })
   })
 
   /** Paradiddles as version 1 stored it: one rhythm, its snare row, on one drum, its voice. */
@@ -80,6 +122,7 @@ describe('parsing an import', () => {
   it('migrates a snare exercise from before exercises carried a schema version into the snare row', () => {
     expect(parseImport(asJson({ format: 'drum-app-exercises', version: 0, exercises: [v1('snare')] }))).toEqual({
       ok: true,
+      folders: [],
       exercises: [{ ...paradiddles, bars: bars.map((bar) => ({ snare: bar.snare, kick: restItems() })) }],
     })
   })
@@ -89,6 +132,7 @@ describe('parsing an import', () => {
     const kick = [note('quarter'), rest, note('sixteenth'), note('sixteenth'), note('eighth'), rest]
     expect(parseImport(asJson(file))).toEqual({
       ok: true,
+      folders: [],
       exercises: [{ ...paradiddles, bars: [{ snare: restItems(), kick: bars[0].snare }, { snare: restItems(), kick }] }],
     })
   })
@@ -132,6 +176,7 @@ describe('parsing an import', () => {
     ['a loop range past the last bar', { ...paradiddles, practice: { ...paradiddles.practice, loopRange: { first: 1, last: 2 } } }],
     ['a loop range ending before it starts', { ...paradiddles, practice: { ...paradiddles.practice, loopRange: { first: 1, last: 0 } } }],
     ['an exercise without a last-opened time', { ...paradiddles, lastOpened: 'yesterday' }],
+    ['an exercise in a folder that is not an id', { ...paradiddles, folderId: 7 }],
     ['a second exercise with the same id', syncopation],
   ])('refuses a file with %s', (_, damaged) => {
     expect(parseImport(withDamaged(damaged))).toEqual({ ok: false, reason: expect.stringMatching(/damaged/) })
@@ -145,7 +190,7 @@ describe('parsing an import', () => {
   })
 
   it('refuses a file with no exercises in it', () => {
-    expect(parseImport(asJson(exportFile([])))).toEqual({ ok: false, reason: expect.stringMatching(/no exercises/) })
+    expect(parseImport(asJson(exportFile([], [])))).toEqual({ ok: false, reason: expect.stringMatching(/no exercises/) })
   })
 })
 

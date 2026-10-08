@@ -1,11 +1,14 @@
 // Export as a browser download.
 
-import type { Exercise } from '@/core'
+import type { Exercise, Folder } from '@/core'
 import { exportFile, exportFileName } from '@/core'
 
-/** Downloads the exercises as an export file, named after the one exercise or today's date. */
-export function downloadExport(exercises: Exercise[]) {
-  const json = JSON.stringify(exportFile(exercises), null, 2)
+/**
+ * Downloads the exercises as an export file, with the folders they're in, named after the one
+ * exercise or today's date.
+ */
+export function downloadExport(exercises: Exercise[], folders: readonly Folder[]) {
+  const json = JSON.stringify(exportFile(exercises, folders), null, 2)
   const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }))
   const link = document.createElement('a')
   link.href = url

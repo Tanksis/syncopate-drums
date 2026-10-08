@@ -220,7 +220,7 @@ export function LibrarySidebar() {
               type="button"
               title="Download every exercise as one file"
               onMouseDown={keepFocus}
-              onClick={() => downloadExport(library)}
+              onClick={() => downloadExport(library, folders)}
               className={buttonClass}
             >
               Export all
@@ -304,7 +304,7 @@ export function LibrarySidebar() {
                   type="button"
                   title="Download the selected exercises as one file"
                   onMouseDown={keepFocus}
-                  onClick={() => downloadExport(selected)}
+                  onClick={() => downloadExport(selected, folders)}
                   className="flex-1 cursor-pointer rounded-md border border-line bg-card px-1.5 py-1 font-semibold hover:border-accent"
                 >
                   Export selected
