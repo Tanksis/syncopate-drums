@@ -37,7 +37,7 @@ function barsPerLineAt(width: number, scale: number): number {
  * The scale (1 to 1.6, in steps of 0.05) and bars a line to draw an exercise of `bars` bars at,
  * in an area `width` by `height`, given one line's height at scale 1. The largest scale that needs
  * no more lines than scale 1 and fits the height; 1 if even scale 1 overflows the height. Also the
- * width of a bar at scale 1, past the first bar's clef: an exercise on one line shares the line
+ * width of a bar in the drawing's units (before scaling), past the first bar's clef: an exercise on one line shares the line
  * (up to `maxBarWidth` a bar); a longer one gets a share of a full line a bar, so bars line up.
  */
 export function notationFit({ bars, width, height, lineHeight }: { bars: number; width: number; height: number; lineHeight: number }): {
