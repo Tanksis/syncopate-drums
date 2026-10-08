@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deleteFolder, inKnownFolder, libraryView, newExercise, newFolder, renameFolder } from './index'
+import { deleteFolder, inKnownFolder, libraryView, moveToFolder, newExercise, newFolder, renameFolder } from './index'
 
 const page38 = { id: 'f1', name: 'Syncopation p.38' }
 const warmUps = { id: 'f2', name: 'Warm-ups' }
@@ -38,6 +38,22 @@ describe('deleting a folder', () => {
 
   it('names the exercises it moved, so they can be saved', () => {
     expect(deleteFolder([page38, warmUps], [line1, singles, line2, loose], 'f1').moved.map((e) => e.id)).toEqual(['e1', 'e2'])
+  })
+})
+
+describe('moving exercises to a folder', () => {
+  it('files them in the folder, in their places in the list', () => {
+    const { library } = moveToFolder([line1, singles, loose, line2], ['e4', 'e3'], 'f1')
+    expect(library).toEqual([line1, { ...singles, folderId: 'f1' }, { ...loose, folderId: 'f1' }, line2])
+  })
+
+  it('takes them out of their folder when moved to no folder', () => {
+    const { library } = moveToFolder([line1, singles, loose], ['e1', 'e4'], null)
+    expect(library).toEqual([{ ...line1, folderId: null }, singles, loose])
+  })
+
+  it('names only the exercises whose folder changed, so they can be saved', () => {
+    expect(moveToFolder([line1, singles, loose], ['e1', 'e3', 'e4'], 'f1').moved.map((e) => e.id)).toEqual(['e3', 'e4'])
   })
 })
 
