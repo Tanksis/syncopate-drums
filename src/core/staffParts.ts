@@ -123,8 +123,14 @@ interface Sound {
  * - Where the exercise and the groove strike the same drum at once, the exercise's note is written.
  * - In a part's triplet beat (one its row writes as a triplet group), a groove hit off the triplet
  *   grid is written on the next triplet position.
+ * - With `swung` (the swing feel on), a sixteenth-grid beat whose hits, from every row and the
+ *   groove, are on the & and perhaps the downbeat, with none on the e or the a, is written as
+ *   played: on the triplet grid, the & on its last position (ADR 0006). Holds go to the nearest
+ *   triplet position, but a note on its downbeat holds one triplet position when its part strikes
+ *   on the let, as Groove Scribe writes it (ride, rest, ride). Each part writes it as a triplet
+ *   group only if it has a note there off the downbeat.
  */
-export function staffParts(bars: readonly Bar[], groove: GroovePresetId): StaffBar[] {
+export function staffParts(bars: readonly Bar[], groove: GroovePresetId, { swung = false } = {}): StaffBar[] {
   const total = bars.length * TICKS_PER_BAR
 
   // Each row's struck notes, each held through its tied continuations, and its triplet beats.
@@ -141,10 +147,9 @@ export function staffParts(bars: readonly Bar[], groove: GroovePresetId): StaffB
     }
     return { sounds, triplet }
   })
-  const exercise = [...snare.sounds, ...kick.sounds]
   const triplet = snare.triplet.map((t, beat) => t || kick.triplet[beat])
 
-  const grooveSounds: Sound[] = bars.flatMap((_, b) =>
+  const grooveStruck: Sound[] = bars.flatMap((_, b) =>
     [...grooveHitsByTick(groove)].flatMap(([tick, hits]) =>
       hits.flatMap((hit): Sound[] => {
         const drum = DRUM_OF_INSTRUMENT[hit.instrument]
@@ -155,6 +160,10 @@ export function staffParts(bars: readonly Bar[], groove: GroovePresetId): StaffB
       }),
     ),
   )
+
+  const swing = swungBeats([...snare.sounds, ...kick.sounds, ...grooveStruck], triplet, swung)
+  const exercise = [...snare.sounds, ...kick.sounds].map((s) => respell(s, swing))
+  const grooveSounds = grooveStruck.map((s) => respell(s, swing))
 
   const barOf = (s: Sound) => Math.floor(s.start / TICKS_PER_BAR)
   // Every sound on the grid of the hands part as it would be in a bar of one voice, which holds the exercise.
@@ -171,11 +180,24 @@ export function staffParts(bars: readonly Bar[], groove: GroovePresetId): StaffB
   // Each part's sounds and triplet beats: in a bar of one voice the hands part holds both rows.
   const [hands, feet] = (['hands', 'feet'] as const).map((limb) => {
     const own = limb === 'hands' ? snare : kick
-    const beats = triplet.map((t, beat) => (oneVoice[barOfBeat(beat)] ? limb === 'hands' && t : own.triplet[beat]))
-    const sounds = [
+    const rowBeats = triplet.map((t, beat) => (oneVoice[barOfBeat(beat)] ? limb === 'hands' && t : own.triplet[beat]))
+    const struck = [
       ...exercise.filter((s) => limbOf(s) === limb),
-      ...grooveSounds.filter((s) => limbOf(s) === limb).map((s) => onGrid(s, beats)),
+      ...grooveSounds.filter((s) => limbOf(s) === limb).map((s) => onGrid(s, rowBeats)),
     ]
+    // A swung downbeat leaves the middle of the triplet silent where its part strikes on the let.
+    const lets = new Set(struck.map((s) => s.start).filter((t) => swing[Math.floor(t / TICKS_PER_BEAT)] && t % TICKS_PER_BEAT === 8))
+    const sounds = struck.map((s) => (lets.has(s.start + 8) ? { ...s, end: Math.min(s.end, s.start + 4) } : s))
+    // A swung beat is a triplet group in a part only where the part has a note off the downbeat.
+    const offBeat = (tick: number) => tick % TICKS_PER_BEAT !== 0
+    const beats = rowBeats.map(
+      (t, beat) =>
+        t ||
+        (swing[beat] &&
+          sounds.some((s) =>
+            [s.start, s.end].some((tick) => offBeat(tick) && Math.floor(tick / TICKS_PER_BEAT) === beat),
+          )),
+    )
     return { beats, sounds, inBar: (b: number) => sounds.some((s) => barOf(s) === b) }
   })
   /** The part that rests wherever it is silent, in a bar of two voices. */
@@ -192,6 +214,33 @@ export function staffParts(bars: readonly Bar[], groove: GroovePresetId): StaffB
         .map((e) => ({ ...e, start: e.start - b * TICKS_PER_BAR }))
     return { hands: inBar(parts[0]), feet: oneVoice[b] ? [] : inBar(parts[1]) }
   })
+}
+
+/**
+ * The beats written swung: with the swing feel on, each sixteenth-grid beat with a hit on the & and
+ * none on the e or the a.
+ */
+function swungBeats(sounds: readonly Sound[], triplet: readonly boolean[], swung: boolean): boolean[] {
+  return triplet.map((t, beat) => {
+    if (!swung || t) return false
+    const offsets = sounds
+      .filter((s) => Math.floor(s.start / TICKS_PER_BEAT) === beat)
+      .map((s) => s.start % TICKS_PER_BEAT)
+    return offsets.includes(TICKS_PER_BEAT / 2) && offsets.every((o) => o % (TICKS_PER_BEAT / 2) === 0)
+  })
+}
+
+/** A sound in swung beats moved to the triplet grid: the & on the last position, holds to the nearest. */
+function respell(sound: Sound, swing: readonly boolean[]): Sound {
+  const move = (tick: number) => {
+    const beatStart = tick - (tick % TICKS_PER_BEAT)
+    return swing[beatStart / TICKS_PER_BEAT] ? beatStart + Math.round((tick - beatStart) / 4) * 4 : tick
+  }
+  const start = move(sound.start)
+  if (start === sound.start && move(sound.end) === sound.end) return sound
+  // A hold of one sixteenth after the & still lasts a triplet position.
+  const end = swing[Math.floor(sound.start / TICKS_PER_BEAT)] ? Math.max(move(sound.end), start + 4) : move(sound.end)
+  return { ...sound, start, end }
 }
 
 /** A groove sound in a triplet beat, its start and end moved on to the next triplet position. */
