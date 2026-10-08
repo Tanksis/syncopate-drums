@@ -15,6 +15,7 @@ const SHARED: KeyHelpGroup[] = [
       ['← →', 'beat back / on'],
       ['↑ ↓  Ctrl+← →', 'bar back / on'],
       ['Home  End', 'start / end of the exercise'],
+      ['Tab', 'snare row / kick row'],
     ],
   },
   {
@@ -64,6 +65,7 @@ const NORMAL: KeyHelpGroup[] = [
     title: 'Normal: move (a beat is a character, a bar a word)',
     keys: [
       ['h l', 'beat back / on'],
+      ['j k', 'kick row / snare row'],
       ['w b', 'next bar / start of the bar'],
       ['0 $', 'first / last beat of the bar'],
       ['gg G', 'start / end; with a count, that bar'],

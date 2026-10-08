@@ -23,6 +23,8 @@ import { overrideCount, sticking } from './sticking'
 export interface Cursor {
   bar: number
   beat: number
+  /** The row the keyboard's edits act on. */
+  row: Row
 }
 
 /** A run of whole bars, first to last inclusive. The cursor sits on one end of it. */
@@ -62,9 +64,6 @@ export type ExerciseSettings = Pick<Exercise, 'sticking' | 'leadHand'>
 
 const SETTING_KEYS: readonly (keyof ExerciseSettings)[] = ['sticking', 'leadHand']
 
-/** The row the keyboard's edits act on. */
-const KEYBOARD_ROW: Row = 'snare'
-
 /** The bars, settings and cursor as they were before a change, to go back to. */
 interface Snapshot {
   bars: Bar[]
@@ -87,13 +86,13 @@ export type EditCommand =
   | { type: 'enterFigure'; hits: string }
   /**
    * A click on a beat's grid position in a row (from 0, on the beat's grid): turns a hit there on
-   * or off, and moves the cursor to that beat without advancing. Never repeated by `.`.
+   * or off, and moves the cursor to that beat and row without advancing. Never repeated by `.`.
    */
   | ({ type: 'toggleGridPosition' } & GridPoint)
   /**
    * A drag on a note in the beat strip: sets where the hold of the note sounding at `from` ends (at
-   * `to` in the same row, which is not held), and moves the cursor to `from`'s beat without
-   * advancing. Never repeated by `.`.
+   * `to` in the same row, which is not held), and moves the cursor to `from`'s beat and row
+   * without advancing. Never repeated by `.`.
    */
   | { type: 'setHold'; from: GridPoint; to: GridPoint }
   /**
@@ -107,6 +106,8 @@ export type EditCommand =
   /** Moves the cursor by beats or bars, stopping at the ends of the exercise. */
   | { type: 'move'; by: 'beat' | 'bar'; step: number }
   | { type: 'moveTo'; bar: number; beat: number }
+  /** Tab, and vim's `j`/`k`: moves the cursor to a row, or (with none given) to the other row. */
+  | { type: 'moveRow'; row?: Row }
   /** To the first or last beat of the exercise, or of the cursor bar. */
   | { type: 'jump'; to: 'start' | 'end' | 'barStart' | 'barEnd' }
   /** vim's `3G`: to the first beat of that bar, kept inside the exercise. */
@@ -178,7 +179,7 @@ export interface KeyPress {
 export function newEditorState(exercise: Exercise): EditorState {
   return {
     exercise,
-    cursor: { bar: 0, beat: 0 },
+    cursor: { bar: 0, beat: 0, row: 'snare' },
     selection: null,
     clipboard: null,
     history: { undo: [], redo: [] },
@@ -223,6 +224,7 @@ function apply(state: EditorState, command: EditCommand): EditorState {
     }
     case 'move':
     case 'moveWord':
+    case 'moveRow':
     case 'jump':
     case 'goToBar':
       // In Normal mode a selection is vim's Visual Line mode: moving takes the selection along.
@@ -368,20 +370,20 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
   switch (command.type) {
     case 'enterFigure': {
       const { bar, beat } = state.cursor
-      let bars = setBeat(state.exercise.bars, KEYBOARD_ROW, bar, beat, command.hits)
+      let bars = setBeat(state.exercise.bars, state.cursor.row, bar, beat, command.hits)
       let cursor: Cursor
-      if (beat < BEATS_PER_BAR - 1) cursor = { bar, beat: beat + 1 }
+      if (beat < BEATS_PER_BAR - 1) cursor = { ...state.cursor, beat: beat + 1 }
       else {
         // Typing past the last beat grows the exercise by a bar of rests.
         if (bar === bars.length - 1) bars = [...bars, restBar()]
-        cursor = { bar: bar + 1, beat: 0 }
+        cursor = { ...state.cursor, bar: bar + 1, beat: 0 }
       }
       // A typed figure sets the beat's grid itself.
       const pendingGrid = withPending(state.pendingGrid, beatIndex(bar, beat), false)
       return { ...withBars(state, bars), cursor, pendingGrid }
     }
     case 'toggleGridPosition': {
-      const moved = moveTo(state, command.bar, command.beat)
+      const moved = moveTo(state, command.bar, command.beat, command.row)
       const { bar, beat } = moved.cursor
       const index = beatIndex(bar, beat)
       const pending = state.pendingGrid.includes(index)
@@ -399,7 +401,7 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
       return { ...withBars(moved, bars), pendingGrid }
     }
     case 'setHold': {
-      const moved = moveTo(state, command.from.bar, command.from.beat)
+      const moved = moveTo(state, command.from.bar, command.from.beat, command.from.row)
       const bars = setHold(state.exercise.bars, command.from, command.to, state.pendingGrid)
       if (bars === state.exercise.bars) return moved
       // As with a click: a beat on the triplet grid stays there while it reads the same on either.
@@ -409,7 +411,7 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
     case 'toggleCutShort': {
       const { bar, beat } = state.cursor
       const toggle = command.type === 'toggleTie' ? toggleTie : toggleCutShort
-      const bars = toggle(state.exercise.bars, KEYBOARD_ROW, bar, beat)
+      const bars = toggle(state.exercise.bars, state.cursor.row, bar, beat)
       return bars === state.exercise.bars ? state : withBars(state, bars)
     }
     case 'rest': {
@@ -423,15 +425,15 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
     case 'addBar':
     case 'openBar': {
       const at = command.type === 'openBar' && command.above ? state.cursor.bar : state.cursor.bar + 1
-      const added = { ...insertBars(state, at, [restBar()]), cursor: { bar: at, beat: 0 } }
+      const added = { ...insertBars(state, at, [restBar()]), cursor: { ...state.cursor, bar: at, beat: 0 } }
       return command.type === 'openBar' ? { ...added, mode: 'insert' } : added
     }
     case 'duplicateBar': {
       // The copy goes in front, so a tie into the bar and a tie out of it both stay where they were.
-      const { bar, beat } = state.cursor
+      const { bar } = state.cursor
       const { bars } = state.exercise
       const next = [...bars.slice(0, bar), ...untieLast([bars[bar]]), ...bars.slice(bar)]
-      return { ...withBarsInserted(state, next, bar, 1), cursor: { bar: bar + 1, beat } }
+      return { ...withBarsInserted(state, next, bar, 1), cursor: { ...state.cursor, bar: bar + 1 } }
     }
     case 'deleteBar': {
       if (command.bar !== undefined) return deleteBars(state, command.bar, command.bar)
@@ -447,7 +449,7 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
       if (!clip) return state
       const at = command.before ? state.cursor.bar : state.cursor.bar + 1
       const copies = Array.from({ length: command.count ?? 1 }, () => untieLast(clip)).flat()
-      return { ...insertBars(state, at, copies), cursor: { bar: at, beat: 0 } }
+      return { ...insertBars(state, at, copies), cursor: { ...state.cursor, bar: at, beat: 0 } }
     }
     case 'replaceBars': {
       const clip = state.clipboard
@@ -456,7 +458,7 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
       const { bars, practice } = state.exercise
       const next = [...untieLast(bars.slice(0, first)), ...untieLast(clip), ...bars.slice(last + 1)]
       const loopRange = loopRangeAfterInsert(loopRangeAfterDelete(practice.loopRange, first, last), first, clip.length)
-      return { ...state, exercise: withLoopRange({ ...state.exercise, bars: next }, loopRange), cursor: { bar: first, beat: 0 } }
+      return { ...state, exercise: withLoopRange({ ...state.exercise, bars: next }, loopRange), cursor: { ...state.cursor, bar: first, beat: 0 } }
     }
     case 'pasteBars': {
       if (!state.clipboard) return state
@@ -464,7 +466,7 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
       const { bars } = state.exercise
       const clip = state.clipboard
       const next = [...untieLast(bars.slice(0, bar)), ...untieLast(clip), ...bars.slice(bar + clip.length)]
-      return { ...withBars(state, next), cursor: { bar, beat: 0 } }
+      return { ...withBars(state, next), cursor: { ...state.cursor, beat: 0 } }
     }
     case 'move': {
       const { bar, beat } = state.cursor
@@ -475,6 +477,10 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
     }
     case 'moveTo':
       return moveTo(state, command.bar, command.beat)
+    case 'moveRow': {
+      const { bar, beat, row } = state.cursor
+      return moveTo(state, bar, beat, command.row ?? (row === 'snare' ? 'kick' : 'snare'))
+    }
     case 'goToBar':
       return moveTo(state, command.bar, 0)
     case 'setExerciseSettings': {
@@ -544,8 +550,8 @@ function withoutOverride<N extends { override?: Hand }>({ override: _, ...rest }
 }
 
 function selectBars(state: EditorState, step: number): EditorState {
-  const { bar, beat } = state.cursor
-  return selectTo(state, { bar: clamp(bar + step, 0, state.exercise.bars.length - 1), beat })
+  const { bar } = state.cursor
+  return selectTo(state, { ...state.cursor, bar: clamp(bar + step, 0, state.exercise.bars.length - 1) })
 }
 
 /** Moves the cursor, taking the moving end of the bar selection (or a new one) along with it. */
@@ -575,10 +581,10 @@ function setBeats(state: EditorState, hits: string, count: number): EditorState 
   for (let i = from; i < to; i++) {
     const bar = Math.floor(i / BEATS_PER_BAR)
     const beat = i % BEATS_PER_BAR
-    const view = views[bar][beat][KEYBOARD_ROW]
+    const view = views[bar][beat][state.cursor.row]
     const alreadyRest = hits === REST_FIGURE.hits && !view.hits.includes('x')
     const alreadySet = view.figure?.hits === hits && !view.cutShort
-    if (!alreadyRest && !alreadySet) bars = setBeat(bars, KEYBOARD_ROW, bar, beat, hits)
+    if (!alreadyRest && !alreadySet) bars = setBeat(bars, state.cursor.row, bar, beat, hits)
   }
   const pendingGrid = state.pendingGrid.filter((i) => i < from || i >= to)
   const regridded = pendingGrid.length === state.pendingGrid.length ? state : { ...state, pendingGrid }
@@ -632,10 +638,10 @@ function deleteBars(state: EditorState, first: number, last: number): EditorStat
   return moveTo({ ...state, exercise: withLoopRange({ ...state.exercise, bars: next }, loopRange) }, cursorBar, beat)
 }
 
-/** Puts the cursor on a beat, kept inside the exercise. */
-function moveTo(state: EditorState, bar: number, beat: number): EditorState {
+/** Puts the cursor on a beat, kept inside the exercise, in the same row or `row`. */
+function moveTo(state: EditorState, bar: number, beat: number, row = state.cursor.row): EditorState {
   const last = state.exercise.bars.length - 1
-  return { ...state, cursor: { bar: clamp(bar, 0, last), beat: clamp(beat, 0, BEATS_PER_BAR - 1) } }
+  return { ...state, cursor: { bar: clamp(bar, 0, last), beat: clamp(beat, 0, BEATS_PER_BAR - 1), row } }
 }
 
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n))
@@ -649,6 +655,7 @@ const PLAIN_KEYS: Record<string, EditCommand> = {
   End: { type: 'jump', to: 'end' },
   Backspace: { type: 'rest', stepBack: true },
   Delete: { type: 'rest', stepBack: false },
+  Tab: { type: 'moveRow' },
 }
 
 const SHIFT_KEYS: Record<string, EditCommand> = {
@@ -679,7 +686,7 @@ export interface KeyContext {
 const INSERT_CONTEXT: KeyContext = { mode: 'insert', pending: '', selection: null, vimKeys: true }
 
 /**
- * The command a key press gives, or null if it gives none. The arrows, Home/End, Backspace,
+ * The command a key press gives, or null if it gives none. The arrows, Home/End, Tab, Backspace,
  * Delete, Shift+←/→, Ctrl shortcuts and Alt+1–4 work in both modes.
  */
 export function commandForKey(press: KeyPress, context: KeyContext = INSERT_CONTEXT): EditCommand | null {
@@ -752,6 +759,10 @@ function normalCommand(key: string, { pending, selection }: KeyContext): EditCom
       return { type: 'move', by: 'beat', step: -count }
     case 'l':
       return { type: 'move', by: 'beat', step: count }
+    case 'j':
+      return { type: 'moveRow', row: 'kick' }
+    case 'k':
+      return { type: 'moveRow', row: 'snare' }
     case 'w':
       return { type: 'moveWord', step: count }
     case 'b':

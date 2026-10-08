@@ -57,7 +57,7 @@ const countLabels = (beat: number, triplet: boolean) =>
  * on into later beats and bars (tied) in the same row, shown live and written on release.
  * Clicking elsewhere on a card moves the cursor to it. A card's 16ths | trip switch, or a
  * right-click on it, switches it between the sixteenth and the triplet grid. The cursor's card is
- * outlined, and the bar selection and a set loop range are shaded.
+ * outlined with a mark beside its row, and the bar selection and a set loop range are shaded.
  */
 export function BeatStrip() {
   const editor = useAppStore((s) => s.editor)
@@ -108,15 +108,21 @@ export function BeatStrip() {
   const nextBeat = (b: number, beat: number): BeatView | undefined =>
     beat < views[b].length - 1 ? views[b][beat + 1] : views[b + 1]?.[0]
 
-  /** One row of a card's cells, its ⌒ mark at the start when the beat is tied into. */
+  /**
+   * One row of a card's cells, its ⌒ mark at the start when the beat is tied into, and a bar beside
+   * it when the cursor is in it.
+   */
   const rowCells = (row: Row, view: RowView, b: number, beat: number) => {
     const tiedOn = nextBeat(b, beat)?.[row].positions[0] === 'hold'
+    const current = cursor.bar === b && cursor.beat === beat && cursor.row === row
     return (
       <div
         aria-label={`${ROW_LOOK[row].name} row`}
+        aria-current={current || undefined}
         title={[view.tiedInto && 'tied into', view.cutShort && 'cut short'].filter(Boolean).join(', ') || undefined}
         className="relative flex gap-1"
       >
+        {current && <span aria-hidden className="absolute inset-y-1 -left-1.5 w-1 rounded-full bg-accent" />}
         {view.tiedInto && <span className="absolute -top-3 -left-3.5 text-base text-accent">⌒</span>}
         {view.positions.map((position, i) => (
           <Cell

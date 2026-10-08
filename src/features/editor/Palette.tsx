@@ -11,10 +11,10 @@ const TILE_HEIGHT = 50
 /** The beat figures laid out like the keyboard; clicking a tile enters its figure. */
 export function Palette() {
   const dispatch = useAppStore((s) => s.dispatch)
-  // The beat as the editor shows it: on the pending grid, no sixteenth figure is lit.
+  // The cursor's row of its beat as the editor shows it: on the pending grid, no sixteenth figure is lit.
   const current = useAppStore((s) => {
     const { cursor } = s.editor
-    return editorBeatViews(s.editor)[cursor.bar][cursor.beat].snare.figure
+    return editorBeatViews(s.editor)[cursor.bar][cursor.beat][cursor.row].figure
   })
 
   const tile = (figure: Figure, wide = false) => (
