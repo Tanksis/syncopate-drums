@@ -42,12 +42,17 @@ export function exerciseToOpenAfterDelete<E extends Pick<Exercise, 'id' | 'lastO
   return lastOpenOrLatest(library.filter((e) => !deleted.has(e.id)), openId)
 }
 
+/** New's exercise: a new Untitled one in the open exercise's folder, so the drummer stays on the same page. */
+export function newExerciseBeside(open: Exercise, { id, now }: { id: string; now: number }): Exercise {
+  return newExercise({ id, now, folderId: open.folderId })
+}
+
 /**
- * Whether an exercise is still exactly as New made it: one bar of rests, the default name and the
- * default settings. Such an exercise is discarded when the drummer leaves it.
+ * Whether an exercise is still exactly as New made it, in whichever folder: one bar of rests, the
+ * default name and the default settings. Such an exercise is discarded when the drummer leaves it.
  */
 export function isUnchangedNew(exercise: Exercise): boolean {
-  return sameValue(exercise, newExercise({ id: exercise.id, now: exercise.lastOpened }))
+  return sameValue(exercise, newExercise({ id: exercise.id, now: exercise.lastOpened, folderId: exercise.folderId }))
 }
 
 /**
@@ -76,11 +81,12 @@ function sameValue(a: unknown, b: unknown): boolean {
 }
 
 /**
- * A copy under a new id, named "<name> (copy)", with the same content and practice settings. An
- * example's copy is Copy to Library's, an ordinary exercise without the "Example: " prefix.
+ * A copy under a new id, named "<name> (copy)", with the same content and practice settings, in its
+ * original's folder. An example's copy is Copy to Library's, an ordinary exercise without the
+ * "Example: " prefix, in no folder.
  */
 export function duplicateExercise(exercise: Exercise, { id, now }: { id: string; now: number }): Exercise {
-  if (isExample(exercise.id)) return copyExample(exercise, { id, now })
+  if (isExample(exercise.id)) return copyExample(exercise, { id, now, folderId: null })
   return { ...exercise, id, name: `${exercise.name} (copy)`, lastOpened: now }
 }
 

@@ -1,0 +1,98 @@
+// Library folders: one level deep, an exercise filed in one by its `folderId` (or in none).
+
+import { filterByName } from './library'
+import type { Exercise, Folder } from './model'
+
+/** What a folder made without a name is called. */
+const UNNAMED_FOLDER = 'New folder'
+
+/** A new folder, its name trimmed; a blank name gives "New folder". */
+export function newFolder({ id, name }: { id: string; name: string }): Folder {
+  return { id, name: name.trim() || UNNAMED_FOLDER }
+}
+
+/** The folders with one renamed, its name trimmed; a blank name is ignored and they stay as they were. */
+export function renameFolder(folders: Folder[], id: string, name: string): Folder[] {
+  const trimmed = name.trim()
+  if (!trimmed) return folders
+  return folders.map((f) => (f.id === id ? { ...f, name: trimmed } : f))
+}
+
+/**
+ * Deletes a folder. Its exercises move to no folder, in their places in the list, and none is
+ * deleted; `moved` is them as they are now, to be saved.
+ */
+export function deleteFolder<E extends Pick<Exercise, 'folderId'>>(
+  folders: Folder[],
+  library: E[],
+  id: string,
+): { folders: Folder[]; library: E[]; moved: E[] } {
+  const moved: E[] = []
+  const kept = library.map((e) => {
+    if (e.folderId !== id) return e
+    const out = { ...e, folderId: null }
+    moved.push(out)
+    return out
+  })
+  return { folders: folders.filter((f) => f.id !== id), library: kept, moved }
+}
+
+/** Whether an exercise is filed in one of these folders, rather than in none or in one that's gone. */
+const isFiled = (exercise: Pick<Exercise, 'folderId'>, folderIds: ReadonlySet<string>) =>
+  exercise.folderId !== null && folderIds.has(exercise.folderId)
+
+/** The exercise as it is when these folders hold its folder, otherwise in no folder (an import's, say). */
+export function inKnownFolder<E extends Pick<Exercise, 'folderId'>>(exercise: E, folders: Folder[]): E {
+  if (exercise.folderId === null || isFiled(exercise, new Set(folders.map((f) => f.id)))) return exercise
+  return { ...exercise, folderId: null }
+}
+
+/** A folder as the Library tab shows it. */
+export interface FolderRow<E> {
+  folder: Folder
+  /** How many exercises it holds, shown even while it's collapsed. */
+  count: number
+  expanded: boolean
+  /** The exercises listed under it: none while it's collapsed, only the matches with filter text. */
+  exercises: E[]
+}
+
+/** The Library tab's rows: the folders, then the exercises in no folder. */
+export interface LibraryView<E> {
+  folders: FolderRow<E>[]
+  loose: E[]
+}
+
+/**
+ * The Library tab as the sidebar shows it: the folders by name (ignoring case), each with its
+ * exercises in list order and a count, then the exercises in no folder (or in one that's gone).
+ * A collapsed folder hides its exercises. With filter text only the matches are listed, a folder
+ * without one is hidden, and a folder with one shows expanded, collapsed or not.
+ */
+export function libraryView<E extends Pick<Exercise, 'name' | 'folderId'>>({
+  library,
+  folders,
+  filter,
+  collapsedIds,
+}: {
+  library: E[]
+  folders: Folder[]
+  filter: string
+  collapsedIds: readonly string[]
+}): LibraryView<E> {
+  const folderIds = new Set(folders.map((f) => f.id))
+  const rows = [...folders]
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+    .map((folder): FolderRow<E> => {
+      const inFolder = library.filter((e) => e.folderId === folder.id)
+      const expanded = filter !== '' || !collapsedIds.includes(folder.id)
+      return { folder, count: inFolder.length, expanded, exercises: expanded ? filterByName(inFolder, filter) : [] }
+    })
+  return {
+    folders: filter === '' ? rows : rows.filter((row) => row.exercises.length > 0),
+    loose: filterByName(
+      library.filter((e) => !isFiled(e, folderIds)),
+      filter,
+    ),
+  }
+}

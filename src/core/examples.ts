@@ -86,11 +86,14 @@ export function isExample(id: string): boolean {
 /**
  * Copy to Library: an ordinary exercise under a new id, opened now, named without the "Example: "
  * prefix, with the example's notes, sticking and practice settings as they are now (a slowed tempo
- * carries over).
+ * carries over), in the folder given.
  */
-export function copyExample(example: Exercise, { id, now }: { id: string; now: number }): Exercise {
+export function copyExample(
+  example: Exercise,
+  { id, now, folderId }: { id: string; now: number; folderId: string | null },
+): Exercise {
   const name = example.name.startsWith(EXAMPLE_NAME_PREFIX) ? example.name.slice(EXAMPLE_NAME_PREFIX.length) : example.name
-  return { ...example, id, name, lastOpened: now }
+  return { ...example, id, name, lastOpened: now, folderId }
 }
 
 /** The sidebar tab that lists an exercise: Examples for an example, otherwise Library. */

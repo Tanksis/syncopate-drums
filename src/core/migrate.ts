@@ -27,6 +27,8 @@ const steps: Record<number, (exercise: Stored) => Stored> = {
       : exercise.bars
     return { ...exercise, bars, schemaVersion: 2 }
   },
+  // Version 2 had no folders: every exercise starts outside one.
+  2: (exercise) => ({ ...exercise, folderId: null, schemaVersion: 3 }),
 }
 
 /** The stored exercise in the current shape; throws for one from a newer version of the app. */

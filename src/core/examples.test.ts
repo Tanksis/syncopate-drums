@@ -186,7 +186,7 @@ describe('the edits an example accepts', () => {
 describe('copying an example to the library', () => {
   const [eighths] = examples
   const slowed = withBpm(eighths, 60)
-  const copy = copyExample(slowed, { id: 'mine', now: 7000 })
+  const copy = copyExample(slowed, { id: 'mine', now: 7000, folderId: null })
 
   it('gives an ordinary exercise under a new id, opened now', () => {
     expect(copy.id).toBe('mine')
@@ -196,6 +196,11 @@ describe('copying an example to the library', () => {
 
   it('drops the "Example: " prefix from the name', () => {
     expect(copy.name).toBe('syncopated eighths')
+  })
+
+  it('files it in the folder given', () => {
+    expect(copy.folderId).toBeNull()
+    expect(copyExample(slowed, { id: 'mine', now: 7000, folderId: 'f1' }).folderId).toBe('f1')
   })
 
   it('keeps the notes, sticking and the practice settings as they are now', () => {
@@ -210,7 +215,7 @@ describe('copying an example to the library', () => {
   })
 
   it('is not taken for a leftover example', () => {
-    expect(leftoverExamples([copyExample(eighths, { id: 'mine', now: 1 })])).toEqual([])
+    expect(leftoverExamples([copyExample(eighths, { id: 'mine', now: 1, folderId: null })])).toEqual([])
   })
 })
 

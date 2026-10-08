@@ -46,7 +46,7 @@ describe('version 1 to 2: the snare row and the kick row (ADR 0005)', () => {
       { snare: [rest, rest, rest, rest], kick: restItems() },
     ])
     expect(migrated).not.toHaveProperty('voice')
-    expect(migrated.schemaVersion).toBe(2)
+    expect(migrated.schemaVersion).toBe(SCHEMA_VERSION)
   })
 
   it('puts a bass drum exercise in the kick row, its overrides dropped, under a resting snare row', () => {
@@ -55,5 +55,14 @@ describe('version 1 to 2: the snare row and the kick row (ADR 0005)', () => {
     expect(migrated.bars).toEqual([{ snare: restItems(), kick: [note('quarter'), ...others] }])
     expect(first).toHaveProperty('override')
     expect(migrated).not.toHaveProperty('voice')
+  })
+})
+
+describe('version 2 to 3: folders', () => {
+  it('puts a version-2 exercise in no folder', () => {
+    const { folderId: _, ...v2 } = { ...newExercise({ id: 'e1', now: 5 }), schemaVersion: 2 }
+    const migrated = migrateExercise(v2)
+    expect(migrated.folderId).toBeNull()
+    expect(migrated.schemaVersion).toBe(3)
   })
 })

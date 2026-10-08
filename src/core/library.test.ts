@@ -13,6 +13,7 @@ import {
   isUnchangedNew,
   newEditorState,
   newExercise,
+  newExerciseBeside,
   withBpm,
 } from './index'
 
@@ -83,8 +84,25 @@ describe('an unchanged new exercise', () => {
     expect(isUnchangedNew(kicked.exercise)).toBe(false)
   })
 
+  it('is unchanged in a folder too, as New made it beside an exercise in that folder', () => {
+    const filed = { ...untitled, name: 'p.38 #1', folderId: 'f1' }
+    expect(isUnchangedNew(newExerciseBeside(filed, { id: 'new', now: 1000 }))).toBe(true)
+  })
+
   it('stops being unchanged once it is renamed', () => {
     expect(isUnchangedNew({ ...untitled, name: 'p.37 #4' })).toBe(false)
+  })
+})
+
+describe('a new exercise', () => {
+  it('goes into the open exercise’s folder', () => {
+    const open = { ...newExercise({ id: 'open', now: 1 }), name: 'p.38 #1', folderId: 'f1' }
+    expect(newExerciseBeside(open, { id: 'new', now: 2 })).toEqual({ ...newExercise({ id: 'new', now: 2 }), folderId: 'f1' })
+  })
+
+  it('goes into no folder beside an exercise in none, or an example', () => {
+    expect(newExerciseBeside(newExercise({ id: 'open', now: 1 }), { id: 'new', now: 2 }).folderId).toBeNull()
+    expect(newExerciseBeside(exampleExercises()[0], { id: 'new', now: 2 }).folderId).toBeNull()
   })
 })
 
@@ -109,11 +127,17 @@ describe('duplicating an exercise', () => {
     expect(copy.practice).toEqual({ bpm: 132, loopRange: { first: 0, last: 0 }, groove: 'off', swing: 0.58 })
   })
 
+  it('puts the copy in its original’s folder', () => {
+    expect(duplicateExercise({ ...original, folderId: 'f1' }, { id: 'copy', now: 900 }).folderId).toBe('f1')
+    expect(copy.folderId).toBeNull()
+  })
+
   it('copies an example to the library, as Copy to Library does', () => {
     const [eighths] = exampleExercises()
     const duplicate = duplicateExercise(eighths, { id: 'mine', now: 900 })
-    expect(duplicate).toEqual(copyExample(eighths, { id: 'mine', now: 900 }))
+    expect(duplicate).toEqual(copyExample(eighths, { id: 'mine', now: 900, folderId: null }))
     expect(duplicate.name).toBe('syncopated eighths')
+    expect(duplicate.folderId).toBeNull()
   })
 })
 

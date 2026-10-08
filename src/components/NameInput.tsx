@@ -7,10 +7,12 @@ import { useRef } from 'react'
 export function NameInput({
   name,
   onDone,
+  label = 'Exercise name',
   className = '',
 }: {
   name: string
   onDone: (name: string | null) => void
+  label?: string
   className?: string
 }) {
   const done = useRef(false)
@@ -21,7 +23,7 @@ export function NameInput({
   }
   return (
     <input
-      aria-label="Exercise name"
+      aria-label={label}
       defaultValue={name}
       autoFocus
       onFocus={(e) => e.currentTarget.select()}
