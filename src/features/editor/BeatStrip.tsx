@@ -148,7 +148,7 @@ export function BeatStrip() {
                     title={[view.tiedInto && 'tied into', view.cutShort && 'cut short'].filter(Boolean).join(', ') || undefined}
                     onClick={() => dispatch({ type: 'moveTo', bar: b, beat })}
                     onContextMenu={switchGrid}
-                    className={`relative flex min-w-0 cursor-pointer flex-col gap-1 rounded-xl border bg-card p-2 ${
+                    className={`relative flex min-w-0 cursor-pointer flex-col gap-1 rounded-xl border p-2 ${looped || selected ? 'bg-card/60' : 'bg-card'} ${
                       current ? 'border-accent ring-2 ring-accent' : 'border-line'
                     }`}
                   >
@@ -257,8 +257,8 @@ function Cell({
   onPointerCancel: () => void
 }) {
   const sounding = position !== 'empty'
-  // Across the 4px gap between cells, or the card's padding, border and half the gap between cards.
-  const bar = 'pointer-events-none absolute top-1/2 h-1.5 -translate-y-1/2 bg-ink/70'
+  // To the middle of the 4px gap between cells, or across the card's padding and border to the middle of the gap between cards.
+  const holdLine = 'pointer-events-none absolute top-1/2 h-1.5 -translate-y-1/2 bg-ink/70'
   return (
     <button
       type="button"
@@ -272,8 +272,8 @@ function Cell({
       onClick={(e) => e.stopPropagation()}
       className="group/cell relative flex h-10 min-w-0 flex-1 cursor-pointer touch-none items-center justify-center rounded border border-line bg-card hover:border-accent"
     >
-      {position === 'hold' && <span className={`${bar} right-1/2 ${first ? '-left-[14px]' : '-left-[5px]'}`} />}
-      {sounding && holdsOn && <span className={`${bar} left-1/2 ${last ? '-right-[14px]' : '-right-[5px]'}`} />}
+      {position === 'hold' && <span className={`${holdLine} right-1/2 ${first ? '-left-[14px]' : '-left-[3px]'}`} />}
+      {sounding && holdsOn && <span className={`${holdLine} left-1/2 ${last ? '-right-[14px]' : '-right-[3px]'}`} />}
       {position === 'hit' ? (
         <span className="relative size-4 rounded-full bg-ink group-hover/cell:bg-accent" />
       ) : position === 'empty' ? (
