@@ -1,0 +1,13 @@
+# 03: Add examples button
+
+**What to build:** An "Add examples" button in the library sidebar that adds a fresh copy of the example set on top of the list and opens the first. See [spec](../spec.md) stories 9 and 11.
+
+**Blocked by:** 02
+
+**Status:** ready-for-agent
+
+- [ ] The library sidebar has an "Add examples" button, styled like Import and Export all, with `keepFocus`
+- [ ] It adds a fresh set (new ids) on top of the list, stores it straight away, opens the first example, and sets `examplesAdded`
+- [ ] Pressing it twice gives two independent copies; editing one leaves the other unchanged
+- [ ] The examples can be renamed, duplicated, exported and deleted like any exercise
+- [ ] Checked in the browser with real mouse clicks
