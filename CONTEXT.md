@@ -114,4 +114,4 @@ Playback where off-beat eighths are delayed into a long-short (triplet-like) fee
 _Avoid_: Shuffle
 
 **Swing amount**:
-How long the first eighth of each beat is, as a share of the beat: 50% is straight, 66.7% (the default) is triplet swing. It is the amount at slow and medium tempos; playback eases it toward straight as the tempo rises. Notated triplets are never swung.
+How long the first eighth of each beat is, as a share of the beat: 50% is straight (where a new exercise starts), 66.7% is triplet swing (set when a jazz groove is picked on a straight exercise). It is the amount at slow and medium tempos; playback eases it toward straight as the tempo rises. Notated triplets are never swung.
