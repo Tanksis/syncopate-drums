@@ -2,16 +2,18 @@ import type { ReactNode } from 'react'
 import { useRef } from 'react'
 import { useAppStore } from '@/app/store'
 import { PanelHeading } from '@/components/PanelHeading'
+import { SidebarHeading } from '@/components/Sidebar'
 import { keepFocus } from '@/components/keepFocus'
 import type { ExerciseSettings, GroovePresetId, VolumeSetting } from '@/core'
 import { GROOVE_PRESETS, MAX_SWING, MAX_VOLUME, MIN_SWING, TRIPLET_SWING, groovePreset, overrideCount } from '@/core'
 
-export function SettingsSidebar() {
+export function SettingsSidebar({ onCollapse }: { onCollapse: () => void }) {
   return (
     <aside
       aria-label="Settings"
-      className="flex flex-col gap-3.5 overflow-auto border-l border-line bg-panel p-3"
+      className="flex w-[250px] flex-col gap-3.5 overflow-auto border-l border-line bg-panel p-3"
     >
+      <SidebarHeading name="Settings" side="right" onCollapse={onCollapse} />
       <SettingGroup title="Groove">
         <GroovePicker />
         <Swing />

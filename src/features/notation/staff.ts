@@ -1,12 +1,13 @@
 // The notation renderer: draws an exercise straight from the model with VexFlow (no MusicXML in
 // between). We do the line wrapping ourselves: 4 bars per line, fewer on a narrow window, and a
-// short last line keeps the bar width and stays left aligned. What to draw comes from the core's
+// short last line keeps the bar width and stays left aligned. A short exercise is drawn bigger, at
+// the scale the core's notationFit picks for the notation area. What to draw comes from the core's
 // staff parts: the hands part stems up, the feet part stems down, or one voice stems up (ADRs 0002, 0004).
 
 import type { StemmableNote } from 'vexflow/bravura'
 import { Beam, Dot, Formatter, Fraction, GhostNote, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
 import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, NoteSticking, PlayPosition, StaffEvent } from '@/core'
-import { TICKS_PER_BEAT, inLoopRange, restBar, setBeat, staffParts, sticking, swingOn } from '@/core'
+import { NOTATION_LAYOUT, TICKS_PER_BEAT, inLoopRange, notationFit, restBar, setBeat, staffParts, sticking, swingOn } from '@/core'
 
 // Mirror the accent, a light tint of it and the loop range's ink and shade from the design tokens in styles/index.css.
 const ACCENT_COLOUR = '#2563eb'
@@ -16,12 +17,7 @@ const LOOP_SHADE = '#fde68a'
 /** Height of the loop band drawn behind the bar numbers of the looped bars. */
 const LOOP_BAND_HEIGHT = 12
 
-const BARS_PER_LINE = 4
-const MIN_BAR_WIDTH = 190
-/** Room for the clef (and, on the first line, the time signature) before the first bar's notes. */
-const CLEF_WIDTH = 70
-const MARGIN = 10
-const STAVE_TOP = 10
+const { clefWidth: CLEF_WIDTH, margin: MARGIN, staveTop: STAVE_TOP } = NOTATION_LAYOUT
 
 /** The SVG is drawn in Bravura and Academico, which VexFlow loads as web fonts. */
 export const notationFontsReady: Promise<unknown> = Promise.all([
@@ -158,6 +154,8 @@ export interface Drawing {
   svg: SVGSVGElement | null
   line: (bar: number) => DrawnLine
   playheadMark: (position: PlayPosition) => PlayheadMark | undefined
+  /** The first line's five stave lines, in the page's pixels from the SVG's top left. */
+  firstStaff: { left: number; top: number; width: number; height: number }
 }
 
 /** Stave lines the playhead line reaches above the top line and below the bottom line. */
@@ -166,18 +164,22 @@ const PLAYHEAD_OVERHANG = 1.5
 /** The x of the middle of a note's noteheads. */
 const noteCentre = (note: StaveNote) => (note.getNoteHeadBeginX() + note.getNoteHeadEndX()) / 2
 
+/** The notation area the exercise is drawn to fit, in pixels. */
+export interface NotationArea {
+  width: number
+  height: number
+}
+
 /**
- * Draws the whole exercise into `el`, replacing what was there, at the given width. Each struck
+ * Draws the whole exercise into `el`, replacing what was there, to fit the area: at its width, and
+ * scaled up when the exercise is short enough (the whole SVG is scaled, so hit areas and the
+ * playhead line scale with it). Each struck
  * chord carries `data-bar` and `data-beat`, the beat it sits in; each bar number
  * carries `data-loop-bar`, its bar. With no cursor, no beat or bar is highlighted.
  */
-export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor | null, width: number): Drawing {
+export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor | null, area: NotationArea): Drawing {
   el.replaceChildren()
   const { bars } = exercise
-  const available = width - 2 * MARGIN - CLEF_WIDTH
-  const barsPerLine = Math.max(1, Math.min(BARS_PER_LINE, Math.floor(available / MIN_BAR_WIDTH)))
-  const barWidth = Math.floor(available / barsPerLine)
-  const lines = Math.ceil(bars.length / barsPerLine)
   const parts = staffParts(bars, exercise.practice.groove, { swung: swingOn(exercise.practice) })
   /** A part is drawn when it has a note or a rest anywhere. */
   const drawnLimbs = (['hands', 'feet'] as const).filter((limb) =>
@@ -189,16 +191,23 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   /** The bar number's line above the stave, clear of the hands part's stems. */
   const barNumberLine = drawnLimbs.includes('hands') ? STEMS_UP_SPACE : 0
   const height = (spaceAbove + handRow + 1) * STAVE_LINE_GAP
+  const { scale, barsPerLine } = notationFit({ bars: bars.length, ...area, lineHeight: height })
+  /** The width drawn in, before scaling. */
+  const width = area.width / scale
+  const barWidth = Math.floor((width - 2 * MARGIN - CLEF_WIDTH) / barsPerLine)
+  const lines = Math.ceil(bars.length / barsPerLine)
 
   const renderer = new Renderer(el as HTMLDivElement, Renderer.Backends.SVG)
-  renderer.resize(width, lines * height + STAVE_TOP)
+  renderer.resize(area.width, Math.ceil((lines * height + STAVE_TOP) * scale))
   const ctx = renderer.getContext()
+  ctx.scale(scale, scale)
   const stickings = new Map(sticking(exercise).map((n) => [n.noteId, n]))
   /** The last drawn note of each drum, with its line, to tie the next one to. */
   const lastOf = new Map<string, TieEnd>()
   const ties: StaveTie[] = []
   /** Where the playhead line goes for each struck position, by `bar:tick`. */
   const marks = new Map<string, PlayheadMark>()
+  const firstStaff = { left: 0, top: 0, width: 0, height: 0 }
 
   bars.forEach((_, b) => {
     const line = Math.floor(b / barsPerLine)
@@ -225,6 +234,10 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
       ctx.restore()
     }
     stave.setContext(ctx).draw()
+    if (line === 0) {
+      const top = stave.getYForLine(0)
+      Object.assign(firstStaff, { left: MARGIN * scale, top: top * scale, width: (x + w - MARGIN) * scale, height: (stave.getYForLine(4) - top) * scale })
+    }
     drawBarNumber(stave, b, exercise.practice.loopRange, barNumberLine)
 
     const drawings = drawnLimbs
@@ -263,12 +276,13 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   })
   ties.forEach((t) => t.setContext(ctx).draw())
 
+  // In the page's pixels, so scaled.
   const line = (bar: number) => {
-    const top = Math.floor(bar / barsPerLine) * height
-    return { top, bottom: top + height + STAVE_TOP }
+    const top = Math.floor(bar / barsPerLine) * height * scale
+    return { top, bottom: top + (height + STAVE_TOP) * scale }
   }
   const playheadMark = ({ bar, tick }: PlayPosition) => marks.get(`${bar}:${tick}`)
-  return { svg: el.querySelector('svg'), line, playheadMark }
+  return { svg: el.querySelector('svg'), line, playheadMark, firstStaff }
 }
 
 /** A notehead a tie can run from or to: its note, its index in the chord, and its line of staves. */
