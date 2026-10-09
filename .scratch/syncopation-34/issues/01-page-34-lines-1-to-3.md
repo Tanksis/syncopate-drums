@@ -4,7 +4,7 @@
 
 **Blocked by:** none
 
-**Status:** needs-info: the photo is cropped at the right edge, so only bar 1 of each line can be read. The user needs to supply the rest of each line before this can be built exactly (see Open questions).
+**Status:** done (2026-10-08): `EyadDev/syncopation-34.json` made and checked in the browser
 
 ## Why an import file, not built-in examples
 
@@ -16,29 +16,25 @@
 - Lines 2 and 3 open with a start-repeat barline. The app loops playback, so there's nothing to add for that.
 - No sticking, accents or tempo are marked.
 
-Transcription of bar 1 of each line, on the app's beat grid (one character per sixteenth, `x` = hit). The snare's quarters and eighths come from each hit lasting until the next one:
+Each line is one bar. Below is the transcription on the app's beat grid: one character per sixteenth, `x` = hit, `t` = the note before is tied into the beat. A hit lasts only until the end of its beat, so each syncopated quarter needs a tie into the next beat:
 
 | Line | Snare, as written | Snare beats | Kick beats |
 |---|---|---|---|
-| 1 | e q e q q: hits on 1, 1&, 2&, 3, 4 | `x.x. ..x. x... x...` | `x... x... x... x...` |
-| 2 | q e q e q: hits on 1, 2, 2&, 3&, 4 | `x... x.x. ..x. x...` | `x... x... x... x...` |
-| 3 | q q e q e: hits on 1, 2, 3, 3&, 4& | `x... x... x.x. ..x.` | `x... x... x... x...` |
+| 1 | e q e q q: hits on 1, 1&, 2&, 3, 4 | `x.x. t.x. x... x...` | `x... x... x... x...` |
+| 2 | q e q e q: hits on 1, 2, 2&, 3&, 4 | `x... x.x. t.x. x...` | `x... x... x... x...` |
+| 3 | q q e q e: hits on 1, 2, 3, 3&, 4& | `x... x... x.x. t.x.` | `x... x... x... x...` |
 
 In every bar the kick has a beat with no snare hit (line 1: beat 2; line 2: beat 3; line 3: beat 4), so by ADR 0004 the app draws two voices, which matches the page.
 
 ## Acceptance criteria
 
-- [ ] All bars of lines 1–3 are transcribed from the full page, not just the cropped bar 1, and the user confirms the transcription before the file is made
-- [ ] The import file is a valid export (`format: 'drum-app-exercises'`, current `SCHEMA_VERSION`, one folder `Syncopation 34`), built with the core's own `newExercise` / `exportFile` so it passes `parseImport`. A throwaway script lives in the session scratchpad, not the repo
-- [ ] Three exercises, named "Syncopation 34 · line 1" to "line 3" (or whatever the user picks), each in the folder
-- [ ] Practice settings are the new-exercise defaults: straight (50% swing), no groove, sticking off
-- [ ] Imported in the browser: the folder appears with the three entries, and each staff reads note for note like the page (the same snare rhythm with kick quarters, in two voices)
-- [ ] The `.json` is outside the repo, and `git status` shows nothing from it
-
-## Open questions
-
-1. **The rest of each line.** The photo ends after bar 1 (line 3's barline is just visible at the right edge). How many bars does each line have? A photo of the full width of the page is needed.
-2. **Folder name.** The request said "Syncopatation 34". Assumed to mean **Syncopation 34**.
-3. **Exercise names.** Assumed "Syncopation 34 · line N".
+- [x] Lines 1–3 transcribed. The user confirmed that each line is one bar
+- [x] The import file is a valid export (`format: 'drum-app-exercises'`, current `SCHEMA_VERSION`, one folder `Syncopation 34`), built with the core's own `newExercise` / `exportFile` so it passes `parseImport`. A throwaway script lives in the session scratchpad, not the repo
+- [x] Three exercises, named "Syncopation 34 · line 1" to "line 3" (or whatever the user picks), each in the folder
+- [x] Practice settings are the new-exercise defaults: straight (50% swing), no groove, sticking off
+- [x] Imported in the browser: the folder appears with the three entries, and each staff reads note for note like the page (the same snare rhythm with kick quarters, in two voices)
+- [x] The `.json` is outside the repo, and `git status` shows nothing from it
 
 ## Comments
+
+- 2026-10-08: The user confirmed that each line is one bar. The folder name "Syncopation 34" and the names "Syncopation 34 · line N" were kept as assumed. The first try, without ties, spelled each syncopated quarter as an eighth and an eighth rest. Tying the crossed beat fixed it, and the staffs now read note for note like the page (e q e q q / q e q e q / q q e q e over kick quarters). The file was built with the core's `setBeat`, `toggleTie` and `exportFile`, and validated with `parseImport`. The import was checked headless with Playwright. The script stays in the session scratchpad.
