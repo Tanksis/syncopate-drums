@@ -39,7 +39,7 @@ function BpmControl() {
 
   return (
     <label className="flex items-center gap-2">
-      <BpmInput className="w-16 px-1.5 py-0.5" />
+      <BpmInput className="w-16 px-1.5 py-0.5 text-right" />
       <span className="text-mute">BPM</span>
       <input
         type="range"
@@ -91,7 +91,7 @@ export function BpmInput({ className }: { className: string }) {
       onChange={(e) => type(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-      className={`rounded-md border border-line bg-card text-right tabular-nums ${className}`}
+      className={`rounded-md border border-line bg-card tabular-nums ${className}`}
     />
   )
 }

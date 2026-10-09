@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useAppStore } from '@/app/store'
+import { keepFocus } from '@/components/keepFocus'
 import { BpmInput } from './TransportControls'
 import { togglePause } from './transport'
 import { usePlaybackKeys } from './usePlaybackKeys'
@@ -28,6 +29,8 @@ export function TransportBar() {
       <button
         type="button"
         aria-label={playing ? 'Pause' : 'Play'}
+        // Keep focus off the buttons, so Space pauses rather than clicking them.
+        onMouseDown={keepFocus}
         onClick={togglePause}
         className={`${roundButtonClass} size-12 border-accent bg-accent text-lg/none text-white active:opacity-80`}
       >
@@ -51,16 +54,16 @@ function BpmStep({ step }: { step: 1 | -1 }) {
   const timer = useRef<number | undefined>(undefined)
   const held = useRef(false)
 
-  const change = (dragging: boolean) => {
+  /** Moves the tempo by `by`; while `dragging`, it isn't saved yet. */
+  const change = (by: number, dragging: boolean) => {
     const { editor, setBpm } = useAppStore.getState()
-    setBpm(editor.exercise.practice.bpm + step, { dragging })
+    setBpm(editor.exercise.practice.bpm + by, { dragging })
   }
   const release = () => {
     window.clearTimeout(timer.current)
     if (!held.current) return
     held.current = false
-    const { editor, setBpm } = useAppStore.getState()
-    setBpm(editor.exercise.practice.bpm)
+    change(0, false)
   }
   useEffect(() => () => window.clearTimeout(timer.current), [])
 
@@ -71,18 +74,19 @@ function BpmStep({ step }: { step: 1 | -1 }) {
       onPointerDown={(e) => {
         if (e.button !== 0) return
         held.current = true
-        change(true)
+        change(step, true)
         const repeat = () => {
-          change(true)
+          change(step, true)
           timer.current = window.setTimeout(repeat, REPEAT_EVERY)
         }
         timer.current = window.setTimeout(repeat, REPEAT_DELAY)
       }}
+      onMouseDown={keepFocus}
       onPointerUp={release}
       onPointerCancel={release}
       onPointerLeave={release}
       // A pointer changes the tempo as it goes down; the keyboard (detail 0) clicks.
-      onClick={(e) => e.detail === 0 && change(false)}
+      onClick={(e) => e.detail === 0 && change(step, false)}
       onContextMenu={(e) => e.preventDefault()}
       className={`${roundButtonClass} size-11 border-line bg-panel text-xl/none active:border-accent active:text-accent`}
     >

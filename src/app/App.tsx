@@ -87,6 +87,7 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
   )
 }
 
+/** A header button on a phone: ☰ or ⚙, big enough for a finger. */
 function PhoneHeaderButton({
   label,
   expanded,
@@ -103,6 +104,8 @@ function PhoneHeaderButton({
       type="button"
       aria-label={label}
       aria-expanded={expanded}
+      // Keep focus off the button, so Space still pauses in a narrow desktop window.
+      onMouseDown={keepFocus}
       onClick={onClick}
       className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent text-xl/none text-mute active:bg-line"
     >
