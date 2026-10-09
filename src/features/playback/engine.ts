@@ -24,11 +24,17 @@ const LAYER_GAIN: Record<Layer, number> = { click: 0.6, exercise: 0.9, groove: 3
 /** Seconds a volume change takes to settle, so a slider drag doesn't crackle. */
 const VOLUME_SMOOTHING = 0.02
 
-/** Virtuosity Drums one-shots for each kit piece, played round-robin, at a fixed velocity. */
+/**
+ * Virtuosity Drums one-shots for each kit piece, played round-robin, at a fixed velocity. The
+ * overhead mics barely pick up the bass drum: its samples are about 20 dB (vl2) and 31 dB (vl1)
+ * quieter than the snare's (RMS over the first 400 ms). So the kick is raised 20 dB to sit level
+ * with the snare, and the feathered kick, already raised with the groove layer, sits about 10 dB
+ * under it: soft, but heard.
+ */
 const SAMPLES: Record<Exclude<Instrument, 'click'>, { files: string[]; velocity: number }> = {
   snare: { files: ['oh_snare_center_vl18', 'oh_snare_center_vl21', 'oh_snare_center_vl24'], velocity: 1 },
-  kick: { files: ['oh_kick_snoff_vl2_rr1', 'oh_kick_snoff_vl2_rr2'], velocity: 1 },
-  kickFeathered: { files: ['oh_kick_snoff_vl1_rr1', 'oh_kick_snoff_vl1_rr2'], velocity: 0.5 },
+  kick: { files: ['oh_kick_snoff_vl2_rr1', 'oh_kick_snoff_vl2_rr2'], velocity: 10 },
+  kickFeathered: { files: ['oh_kick_snoff_vl1_rr1', 'oh_kick_snoff_vl1_rr2'], velocity: 2.8 },
   ride: { files: ['oh_ride_ride_vl2_rr1', 'oh_ride_ride_vl2_rr2'], velocity: 0.85 },
   rideBell: { files: ['oh_ride_bell_vl2_rr1'], velocity: 0.85 },
   hihatClosed: { files: ['oh_hh_closed_vl2_rr1', 'oh_hh_closed_vl3_rr1'], velocity: 0.8 },

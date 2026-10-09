@@ -188,7 +188,7 @@ export function newExercise({ id, now, folderId = null }: { id: string; now: num
     name: 'Untitled',
     schemaVersion: SCHEMA_VERSION,
     bars: [restBar()],
-    sticking: 'natural',
+    sticking: 'off',
     leadHand: 'R',
     practice: { bpm: 80, loopRange: null, groove: 'off', swing: MIN_SWING },
     lastOpened: now,
