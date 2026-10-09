@@ -6,8 +6,8 @@ import { SidebarHeading } from '@/components/Sidebar'
 import { LoopReadout } from '@/features/playback/LoopReadout'
 import { CountInToggle } from '@/features/playback/TransportControls'
 import { keepFocus } from '@/components/keepFocus'
-import type { ExerciseSettings, GroovePresetId, VolumeSetting } from '@/core'
-import { GROOVE_PRESETS, MAX_SWING, MAX_VOLUME, MIN_SWING, TRIPLET_SWING, groovePreset, overrideCount } from '@/core'
+import type { ExerciseSettings, GroovePresetId, Theme, VolumeSetting } from '@/core'
+import { GROOVE_PRESETS, THEMES, MAX_SWING, MAX_VOLUME, MIN_SWING, TRIPLET_SWING, groovePreset, overrideCount } from '@/core'
 
 export function SettingsSidebar({ onCollapse, fullScreen = false }: { onCollapse: () => void; fullScreen?: boolean }) {
   return (
@@ -40,6 +40,9 @@ export function SettingsSidebar({ onCollapse, fullScreen = false }: { onCollapse
           <MuteExercise />
         </Volume>
         <Volume label="Groove" setting="grooveVolume" />
+      </SettingGroup>
+      <SettingGroup title="Display">
+        <ThemeChoice />
       </SettingGroup>
     </aside>
   )
@@ -171,6 +174,33 @@ function Volume({ label, setting, children }: { label: string; setting: VolumeSe
       </label>
       {/* The same width on every row, so the sliders line up. */}
       <div className="flex w-11 justify-end">{children}</div>
+    </div>
+  )
+}
+
+const THEME_NAMES: Record<Theme, string> = { auto: 'Auto', light: 'Light', dark: 'Dark' }
+
+/** Light or dark on this device, or Auto to follow the device's own setting. */
+function ThemeChoice() {
+  const theme = useAppStore((s) => s.device.theme)
+  const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
+  return (
+    <div role="group" aria-label="Theme" className="flex items-center justify-between gap-2">
+      <span className="text-mute">Theme</span>
+      <div className="flex overflow-hidden rounded-md border border-edge">
+        {THEMES.map((option) => (
+          <button
+            key={option}
+            type="button"
+            aria-pressed={option === theme}
+            onMouseDown={keepFocus}
+            onClick={() => setDeviceSettings({ theme: option })}
+            className="cursor-pointer border-l border-edge bg-card px-2 py-0.5 first:border-l-0 hover:text-accent aria-pressed:bg-accent aria-pressed:text-on-accent aria-pressed:hover:text-on-accent"
+          >
+            {THEME_NAMES[option]}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

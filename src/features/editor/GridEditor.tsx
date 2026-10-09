@@ -22,7 +22,7 @@ export function GridEditor({ onDone }: { onDone?: () => void }) {
     return (
       <section
         aria-label="Grid editor"
-        className="flex h-[55dvh] shrink-0 flex-col rounded-t-2xl border-t border-line bg-panel shadow-[0_-6px_18px_color-mix(in_srgb,var(--color-ink)_8%,transparent)]"
+        className="flex h-[55dvh] shrink-0 flex-col rounded-t-2xl border-t border-line bg-panel shadow-[0_-6px_18px_color-mix(in_srgb,var(--color-shade)_8%,transparent)]"
       >
         <div className="flex shrink-0 items-center gap-2 px-3 py-2">
           <BarTabs large />

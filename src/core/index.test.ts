@@ -69,4 +69,17 @@ describe('stored device settings', () => {
     const stored = { countIn: false, vimKeys: true, figuresPanelOpen: true }
     expect(deviceSettingsFrom(stored)).toEqual({ ...DEFAULT_DEVICE_SETTINGS, countIn: false })
   })
+
+  it('follow the device theme by default', () => {
+    expect(DEFAULT_DEVICE_SETTINGS.theme).toBe('auto')
+  })
+
+  it('keep a stored light or dark theme', () => {
+    expect(deviceSettingsFrom({ theme: 'dark' }).theme).toBe('dark')
+    expect(deviceSettingsFrom({ theme: 'light' }).theme).toBe('light')
+  })
+
+  it('drop a stored theme the app does not have', () => {
+    expect(deviceSettingsFrom({ theme: 'sepia', countIn: false })).toEqual({ ...DEFAULT_DEVICE_SETTINGS, countIn: false })
+  })
 })

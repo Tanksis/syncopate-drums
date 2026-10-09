@@ -30,3 +30,6 @@ export const usePhoneWindow = () => useMediaQuery(PHONE)
 
 /** Whether the primary pointer is coarse, a finger rather than a mouse. */
 export const useCoarsePointer = () => useMediaQuery(COARSE_POINTER)
+
+/** Whether the device is set to a dark appearance, which the `auto` theme follows. */
+export const useSystemDark = () => useMediaQuery('(prefers-color-scheme: dark)')

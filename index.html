@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Syncopate!</title>
+    <script>
+      // Applies the theme before the first paint, so a dark launch shows no light frame. The app
+      // mirrors its theme setting to this key (src/app/theme.ts); without it, follow the device.
+      try {
+        var theme = localStorage.getItem('syncopate-theme')
+      } catch (e) {}
+      if (theme !== 'light' && theme !== 'dark') theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+      document.documentElement.dataset.theme = theme
+      document.documentElement.style.colorScheme = theme
+    </script>
   </head>
   <body>
     <div id="root"></div>

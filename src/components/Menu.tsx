@@ -85,7 +85,7 @@ export function Menu({ label, items, large = false }: { label: string; items: Me
           role="menu"
           aria-label={label}
           style={{ right: anchor.right }}
-          className="fixed z-30 flex min-w-44 flex-col rounded-lg border border-line bg-card py-1 text-sm shadow-lg shadow-ink/10"
+          className="fixed z-30 flex min-w-44 flex-col rounded-lg border border-line bg-card py-1 text-sm shadow-lg shadow-shade/10"
         >
           {items.map((item) => (
             <button

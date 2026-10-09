@@ -134,14 +134,23 @@ export interface DeviceSettings {
   librarySidebarOpen: boolean
   /** The settings sidebar is open, not a rail, in a wide window. */
   settingsSidebarOpen: boolean
+  /** Light or dark, or `auto` to follow the device's own setting. */
+  theme: Theme
 }
+
+/** The colour themes: `auto` follows the device's light or dark setting. */
+export type Theme = 'auto' | 'light' | 'dark'
+
+export const THEMES: readonly Theme[] = ['auto', 'light', 'dark']
 
 /**
  * Device settings as stored, over the defaults for any added since. A stored setting the app no
- * longer has (such as `vimKeys`, ADR 0009) is dropped.
+ * longer has (such as `vimKeys`, ADR 0009), or a theme it doesn't have, is dropped.
  */
 export function deviceSettingsFrom(stored: Record<string, unknown> | undefined): DeviceSettings {
-  const known = Object.entries(stored ?? {}).filter(([key]) => key in DEFAULT_DEVICE_SETTINGS)
+  const known = Object.entries(stored ?? {}).filter(
+    ([key, value]) => key in DEFAULT_DEVICE_SETTINGS && (key !== 'theme' || THEMES.includes(value as Theme)),
+  )
   return { ...DEFAULT_DEVICE_SETTINGS, ...Object.fromEntries(known) }
 }
 
@@ -159,6 +168,7 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   collapsedFolderIds: [],
   librarySidebarOpen: true,
   settingsSidebarOpen: true,
+  theme: 'auto',
 }
 
 /** The device settings that are a playback layer's volume. */
