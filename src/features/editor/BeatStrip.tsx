@@ -342,7 +342,8 @@ function GridSwitch({ bar, beat, triplet, onSwitch }: { bar: number; beat: numbe
 /**
  * One grid position, a big cell: a hit's disc, a ghost hit on hover when empty, and the hold bar
  * running in from the left where the note sounds on here and out to the right where it sounds on
- * after. At the card's edges the bar runs on to meet the next card's.
+ * after. At the card's edges the bar runs on to meet the next card's. Where a note stops sounding, a
+ * › grip on the cell's right edge shows that its hold can be dragged on.
  */
 function Cell({
   row,
@@ -401,6 +402,11 @@ function Cell({
       ) : position === 'empty' ? (
         <span className={`${disc} opacity-0 group-hover/cell:opacity-25`} />
       ) : null}
+      {sounding && !holdsOn && (
+        <span aria-hidden className="pointer-events-none absolute right-0.5 text-sm/none font-bold text-mute group-hover/cell:text-accent">
+          ›
+        </span>
+      )}
       {flashedHand && (
         <span
           aria-hidden
