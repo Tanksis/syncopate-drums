@@ -1,5 +1,5 @@
 import { useAppStore } from '@/app/store'
-import { useSystemDark } from '@/app/useMediaQuery'
+import { SYSTEM_DARK, useSystemDark } from '@/app/useMediaQuery'
 import type { Theme } from '@/core'
 
 /**
@@ -8,13 +8,11 @@ import type { Theme } from '@/core'
  */
 const THEME_MIRROR_KEY = 'syncopate-theme'
 
-const SYSTEM_DARK = '(prefers-color-scheme: dark)'
-
-const resolve = (theme: Theme, systemDark: boolean) => (theme === 'auto' ? (systemDark ? 'dark' : 'light') : theme)
+const resolveTheme = (theme: Theme, systemDark: boolean) => (theme === 'auto' ? (systemDark ? 'dark' : 'light') : theme)
 
 /** The theme drawn: the setting, with `auto` resolved by the device's light or dark setting. */
 export function useResolvedTheme(): 'light' | 'dark' {
-  return resolve(useAppStore((s) => s.device.theme), useSystemDark())
+  return resolveTheme(useAppStore((s) => s.device.theme), useSystemDark())
 }
 
 /**
@@ -27,7 +25,7 @@ export function useResolvedTheme(): 'light' | 'dark' {
 export function followTheme() {
   const media = window.matchMedia(SYSTEM_DARK)
   const apply = () => {
-    const resolved = resolve(useAppStore.getState().device.theme, media.matches)
+    const resolved = resolveTheme(useAppStore.getState().device.theme, media.matches)
     document.documentElement.dataset.theme = resolved
     document.documentElement.style.colorScheme = resolved
   }
@@ -38,8 +36,11 @@ export function followTheme() {
       // Storage blocked: the next launch starts in Auto until the app loads the setting.
     }
   }
-  apply()
-  mirror(useAppStore.getState().device.theme)
+  // If storage failed to open, the setting is only the default, so the inline script's theme stands.
+  if (useAppStore.getState().saving) {
+    apply()
+    mirror(useAppStore.getState().device.theme)
+  }
   media.addEventListener('change', apply)
   useAppStore.subscribe((state, previous) => {
     if (state.device.theme === previous.device.theme) return

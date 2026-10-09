@@ -43,7 +43,8 @@
 /*
  * The dark theme: warm near-black greys from the same stone family, with the accent, playhead, kick
  * and loop colours lightened for the dark background. <html data-theme="dark"> turns it on; the
- * inline script in index.html sets it before the first paint, and App keeps it in step.
+ * inline script in index.html sets it before the first paint, and followTheme (src/app/theme.ts)
+ * keeps it in step.
  */
 :root[data-theme='dark'] {
   --color-accent: #7ea6ff;

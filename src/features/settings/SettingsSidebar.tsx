@@ -7,7 +7,7 @@ import { LoopReadout } from '@/features/playback/LoopReadout'
 import { CountInToggle } from '@/features/playback/TransportControls'
 import { keepFocus } from '@/components/keepFocus'
 import type { ExerciseSettings, GroovePresetId, Theme, VolumeSetting } from '@/core'
-import { GROOVE_PRESETS, THEMES, MAX_SWING, MAX_VOLUME, MIN_SWING, TRIPLET_SWING, groovePreset, overrideCount } from '@/core'
+import { GROOVE_PRESETS, MAX_SWING, MAX_VOLUME, MIN_SWING, THEMES, TRIPLET_SWING, groovePreset, overrideCount } from '@/core'
 
 export function SettingsSidebar({ onCollapse, fullScreen = false }: { onCollapse: () => void; fullScreen?: boolean }) {
   return (

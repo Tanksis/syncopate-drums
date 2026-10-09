@@ -8,12 +8,15 @@
     <script>
       // Applies the theme before the first paint, so a dark launch shows no light frame. The app
       // mirrors its theme setting to this key (src/app/theme.ts); without it, follow the device.
-      try {
-        var theme = localStorage.getItem('syncopate-theme')
-      } catch (e) {}
-      if (theme !== 'light' && theme !== 'dark') theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-      document.documentElement.dataset.theme = theme
-      document.documentElement.style.colorScheme = theme
+      ;(function () {
+        var theme
+        try {
+          theme = localStorage.getItem('syncopate-theme')
+        } catch (e) {}
+        if (theme !== 'light' && theme !== 'dark') theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        document.documentElement.dataset.theme = theme
+        document.documentElement.style.colorScheme = theme
+      })()
     </script>
   </head>
   <body>
