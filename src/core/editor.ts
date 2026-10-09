@@ -15,7 +15,7 @@ import {
   withLoopRangeInBars,
 } from './model'
 import type { BeatView, GridPoint, RowView } from './speller'
-import { beatViews, clearBeatToDownbeat, setBeat, setHold, toggleHit } from './speller'
+import { beatViews, clearBeatToDownbeat, setBeat, setHold, toggleHit, toggleTie } from './speller'
 import type { NoteSticking } from './sticking'
 import { overrideCount, sticking } from './sticking'
 
@@ -83,7 +83,7 @@ export type EditCommand =
    */
   | { type: 'setHold'; from: GridPoint; to: GridPoint }
   /**
-   * The 16ths | trip switch or a right-click on a beat card: puts the beat on the triplet or the
+   * A beat card's 16ths | trip switch or its menu: puts the beat on the triplet or the
    * sixteenth grid, keeping each row's note on the downbeat and clearing the others, and moves the
    * cursor to that beat without advancing.
    */
@@ -100,6 +100,14 @@ export type EditCommand =
    * stays (Delete).
    */
   | { type: 'rest'; stepBack: boolean }
+  /** A beat card's menu: turns a beat into a rest in both rows, and moves the cursor to it. */
+  | { type: 'restBeat'; bar: number; beat: number }
+  /**
+   * A beat card's menu: ties a bar's first beat in a row into the last note of the bar before, or
+   * unties it, and moves the cursor to that beat and row. Refused, leaving all as it was, where
+   * `canTieOverBarline` says no. A beat on the pending grid stays there: it still reads the same.
+   */
+  | { type: 'tieOverBarline'; bar: number; row: Row }
   /** Adds a bar of rests after the cursor bar. */
   | { type: 'addBar' }
   | { type: 'duplicateBar' }
@@ -144,6 +152,22 @@ export function newEditorState(exercise: Exercise): EditorState {
   }
 }
 
+/**
+ * Whether a bar's first beat in a row offers "Tie over the barline": it is tied over already, or
+ * it could be, as its downbeat is a hit and the bar before ends in a note in that row. Never on the
+ * exercise's first beat.
+ */
+export function canTieOverBarline(state: EditorState, bar: number, row: Row): boolean {
+  return tiedOverBarline(state.exercise.bars, bar, row) !== null
+}
+
+/** The bars with a bar's first beat in a row tied over the barline or untied, or null if it can't be. */
+function tiedOverBarline(bars: Bar[], bar: number, row: Row): Bar[] | null {
+  if (bar < 1 || bar >= bars.length) return null
+  const toggled = toggleTie(bars, row, bar, 0)
+  return toggled === bars ? null : toggled
+}
+
 /** Each bar's four beats as the editor shows them: beats on the pending grid read as triplets. */
 export function editorBeatViews(state: EditorState): BeatView[][] {
   return beatViews(state.exercise.bars, state.pendingGrid)
@@ -162,8 +186,11 @@ export function applyEdit(state: EditorState, command: EditCommand): EditorState
 /** The commands that go through the undo history. */
 type RecordedCommand = Exclude<EditCommand, { type: 'selectBars' }>
 
-/** The beat strip's own edits, which look after the pending grid themselves. */
-const GRID_COMMANDS = new Set<EditCommand['type']>(['toggleGridPosition', 'setBeatGrid', 'setHold'])
+/**
+ * The beat strip's own edits, which look after the pending grid themselves. A tie over the barline
+ * leaves it as it was: a beat on it holds only its downbeat, tied or struck.
+ */
+const GRID_COMMANDS = new Set<EditCommand['type']>(['toggleGridPosition', 'setBeatGrid', 'setHold', 'tieOverBarline'])
 
 function record(state: EditorState, command: RecordedCommand): EditorState {
   if (command.type === 'undo' || command.type === 'redo') return clearSelection(travel(state, command.type))
@@ -282,8 +309,17 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
       return { ...withBars(moved, bars), pendingGrid: pendingGridAfter(state, bars) }
     }
     case 'rest': {
-      const rested = restCursorBeat(state)
+      const { bar, beat, row } = state.cursor
+      const rested = restBeat(state, bar, beat, [row])
       return command.stepBack ? edit(rested, { type: 'move', by: 'beat', step: -1 }) : rested
+    }
+    case 'restBeat': {
+      const moved = moveTo(state, command.bar, command.beat)
+      return restBeat(moved, moved.cursor.bar, moved.cursor.beat, ROWS)
+    }
+    case 'tieOverBarline': {
+      const bars = tiedOverBarline(state.exercise.bars, command.bar, command.row)
+      return bars ? withBars(moveTo(state, command.bar, 0, command.row), bars) : state
     }
     case 'addBar': {
       const at = state.cursor.bar + 1
@@ -393,15 +429,17 @@ function selectedBars(state: EditorState): BarSelection {
 }
 
 /**
- * Turns the cursor beat into a rest in the cursor row, which also takes the beat off the pending
- * grid. A rest over a rest is no change.
+ * Turns a beat into a rest in the given rows, which also takes the beat off the pending grid. A
+ * rest over a rest is no change.
  */
-function restCursorBeat(state: EditorState): EditorState {
-  const { bar, beat, row } = state.cursor
+function restBeat(state: EditorState, bar: number, beat: number, rows: readonly Row[]): EditorState {
   const pendingGrid = withPending(state.pendingGrid, beatIndex(bar, beat), false)
   const regridded = pendingGrid.length === state.pendingGrid.length ? state : { ...state, pendingGrid }
-  if (!editorBeatViews(state)[bar][beat][row].hits.includes('x')) return regridded
-  return withBars(regridded, setBeat(state.exercise.bars, row, bar, beat, REST_FIGURE.hits))
+  const view = editorBeatViews(state)[bar][beat]
+  const bars = rows
+    .filter((row) => view[row].hits.includes('x'))
+    .reduce((bars, row) => setBeat(bars, row, bar, beat, REST_FIGURE.hits), state.exercise.bars)
+  return bars === state.exercise.bars ? regridded : withBars(regridded, bars)
 }
 
 function withBars(state: EditorState, bars: Bar[]): EditorState {

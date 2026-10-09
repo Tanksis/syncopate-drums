@@ -2,8 +2,10 @@ import type { PointerEvent } from 'react'
 import { useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { keepFocus } from '@/components/keepFocus'
-import type { BeatView, GridPoint, PositionState, Row, RowView } from '@/core'
-import { applyEdit, editorBeatViews, inLoopRange } from '@/core'
+import type { MenuItem } from '@/components/Menu'
+import { Menu } from '@/components/Menu'
+import type { BeatView, EditCommand, EditorState, GridPoint, PositionState, Row, RowView } from '@/core'
+import { ROWS, applyEdit, canTieOverBarline, editorBeatViews, inLoopRange, isExample } from '@/core'
 
 /** A press on a grid position, and (once it moves to another position) the hold end it drags to. */
 interface Press {
@@ -56,15 +58,17 @@ const countLabels = (beat: number, triplet: boolean) =>
  * hover), their count labels, and the kick row's cells under them, as the staff writes hands over
  * feet. Clicking a cell turns a hit on or off in its row; pressing on a note and dragging sets
  * where its hold ends, on into later beats of the bar in the same row, shown live and written on
- * release. Clicking elsewhere on a card moves the cursor to it. A card's 16ths | trip switch, or a
- * right-click on it, switches it between the sixteenth and the triplet grid. The cursor's card is
- * outlined with a mark beside its row, and the bar selection and a set loop range are shaded.
+ * release. Clicking elsewhere on a card moves the cursor to it. A card's 16ths | trip switch puts
+ * it on the sixteenth or the triplet grid, and its ⋯ menu (not on an example) switches the grid,
+ * rests the beat, or ties a bar's first beat over the barline. The cursor's card is outlined with a
+ * mark beside its row, and the bar selection and a set loop range are shaded.
  */
 export function BeatStrip() {
   const editor = useAppStore((s) => s.editor)
   const { cursor, selection } = editor
   const { loopRange } = editor.exercise.practice
   const dispatch = useAppStore((s) => s.dispatch)
+  const example = useAppStore((s) => isExample(s.editor.exercise.id))
   const [press, setPress] = useState<Press | null>(null)
   // The press as the handlers last left it, which the next event sees even before it has rendered.
   const pressRef = useRef<Press | null>(null)
@@ -149,8 +153,7 @@ export function BeatStrip() {
   const selected = selection !== null && b >= selection.first && b <= selection.last
   const looped = inLoopRange(loopRange, b)
   return (
-    // The strip's right-click switches grids, so the browser's menu stays shut over it.
-    <div aria-label="Beat strip" data-beat-strip className="flex flex-col gap-2" onContextMenu={(e) => e.preventDefault()}>
+    <div aria-label="Beat strip" data-beat-strip className="flex flex-col gap-2">
       <div
         aria-label={`Bar ${b + 1}`}
         aria-selected={selected || undefined}
@@ -188,7 +191,6 @@ export function BeatStrip() {
                 data-beat={beat}
                 aria-current={current || undefined}
                 onClick={() => dispatch({ type: 'moveTo', bar: b, beat })}
-                onContextMenu={switchGrid}
                 className={`relative flex min-w-0 cursor-pointer flex-col gap-1 rounded-xl border p-2 ${looped || selected ? 'bg-card/60' : 'bg-card'} ${
                   current ? 'border-accent ring-2 ring-accent' : 'border-line'
                 }`}
@@ -196,6 +198,7 @@ export function BeatStrip() {
                 <div className="flex items-center gap-1.5">
                   <span className="text-lg/none font-bold">{beat + 1}</span>
                   <GridSwitch bar={b} beat={beat} triplet={view.triplet} onSwitch={switchGrid} />
+                  {!example && <Menu label={`Bar ${b + 1}, beat ${beat + 1} menu`} items={beatMenu(editor, b, beat, view, switchGrid, dispatch)} />}
                 </div>
                 {rowCells('snare', view.snare, b, beat)}
                 <div aria-hidden className="flex gap-1">
@@ -215,6 +218,30 @@ export function BeatStrip() {
   )
 }
 
+/**
+ * A beat card's ⋯ menu: the other grid, a rest in both rows, and, on a bar's first beat, a tie over
+ * the barline for each row the core offers one in, ticked when tied.
+ */
+function beatMenu(
+  editor: EditorState,
+  bar: number,
+  beat: number,
+  view: BeatView,
+  switchGrid: () => void,
+  dispatch: (command: EditCommand) => void,
+): MenuItem[] {
+  const ties = beat === 0 ? ROWS.filter((row) => canTieOverBarline(editor, bar, row)) : []
+  return [
+    { label: view.triplet ? 'Switch to sixteenths' : 'Switch to triplets', onSelect: switchGrid },
+    { label: 'Rest the beat', onSelect: () => dispatch({ type: 'restBeat', bar, beat }) },
+    ...ties.map((row) => ({
+      label: `Tie ${ROW_LOOK[row].name.toLowerCase()} over the barline`,
+      checked: view[row].tiedInto,
+      onSelect: () => dispatch({ type: 'tieOverBarline', bar, row }),
+    })),
+  ]
+}
+
 /** A beat's 16ths | trip switch, its current grid lit. */
 function GridSwitch({ bar, beat, triplet, onSwitch }: { bar: number; beat: number; triplet: boolean; onSwitch: () => void }) {
   const segment = (grid: 'sixteenth' | 'triplet', label: string) => {
@@ -224,7 +251,7 @@ function GridSwitch({ bar, beat, triplet, onSwitch }: { bar: number; beat: numbe
         type="button"
         aria-label={`Bar ${bar + 1}, beat ${beat + 1}: ${grid} grid`}
         aria-pressed={on}
-        title={on ? `On the ${grid} grid` : `Switch to the ${grid} grid (or right-click the beat)`}
+        title={on ? `On the ${grid} grid` : `Switch to the ${grid} grid`}
         tabIndex={-1}
         // Keep focus off the button, so Space and Enter go to the editor rather than clicking it.
         onMouseDown={keepFocus}

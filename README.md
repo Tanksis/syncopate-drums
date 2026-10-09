@@ -10,7 +10,7 @@ Planning is done and the build has started. Ticket 15 put up the app skeleton (t
 
 ## What v1 does
 
-- **Grid editor**: click or tap a beat's grid positions to add snare and kick hits, and drag a note to set how long it holds; each beat is on sixteenths or triplets. The app spells the notation for you.
+- **Grid editor**: click or tap a beat's grid positions to add snare and kick hits, and drag a note to set how long it holds; each beat is on sixteenths or triplets, and its ⋯ menu switches the grid, rests the beat, or ties a bar's first beat over the barline. The app spells the notation for you.
 - **Notation view**: a drum staff, four bars per line like the book, redrawn as you type.
 - **Sticking**: natural, alternate or off, from either lead hand, with per-note overrides.
 - **Groove layer and swing**: jazz ride/hi-hat presets drawn above the line and played with it; one swing amount that straightens out at fast tempos.
