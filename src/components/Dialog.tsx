@@ -20,7 +20,7 @@ export function DialogButton({
       data-autofocus={autoFocus || undefined}
       onClick={onClick}
       className={`cursor-pointer rounded-md border px-3 py-1 font-semibold ${
-        danger ? 'border-danger bg-danger text-white hover:opacity-90' : 'border-line bg-card hover:border-accent'
+        danger ? 'border-danger bg-danger text-on-accent hover:opacity-90' : 'border-edge bg-card hover:border-accent'
       }`}
     >
       {children}

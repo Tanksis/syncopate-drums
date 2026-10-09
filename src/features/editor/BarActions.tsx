@@ -77,7 +77,7 @@ function HistoryButton({
       onMouseDown={keepFocus}
       onClick={onClick}
       className={`cursor-pointer text-mute hover:bg-line hover:text-accent disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-mute ${
-        large ? 'size-9 rounded-lg border border-line bg-card text-lg/none' : 'rounded px-1 text-base/none'
+        large ? 'size-9 rounded-lg border border-edge bg-card text-lg/none' : 'rounded px-1 text-base/none'
       }`}
     >
       {children}

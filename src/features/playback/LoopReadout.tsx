@@ -20,7 +20,7 @@ export function LoopReadout() {
           // Keep focus off the button, so Space and Enter go to the editor rather than clicking it.
           onMouseDown={keepFocus}
           onClick={loopAll}
-          className="cursor-pointer rounded-md border border-line bg-panel px-2 py-0.5 hover:border-accent"
+          className="cursor-pointer rounded-md border border-edge bg-panel px-2 py-0.5 hover:border-accent"
         >
           all
         </button>

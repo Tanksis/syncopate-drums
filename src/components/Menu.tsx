@@ -73,7 +73,7 @@ export function Menu({ label, items, large = false }: { label: string; items: Me
           setAnchor(anchor ? null : { top: box.top, bottom: box.bottom, right: window.innerWidth - box.right })
         }}
         className={`cursor-pointer text-mute hover:bg-line hover:text-accent aria-expanded:bg-line aria-expanded:text-accent ${
-          large ? 'size-9 rounded-lg border border-line bg-card text-base/none' : 'rounded px-1 text-sm/none'
+          large ? 'size-9 rounded-lg border border-edge bg-card text-base/none' : 'rounded px-1 text-sm/none'
         }`}
       >
         ⋯

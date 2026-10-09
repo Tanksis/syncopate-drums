@@ -15,10 +15,10 @@ import { useExerciseDrop } from './useExerciseDrop'
 const EXAMPLES = exampleExercises()
 
 const buttonClass =
-  'flex-1 cursor-pointer rounded-md border border-line bg-card px-2 py-1 font-semibold hover:border-accent'
+  'flex-1 cursor-pointer rounded-md border border-edge bg-card px-2 py-1 font-semibold hover:border-accent'
 
 /** A sidebar button that's disabled for an example, or with no example open. */
-const disablableButtonClass = `${buttonClass} disabled:cursor-default disabled:text-mute disabled:hover:border-line`
+const disablableButtonClass = `${buttonClass} disabled:cursor-default disabled:text-mute disabled:hover:border-edge`
 
 /** An exercise's button in a list, marked when it's the open one. */
 const listButtonClass = (open: boolean) =>
@@ -247,7 +247,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
               placeholder="Filter…"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="min-w-0 flex-1 rounded-md border border-line bg-card px-2 py-1 outline-none focus:border-accent"
+              className="min-w-0 flex-1 rounded-md border border-edge bg-card px-2 py-1 outline-none focus:border-accent"
             />
             <button
               type="button"
@@ -271,7 +271,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
                   type="button"
                   onMouseDown={keepFocus}
                   onClick={() => setSelectedIds(new Set())}
-                  className="cursor-pointer rounded-md border border-line bg-card px-1.5 py-1 hover:border-accent"
+                  className="cursor-pointer rounded-md border border-edge bg-card px-1.5 py-1 hover:border-accent"
                 >
                   Clear
                 </button>
@@ -287,7 +287,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
                   // Space and Enter belong to the editor.
                   e.target.blur()
                 }}
-                className="cursor-pointer rounded-md border border-line bg-card px-1.5 py-1 font-semibold hover:border-accent"
+                className="cursor-pointer rounded-md border border-edge bg-card px-1.5 py-1 font-semibold hover:border-accent"
               >
                 <option value="" disabled hidden>
                   Move to…
@@ -305,7 +305,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
                   title="Download the selected exercises as one file"
                   onMouseDown={keepFocus}
                   onClick={() => downloadExport(selected, folders)}
-                  className="flex-1 cursor-pointer rounded-md border border-line bg-card px-1.5 py-1 font-semibold hover:border-accent"
+                  className="flex-1 cursor-pointer rounded-md border border-edge bg-card px-1.5 py-1 font-semibold hover:border-accent"
                 >
                   Export selected
                 </button>
@@ -313,7 +313,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
                   type="button"
                   onMouseDown={keepFocus}
                   onClick={() => setToDelete(selected)}
-                  className="flex-1 cursor-pointer rounded-md border border-line bg-card px-1.5 py-1 font-semibold text-danger hover:border-danger"
+                  className="flex-1 cursor-pointer rounded-md border border-edge bg-card px-1.5 py-1 font-semibold text-danger hover:border-danger"
                 >
                   Delete selected
                 </button>

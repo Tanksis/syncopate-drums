@@ -56,7 +56,7 @@ const samePoint = (a: GridPoint | null, b: GridPoint | null) =>
 /** How each row is named and coloured: the kick row in its own colour, apart from the snare row's ink. */
 const ROW_LOOK: Record<Row, { name: string; disc: string; hold: string }> = {
   snare: { name: 'Snare', disc: 'bg-ink', hold: 'bg-ink/70' },
-  kick: { name: 'Kick', disc: 'bg-kick', hold: 'bg-kick/70' },
+  kick: { name: 'Kick', disc: 'bg-kick', hold: 'bg-kick/80' },
 }
 
 /** What each grid position of a beat is counted as: 1 e & a, or 1 trip let. */
@@ -225,7 +225,7 @@ export function BeatStrip({ twoPerRow = false }: { twoPerRow?: boolean }) {
         // A selected bar in the loop range keeps the loop shading inside the selection's border.
         className={`flex flex-col gap-1.5 rounded-lg border px-2 pb-2 ${twoPerRow ? 'pt-2' : 'pt-1'} ${
           selected ? 'border-accent' : looped ? 'border-loop-line' : 'border-line'
-        } ${looped ? 'bg-loop' : selected ? 'bg-sky-100' : 'bg-panel'}`}
+        } ${looped ? 'bg-loop' : selected ? 'bg-select' : 'bg-panel'}`}
       >
         {!twoPerRow && (
           <div className="flex items-center text-xs">
@@ -325,14 +325,14 @@ function GridSwitch({ bar, beat, triplet, onSwitch }: { bar: number; beat: numbe
           e.stopPropagation()
           if (!on) onSwitch()
         }}
-        className={`cursor-pointer px-1.5 ${on ? 'bg-accent text-white' : 'text-mute hover:text-accent'}`}
+        className={`cursor-pointer px-1.5 ${on ? 'bg-accent text-on-accent' : 'text-mute hover:text-accent'}`}
       >
         {label}
       </button>
     )
   }
   return (
-    <span className="ml-auto inline-flex overflow-hidden rounded border border-line bg-card text-[10px] leading-5">
+    <span className="ml-auto inline-flex overflow-hidden rounded border border-edge bg-card text-[10px] leading-5">
       {segment('sixteenth', '16ths')}
       {segment('triplet', 'trip')}
     </span>
@@ -393,7 +393,7 @@ function Cell({
       onClick={(e) => e.stopPropagation()}
       // A long-press is the strip's own: no context menu, callout or text selection on top of it.
       onContextMenu={(e) => e.preventDefault()}
-      className={`group/cell relative flex min-w-0 flex-1 cursor-pointer touch-none items-center justify-center rounded border border-line bg-card select-none [-webkit-touch-callout:none] hover:border-accent ${tall ? 'h-11' : 'h-10'}`}
+      className={`group/cell relative flex min-w-0 flex-1 cursor-pointer touch-none items-center justify-center rounded border border-edge bg-card select-none [-webkit-touch-callout:none] hover:border-accent ${tall ? 'h-11' : 'h-10'}`}
     >
       {position === 'hold' && <span className={`${holdLine} right-1/2 ${first ? '-left-[14px]' : '-left-[3px]'}`} />}
       {sounding && holdsOn && <span className={`${holdLine} left-1/2 ${last ? '-right-[14px]' : '-right-[3px]'}`} />}
@@ -411,7 +411,7 @@ function Cell({
         <span
           aria-hidden
           data-flashed-hand
-          className="pointer-events-none absolute inset-0 flex animate-pulse items-center justify-center rounded bg-accent text-sm font-bold text-white"
+          className="pointer-events-none absolute inset-0 flex animate-pulse items-center justify-center rounded bg-accent text-sm font-bold text-on-accent"
         >
           {flashedHand}
         </span>

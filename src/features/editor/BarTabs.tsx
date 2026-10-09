@@ -35,12 +35,12 @@ export function BarTabs({ large = false }: { large?: boolean }) {
         {Array.from({ length: barCount }, (_, bar) => {
           const look =
             bar === current
-              ? 'border-accent bg-accent text-white'
+              ? 'border-accent bg-accent text-on-accent'
               : isSelected(bar)
-                ? 'border-accent bg-sky-100 text-ink'
+                ? 'border-accent bg-select text-ink'
                 : inLoopRange(loopRange, bar)
                   ? 'border-loop-line bg-loop text-loop-ink'
-                  : 'border-line bg-card text-mute hover:text-accent'
+                  : 'border-edge bg-card text-mute hover:text-accent'
           return (
             <button
               key={bar}
@@ -74,7 +74,7 @@ export function BarTabs({ large = false }: { large?: boolean }) {
             goTo(barCount - 1)
             dispatch({ type: 'addBar' })
           }}
-          className={`${tab} shrink-0 border-dashed border-line bg-card text-mute hover:text-accent`}
+          className={`${tab} shrink-0 border-dashed border-edge bg-card text-mute hover:text-accent`}
         >
           +
         </button>

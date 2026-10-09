@@ -19,7 +19,7 @@ export function TransportControls() {
         // Keep focus off the button, so Space pauses rather than clicking it.
         onMouseDown={keepFocus}
         onClick={togglePlayback}
-        className="w-20 cursor-pointer rounded-md border border-line bg-panel px-2.5 py-1 font-semibold hover:border-accent"
+        className="w-20 cursor-pointer rounded-md border border-edge bg-panel px-2.5 py-1 font-semibold hover:border-accent"
       >
         {playing ? '■ Stop' : '▶ Play'}
       </button>
@@ -91,7 +91,7 @@ export function BpmInput({ className }: { className: string }) {
       onChange={(e) => type(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-      className={`rounded-md border border-line bg-card tabular-nums ${className}`}
+      className={`rounded-md border border-edge bg-card tabular-nums ${className}`}
     />
   )
 }
@@ -108,7 +108,7 @@ export function CountInToggle() {
       // Keep focus off the button, so the editor's keys still work after a click.
       onMouseDown={keepFocus}
       onClick={() => setDeviceSettings({ countIn: !countIn })}
-      className="cursor-pointer rounded-md border border-line bg-panel px-2 py-0.5 hover:border-accent aria-pressed:bg-accent aria-pressed:text-white"
+      className="cursor-pointer rounded-md border border-edge bg-panel px-2 py-0.5 hover:border-accent aria-pressed:bg-accent aria-pressed:text-on-accent"
     >
       count-in
     </button>

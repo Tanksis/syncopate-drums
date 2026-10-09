@@ -241,7 +241,7 @@ function ExerciseName({ className = '' }: { className?: string }) {
       title="Rename"
       onMouseDown={keepFocus}
       onClick={() => setRenaming(true)}
-      className={`cursor-text truncate rounded border border-transparent bg-transparent px-1 text-mute hover:border-line ${className}`}
+      className={`cursor-text truncate rounded border border-transparent bg-transparent px-1 text-mute hover:border-edge ${className}`}
     >
       {name}
     </button>

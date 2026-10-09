@@ -33,7 +33,7 @@ export function GridEditor({ onDone }: { onDone?: () => void }) {
               // Keep focus off the button, so Space still pauses in a narrow desktop window.
               onMouseDown={keepFocus}
               onClick={onDone}
-              className="ml-1 h-9 cursor-pointer rounded-lg border-0 bg-accent px-3.5 text-sm font-semibold text-white active:opacity-80"
+              className="ml-1 h-9 cursor-pointer rounded-lg border-0 bg-accent px-3.5 text-sm font-semibold text-on-accent active:opacity-80"
             >
               Done
             </button>
@@ -59,7 +59,7 @@ export function GridEditor({ onDone }: { onDone?: () => void }) {
             title="Keys (?)"
             onMouseDown={keepFocus}
             onClick={toggleHelp}
-            className="ml-auto cursor-pointer rounded-md border border-line bg-card px-2 py-0.5 text-xs text-mute hover:text-accent aria-pressed:border-accent aria-pressed:text-accent"
+            className="ml-auto cursor-pointer rounded-md border border-edge bg-card px-2 py-0.5 text-xs text-mute hover:text-accent aria-pressed:border-accent aria-pressed:text-accent"
           >
             ? keys
           </button>

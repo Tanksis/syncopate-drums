@@ -37,7 +37,7 @@ export function SidebarHeading({
           type="button"
           aria-label={`Close ${name.toLowerCase()}`}
           onClick={onCollapse}
-          className="-my-1 cursor-pointer rounded-md border border-line bg-card px-3 py-1.5 font-semibold"
+          className="-my-1 cursor-pointer rounded-md border border-edge bg-card px-3 py-1.5 font-semibold"
         >
           Close
         </button>

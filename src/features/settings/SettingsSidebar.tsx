@@ -71,7 +71,7 @@ function GroovePicker() {
           setGroove(e.target.value as GroovePresetId)
           e.currentTarget.blur()
         }}
-        className="min-w-0 flex-1 cursor-pointer rounded-md border border-line bg-card px-1 py-0.5"
+        className="min-w-0 flex-1 cursor-pointer rounded-md border border-edge bg-card px-1 py-0.5"
       >
         {GROOVE_PRESETS.map((preset) => (
           <option key={preset.id} value={preset.id}>
@@ -120,7 +120,7 @@ function Swing() {
         />
         <span className="w-12 text-right tabular-nums">{(swing * 100).toFixed(1)}%</span>
       </label>
-      <div role="group" aria-label="Swing presets" className="flex overflow-hidden rounded-md border border-line">
+      <div role="group" aria-label="Swing presets" className="flex overflow-hidden rounded-md border border-edge">
         {SWING_PRESETS.map((preset) => (
           <button
             key={preset.name}
@@ -128,7 +128,7 @@ function Swing() {
             aria-pressed={Math.abs(preset.swing - swing) < 1e-6}
             onMouseDown={keepFocus}
             onClick={() => setSwing(preset.swing)}
-            className="flex-1 cursor-pointer border-l border-line bg-card px-1 py-0.5 first:border-l-0 hover:text-accent aria-pressed:bg-accent aria-pressed:text-white aria-pressed:hover:text-white"
+            className="flex-1 cursor-pointer border-l border-edge bg-card px-1 py-0.5 first:border-l-0 hover:text-accent aria-pressed:bg-accent aria-pressed:text-on-accent aria-pressed:hover:text-on-accent"
           >
             {preset.name}
           </button>
@@ -186,7 +186,7 @@ function MuteExercise() {
       title={muted ? 'Unmute the exercise' : 'Mute the exercise'}
       onMouseDown={keepFocus}
       onClick={() => setDeviceSettings({ exerciseMuted: !muted })}
-      className="cursor-pointer rounded-md border border-line bg-card px-1.5 py-0.5 hover:text-accent aria-pressed:bg-accent aria-pressed:text-white aria-pressed:hover:text-white"
+      className="cursor-pointer rounded-md border border-edge bg-card px-1.5 py-0.5 hover:text-accent aria-pressed:bg-accent aria-pressed:text-on-accent aria-pressed:hover:text-on-accent"
     >
       mute
     </button>
@@ -203,7 +203,7 @@ function ResetOverrides() {
       disabled={count === 0}
       onMouseDown={keepFocus}
       onClick={() => dispatch({ type: 'resetOverrides' })}
-      className="cursor-pointer self-end rounded-md border border-line bg-card px-2 py-0.5 hover:text-accent disabled:cursor-default disabled:text-mute disabled:hover:text-mute"
+      className="cursor-pointer self-end rounded-md border border-edge bg-card px-2 py-0.5 hover:text-accent disabled:cursor-default disabled:text-mute disabled:hover:text-mute"
     >
       Reset overrides ({count})
     </button>
@@ -225,7 +225,7 @@ function Choice<K extends keyof ExerciseSettings>({
   return (
     <div role="group" aria-label={label} className="flex items-center justify-between gap-2">
       <span className="text-mute">{label}</span>
-      <div className="flex overflow-hidden rounded-md border border-line">
+      <div className="flex overflow-hidden rounded-md border border-edge">
         {options.map((option) => (
           <button
             key={option}
@@ -234,7 +234,7 @@ function Choice<K extends keyof ExerciseSettings>({
             // Keep focus off the button, so the editor's keys still work after a click.
             onMouseDown={keepFocus}
             onClick={() => dispatch({ type: 'setExerciseSettings', settings: { [setting]: option } })}
-            className="cursor-pointer border-l border-line bg-card px-2 py-0.5 first:border-l-0 hover:text-accent aria-pressed:bg-accent aria-pressed:text-white aria-pressed:hover:text-white"
+            className="cursor-pointer border-l border-edge bg-card px-2 py-0.5 first:border-l-0 hover:text-accent aria-pressed:bg-accent aria-pressed:text-on-accent aria-pressed:hover:text-on-accent"
           >
             {option}
           </button>
