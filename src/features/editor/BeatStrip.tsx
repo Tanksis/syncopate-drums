@@ -49,16 +49,17 @@ const countLabels = (beat: number, triplet: boolean) =>
   triplet ? [`${beat + 1}`, 'trip', 'let'] : [`${beat + 1}`, 'e', '&', 'a']
 
 /**
- * The bars and beats of the exercise, the main editor. It shows one bar at a time, the cursor's (the
- * bar tabs go to another), so it stays the same height however long the exercise is: a header with
- * the bar's number and delete button, over its beats, each a card. A card shows the snare row's grid positions as
- * big cells (a hit, a hold bar for a note still sounding, or a ghost hit on hover), their count
- * labels, and the kick row's cells under them, as the staff writes hands over feet. Clicking a
- * cell turns a hit on or off in its row; pressing on a note and dragging sets where its hold ends,
- * on into later beats of the bar in the same row, shown live and written on release.
- * Clicking elsewhere on a card moves the cursor to it. A card's 16ths | trip switch, or a
- * right-click on it, switches it between the sixteenth and the triplet grid. The cursor's card is
- * outlined with a mark beside its row, and the bar selection and a set loop range are shaded.
+ * The bars and beats of the exercise, the main editor. It shows one bar at a time, the cursor's
+ * (the bar tabs go to another), so it stays the same height however long the exercise is: a header
+ * with the bar's number and delete button, over its beats, each a card. A card shows the snare
+ * row's grid positions as big cells (a hit, a hold bar for a note still sounding, or a ghost hit on
+ * hover), their count labels, and the kick row's cells under them, as the staff writes hands over
+ * feet. Clicking a cell turns a hit on or off in its row; pressing on a note and dragging sets
+ * where its hold ends, on into later beats of the bar in the same row (t on the next bar's first
+ * beat ties across the barline), shown live and written on release. Clicking elsewhere on a card
+ * moves the cursor to it. A card's 16ths | trip switch, or a right-click on it, switches it between
+ * the sixteenth and the triplet grid. The cursor's card is outlined with a mark beside its row, and
+ * the bar selection and a set loop range are shaded.
  */
 export function BeatStrip() {
   const editor = useAppStore((s) => s.editor)
@@ -177,7 +178,7 @@ export function BeatStrip() {
         </div>
         <div className="grid grid-cols-4 gap-2">
           {beats.map((view, beat) => {
-            const current = cursor.bar === b && cursor.beat === beat
+            const current = cursor.beat === beat
             const switchGrid = () => dispatch({ type: 'setBeatGrid', bar: b, beat, triplet: !view.triplet })
             return (
               <div
