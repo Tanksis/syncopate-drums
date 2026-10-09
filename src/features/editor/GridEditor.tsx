@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { keepFocus } from '@/components/keepFocus'
+import { BarTabs } from './BarTabs'
 import { BeatStrip } from './BeatStrip'
 import { CheatSheet } from './CheatSheet'
 import { Palette } from './Palette'
@@ -15,7 +16,8 @@ export function GridEditor() {
       aria-label="Grid editor"
       className="flex max-h-[52vh] min-h-[30vh] flex-col gap-3 overflow-auto border-t border-line bg-panel px-4 py-2"
     >
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <BarTabs />
         <ModeIndicator />
         <VimSwitch />
         <button

@@ -18,7 +18,7 @@ interface Press {
 
 /**
  * The grid position of a row under the pointer, anywhere in the strip: in the beat card nearest the
- * pointer (so a drag follows the strip onto the bars below), kept to that card's first and last
+ * pointer (so a drag follows the strip onto later beats), kept to that card's first and last
  * position in the row.
  */
 function pointUnder(strip: Element, row: Row, clientX: number, clientY: number): GridPoint | null {
@@ -49,15 +49,17 @@ const countLabels = (beat: number, triplet: boolean) =>
   triplet ? [`${beat + 1}`, 'trip', 'let'] : [`${beat + 1}`, 'e', '&', 'a']
 
 /**
- * The bars and beats of the exercise, the main editor: one bar per line of cards, under a header with its
- * number and delete button, and each beat a card. A card shows the snare row's grid positions as
- * big cells (a hit, a hold bar for a note still sounding, or a ghost hit on hover), their count
- * labels, and the kick row's cells under them, as the staff writes hands over feet. Clicking a
- * cell turns a hit on or off in its row; pressing on a note and dragging sets where its hold ends,
- * on into later beats and bars (tied) in the same row, shown live and written on release.
- * Clicking elsewhere on a card moves the cursor to it. A card's 16ths | trip switch, or a
- * right-click on it, switches it between the sixteenth and the triplet grid. The cursor's card is
- * outlined with a mark beside its row, and the bar selection and a set loop range are shaded.
+ * The bars and beats of the exercise, the main editor. It shows one bar at a time, the cursor's
+ * (the bar tabs go to another), so it stays the same height however long the exercise is: a header
+ * with the bar's number and delete button, over its beats, each a card. A card shows the snare
+ * row's grid positions as big cells (a hit, a hold bar for a note still sounding, or a ghost hit on
+ * hover), their count labels, and the kick row's cells under them, as the staff writes hands over
+ * feet. Clicking a cell turns a hit on or off in its row; pressing on a note and dragging sets
+ * where its hold ends, on into later beats of the bar in the same row (t on the next bar's first
+ * beat ties across the barline), shown live and written on release. Clicking elsewhere on a card
+ * moves the cursor to it. A card's 16ths | trip switch, or a right-click on it, switches it between
+ * the sixteenth and the triplet grid. The cursor's card is outlined with a mark beside its row, and
+ * the bar selection and a set loop range are shaded.
  */
 export function BeatStrip() {
   const editor = useAppStore((s) => s.editor)
@@ -143,78 +145,75 @@ export function BeatStrip() {
     )
   }
 
+  const b = cursor.bar
+  const beats = views[b]
+  const selected = selection !== null && b >= selection.first && b <= selection.last
+  const looped = inLoopRange(loopRange, b)
   return (
     // The strip's right-click switches grids, so the browser's menu stays shut over it.
     <div aria-label="Beat strip" data-beat-strip className="flex flex-col gap-2" onContextMenu={(e) => e.preventDefault()}>
-      {views.map((beats, b) => {
-        const selected = selection !== null && b >= selection.first && b <= selection.last
-        const looped = inLoopRange(loopRange, b)
-        return (
-          <div
-            key={b}
-            aria-label={`Bar ${b + 1}`}
-            aria-selected={selected || undefined}
-            title={looped ? 'In the loop range' : undefined}
-            // A selected bar in the loop range keeps the loop shading inside the selection's border.
-            className={`flex flex-col gap-1.5 rounded-lg border px-2 pt-1 pb-2 ${
-              selected ? 'border-accent' : looped ? 'border-loop-line' : 'border-line'
-            } ${looped ? 'bg-loop' : selected ? 'bg-sky-100' : 'bg-panel'}`}
+      <div
+        aria-label={`Bar ${b + 1}`}
+        aria-selected={selected || undefined}
+        title={looped ? 'In the loop range' : undefined}
+        // A selected bar in the loop range keeps the loop shading inside the selection's border.
+        className={`flex flex-col gap-1.5 rounded-lg border px-2 pt-1 pb-2 ${
+          selected ? 'border-accent' : looped ? 'border-loop-line' : 'border-line'
+        } ${looped ? 'bg-loop' : selected ? 'bg-sky-100' : 'bg-panel'}`}
+      >
+        <div className="flex items-center text-xs">
+          <span className={`font-semibold ${looped ? 'text-loop-ink' : 'text-ink'}`}>Bar {b + 1}</span>
+          <button
+            type="button"
+            title={`Delete bar ${b + 1} (Ctrl+Backspace)`}
+            aria-label={`Delete bar ${b + 1}`}
+            tabIndex={-1}
+            // Keep focus off the button, so Space and Enter go to the editor rather than clicking it.
+            onMouseDown={keepFocus}
+            onClick={() => dispatch({ type: 'deleteBar', bar: b })}
+            className="ml-auto cursor-pointer rounded px-1.5 text-mute hover:bg-line hover:text-danger"
           >
-            <div className="flex items-center text-xs">
-              <span className={`font-semibold ${looped ? 'text-loop-ink' : 'text-ink'}`}>Bar {b + 1}</span>
-              <button
-                type="button"
-                title={`Delete bar ${b + 1} (Ctrl+Backspace)`}
-                aria-label={`Delete bar ${b + 1}`}
-                tabIndex={-1}
-                // Keep focus off the button, so Space and Enter go to the editor rather than clicking it.
-                onMouseDown={keepFocus}
-                onClick={() => dispatch({ type: 'deleteBar', bar: b })}
-                className="ml-auto cursor-pointer rounded px-1.5 text-mute hover:bg-line hover:text-danger"
+            ✕ delete
+          </button>
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+          {beats.map((view, beat) => {
+            const current = cursor.beat === beat
+            const switchGrid = () => dispatch({ type: 'setBeatGrid', bar: b, beat, triplet: !view.triplet })
+            return (
+              <div
+                key={beat}
+                aria-label={`Bar ${b + 1}, beat ${beat + 1}`}
+                data-beat-box
+                data-bar={b}
+                data-beat={beat}
+                aria-current={current || undefined}
+                onClick={() => dispatch({ type: 'moveTo', bar: b, beat })}
+                onContextMenu={switchGrid}
+                className={`relative flex min-w-0 cursor-pointer flex-col gap-1 rounded-xl border p-2 ${looped || selected ? 'bg-card/60' : 'bg-card'} ${
+                  current ? 'border-accent ring-2 ring-accent' : 'border-line'
+                }`}
               >
-                ✕ delete
-              </button>
-            </div>
-            <div className="grid grid-cols-4 gap-2">
-              {beats.map((view, beat) => {
-                const current = cursor.bar === b && cursor.beat === beat
-                const switchGrid = () => dispatch({ type: 'setBeatGrid', bar: b, beat, triplet: !view.triplet })
-                return (
-                  <div
-                    key={beat}
-                    aria-label={`Bar ${b + 1}, beat ${beat + 1}`}
-                    data-beat-box
-                    data-bar={b}
-                    data-beat={beat}
-                    aria-current={current || undefined}
-                    onClick={() => dispatch({ type: 'moveTo', bar: b, beat })}
-                    onContextMenu={switchGrid}
-                    className={`relative flex min-w-0 cursor-pointer flex-col gap-1 rounded-xl border p-2 ${looped || selected ? 'bg-card/60' : 'bg-card'} ${
-                      current ? 'border-accent ring-2 ring-accent' : 'border-line'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-lg/none font-bold">{beat + 1}</span>
-                      <FigureKey row="snare" figure={view.snare.figure} />
-                      <FigureKey row="kick" figure={view.kick.figure} />
-                      <GridSwitch bar={b} beat={beat} triplet={view.triplet} onSwitch={switchGrid} />
-                    </div>
-                    {rowCells('snare', view.snare, b, beat)}
-                    <div aria-hidden className="flex gap-1">
-                      {countLabels(beat, view.triplet).map((label, i) => (
-                        <span key={i} className={`flex-1 text-center font-mono text-[11px] ${i === 0 ? 'font-bold text-ink' : 'text-mute'}`}>
-                          {label}
-                        </span>
-                      ))}
-                    </div>
-                    {rowCells('kick', view.kick, b, beat)}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )
-      })}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-lg/none font-bold">{beat + 1}</span>
+                  <FigureKey row="snare" figure={view.snare.figure} />
+                  <FigureKey row="kick" figure={view.kick.figure} />
+                  <GridSwitch bar={b} beat={beat} triplet={view.triplet} onSwitch={switchGrid} />
+                </div>
+                {rowCells('snare', view.snare, b, beat)}
+                <div aria-hidden className="flex gap-1">
+                  {countLabels(beat, view.triplet).map((label, i) => (
+                    <span key={i} className={`flex-1 text-center font-mono text-[11px] ${i === 0 ? 'font-bold text-ink' : 'text-mute'}`}>
+                      {label}
+                    </span>
+                  ))}
+                </div>
+                {rowCells('kick', view.kick, b, beat)}
+              </div>
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }
