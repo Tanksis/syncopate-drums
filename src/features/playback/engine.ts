@@ -29,11 +29,12 @@ const VOLUME_SMOOTHING = 0.02
  * overhead mics barely pick up the bass drum: its samples are about 20 dB (vl2) and 31 dB (vl1)
  * quieter than the snare's (RMS over the first 400 ms). So the kick is raised 20 dB to sit level
  * with the snare, and the feathered kick, already raised with the groove layer, sits about 10 dB
- * under it: soft, but heard.
+ * under it: soft, but heard. Raised that much, the kick's room tail (two seconds, only about 17 dB
+ * down at 300 ms) booms into the next hits, so it is faded out after `hold` seconds.
  */
-const SAMPLES: Record<Exclude<Instrument, 'click'>, { files: string[]; velocity: number }> = {
+const SAMPLES: Record<Exclude<Instrument, 'click'>, { files: string[]; velocity: number; hold?: number }> = {
   snare: { files: ['oh_snare_center_vl18', 'oh_snare_center_vl21', 'oh_snare_center_vl24'], velocity: 1 },
-  kick: { files: ['oh_kick_snoff_vl2_rr1', 'oh_kick_snoff_vl2_rr2'], velocity: 10 },
+  kick: { files: ['oh_kick_snoff_vl2_rr1', 'oh_kick_snoff_vl2_rr2'], velocity: 10, hold: 0.06 },
   kickFeathered: { files: ['oh_kick_snoff_vl1_rr1', 'oh_kick_snoff_vl1_rr2'], velocity: 2.8 },
   ride: { files: ['oh_ride_ride_vl2_rr1', 'oh_ride_ride_vl2_rr2'], velocity: 0.85 },
   rideBell: { files: ['oh_ride_bell_vl2_rr1'], velocity: 0.85 },
@@ -206,6 +207,10 @@ function play(audio: Audio, when: number, event: ScheduledEvent): void {
   }
 }
 
+/** Seconds a held sample takes to fade by about 9 dB (one time constant), and when it is cut off. */
+const FADE = 0.04
+const FADE_END = 0.25
+
 /** A short synthesized beep: higher and louder on beat 1. */
 function click({ ctx, layers }: Audio, when: number, accent: boolean): AudioScheduledSourceNode {
   const osc = ctx.createOscillator()
@@ -221,7 +226,7 @@ function click({ ctx, layers }: Audio, when: number, accent: boolean): AudioSche
 }
 
 function sample({ ctx, layers, buffers }: Audio, when: number, event: ScheduledEvent): AudioScheduledSourceNode {
-  const { files, velocity } = SAMPLES[event.instrument as Exclude<Instrument, 'click'>]
+  const { files, velocity, hold } = SAMPLES[event.instrument as Exclude<Instrument, 'click'>]
   const turn = ((roundRobin.get(event.instrument) ?? -1) + 1) % files.length
   roundRobin.set(event.instrument, turn)
   const source = ctx.createBufferSource()
@@ -230,5 +235,9 @@ function sample({ ctx, layers, buffers }: Audio, when: number, event: ScheduledE
   gain.gain.value = velocity * (event.velocity ?? 1)
   source.connect(gain).connect(layers[event.kind])
   source.start(when)
+  if (hold !== undefined) {
+    gain.gain.setTargetAtTime(0, when + hold, FADE)
+    source.stop(when + hold + FADE_END)
+  }
   return source
 }
