@@ -46,29 +46,28 @@
 }
 
 /*
- * The dark theme: warm near-black greys from the same stone family, darkest on the notation's paper,
- * with the accent, playhead, kick and loop colours lightened for the dark background, and the blue
- * shadings kept faint. <html data-theme="dark"> turns it on; the
- * inline script in index.html sets it before the first paint, and followTheme (src/app/theme.ts)
- * keeps it in step.
+ * The dark theme: monochrome, neutral greys from charcoal to near-black on the notation's paper, with
+ * a grey accent, so only the playhead, kick and loop carry colour. <html data-theme="dark"> turns it
+ * on; the inline script in index.html sets it before the first paint, and followTheme
+ * (src/app/theme.ts) keeps it in step.
  */
 :root[data-theme='dark'] {
-  --color-accent: #6f97ec;
-  --color-on-accent: #0c0a09;
-  --color-accent-tint: #151b27;
-  --color-select: #1a2333;
-  --color-bg: #131110;
-  --color-card: #1f1c1a;
-  --color-paper: #0a0908;
-  --color-ink: #e7e5e4;
-  --color-mute: #a8a09b;
-  --color-line: #2e2a27;
-  --color-edge: #7a736d;
-  --color-panel: #181614;
+  --color-accent: #888888;
+  --color-on-accent: #0a0a0a;
+  --color-accent-tint: #191919;
+  --color-select: #2a2a2a;
+  --color-bg: #121212;
+  --color-card: #1e1e1e;
+  --color-paper: #0a0a0a;
+  --color-ink: #e0e0e0;
+  --color-mute: #b0b0b0;
+  --color-line: #3a3a3a;
+  --color-edge: #6a6a6a;
+  --color-panel: #181818;
   --color-danger: #f68080;
   --color-play: #34d399;
   --color-kick: #ff8a5c;
-  --color-loop: #3d2f0e;
+  --color-loop: #43371d;
   --color-loop-line: #d99a1a;
   --color-loop-ink: #fcc94a;
   --color-shade: #000;
