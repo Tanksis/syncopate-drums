@@ -14,10 +14,10 @@ const roundButtonClass =
   'flex shrink-0 cursor-pointer touch-manipulation select-none items-center justify-center rounded-full border font-semibold [-webkit-touch-callout:none]'
 
 /**
- * The phone layout's transport, fixed at the bottom within reach of a thumb: play/pause, and the
- * tempo with − and + buttons that repeat while held.
+ * The phone layout's transport, fixed at the bottom within reach of a thumb: play/pause, the tempo
+ * with − and + buttons that repeat while held, and Edit, given `onEdit`, to open the editor sheet.
  */
-export function TransportBar() {
+export function TransportBar({ onEdit }: { onEdit?: () => void }) {
   usePlaybackKeys()
   const playing = useAppStore((s) => s.playing)
   return (
@@ -45,6 +45,17 @@ export function TransportBar() {
         </label>
         <BpmStep step={1} />
       </div>
+      {onEdit && (
+        <button
+          type="button"
+          // Keep focus off the button, so Space pauses rather than clicking it.
+          onMouseDown={keepFocus}
+          onClick={onEdit}
+          className="ml-auto h-11 shrink-0 cursor-pointer rounded-lg border border-line bg-card px-3.5 text-sm font-semibold touch-manipulation active:border-accent active:text-accent"
+        >
+          Edit
+        </button>
+      )}
     </div>
   )
 }

@@ -1,7 +1,7 @@
 // Layout A, "Workstation": library sidebar | header, notation view, editor panel | settings sidebar.
 // Either sidebar collapses to a rail; below 1000 px both are rails that open over the notation.
-// Below 640 px, the phone layout: a column of header, notation and transport bar, with the
-// sidebars opening over the whole screen.
+// Below 640 px, the phone layout: a column of header, notation, the editor sheet when it's open,
+// and transport bar, with the sidebars opening over the whole screen.
 
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
@@ -51,10 +51,19 @@ export function App() {
 
 /**
  * The phone layout: a compact header (☰, the exercise name, ⚙), the notation filling the screen,
- * and the transport bar at the bottom. ☰ and ⚙ open their sidebar over the whole screen.
+ * and the transport bar at the bottom. ☰ and ⚙ open their sidebar over the whole screen. Edit, in
+ * the transport bar, opens the grid editor as a sheet under the notation, which Done closes; an
+ * example, which can't be changed, has no Edit and shows the notation only.
  */
 function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl> }) {
   const { library, settings } = sidebars
+  const example = useAppStore((s) => isExample(s.editor.exercise.id))
+  const [editOpen, setEditOpen] = useState(false)
+  // Opening an example closes the sheet, so it doesn't come back with the next exercise.
+  useEffect(() => {
+    if (example) setEditOpen(false)
+  }, [example])
+  const editing = editOpen && !example
   return (
     <div className="flex h-dvh flex-col">
       <header className="flex shrink-0 items-center gap-1 border-b border-line bg-card px-1 pt-[env(safe-area-inset-top)]">
@@ -71,7 +80,8 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
       <NotSaving className="border-b border-line bg-card px-3 py-1 text-xs" />
       <ExampleNotice />
       <NotationView />
-      <TransportBar />
+      {editing && <GridEditor onDone={() => setEditOpen(false)} />}
+      <TransportBar onEdit={example || editing ? undefined : () => setEditOpen(true)} />
 
       {library.state === 'overlay' && (
         <SidebarFullScreen>

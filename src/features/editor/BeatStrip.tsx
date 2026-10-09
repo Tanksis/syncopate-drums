@@ -75,9 +75,11 @@ const countLabels = (beat: number, triplet: boolean) =>
  * new hand on the cell. Clicking elsewhere on a card moves the cursor to it. A card's 16ths | trip switch puts
  * it on the sixteenth or the triplet grid, and its ⋯ menu (not on an example) switches the grid,
  * rests the beat, or ties a bar's first beat over the barline. The cursor's card is outlined with a
- * mark beside its row, and the bar selection and a set loop range are shaded.
+ * mark beside its row, and the bar selection and a set loop range are shaded. `twoPerRow`, on a
+ * phone, lays the cards out two to a row with cells tall enough for a finger, and leaves the bar's
+ * number and delete button to the bar tabs and the bar menu above.
  */
-export function BeatStrip() {
+export function BeatStrip({ twoPerRow = false }: { twoPerRow?: boolean }) {
   const editor = useAppStore((s) => s.editor)
   const { cursor, selection } = editor
   const { loopRange } = editor.exercise.practice
@@ -202,6 +204,7 @@ export function BeatStrip() {
             onPointerMove={movePress}
             onPointerUp={endPress}
             onPointerCancel={cancelPress}
+            tall={twoPerRow}
             flashedHand={flash && samePoint(flash.point, { row, bar: b, beat, position: i }) ? flashedHand : null}
           />
         ))}
@@ -220,26 +223,28 @@ export function BeatStrip() {
         aria-selected={selected || undefined}
         title={looped ? 'In the loop range' : undefined}
         // A selected bar in the loop range keeps the loop shading inside the selection's border.
-        className={`flex flex-col gap-1.5 rounded-lg border px-2 pt-1 pb-2 ${
+        className={`flex flex-col gap-1.5 rounded-lg border px-2 pb-2 ${twoPerRow ? 'pt-2' : 'pt-1'} ${
           selected ? 'border-accent' : looped ? 'border-loop-line' : 'border-line'
         } ${looped ? 'bg-loop' : selected ? 'bg-sky-100' : 'bg-panel'}`}
       >
-        <div className="flex items-center text-xs">
-          <span className={`font-semibold ${looped ? 'text-loop-ink' : 'text-ink'}`}>Bar {b + 1}</span>
-          <button
-            type="button"
-            title={`Delete bar ${b + 1} (Ctrl+Backspace)`}
-            aria-label={`Delete bar ${b + 1}`}
-            tabIndex={-1}
-            // Keep focus off the button, so Space and Enter go to the editor rather than clicking it.
-            onMouseDown={keepFocus}
-            onClick={() => dispatch({ type: 'deleteBar', bar: b })}
-            className="ml-auto cursor-pointer rounded px-1.5 text-mute hover:bg-line hover:text-danger"
-          >
-            ✕ delete
-          </button>
-        </div>
-        <div className="grid grid-cols-4 gap-2">
+        {!twoPerRow && (
+          <div className="flex items-center text-xs">
+            <span className={`font-semibold ${looped ? 'text-loop-ink' : 'text-ink'}`}>Bar {b + 1}</span>
+            <button
+              type="button"
+              title={`Delete bar ${b + 1} (Ctrl+Backspace)`}
+              aria-label={`Delete bar ${b + 1}`}
+              tabIndex={-1}
+              // Keep focus off the button, so Space and Enter go to the editor rather than clicking it.
+              onMouseDown={keepFocus}
+              onClick={() => dispatch({ type: 'deleteBar', bar: b })}
+              className="ml-auto cursor-pointer rounded px-1.5 text-mute hover:bg-line hover:text-danger"
+            >
+              ✕ delete
+            </button>
+          </div>
+        )}
+        <div className={`grid gap-2 ${twoPerRow ? 'grid-cols-2' : 'grid-cols-4'}`}>
           {beats.map((view, beat) => {
             const current = cursor.beat === beat
             const switchGrid = () => dispatch({ type: 'setBeatGrid', bar: b, beat, triplet: !view.triplet })
@@ -346,6 +351,7 @@ function Cell({
   holdsOn,
   first,
   last,
+  tall,
   flashedHand,
   ...pointer
 }: {
@@ -358,6 +364,8 @@ function Cell({
   /** The beat's first or last cell, whose bar runs on across the card's edge. */
   first: boolean
   last: boolean
+  /** At least 44 px tall, for a finger on a phone. */
+  tall: boolean
   /** The hand a long-press here just flipped the note to, shown for a moment. */
   flashedHand: Hand | null
   /** A press here is a click on release, or a drag of the note's hold once it moves. */
@@ -384,7 +392,7 @@ function Cell({
       onClick={(e) => e.stopPropagation()}
       // A long-press is the strip's own: no context menu, callout or text selection on top of it.
       onContextMenu={(e) => e.preventDefault()}
-      className="group/cell relative flex h-10 min-w-0 flex-1 cursor-pointer touch-none items-center justify-center rounded border border-line bg-card select-none [-webkit-touch-callout:none] hover:border-accent"
+      className={`group/cell relative flex min-w-0 flex-1 cursor-pointer touch-none items-center justify-center rounded border border-line bg-card select-none [-webkit-touch-callout:none] hover:border-accent ${tall ? 'h-11' : 'h-10'}`}
     >
       {position === 'hold' && <span className={`${holdLine} right-1/2 ${first ? '-left-[14px]' : '-left-[3px]'}`} />}
       {sounding && holdsOn && <span className={`${holdLine} left-1/2 ${last ? '-right-[14px]' : '-right-[3px]'}`} />}
