@@ -4,9 +4,9 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A screen wake lock is requested when playback starts and released one minute after it stops or pauses. Starting again within the minute keeps it
-- [ ] It's requested again when the page becomes visible while playing. A refusal or a missing API is ignored
-- [ ] `navigator.audioSession.type = 'playback'` is set, where it exists, before the audio context starts
-- [ ] Checked in the browser that playback causes no errors where the APIs are missing. The user checks the music-stand and silent-switch behaviour on their iPhone
+- [x] A screen wake lock is requested when playback starts and released one minute after it stops or pauses. Starting again within the minute keeps it
+- [x] It's requested again when the page becomes visible while playing. A refusal or a missing API is ignored
+- [x] `navigator.audioSession.type = 'playback'` is set, where it exists, before the audio context starts
+- [x] Checked in the browser that playback causes no errors where the APIs are missing (headless Chromium, stubbed and missing APIs). The user checks the music-stand and silent-switch behaviour on their iPhone
