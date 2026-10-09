@@ -45,7 +45,7 @@ describe('a new exercise', () => {
     expect(ex).toMatchObject({
       id: 'e1',
       name: 'Untitled',
-      sticking: 'natural',
+      sticking: 'off',
       leadHand: 'R',
       practice: { bpm: 80, loopRange: null, groove: 'off', swing: 0.5 },
       lastOpened: 1234,
@@ -504,14 +504,14 @@ describe('sticking settings', () => {
 
     const undone = keys(edited, ctrl('z'))
     expect(undone.exercise).toMatchObject({ sticking: 'alternate', leadHand: 'R' })
-    expect(keys(undone, ctrl('z')).exercise).toMatchObject({ sticking: 'natural', leadHand: 'R' })
+    expect(keys(undone, ctrl('z')).exercise).toMatchObject({ sticking: 'off', leadHand: 'R' })
     expect(keys(undone, ctrl('z'), ctrl('z')).exercise.bars).not.toBe(start.exercise.bars)
     expect(keys(undone, ctrl('Z', { shiftKey: true })).exercise.leadHand).toBe('L')
   })
 
   it('setting what is already set is not a change', () => {
     const state = type(['1'])
-    expect(set(state, { sticking: 'natural' })).toBe(state)
+    expect(set(state, { sticking: 'off' })).toBe(state)
   })
 })
 
@@ -520,8 +520,10 @@ describe('sticking overrides', () => {
   /** The shown hands in order, with `-` for a note that shows none. */
   const hands = (state: EditorState) => sticking(state.exercise).map((n) => n.shown ?? '-').join('')
   const overrides = (state: EditorState) => sticking(state.exercise).map((n) => n.override ?? '-').join('')
-  /** `x.x.` `xxxx` under natural sticking, cursor on the sixteenths. */
-  const start = () => ({ ...type(['2', '4']), cursor: cursorAt(0, 1) })
+  /** Types the keys into a new exercise under natural sticking. */
+  const typeNatural = (keys: string[]) => type(keys, newEditorState({ ...newExercise({ id: 'e1', now: 0 }), sticking: 'natural' }))
+  /** `x.x.` `xxxx`, cursor on the sixteenths. */
+  const start = () => ({ ...typeNatural(['2', '4']), cursor: cursorAt(0, 1) })
 
   it('Alt+1–4 flips the 1st–4th struck note of the cursor beat, leaving the others alone', () => {
     expect(hands(start())).toBe('RL' + 'RLRL')
@@ -542,7 +544,7 @@ describe('sticking overrides', () => {
 
   it('counts struck notes only, and does nothing past the last one', () => {
     // `.xxx` then a tie into `x.x.`: the beat's first struck note is the one after the tie.
-    const state = { ...keys(type(['9', '2']), press('ArrowLeft'), press('t')), cursor: cursorAt(0, 1) }
+    const state = { ...keys(typeNatural(['9', '2']), press('ArrowLeft'), press('t')), cursor: cursorAt(0, 1) }
     expect(hands(keys(state, alt('1')))).toBe('LRL' + 'R')
     expect(keys(state, alt('2'))).toBe(state)
   })
