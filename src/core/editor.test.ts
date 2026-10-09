@@ -357,23 +357,23 @@ describe("a beat card's menu", () => {
     const tiedInto = (state: EditorState, row: Row) => editorBeatViews(state)[1][0][row].tiedInto
 
     it('ties a bar’s first beat into the last note of the bar before, and unties it again', () => {
-      const tied = applyEdit(twoBars(), { type: 'toggleTie', bar: 1, row: 'snare' })
+      const tied = applyEdit(twoBars(), { type: 'tieOverBarline', bar: 1, row: 'snare' })
       expect(tiedInto(tied, 'snare')).toBe(true)
       expect(tied.cursor).toEqual(cursorAt(1, 0, 'snare'))
-      const untied = applyEdit(tied, { type: 'toggleTie', bar: 1, row: 'snare' })
+      const untied = applyEdit(tied, { type: 'tieOverBarline', bar: 1, row: 'snare' })
       expect(tiedInto(untied, 'snare')).toBe(false)
       expect(untied.exercise.bars).toEqual(twoBars().exercise.bars)
     })
 
     it('is one undo step', () => {
-      const tied = applyEdit(twoBars(), { type: 'toggleTie', bar: 1, row: 'snare' })
+      const tied = applyEdit(twoBars(), { type: 'tieOverBarline', bar: 1, row: 'snare' })
       expect(keys(tied, ctrl('z')).exercise.bars).toEqual(twoBars().exercise.bars)
     })
 
     it('is offered where it would tie or untie, and only there', () => {
       const state = twoBars()
       expect(canTieOverBarline(state, 1, 'snare')).toBe(true)
-      expect(canTieOverBarline(applyEdit(state, { type: 'toggleTie', bar: 1, row: 'snare' }), 1, 'snare')).toBe(true)
+      expect(canTieOverBarline(applyEdit(state, { type: 'tieOverBarline', bar: 1, row: 'snare' }), 1, 'snare')).toBe(true)
       // The exercise's first beat has nothing before it.
       expect(canTieOverBarline(state, 0, 'snare')).toBe(false)
       // The kick row's bar 1 ends in a rest.
@@ -382,11 +382,18 @@ describe("a beat card's menu", () => {
       expect(canTieOverBarline(click(state, 1, 0, 0), 1, 'snare')).toBe(false)
     })
 
+    it('keeps a beat put on triplets on the triplet grid', () => {
+      const pending = applyEdit(twoBars(), { type: 'setBeatGrid', bar: 1, beat: 0, triplet: true })
+      const tied = applyEdit(pending, { type: 'tieOverBarline', bar: 1, row: 'snare' })
+      expect(editorBeatViews(tied)[1][0]).toMatchObject({ triplet: true, snare: { tiedInto: true } })
+      expect(editorBeatViews(applyEdit(tied, { type: 'tieOverBarline', bar: 1, row: 'snare' }))[1][0].triplet).toBe(true)
+    })
+
     it('is refused where it is not offered', () => {
       const state = twoBars()
-      expect(applyEdit(state, { type: 'toggleTie', bar: 1, row: 'kick' }).exercise.bars).toBe(state.exercise.bars)
-      expect(applyEdit(state, { type: 'toggleTie', bar: 0, row: 'snare' }).exercise.bars).toBe(state.exercise.bars)
-      expect(applyEdit(state, { type: 'toggleTie', bar: 0, row: 'snare' }).history.undo).toHaveLength(state.history.undo.length)
+      expect(applyEdit(state, { type: 'tieOverBarline', bar: 1, row: 'kick' }).exercise.bars).toBe(state.exercise.bars)
+      expect(applyEdit(state, { type: 'tieOverBarline', bar: 0, row: 'snare' }).exercise.bars).toBe(state.exercise.bars)
+      expect(applyEdit(state, { type: 'tieOverBarline', bar: 0, row: 'snare' }).history.undo).toHaveLength(state.history.undo.length)
     })
   })
 })

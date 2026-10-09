@@ -198,7 +198,7 @@ export function BeatStrip() {
                 <div className="flex items-center gap-1.5">
                   <span className="text-lg/none font-bold">{beat + 1}</span>
                   <GridSwitch bar={b} beat={beat} triplet={view.triplet} onSwitch={switchGrid} />
-                  {!example && <Menu label={`Bar ${b + 1}, beat ${beat + 1} menu`} items={beatMenu(editor, b, beat, view, dispatch)} />}
+                  {!example && <Menu label={`Bar ${b + 1}, beat ${beat + 1} menu`} items={beatMenu(editor, b, beat, view, switchGrid, dispatch)} />}
                 </div>
                 {rowCells('snare', view.snare, b, beat)}
                 <div aria-hidden className="flex gap-1">
@@ -222,16 +222,22 @@ export function BeatStrip() {
  * A beat card's ⋯ menu: the other grid, a rest in both rows, and, on a bar's first beat, a tie over
  * the barline for each row the core offers one in, ticked when tied.
  */
-function beatMenu(editor: EditorState, bar: number, beat: number, view: BeatView, dispatch: (command: EditCommand) => void): MenuItem[] {
-  const triplet = !view.triplet
+function beatMenu(
+  editor: EditorState,
+  bar: number,
+  beat: number,
+  view: BeatView,
+  switchGrid: () => void,
+  dispatch: (command: EditCommand) => void,
+): MenuItem[] {
   const ties = beat === 0 ? ROWS.filter((row) => canTieOverBarline(editor, bar, row)) : []
   return [
-    { label: triplet ? 'Switch to triplets' : 'Switch to sixteenths', onSelect: () => dispatch({ type: 'setBeatGrid', bar, beat, triplet }) },
+    { label: view.triplet ? 'Switch to sixteenths' : 'Switch to triplets', onSelect: switchGrid },
     { label: 'Rest the beat', onSelect: () => dispatch({ type: 'restBeat', bar, beat }) },
     ...ties.map((row) => ({
       label: `Tie ${ROW_LOOK[row].name.toLowerCase()} over the barline`,
       checked: view[row].tiedInto,
-      onSelect: () => dispatch({ type: 'toggleTie', bar, row }),
+      onSelect: () => dispatch({ type: 'tieOverBarline', bar, row }),
     })),
   ]
 }

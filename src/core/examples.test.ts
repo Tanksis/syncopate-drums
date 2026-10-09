@@ -136,7 +136,7 @@ describe('the edits an example accepts', () => {
         { type: 'setBeatGrid', bar: 0, beat: 0, triplet: true },
         { type: 'rest', stepBack: true },
         { type: 'restBeat', bar: 0, beat: 0 },
-        { type: 'toggleTie', bar: 1, row: 'snare' },
+        { type: 'tieOverBarline', bar: 1, row: 'snare' },
       ),
     ).toEqual([false, false, false, false, false, false])
   })

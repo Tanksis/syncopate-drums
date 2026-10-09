@@ -104,9 +104,10 @@ export type EditCommand =
   | { type: 'restBeat'; bar: number; beat: number }
   /**
    * A beat card's menu: ties a bar's first beat in a row into the last note of the bar before, or
-   * unties it, and moves the cursor to that beat and row. Refused where `canTieOverBarline` says no.
+   * unties it, and moves the cursor to that beat and row. Refused, leaving all as it was, where
+   * `canTieOverBarline` says no. A beat on the pending grid stays there: it still reads the same.
    */
-  | { type: 'toggleTie'; bar: number; row: Row }
+  | { type: 'tieOverBarline'; bar: number; row: Row }
   /** Adds a bar of rests after the cursor bar. */
   | { type: 'addBar' }
   | { type: 'duplicateBar' }
@@ -157,8 +158,14 @@ export function newEditorState(exercise: Exercise): EditorState {
  * exercise's first beat.
  */
 export function canTieOverBarline(state: EditorState, bar: number, row: Row): boolean {
-  const { bars } = state.exercise
-  return bar > 0 && bar < bars.length && toggleTie(bars, row, bar, 0) !== bars
+  return tiedOverBarline(state.exercise.bars, bar, row) !== null
+}
+
+/** The bars with a bar's first beat in a row tied over the barline or untied, or null if it can't be. */
+function tiedOverBarline(bars: Bar[], bar: number, row: Row): Bar[] | null {
+  if (bar < 1 || bar >= bars.length) return null
+  const toggled = toggleTie(bars, row, bar, 0)
+  return toggled === bars ? null : toggled
 }
 
 /** Each bar's four beats as the editor shows them: beats on the pending grid read as triplets. */
@@ -179,8 +186,11 @@ export function applyEdit(state: EditorState, command: EditCommand): EditorState
 /** The commands that go through the undo history. */
 type RecordedCommand = Exclude<EditCommand, { type: 'selectBars' }>
 
-/** The beat strip's own edits, which look after the pending grid themselves. */
-const GRID_COMMANDS = new Set<EditCommand['type']>(['toggleGridPosition', 'setBeatGrid', 'setHold'])
+/**
+ * The beat strip's own edits, which look after the pending grid themselves. A tie over the barline
+ * leaves it as it was: a beat on it holds only its downbeat, tied or struck.
+ */
+const GRID_COMMANDS = new Set<EditCommand['type']>(['toggleGridPosition', 'setBeatGrid', 'setHold', 'tieOverBarline'])
 
 function record(state: EditorState, command: RecordedCommand): EditorState {
   if (command.type === 'undo' || command.type === 'redo') return clearSelection(travel(state, command.type))
@@ -307,10 +317,9 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
       const moved = moveTo(state, command.bar, command.beat)
       return restBeat(moved, moved.cursor.bar, moved.cursor.beat, ROWS)
     }
-    case 'toggleTie': {
-      const moved = moveTo(state, command.bar, 0, command.row)
-      if (!canTieOverBarline(state, command.bar, command.row)) return moved
-      return withBars(moved, toggleTie(state.exercise.bars, command.row, command.bar, 0))
+    case 'tieOverBarline': {
+      const bars = tiedOverBarline(state.exercise.bars, command.bar, command.row)
+      return bars ? withBars(moveTo(state, command.bar, 0, command.row), bars) : state
     }
     case 'addBar': {
       const at = state.cursor.bar + 1

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { keepFocus } from './keepFocus'
 
+/** One choice in a menu. */
 export interface MenuItem {
   label: string
   /** A toggle's state, shown as a tick; leave undefined for a plain action. */
@@ -16,22 +17,22 @@ export interface MenuItem {
  */
 export function Menu({ label, items }: { label: string; items: MenuItem[] }) {
   // The button's box, which the popover hangs from; null while closed.
-  const [at, setAt] = useState<{ top: number; bottom: number; right: number } | null>(null)
+  const [anchor, setAnchor] = useState<{ top: number; bottom: number; right: number } | null>(null)
   const root = useRef<HTMLDivElement>(null)
   const popover = useRef<HTMLDivElement>(null)
 
   // Under the button, or over it if it would run off the bottom of the window.
   useLayoutEffect(() => {
     const menu = popover.current
-    if (!at || !menu) return
+    if (!anchor || !menu) return
     const { height } = menu.getBoundingClientRect()
-    const below = at.bottom + 4
-    menu.style.top = `${below + height > window.innerHeight ? Math.max(4, at.top - 4 - height) : below}px`
-  }, [at])
+    const below = anchor.bottom + 4
+    menu.style.top = `${below + height > window.innerHeight ? Math.max(4, anchor.top - 4 - height) : below}px`
+  }, [anchor])
 
   useEffect(() => {
-    if (!at) return
-    const close = () => setAt(null)
+    if (!anchor) return
+    const close = () => setAnchor(null)
     const onPointerDown = (e: PointerEvent) => {
       if (!(e.target instanceof Node && root.current?.contains(e.target))) close()
     }
@@ -52,7 +53,7 @@ export function Menu({ label, items }: { label: string; items: MenuItem[] }) {
       window.removeEventListener('scroll', close, { capture: true })
       window.removeEventListener('resize', close)
     }
-  }, [at])
+  }, [anchor])
 
   return (
     // Clicks in the menu stay in it, so a card or row around it doesn't take them too.
@@ -61,25 +62,25 @@ export function Menu({ label, items }: { label: string; items: MenuItem[] }) {
         type="button"
         aria-label={label}
         aria-haspopup="menu"
-        aria-expanded={at !== null}
+        aria-expanded={anchor !== null}
         title={label}
         tabIndex={-1}
         onMouseDown={keepFocus}
         onClick={(e) => {
           const box = e.currentTarget.getBoundingClientRect()
-          setAt(at ? null : { top: box.top, bottom: box.bottom, right: window.innerWidth - box.right })
+          setAnchor(anchor ? null : { top: box.top, bottom: box.bottom, right: window.innerWidth - box.right })
         }}
         className="cursor-pointer rounded px-1 text-sm/none text-mute hover:bg-line hover:text-accent aria-expanded:bg-line aria-expanded:text-accent"
       >
         ⋯
       </button>
-      {at && (
+      {anchor && (
         // Fixed, so a scrolling panel around the button doesn't clip it.
         <div
           ref={popover}
           role="menu"
           aria-label={label}
-          style={{ right: at.right }}
+          style={{ right: anchor.right }}
           className="fixed z-30 flex min-w-44 flex-col rounded-lg border border-line bg-card py-1 text-sm shadow-lg"
         >
           {items.map((item) => (
@@ -91,7 +92,7 @@ export function Menu({ label, items }: { label: string; items: MenuItem[] }) {
               tabIndex={-1}
               onMouseDown={keepFocus}
               onClick={() => {
-                setAt(null)
+                setAnchor(null)
                 item.onSelect()
               }}
               className="flex cursor-pointer items-center gap-2 px-3 py-2 text-left whitespace-nowrap hover:bg-panel hover:text-accent"
