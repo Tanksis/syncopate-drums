@@ -4,7 +4,9 @@
 
 **Blocked by:** 01
 
-**Status:** needs-triage
+**Status:** wontfix
+
+Closed 2026-10-08: after living with ticket 01 the user found the notation good enough.
 
 Decide after living with ticket 01: if small screens still feel cramped, settle these first, then make it ready-for-agent.
 
