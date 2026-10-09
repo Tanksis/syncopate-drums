@@ -7,6 +7,7 @@ import {
   applyEdit,
   beatIndex,
   beatViews,
+  canTieOverBarline,
   commandForKey,
   editorBeatViews,
   loopAt,
@@ -331,6 +332,62 @@ describe('turning beats into rests', () => {
     const state = applyEdit(typedAt(['1', '2', '3', '4'], 0, 2), commandForKey(press('Delete'))!)
     expect(figureKeys(state)[0]).toBe('12 4')
     expect(state.cursor).toEqual(cursorAt(0, 2))
+  })
+})
+
+describe("a beat card's menu", () => {
+  /** Snare on beats 1–4 of bar 1 and kick on its beats 1 and 3, the cursor last in the kick row. */
+  const groove = () => click(click(click(click(click(click(fresh(), 0, 0, 0), 0, 1, 0), 0, 2, 0), 0, 3, 0), 0, 0, 0, 'kick'), 0, 2, 0, 'kick')
+  const rowHits = (state: EditorState, row: Row) => editorBeatViews(state)[0].map((v) => v[row].hits).join(' ')
+
+  it('rests a given beat in both rows, as one undo step, and moves the cursor there', () => {
+    const rested = applyEdit(groove(), { type: 'restBeat', bar: 0, beat: 2 })
+    expect(rowHits(rested, 'snare')).toBe('x... x... .... x...')
+    expect(rowHits(rested, 'kick')).toBe('x... .... .... ....')
+    expect(rested.cursor).toEqual(cursorAt(0, 2, 'kick'))
+    expect(keys(rested, ctrl('z')).exercise.bars).toEqual(groove().exercise.bars)
+  })
+
+  describe('tie over the barline', () => {
+    /** Two bars: a snare hit on bar 1's beat 4 and bar 2's beat 1; the kick only on bar 2's beat 1. */
+    const twoBars = () => {
+      const added = applyEdit(fresh(), { type: 'addBar' })
+      return click(click(click(added, 0, 3, 0), 1, 0, 0), 1, 0, 0, 'kick')
+    }
+    const tiedInto = (state: EditorState, row: Row) => editorBeatViews(state)[1][0][row].tiedInto
+
+    it('ties a bar’s first beat into the last note of the bar before, and unties it again', () => {
+      const tied = applyEdit(twoBars(), { type: 'toggleTie', bar: 1, row: 'snare' })
+      expect(tiedInto(tied, 'snare')).toBe(true)
+      expect(tied.cursor).toEqual(cursorAt(1, 0, 'snare'))
+      const untied = applyEdit(tied, { type: 'toggleTie', bar: 1, row: 'snare' })
+      expect(tiedInto(untied, 'snare')).toBe(false)
+      expect(untied.exercise.bars).toEqual(twoBars().exercise.bars)
+    })
+
+    it('is one undo step', () => {
+      const tied = applyEdit(twoBars(), { type: 'toggleTie', bar: 1, row: 'snare' })
+      expect(keys(tied, ctrl('z')).exercise.bars).toEqual(twoBars().exercise.bars)
+    })
+
+    it('is offered where it would tie or untie, and only there', () => {
+      const state = twoBars()
+      expect(canTieOverBarline(state, 1, 'snare')).toBe(true)
+      expect(canTieOverBarline(applyEdit(state, { type: 'toggleTie', bar: 1, row: 'snare' }), 1, 'snare')).toBe(true)
+      // The exercise's first beat has nothing before it.
+      expect(canTieOverBarline(state, 0, 'snare')).toBe(false)
+      // The kick row's bar 1 ends in a rest.
+      expect(canTieOverBarline(state, 1, 'kick')).toBe(false)
+      // No hit on the downbeat to tie.
+      expect(canTieOverBarline(click(state, 1, 0, 0), 1, 'snare')).toBe(false)
+    })
+
+    it('is refused where it is not offered', () => {
+      const state = twoBars()
+      expect(applyEdit(state, { type: 'toggleTie', bar: 1, row: 'kick' }).exercise.bars).toBe(state.exercise.bars)
+      expect(applyEdit(state, { type: 'toggleTie', bar: 0, row: 'snare' }).exercise.bars).toBe(state.exercise.bars)
+      expect(applyEdit(state, { type: 'toggleTie', bar: 0, row: 'snare' }).history.undo).toHaveLength(state.history.undo.length)
+    })
   })
 })
 

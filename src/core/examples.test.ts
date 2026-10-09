@@ -128,15 +128,17 @@ describe('the edits an example accepts', () => {
     expect(accepts({ type: 'selectBars', step: 1 }, { type: 'copyBars' })).toEqual([true, true])
   })
 
-  it('refuses a hit toggle, a hold drag, a grid switch and a rest', () => {
+  it('refuses a hit toggle, a hold drag, a grid switch, a rest and a tie', () => {
     expect(
       accepts(
         { type: 'toggleGridPosition', row: 'snare', bar: 0, beat: 0, position: 0 },
         { type: 'setHold', from: { row: 'snare', bar: 0, beat: 0, position: 0 }, to: { row: 'snare', bar: 0, beat: 1, position: 0 } },
         { type: 'setBeatGrid', bar: 0, beat: 0, triplet: true },
         { type: 'rest', stepBack: true },
+        { type: 'restBeat', bar: 0, beat: 0 },
+        { type: 'toggleTie', bar: 1, row: 'snare' },
       ),
-    ).toEqual([false, false, false, false])
+    ).toEqual([false, false, false, false, false, false])
   })
 
   it('refuses adding, deleting and pasting bars', () => {

@@ -118,6 +118,8 @@ const EXAMPLE_ACCEPTS: Record<EditCommand['type'], boolean> = {
   setHold: false,
   setBeatGrid: false,
   rest: false,
+  restBeat: false,
+  toggleTie: false,
   addBar: false,
   duplicateBar: false,
   deleteBar: false,
