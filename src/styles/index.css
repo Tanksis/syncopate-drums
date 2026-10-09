@@ -6,6 +6,7 @@
  * in the app comes from here; the notation reads them as CSS variables when it draws (staff.ts), so
  * they are always emitted (static). The light theme meets WCAG AA: text 4.5:1 against the surface it
  * sits on (the loop fill and a hovered bg-line included), large text, control borders and states 3:1.
+ * The dark theme below redefines them to the same targets.
  */
 @theme static {
   --color-accent: #2158df;
@@ -33,8 +34,37 @@
   --color-loop: #fde68a;
   --color-loop-line: #d97706;
   --color-loop-ink: #a14a08;
+  /* Shadows and a dialog's backdrop: dark in both themes. */
+  --color-shade: #1c1917;
 
   --font-sans: system-ui, sans-serif;
+}
+
+/*
+ * The dark theme: warm near-black greys from the same stone family, with the accent, playhead, kick
+ * and loop colours lightened for the dark background. <html data-theme="dark"> turns it on; the
+ * inline script in index.html sets it before the first paint, and followTheme (src/app/theme.ts)
+ * keeps it in step.
+ */
+:root[data-theme='dark'] {
+  --color-accent: #7ea6ff;
+  --color-on-accent: #1c1917;
+  --color-accent-tint: #24314a;
+  --color-select: #1f3550;
+  --color-bg: #1c1917;
+  --color-card: #292524;
+  --color-ink: #e7e5e4;
+  --color-mute: #b0a8a3;
+  --color-line: #3a3532;
+  --color-edge: #8a827c;
+  --color-panel: #221f1d;
+  --color-danger: #fb8a8a;
+  --color-play: #34d399;
+  --color-kick: #ff8a5c;
+  --color-loop: #4a3810;
+  --color-loop-line: #d99a1a;
+  --color-loop-ink: #fcc94a;
+  --color-shade: #000;
 }
 
 @layer base {

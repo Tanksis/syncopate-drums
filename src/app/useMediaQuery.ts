@@ -9,6 +9,9 @@ const PHONE = '(width < 640px)'
 /** A touch screen: keyboard hints are hidden. */
 const COARSE_POINTER = '(pointer: coarse)'
 
+/** The device is set to a dark appearance, which the `auto` theme follows. */
+export const SYSTEM_DARK = '(prefers-color-scheme: dark)'
+
 /** Whether the media query matches, kept up to date as it changes. */
 function useMediaQuery(query: string): boolean {
   const subscribe = useCallback(
@@ -30,3 +33,6 @@ export const usePhoneWindow = () => useMediaQuery(PHONE)
 
 /** Whether the primary pointer is coarse, a finger rather than a mouse. */
 export const useCoarsePointer = () => useMediaQuery(COARSE_POINTER)
+
+/** Whether the device is set to a dark appearance, which the `auto` theme follows. */
+export const useSystemDark = () => useMediaQuery(SYSTEM_DARK)

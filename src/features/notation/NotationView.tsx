@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
+import { useResolvedTheme } from '@/app/theme'
 import { hasHits } from '@/core'
 import { followPlayback, scrollLineIntoView } from './followPlayback'
 import type { Drawing, NotationArea } from './staff'
@@ -11,6 +12,8 @@ export function NotationView() {
   const dispatch = useAppStore((s) => s.dispatch)
   const loopBar = useAppStore((s) => s.loopBar)
   const playing = useAppStore((s) => s.playing)
+  // The notation reads the colour tokens as it draws, so it redraws when the theme changes.
+  const theme = useResolvedTheme()
   const scrollerRef = useRef<HTMLElement>(null)
   const staffRef = useRef<HTMLDivElement>(null)
   /** The staff's width and the notation view's height inside its padding. */
@@ -55,7 +58,7 @@ export function NotationView() {
     )
     // Keep the cursor's line in view as typing runs past the bottom.
     if (!playing) scrollLineIntoView(scrollerRef.current!, staffRef.current!, drawing.line(cursor.bar))
-  }, [exercise, cursor, area, fontsReady, playing])
+  }, [exercise, cursor, area, fontsReady, playing, theme])
 
   useEffect(() => {
     if (playing) return followPlayback(scrollerRef.current!, staffRef.current!, () => drawingRef.current)
