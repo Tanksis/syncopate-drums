@@ -102,39 +102,26 @@ export function tabListing(id: string): LibraryTab {
 }
 
 /**
- * Which edit commands an example takes: those that move the cursor, select or copy bars, or change
- * mode. Every command that would change its bars, sticking, lead hand or overrides is refused, and
- * so are undo, redo and `.`, since it has no changes to go back over or repeat. A new command must
- * be listed here, so it can't slip past the read-only rule. (Practice settings aren't edit commands.)
+ * Which edit commands an example takes: those that move the cursor, or select or copy bars. Every
+ * command that would change its bars, sticking, lead hand or overrides is refused, and so are undo
+ * and redo, since it has no changes to go back over. A new command must be listed here, so it can't
+ * slip past the read-only rule. (Practice settings aren't edit commands.)
  */
 const EXAMPLE_ACCEPTS: Record<EditCommand['type'], boolean> = {
   move: true,
   moveTo: true,
   moveRow: true,
   jump: true,
-  goToBar: true,
-  moveWord: true,
   selectBars: true,
   copyBars: true,
-  normal: true,
-  insert: true,
-  pending: true,
-  enterFigure: false,
   toggleGridPosition: false,
   setHold: false,
   setBeatGrid: false,
-  toggleTie: false,
-  toggleCutShort: false,
   rest: false,
   addBar: false,
-  openBar: false,
   duplicateBar: false,
   deleteBar: false,
   pasteBars: false,
-  putBars: false,
-  replaceBars: false,
-  repeatChange: false,
-  replaceBeats: false,
   setExerciseSettings: false,
   flipOverride: false,
   resetOverrides: false,

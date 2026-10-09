@@ -2,8 +2,8 @@ import type { PointerEvent } from 'react'
 import { useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { keepFocus } from '@/components/keepFocus'
-import type { BeatView, Figure, GridPoint, PositionState, Row, RowView } from '@/core'
-import { REST_FIGURE, applyEdit, editorBeatViews, inLoopRange } from '@/core'
+import type { BeatView, GridPoint, PositionState, Row, RowView } from '@/core'
+import { applyEdit, editorBeatViews, inLoopRange } from '@/core'
 
 /** A press on a grid position, and (once it moves to another position) the hold end it drags to. */
 interface Press {
@@ -39,9 +39,9 @@ const samePoint = (a: GridPoint | null, b: GridPoint | null) =>
   a?.row === b?.row && a?.bar === b?.bar && a?.beat === b?.beat && a?.position === b?.position
 
 /** How each row is named and coloured: the kick row in its own colour, apart from the snare row's ink. */
-const ROW_LOOK: Record<Row, { name: string; disc: string; hold: string; keycap: string }> = {
-  snare: { name: 'Snare', disc: 'bg-ink', hold: 'bg-ink/70', keycap: 'border-line text-mute' },
-  kick: { name: 'Kick', disc: 'bg-kick', hold: 'bg-kick/70', keycap: 'border-kick/40 text-kick' },
+const ROW_LOOK: Record<Row, { name: string; disc: string; hold: string }> = {
+  snare: { name: 'Snare', disc: 'bg-ink', hold: 'bg-ink/70' },
+  kick: { name: 'Kick', disc: 'bg-kick', hold: 'bg-kick/70' },
 }
 
 /** What each grid position of a beat is counted as: 1 e & a, or 1 trip let. */
@@ -55,11 +55,10 @@ const countLabels = (beat: number, triplet: boolean) =>
  * row's grid positions as big cells (a hit, a hold bar for a note still sounding, or a ghost hit on
  * hover), their count labels, and the kick row's cells under them, as the staff writes hands over
  * feet. Clicking a cell turns a hit on or off in its row; pressing on a note and dragging sets
- * where its hold ends, on into later beats of the bar in the same row (t on the next bar's first
- * beat ties across the barline), shown live and written on release. Clicking elsewhere on a card
- * moves the cursor to it. A card's 16ths | trip switch, or a right-click on it, switches it between
- * the sixteenth and the triplet grid. The cursor's card is outlined with a mark beside its row, and
- * the bar selection and a set loop range are shaded.
+ * where its hold ends, on into later beats of the bar in the same row, shown live and written on
+ * release. Clicking elsewhere on a card moves the cursor to it. A card's 16ths | trip switch, or a
+ * right-click on it, switches it between the sixteenth and the triplet grid. The cursor's card is
+ * outlined with a mark beside its row, and the bar selection and a set loop range are shaded.
  */
 export function BeatStrip() {
   const editor = useAppStore((s) => s.editor)
@@ -196,8 +195,6 @@ export function BeatStrip() {
               >
                 <div className="flex items-center gap-1.5">
                   <span className="text-lg/none font-bold">{beat + 1}</span>
-                  <FigureKey row="snare" figure={view.snare.figure} />
-                  <FigureKey row="kick" figure={view.kick.figure} />
                   <GridSwitch bar={b} beat={beat} triplet={view.triplet} onSwitch={switchGrid} />
                 </div>
                 {rowCells('snare', view.snare, b, beat)}
@@ -215,20 +212,6 @@ export function BeatStrip() {
         </div>
       </div>
     </div>
-  )
-}
-
-/** The key of a row's figure in the beat, as a keycap; none for a rest or a beat no figure writes. */
-function FigureKey({ row, figure }: { row: Row; figure: Figure | undefined }) {
-  if (!figure || figure === REST_FIGURE) return null
-  const key = figure.key.toUpperCase()
-  return (
-    <kbd
-      title={`${ROW_LOOK[row].name} figure key ${key}`}
-      className={`rounded border border-b-2 px-1 font-mono text-[10px]/[14px] ${ROW_LOOK[row].keycap}`}
-    >
-      {key}
-    </kbd>
   )
 }
 

@@ -1,6 +1,27 @@
 import { describe, expect, it } from 'vitest'
 import type { Bar, Cursor, EditorState, ExerciseSettings, KeyPress, Row } from './index'
-import { REST_FIGURE, applyEdit, beatViews, commandForKey, editorBeatViews, loopAt, newEditorState, newExercise, sticking, withBpm, withGroove, withLoopRange, withSwing } from './index'
+import {
+  BEATS_PER_BAR,
+  FIGURES,
+  REST_FIGURE,
+  applyEdit,
+  beatIndex,
+  beatViews,
+  commandForKey,
+  editorBeatViews,
+  loopAt,
+  newEditorState,
+  newExercise,
+  restBar,
+  setBeat,
+  sticking,
+  toggleCutShort,
+  toggleTie,
+  withBpm,
+  withGroove,
+  withLoopRange,
+  withSwing,
+} from './index'
 
 const press = (key: string, mods: Partial<KeyPress> = {}): KeyPress => ({
   key,
@@ -21,13 +42,34 @@ const cursorAt = (bar: number, beat: number, row: Row = 'snare'): Cursor => ({ b
 const keys = (state: EditorState, ...presses: KeyPress[]) =>
   presses.reduce((s, p) => applyEdit(s, commandForKey(p)!), state)
 
-function type(keys: string[], state = newEditorState(newExercise({ id: 'e1', now: 0 }))): EditorState {
-  return keys.reduce((s, key) => {
-    const command = commandForKey(press(key))
-    if (!command) throw new Error(`no command for ${JSON.stringify(key)}`)
-    return applyEdit(s, command)
+const fresh = () => newEditorState(newExercise({ id: 'e1', now: 0 }))
+
+/**
+ * Writes exercises as they were stored before ADR 0009, outside the undo history: each figure key
+ * sets the cursor beat in the cursor row to that figure and moves on a beat, growing the exercise
+ * by a bar of rests past the last beat; `t` ties the cursor beat into the one before it and `.`
+ * cuts it short, without moving. Notes are now entered on the grid only, so this is a fixture.
+ */
+function type(typed: string[], state = fresh()): EditorState {
+  return typed.reduce((s, key) => {
+    const { bar, beat, row } = s.cursor
+    const withBars = (bars: Bar[]) => ({ ...s, exercise: { ...s.exercise, bars } })
+    if (key === 't') return withBars(toggleTie(s.exercise.bars, row, bar, beat))
+    if (key === '.') return withBars(toggleCutShort(s.exercise.bars, row, bar, beat))
+    const figure = key === REST_FIGURE.key ? REST_FIGURE : FIGURES.find((f) => f.key === key)
+    if (!figure) throw new Error(`no figure for ${JSON.stringify(key)}`)
+    let bars = setBeat(s.exercise.bars, row, bar, beat, figure.hits)
+    const last = beat === BEATS_PER_BAR - 1
+    if (last && bar === bars.length - 1) bars = [...bars, restBar()]
+    const cursor = last ? { ...s.cursor, bar: bar + 1, beat: 0 } : { ...s.cursor, beat: beat + 1 }
+    const pendingGrid = s.pendingGrid.filter((i) => i !== beatIndex(bar, beat))
+    return { ...withBars(bars), cursor, pendingGrid }
   }, state)
 }
+
+/** A click on a grid position in the snare row, unless given another. */
+const click = (state: EditorState, bar: number, beat: number, position: number, row: Row = 'snare') =>
+  applyEdit(state, { type: 'toggleGridPosition', row, bar, beat, position })
 
 /** The snare row's beats as the editor shows them, each with the beat's shared grid. */
 const snareViews = (bars: Bar[], tripletBeats?: number[]) =>
@@ -59,43 +101,21 @@ describe('a new exercise', () => {
   })
 })
 
-describe('entering figures', () => {
-  it('moves the cursor on by a beat after each figure', () => {
-    const state = type(['2', '3'])
-    expect(state.cursor).toEqual(cursorAt(0, 2))
-    expect(figureKeys(state)).toEqual(['23  '])
-  })
-
-  it('enters a bar in four keystrokes, then grows the exercise by a bar of rests', () => {
-    const state = type(['2', '3', '7', '-'])
-    expect(figureKeys(state)).toEqual(['237 ', '    '])
-    expect(state.cursor).toEqual(cursorAt(1, 0))
-  })
-
-  it('keeps typing into the next bar', () => {
-    const state = type(['1', '1', '1', '1', '4', 'z'])
-    expect(figureKeys(state)).toEqual(['1111', '4z  '])
-    expect(state.cursor).toEqual(cursorAt(1, 2))
-  })
-
-  it('leaves the rest of the exercise alone', () => {
-    const state = type(['5', '6', '7', '8', '9', '0'])
-    expect(state.exercise).toMatchObject({ id: 'e1', name: 'Untitled', practice: { bpm: 80 } })
-  })
-})
-
 describe('the key map', () => {
-  it('maps the home row to the triplet figures', () => {
-    expect(commandForKey(press('a'))).toEqual({ type: 'enterFigure', hits: 'xxx' })
-    expect(commandForKey(press('S'))).toEqual({ type: 'enterFigure', hits: 'x.x' })
-    expect(commandForKey(press('h'))).toEqual({ type: 'enterFigure', hits: '..x' })
+  it('enters no figures: the number row, the bottom row, the home row and - do nothing (ADR 0009)', () => {
+    for (const key of [...'1234567890zxcvbasdfgh-', 'Z', 'A']) expect(commandForKey(press(key)), key).toBeNull()
   })
 
-  it('maps the number row, the bottom row and - to figures', () => {
-    expect(commandForKey(press('2'))).toEqual({ type: 'enterFigure', hits: 'x.x.' })
-    expect(commandForKey(press('b'))).toEqual({ type: 'enterFigure', hits: 'xx..' })
-    expect(commandForKey(press('B'))).toEqual({ type: 'enterFigure', hits: 'xx..' })
-    expect(commandForKey(press('-'))).toEqual({ type: 'enterFigure', hits: '....' })
+  it('has no tie, cut short, Normal mode or sticking keys: T, ., Esc and Alt+1–4 do nothing', () => {
+    for (const key of ['t', 'T', '.', 'Escape']) expect(commandForKey(press(key)), key).toBeNull()
+    for (const digit of '1234') {
+      expect(commandForKey(press(digit, { altKey: true })), `Alt+${digit}`).toBeNull()
+    }
+  })
+
+  it('has no vim keys', () => {
+    for (const key of [...'hjklwbxpPoOuViaG0$']) expect(commandForKey(press(key)), key).toBeNull()
+    expect(commandForKey(ctrl('r'))).toBeNull()
   })
 
   it('leaves Space to the transport', () => {
@@ -216,7 +236,7 @@ describe('the loop range', () => {
   })
 
   it('undo of a note change leaves a range picked since alone', () => {
-    const typed = type(['1'], newEditorState(five()))
+    const typed = click(newEditorState(five()), 0, 0, 1)
     const relooped = { ...typed, exercise: loopAt(typed.exercise, 4) }
     expect(applyEdit(relooped, { type: 'undo' }).exercise.practice.loopRange).toEqual({ first: 4, last: 4 })
   })
@@ -234,35 +254,24 @@ describe('the loop range', () => {
   })
 })
 
-describe('ties and cut short', () => {
-  const views = (state: EditorState) => snareViews(state.exercise.bars)[state.cursor.bar]
+describe('beats tied or cut short before ADR 0009', () => {
+  const views = (state: EditorState) => snareViews(state.exercise.bars)[0]
+  // Quarters, with beat 2 tied into and beat 3 cut short to an eighth.
+  const stored = () => ({ ...type(['1', '1', '1', '1']), cursor: cursorAt(0, 1) })
+  const old = () => type(['.'], { ...type(['t'], stored()), cursor: cursorAt(0, 2) })
 
-  it('T ties the cursor beat into the one before it, without moving the cursor', () => {
-    const state = { ...type(['1', '1']), cursor: cursorAt(0, 1) }
-    const tied = type(['t'], state)
-    expect(tied.cursor).toEqual(cursorAt(0, 1))
-    expect(views(tied)[1].tiedInto).toBe(true)
-    expect(views(type(['T'], tied))[1].tiedInto).toBe(false)
+  it('keep their tie and cut short through moves and edits elsewhere', () => {
+    expect(views(old())[1].tiedInto).toBe(true)
+    expect(views(old())[2]).toMatchObject({ cutShort: true, figure: { key: '1' } })
+    const edited = keys(click(old(), 0, 3, 2), press('Home'), press('ArrowRight'), press('Tab'))
+    expect(views(edited)[1].tiedInto).toBe(true)
+    expect(views(edited)[2].cutShort).toBe(true)
+    expect(edited.exercise.bars[0].snare.slice(0, 4)).toEqual(old().exercise.bars[0].snare.slice(0, 4))
   })
 
-  it('. cuts the cursor beat short, without moving the cursor', () => {
-    const state = { ...type(['1']), cursor: cursorAt(0, 0) }
-    const cut = type(['.'], state)
-    expect(cut.cursor).toEqual(cursorAt(0, 0))
-    expect(views(cut)[0].cutShort).toBe(true)
-    expect(views(type(['.'], cut))[0].cutShort).toBe(false)
-  })
-
-  it('leaves the state alone when there is nothing to tie or cut', () => {
-    const state = type(['3'])
-    expect(type(['t'], state)).toBe(state)
-    expect(type(['.'], state)).toBe(state)
-  })
-
-  it('maps T and . to the toggles', () => {
-    expect(commandForKey(press('t'))).toEqual({ type: 'toggleTie' })
-    expect(commandForKey(press('T'))).toEqual({ type: 'toggleTie' })
-    expect(commandForKey(press('.'))).toEqual({ type: 'toggleCutShort' })
+  it('a tie inside a bar is undone by dragging the hold back', () => {
+    const untied = applyEdit(old(), { type: 'setHold', from: { row: 'snare', bar: 0, beat: 0, position: 0 }, to: { row: 'snare', bar: 0, beat: 1, position: 0 } })
+    expect(views(untied)[1].tiedInto).toBe(false)
   })
 })
 
@@ -370,7 +379,7 @@ describe('reshaping bars', () => {
   })
 
   // 1111 | 2222 | 2222 | rests, with bar 1's last note held over the bar line into bar 2.
-  const held = () => ({ ...applyEdit({ ...type('111122222222'.split('')), cursor: cursorAt(1, 0) }, { type: 'toggleTie' }) })
+  const held = () => ({ ...type(['t'], { ...type('111122222222'.split('')), cursor: cursorAt(1, 0) }) })
 
   it('cuts a tie that would run into an added bar or a bar moved up by a delete', () => {
     expect(tiedInto(held())).toEqual(['----', '⌒---', '----', '----'])
@@ -445,11 +454,13 @@ describe('selecting, copying and pasting bars', () => {
 describe('undo and redo', () => {
   const undo = ctrl('z')
   const redo = ctrl('Z', { shiftKey: true })
+  /** Clicks on the downbeats of beats 1, 2 and 3. */
+  const clicked = () => click(click(click(fresh(), 0, 0, 0), 0, 1, 0), 0, 2, 0)
 
   it('Ctrl+Z undoes each change in turn, putting the cursor back', () => {
-    const state = keys(type(['1', '2', '3']), undo)
-    expect(figureKeys(state)).toEqual(['12  '])
-    expect(state.cursor).toEqual(cursorAt(0, 2))
+    const state = keys(clicked(), undo)
+    expect(figureKeys(state)).toEqual(['11  '])
+    expect(state.cursor).toEqual(cursorAt(0, 1))
     expect(figureKeys(keys(state, undo, undo))).toEqual(['    '])
   })
 
@@ -467,22 +478,21 @@ describe('undo and redo', () => {
   })
 
   it('Ctrl+Shift+Z redoes what was undone, until a new change', () => {
-    const typed = type(['1', '2', '3'])
-    const state = keys(typed, undo, undo, redo)
-    expect(figureKeys(state)).toEqual(['12  '])
-    expect(figureKeys(keys(state, redo))).toEqual(['123 '])
-    const changed = type(['5'], state)
+    const state = keys(clicked(), undo, undo, redo)
+    expect(figureKeys(state)).toEqual(['11  '])
+    expect(figureKeys(keys(state, redo))).toEqual(['111 '])
+    const changed = click(state, 0, 3, 0)
     expect(keys(changed, redo).exercise).toBe(changed.exercise)
   })
 
-  it('covers ties, cut short, rests and bar changes, but not moves', () => {
-    const start = { ...type(['1', '1']), cursor: cursorAt(0, 1) }
+  it('covers rests and bar changes, but not moves', () => {
+    const start = { ...type(['2', '2']), cursor: cursorAt(0, 1) }
     const moves = ['ArrowLeft', 'ArrowRight']
-    const steps = ['t', 'ArrowLeft', '.', 'Backspace', 'ArrowRight', 'Delete'].map((k) => press(k)).concat([ctrl('Enter'), ctrl('d')])
+    const steps = ['Backspace', 'ArrowRight', 'Delete'].map((k) => press(k)).concat([ctrl('Enter'), ctrl('d')])
     const edited = keys(start, ...steps)
     const undone = keys(edited, ...steps.filter((p) => !moves.includes(p.key)).map(() => undo))
     expect(undone.exercise.bars).toEqual(start.exercise.bars)
-    expect(figureKeys(keys(undone, undo))).toEqual(['1   '])
+    expect(keys(undone, undo).exercise).toBe(undone.exercise)
   })
 
   it('a rest over a rest is not a change', () => {
@@ -493,8 +503,8 @@ describe('undo and redo', () => {
   it('with nothing to undo or redo, nothing changes', () => {
     const state = type(['1'])
     expect(keys(state, redo).exercise).toBe(state.exercise)
-    const fresh = newEditorState(newExercise({ id: 'e1', now: 0 }))
-    expect(keys(fresh, undo).exercise).toBe(fresh.exercise)
+    const empty = fresh()
+    expect(keys(empty, undo).exercise).toBe(empty.exercise)
   })
 })
 
@@ -503,7 +513,7 @@ describe('sticking settings', () => {
     applyEdit(state, { type: 'setExerciseSettings', settings })
 
   it('change the exercise, each as one undoable step', () => {
-    const start = type(['1', '2'])
+    const start = click(fresh(), 0, 0, 0)
     const edited = set(set(start, { sticking: 'alternate' }), { leadHand: 'L' })
     expect(edited.exercise).toMatchObject({ sticking: 'alternate', leadHand: 'L' })
     expect(edited.exercise.bars).toBe(start.exercise.bars)
@@ -522,73 +532,68 @@ describe('sticking settings', () => {
 })
 
 describe('sticking overrides', () => {
-  const alt = (key: string) => press(key, { altKey: true })
+  /** Flips the note at that tick of bar 1, as a click on its hand does. */
+  const flip = (state: EditorState, ...ticks: number[]) =>
+    ticks.reduce((s, tick) => applyEdit(s, { type: 'flipOverride', note: { id: `0:${tick}` } }), state)
   /** The shown hands in order, with `-` for a note that shows none. */
   const hands = (state: EditorState) => sticking(state.exercise).map((n) => n.shown ?? '-').join('')
   const overrides = (state: EditorState) => sticking(state.exercise).map((n) => n.override ?? '-').join('')
   /** Types the keys into a new exercise under natural sticking. */
   const typeNatural = (keys: string[]) => type(keys, newEditorState({ ...newExercise({ id: 'e1', now: 0 }), sticking: 'natural' }))
-  /** `x.x.` `xxxx`, cursor on the sixteenths. */
+  /** `x.x.` `xxxx`, cursor on the sixteenths, whose notes start at ticks 12, 15, 18 and 21. */
   const start = () => ({ ...typeNatural(['2', '4']), cursor: cursorAt(0, 1) })
 
-  it('Alt+1–4 flips the 1st–4th struck note of the cursor beat, leaving the others alone', () => {
+  it('a flip sets the opposite hand on that note, leaving the others alone', () => {
     expect(hands(start())).toBe('RL' + 'RLRL')
-    expect(hands(keys(start(), alt('2')))).toBe('RL' + 'RRRL')
-    expect(hands(keys(start(), alt('1'), alt('4')))).toBe('RL' + 'LLRR')
+    expect(hands(flip(start(), 15))).toBe('RL' + 'RRRL')
+    expect(hands(flip(start(), 12, 21))).toBe('RL' + 'LLRR')
   })
 
   it('flipping an overridden note again clears its override', () => {
-    expect(overrides(keys(start(), alt('2'), alt('2')))).toBe('------')
-    expect(hands(keys(start(), alt('2'), alt('2')))).toBe('RL' + 'RLRL')
+    expect(overrides(flip(start(), 15, 15))).toBe('------')
+    expect(hands(flip(start(), 15, 15))).toBe('RL' + 'RLRL')
   })
 
-  it('a click flips the note by its id, wherever the cursor is', () => {
-    const state = applyEdit(start(), { type: 'flipOverride', note: { id: '0:6' } })
+  it('flips the note by its id, wherever the cursor is', () => {
+    const state = flip(start(), 6)
     expect(hands(state)).toBe('RR' + 'RLRL')
     expect(state.cursor).toEqual(cursorAt(0, 1))
   })
 
-  it('counts struck notes only, and does nothing past the last one', () => {
-    // `.xxx` then a tie into `x.x.`: the beat's first struck note is the one after the tie.
-    const state = { ...keys(typeNatural(['9', '2']), press('ArrowLeft'), press('t')), cursor: cursorAt(0, 1) }
-    expect(hands(keys(state, alt('1')))).toBe('LRL' + 'R')
-    expect(keys(state, alt('2'))).toBe(state)
-  })
-
-  it('Alt+1–4 works by the physical key too, as on a Mac where Alt types another character', () => {
-    expect(commandForKey(press('¡', { altKey: true, code: 'Digit1' }))).toEqual({ type: 'flipOverride', note: { index: 0 } })
-    expect(commandForKey(press('3', { altKey: true }))).toEqual({ type: 'flipOverride', note: { index: 2 } })
+  it('does nothing for a note that is not there', () => {
+    const state = start()
+    expect(flip(state, 3)).toBe(state)
   })
 
   it('each flip is one undoable step', () => {
-    const flipped = keys(start(), alt('1'), alt('2'))
+    const flipped = flip(start(), 12, 15)
     expect(overrides(keys(flipped, ctrl('z')))).toBe('--' + 'L---')
     expect(overrides(keys(flipped, ctrl('z'), ctrl('z')))).toBe('------')
     expect(overrides(keys(flipped, ctrl('z'), ctrl('Z', { shiftKey: true })))).toBe('--' + 'LR--')
   })
 
   it('survives re-entering a neighbouring beat and a duration change on its own note', () => {
-    const flipped = keys(start(), alt('3'))
+    const flipped = flip(start(), 18)
     // Re-entering beat 1 as straight sixteenths.
-    const neighbour = keys({ ...flipped, cursor: cursorAt(0, 0) }, press('4'))
+    const neighbour = type(['4'], { ...flipped, cursor: cursorAt(0, 0) })
     expect(overrides(neighbour)).toBe('----' + '--L-')
     // `xxxx` → `x...`: the overridden first sixteenth becomes a quarter.
-    const longer = keys({ ...keys(start(), alt('1')), cursor: cursorAt(0, 1) }, press('1'))
+    const longer = type(['1'], { ...flip(start(), 12), cursor: cursorAt(0, 1) })
     expect(snareViews(longer.exercise.bars)[0][1].hits).toBe('x...')
     expect(overrides(longer)).toBe('--' + 'L')
   })
 
   it('is dropped when its beat becomes a rest', () => {
-    const flipped = keys(start(), alt('2'))
+    const flipped = flip(start(), 15)
     const rested = keys({ ...flipped, cursor: cursorAt(0, 1) }, press('Delete'))
     expect(overrides(rested)).toBe('--')
-    expect(overrides(keys({ ...rested, cursor: cursorAt(0, 1) }, press('4')))).toBe('------')
+    expect(overrides(type(['4'], { ...rested, cursor: cursorAt(0, 1) }))).toBe('------')
   })
 
   it('is kept across mode switches, and hidden but kept with sticking off', () => {
     const set = (state: EditorState, settings: Partial<ExerciseSettings>) =>
       applyEdit(state, { type: 'setExerciseSettings', settings })
-    const flipped = keys(start(), alt('2'))
+    const flipped = flip(start(), 15)
     const alternate = set(flipped, { sticking: 'alternate' })
     expect(overrides(alternate)).toBe('--' + '-R--')
     expect(hands(set(flipped, { sticking: 'off' }))).toBe('------')
@@ -598,12 +603,11 @@ describe('sticking overrides', () => {
 
   it('cannot be flipped while sticking is hidden', () => {
     const off = applyEdit(start(), { type: 'setExerciseSettings', settings: { sticking: 'off' } })
-    expect(keys(off, alt('1'))).toBe(off)
-    expect(applyEdit(off, { type: 'flipOverride', note: { id: '0:0' } })).toBe(off)
+    expect(flip(off, 0)).toBe(off)
   })
 
   it('reset clears every override in one undoable step, and is not a change with none set', () => {
-    const flipped = keys(start(), alt('1'), alt('4'), press('ArrowLeft'), alt('2'))
+    const flipped = flip(start(), 12, 21, 6)
     expect(overrides(flipped)).toBe('-R' + 'L--R')
     const reset = applyEdit(flipped, { type: 'resetOverrides' })
     expect(overrides(reset)).toBe('------')
@@ -612,241 +616,7 @@ describe('sticking overrides', () => {
   })
 })
 
-/**
- * Types keys through the key map in whatever mode the editor is in, as vim writes them: one
- * character per key, with `<Esc>`, `<BS>`, `<Del>`, `<Left>`… and `<C-r>` for Ctrl+R.
- */
-function vim(state: EditorState, typed: string, { vimKeys = true } = {}): EditorState {
-  const named: Record<string, string> = { Esc: 'Escape', BS: 'Backspace', Del: 'Delete', Left: 'ArrowLeft', Right: 'ArrowRight' }
-  const presses = [...typed.matchAll(/<(C-)?(\w+)>|./g)].map(([char, ctrlMod, name]) => {
-    if (!name) return press(char, { shiftKey: char !== char.toLowerCase() || '$?'.includes(char) })
-    return press(named[name] ?? name, { ctrlKey: !!ctrlMod })
-  })
-  return presses.reduce((s, p) => {
-    const command = commandForKey(p, { ...s, vimKeys })
-    return command ? applyEdit(s, command) : s
-  }, state)
-}
-
-describe('vim modes', () => {
-  const fresh = () => newEditorState(newExercise({ id: 'e1', now: 0 }))
-
-  it('opens in Insert mode; Esc goes to Normal mode, stepping back onto the last beat typed', () => {
-    expect(fresh().mode).toBe('insert')
-    const state = vim(fresh(), '123<Esc>')
-    expect(state.mode).toBe('normal')
-    expect(state.cursor).toEqual(cursorAt(0, 2))
-  })
-
-  it('i returns to Insert on the cursor beat, a on the beat after it', () => {
-    const normal = vim(fresh(), '123<Esc>')
-    expect(vim(normal, 'i')).toMatchObject({ mode: 'insert', cursor: cursorAt(0, 2) })
-    expect(vim(normal, 'a')).toMatchObject({ mode: 'insert', cursor: cursorAt(0, 3) })
-    expect(figureKeys(vim(normal, 'a4'))).toEqual(['1234', '    '])
-  })
-
-  it('figure keys do not enter figures in Normal mode', () => {
-    const normal = vim(fresh(), '1<Esc>')
-    expect(vim(normal, '2').exercise).toBe(normal.exercise)
-  })
-
-  it('with vim keys off there is no Normal mode: Esc does nothing', () => {
-    const state = vim(fresh(), '12<Esc>3', { vimKeys: false })
-    expect(state.mode).toBe('insert')
-    expect(figureKeys(state)).toEqual(['123 '])
-  })
-
-  it('with vim keys off the arrows, Backspace, Delete and Ctrl shortcuts still work', () => {
-    const state = vim(fresh(), '1234<Left><Left><BS><Del><C-Enter>', { vimKeys: false })
-    expect(figureKeys(state)).toEqual(['1  4', '    ', '    '])
-    expect(figureKeys(vim(state, '<C-z>', { vimKeys: false }))).toEqual(['1  4', '    '])
-  })
-})
-
-describe('vim Normal mode', () => {
-  // Bars 1111 | 2222 | 3333 | 4444 | rests, in Normal mode with the cursor on bar 2, beat 3.
-  const four = (cursor = cursorAt(1, 2)) => ({ ...vim(type('1111222233334444'.split('')), '<Esc>'), cursor })
-
-  it('h/l move by beat and w/b by bar, a beat being a character and a bar a word', () => {
-    expect(vim(four(), 'l').cursor).toEqual(cursorAt(1, 3))
-    expect(vim(four(), 'll').cursor).toEqual(cursorAt(2, 0))
-    expect(vim(four(), 'h').cursor).toEqual(cursorAt(1, 1))
-    expect(vim(four(), 'w').cursor).toEqual(cursorAt(2, 0))
-    expect(vim(four(), 'b').cursor).toEqual(cursorAt(1, 0))
-    expect(vim(four(), 'bb').cursor).toEqual(cursorAt(0, 0))
-    expect(vim(four(cursorAt(4, 1)), 'w').cursor).toEqual(cursorAt(4, 3))
-  })
-
-  it('0/$ go to the first and last beat of the bar, gg/G to the start and end of the exercise', () => {
-    expect(vim(four(), '0').cursor).toEqual(cursorAt(1, 0))
-    expect(vim(four(), '$').cursor).toEqual(cursorAt(1, 3))
-    expect(vim(four(), 'gg').cursor).toEqual(cursorAt(0, 0))
-    expect(vim(four(), 'G').cursor).toEqual(cursorAt(4, 3))
-  })
-
-  it('takes a count before a move, and before G to go to that bar', () => {
-    expect(vim(four(), '3l').cursor).toEqual(cursorAt(2, 1))
-    expect(vim(four(), '2w').cursor).toEqual(cursorAt(3, 0))
-    expect(vim(four(), '10h').cursor).toEqual(cursorAt(0, 0))
-    expect(vim(four(), '3G').cursor).toEqual(cursorAt(2, 0))
-    expect(vim(four(), '4gg').cursor).toEqual(cursorAt(3, 0))
-  })
-
-  it('x turns the cursor beat into a rest, and a count of beats from it, leaving the cursor', () => {
-    expect(figureKeys(vim(four(), 'x'))).toEqual(['1111', '22 2', '3333', '4444', '    '])
-    const state = vim(four(), '3x')
-    expect(figureKeys(state)).toEqual(['1111', '22  ', ' 333', '4444', '    '])
-    expect(state.cursor).toEqual(cursorAt(1, 2))
-    expect(figureKeys(vim(state, 'u'))).toEqual(['1111', '2222', '3333', '4444', '    '])
-  })
-
-  it('dd deletes the cursor bar; 2dd two bars, and u restores both', () => {
-    expect(figureKeys(vim(four(), 'dd'))).toEqual(['1111', '3333', '4444', '    '])
-    const state = vim(four(), '2dd')
-    expect(figureKeys(state)).toEqual(['1111', '4444', '    '])
-    expect(state.cursor).toEqual(cursorAt(1, 2))
-    const undone = vim(state, 'u')
-    expect(figureKeys(undone)).toEqual(['1111', '2222', '3333', '4444', '    '])
-    expect(undone.cursor).toEqual(cursorAt(1, 2))
-    expect(figureKeys(vim(undone, '<C-r>'))).toEqual(['1111', '4444', '    '])
-  })
-
-  it('yy then p puts the bar after the cursor bar, P before it', () => {
-    const start = four()
-    const yanked = vim(start, 'yy')
-    expect(yanked.exercise).toBe(start.exercise)
-    const after = vim(yanked, 'wwp')
-    expect(figureKeys(after)).toEqual(['1111', '2222', '3333', '4444', '2222', '    '])
-    expect(after.cursor).toEqual(cursorAt(4, 0))
-    expect(figureKeys(vim(yanked, 'P'))).toEqual(['1111', '2222', '2222', '3333', '4444', '    '])
-  })
-
-  it('2yy yanks two bars, and 3p puts them three times', () => {
-    const state = vim(four(cursorAt(0, 0)), '2yyG3p')
-    expect(figureKeys(state)).toEqual(['1111', '2222', '3333', '4444', '    ', '1111', '2222', '1111', '2222', '1111', '2222'])
-    expect(figureKeys(vim(state, 'u'))).toEqual(['1111', '2222', '3333', '4444', '    '])
-  })
-
-  it('p with nothing yanked does nothing', () => {
-    const state = four()
-    expect(vim(state, 'p').exercise).toBe(state.exercise)
-  })
-
-  it('o/O open a bar of rests below or above the cursor bar, in Insert mode', () => {
-    const below = vim(four(), 'o')
-    expect(figureKeys(below)).toEqual(['1111', '2222', '    ', '3333', '4444', '    '])
-    expect(below).toMatchObject({ mode: 'insert', cursor: cursorAt(2, 0) })
-    const above = vim(four(), 'O5')
-    expect(figureKeys(above)).toEqual(['1111', '5   ', '2222', '3333', '4444', '    '])
-    expect(above.mode).toBe('insert')
-  })
-
-  it('r and a figure key replace the cursor beat, leaving the cursor and the mode', () => {
-    const state = vim(four(), 'r5')
-    expect(figureKeys(state)).toEqual(['1111', '2252', '3333', '4444', '    '])
-    expect(state).toMatchObject({ mode: 'normal', cursor: cursorAt(1, 2) })
-    expect(figureKeys(vim(four(), 'r-'))).toEqual(['1111', '22 2', '3333', '4444', '    '])
-    expect(figureKeys(vim(four(), '2ra'))).toEqual(['1111', '22aa', '3333', '4444', '    '])
-    const start = four()
-    expect(vim(start, 'rq').exercise).toBe(start.exercise)
-  })
-
-  it('. repeats the last change where the cursor is now, with its count unless given another', () => {
-    expect(figureKeys(vim(four(), 'dd.'))).toEqual(['1111', '4444', '    '])
-    expect(figureKeys(vim(four(), 'r5l.'))).toEqual(['1111', '2255', '3333', '4444', '    '])
-    expect(figureKeys(vim(four(cursorAt(0, 0)), '2xw.'))).toEqual(['  11', '  22', '3333', '4444', '    '])
-    expect(figureKeys(vim(four(cursorAt(0, 0)), 'xw3.'))).toEqual([' 111', '   2', '3333', '4444', '    '])
-  })
-
-  it('. does not repeat moves, yanks or undo, and is one undoable step', () => {
-    const state = vim(four(), 'ddlyyu.')
-    expect(figureKeys(state)).toEqual(['1111', '3333', '4444', '    '])
-    expect(figureKeys(vim(state, 'u'))).toEqual(['1111', '2222', '3333', '4444', '    '])
-    const nothing = vim(newEditorState(four().exercise), '<Esc>')
-    expect(vim(nothing, '.').exercise).toBe(nothing.exercise)
-  })
-
-  it('. repeats a figure typed in Insert mode', () => {
-    const state = vim(type(['1', '2']), '<Esc>0.')
-    expect(figureKeys(state)).toEqual(['22  '])
-  })
-
-  it('. repeats a typed figure in place, as r does: no change on the beat just typed, then stamps with a count', () => {
-    const typed = vim(type(['1', '2']), '<Esc>')
-    const again = vim(typed, '.')
-    expect(again.exercise).toBe(typed.exercise)
-    expect(again.cursor).toEqual(cursorAt(0, 1))
-    expect(figureKeys(vim(typed, 'l2.'))).toEqual(['1222'])
-  })
-
-  it('a counted G or gg extends the selection', () => {
-    expect(vim(four(cursorAt(0, 0)), 'V3G').selection).toEqual({ first: 0, last: 2 })
-    expect(vim(four(cursorAt(3, 0)), 'V2gg').selection).toEqual({ first: 1, last: 3 })
-  })
-
-  it('V selects the cursor bar, moves extend the selection, and y yanks it and ends it', () => {
-    const selecting = vim(four(), 'Vw')
-    expect(selecting.selection).toEqual({ first: 1, last: 2 })
-    expect(selecting.mode).toBe('normal')
-    const yanked = vim(selecting, 'y')
-    expect(yanked.selection).toBeNull()
-    expect(figureKeys(vim(yanked, 'Gp'))).toEqual(['1111', '2222', '3333', '4444', '    ', '2222', '3333'])
-  })
-
-  it('V then d (or x) deletes the selected bars', () => {
-    expect(figureKeys(vim(four(), 'Vwd'))).toEqual(['1111', '4444', '    '])
-    expect(figureKeys(vim(four(), 'Vbx'))).toEqual(['1111', '3333', '4444', '    '])
-  })
-
-  it('V then p replaces the selected bars with the yanked ones', () => {
-    const state = vim(four(cursorAt(0, 0)), 'yywVwp')
-    expect(figureKeys(state)).toEqual(['1111', '1111', '4444', '    '])
-    expect(state.selection).toBeNull()
-    expect(figureKeys(vim(state, 'u'))).toEqual(['1111', '2222', '3333', '4444', '    '])
-  })
-
-  it('Esc or V again ends the selection, staying in Normal mode', () => {
-    expect(vim(four(), 'Vw<Esc>')).toMatchObject({ selection: null, mode: 'normal', cursor: cursorAt(2, 0) })
-    expect(vim(four(), 'VwV').selection).toBeNull()
-  })
-
-  it('the arrows, Backspace, Delete, Ctrl shortcuts and Alt+1–4 work in Normal mode too', () => {
-    const context = { ...four(), vimKeys: true }
-    expect(commandForKey(press('ArrowRight'), context)).toEqual({ type: 'move', by: 'beat', step: 1 })
-    expect(commandForKey(press('Backspace'), context)).toEqual({ type: 'rest', stepBack: true })
-    expect(commandForKey(press('Delete'), context)).toEqual({ type: 'rest', stepBack: false })
-    expect(commandForKey(ctrl('d'), context)).toEqual({ type: 'duplicateBar' })
-    expect(commandForKey(ctrl('z'), context)).toEqual({ type: 'undo' })
-    expect(commandForKey(press('1', { altKey: true }), context)).toEqual({ type: 'flipOverride', note: { index: 0 } })
-    // Ctrl+Space is left to the transport.
-    expect(commandForKey(ctrl(' '), context)).toBeNull()
-  })
-
-  it('Ctrl+R redoes only in Normal mode, leaving it to the browser in Insert mode', () => {
-    expect(commandForKey(ctrl('r'), { ...four(), vimKeys: true })).toEqual({ type: 'redo', count: 1 })
-    expect(commandForKey(ctrl('r'))).toBeNull()
-  })
-
-  it('reads Shift and a letter as the capital, even when the key comes unshifted', () => {
-    expect(commandForKey(press('g', { shiftKey: true }), { ...four(), vimKeys: true })).toEqual({ type: 'jump', to: 'end' })
-  })
-
-  it('Esc drops the keys pending', () => {
-    expect(vim(four(), '2d<Esc>').pending).toBe('')
-    expect(figureKeys(vim(four(), '2d<Esc>d'))).toEqual(figureKeys(four()))
-  })
-
-  it('a key that completes no command drops the keys pending', () => {
-    const state = vim(four(), '3q')
-    expect(state.pending).toBe('')
-    expect(vim(state, 'l').cursor).toEqual(cursorAt(1, 3))
-  })
-})
-
 describe('clicking grid positions', () => {
-  const click = (state: EditorState, bar: number, beat: number, position: number) =>
-    applyEdit(state, { type: 'toggleGridPosition', row: 'snare', bar, beat, position })
-  const fresh = () => newEditorState(newExercise({ id: 'e1', now: 0 }))
 
   it('clicks several positions in one beat, the cursor moving to that beat without advancing', () => {
     const state = click(click(fresh(), 0, 2, 2), 0, 2, 0)
@@ -860,25 +630,12 @@ describe('clicking grid positions', () => {
     expect(figureKeys(keys(state, ctrl('z'), ctrl('z')))).toEqual(['    '])
   })
 
-  it('works in Insert and Normal mode without changing the mode', () => {
-    expect(click(fresh(), 0, 0, 0).mode).toBe('insert')
-    const clicked = click(vim(fresh(), '<Esc>'), 0, 3, 0)
-    expect(clicked.mode).toBe('normal')
-    expect(figureKeys(clicked)).toEqual(['   1'])
-  })
-
-  it('is not the change . repeats', () => {
-    const clicked = click(vim(fresh(), '2<Esc>'), 0, 2, 3)
-    const repeated = vim({ ...clicked, cursor: cursorAt(0, 1) }, '.')
-    expect(figureKeys(repeated)).toEqual(['22x '])
-  })
-
   it('removes the & of an eighth pair, giving a quarter', () => {
     expect(figureKeys(click(type(['2']), 0, 0, 2))).toEqual(['1   '])
   })
 
   it('strikes the downbeat of a tied-into beat again', () => {
-    const tied = keys(type(['1', '1']), press('ArrowLeft'), press('t'))
+    const tied = type(['t'], { ...type(['1', '1']), cursor: cursorAt(0, 1) })
     expect(snareViews(tied.exercise.bars)[0][1].tiedInto).toBe(true)
     const struck = click(tied, 0, 1, 0)
     expect(snareViews(struck.exercise.bars)[0][1]).toMatchObject({ tiedInto: false, figure: { key: '1' } })
@@ -890,23 +647,16 @@ describe('dragging a hold', () => {
     applyEdit(state, { type: 'setHold', from: { row: 'snare', bar, beat, position }, to: { row: 'snare', bar, beat, position: end } })
   const text = (state: EditorState) => snareViews(state.exercise.bars)[0].map((v) => v.positions.map((p) => p[0]).join(''))
 
-  it('sets the hold, moving the cursor to the beat without advancing or changing the mode', () => {
-    const state = drag(vim(type(['2', '2']), '<Esc>'), 0, 0, 0, 1)
+  it('sets the hold, moving the cursor to the beat without advancing', () => {
+    const state = drag(type(['2', '2']), 0, 0, 0, 1)
     expect(text(state)[0]).toBe('hehh')
     expect(state.cursor).toEqual(cursorAt(0, 0))
-    expect(state.mode).toBe('normal')
-    expect(drag(type(['2', '2']), 0, 1, 2, 3).mode).toBe('insert')
   })
 
   it('is one undo step', () => {
     const state = drag(drag(type(['2']), 0, 0, 2, 3), 0, 0, 0, 1)
     expect(text(keys(state, ctrl('z')))[0]).toBe('hhhe')
     expect(text(keys(state, ctrl('z'), ctrl('z')))[0]).toBe('hhhh')
-  })
-
-  it('is not the change . repeats', () => {
-    const dragged = drag(vim(type(['4', '4']), '<Esc>'), 0, 0, 0, 1)
-    expect(dragged.lastChange).toEqual(vim(type(['4', '4']), '<Esc>').lastChange)
   })
 
   it('records nothing when the drag changes nothing', () => {
@@ -916,13 +666,9 @@ describe('dragging a hold', () => {
     expect(dragged.cursor).toEqual(cursorAt(0, 0))
   })
 
-  it('a figure key over a beat with custom holds resets them', () => {
-    const custom = drag(type(['2']), 0, 0, 0, 1)
-    expect(snareViews(custom.exercise.bars)[0][0].figure).toBeUndefined()
-    const retyped = type(['2'], { ...custom, cursor: cursorAt(0, 0) })
-    expect(figureKeys(retyped)).toEqual(['2   '])
-    const replaced = vim({ ...custom, cursor: cursorAt(0, 0) }, '<Esc>r2')
-    expect(figureKeys(replaced)).toEqual(['2   '])
+  it('cuts a note short when dragged to one grid position, as the old cut short did', () => {
+    const cut = drag(type(['1']), 0, 0, 0, 1)
+    expect(text(cut)[0]).toBe('heee')
   })
 
   it('drags on the pending triplet grid, which the beat then keeps on its own', () => {
@@ -952,9 +698,6 @@ describe('dragging a hold', () => {
 describe('switching a beat between the sixteenth and triplet grid', () => {
   const grid = (state: EditorState, bar: number, beat: number, triplet: boolean) =>
     applyEdit(state, { type: 'setBeatGrid', bar, beat, triplet })
-  const click = (state: EditorState, bar: number, beat: number, position: number) =>
-    applyEdit(state, { type: 'toggleGridPosition', row: 'snare', bar, beat, position })
-  const fresh = () => newEditorState(newExercise({ id: 'e1', now: 0 }))
   const view = (state: EditorState, bar: number, beat: number) => editorSnareViews(state)[bar][beat]
 
   it('puts an empty beat on the triplet grid, with three empty positions', () => {
@@ -975,7 +718,7 @@ describe('switching a beat between the sixteenth and triplet grid', () => {
     expect(snareViews(state.exercise.bars)[0][1]).toMatchObject({ triplet: false, figure: { key: '1' } })
   })
 
-  it('shows no sixteenth figure for a beat on the pending grid, for the palette to light', () => {
+  it('shows no sixteenth figure for a beat on the pending grid', () => {
     const empty = grid(fresh(), 0, 1, true)
     expect(view(empty, 0, 1).figure).toBeUndefined()
     const downbeat = click(empty, 0, 1, 0)
@@ -993,15 +736,13 @@ describe('switching a beat between the sixteenth and triplet grid', () => {
   })
 
   it('keeps a tie into the beat', () => {
-    const tied = keys(type(['1', '2']), press('ArrowLeft'), press('t'))
+    const tied = type(['t'], { ...type(['1', '2']), cursor: cursorAt(0, 1) })
     const state = grid(tied, 0, 1, true)
     expect(view(state, 0, 1)).toMatchObject({ triplet: true, tiedInto: true, positions: ['hold', 'hold', 'hold'] })
   })
 
-  it('moves the cursor to the beat without advancing, keeping the mode', () => {
-    const state = grid(vim(fresh(), '<Esc>'), 0, 2, true)
-    expect(state.cursor).toEqual(cursorAt(0, 2))
-    expect(state.mode).toBe('normal')
+  it('moves the cursor to the beat without advancing', () => {
+    expect(grid(fresh(), 0, 2, true).cursor).toEqual(cursorAt(0, 2))
   })
 
   it('makes each switch one undo step, the pending grid with it', () => {
@@ -1016,23 +757,18 @@ describe('switching a beat between the sixteenth and triplet grid', () => {
   })
 
   it('is no change when the beat is already on that grid', () => {
-    const state = grid(type(['a']), 0, 0, true)
-    expect(state.history.undo).toHaveLength(1)
+    const state = type(['a'])
+    expect(grid(state, 0, 0, true).exercise).toBe(state.exercise)
+    expect(grid(state, 0, 0, true).history.undo).toHaveLength(0)
     expect(grid(fresh(), 0, 0, false).history.undo).toHaveLength(0)
-  })
-
-  it('is not the change . repeats', () => {
-    const switched = grid(vim(fresh(), '2<Esc>'), 0, 2, true)
-    const repeated = vim({ ...switched, cursor: cursorAt(0, 1) }, '.')
-    expect(figureKeys(repeated)).toEqual(['22  '])
   })
 
   it('leaves the pending grid when the beat changes by any other command, not when another beat does', () => {
     const pending = grid(type(['1', '1']), 0, 1, true)
     expect(view(pending, 0, 1).triplet).toBe(true)
-    expect(view(keys(pending, press('t')), 0, 1).triplet).toBe(false)
-    expect(view(keys(pending, press('ArrowRight'), press('2')), 0, 1).triplet).toBe(true)
-    expect(view(keys(pending, press('1')), 0, 1).triplet).toBe(false)
+    expect(view(keys({ ...pending, cursor: cursorAt(0, 1) }, press('Delete')), 0, 1).triplet).toBe(false)
+    expect(view(keys({ ...pending, cursor: cursorAt(0, 2) }, press('Delete')), 0, 1).triplet).toBe(true)
+    expect(view(keys({ ...pending, cursor: cursorAt(0, 0) }, press('Delete')), 0, 1).triplet).toBe(true)
   })
 
   it('goes back on the triplet grid when the last triplet off the downbeat is clicked off', () => {
@@ -1085,9 +821,6 @@ describe('the kick row (ADR 0005)', () => {
     const kicks = kickHits(state)[0]
     expect(kickHits(keys(state, ctrl('d')))).toEqual([kicks, kicks, '.... .... .... ....'])
     expect(kickHits(keys(state, ctrl('c'), press('ArrowDown'), ctrl('v')))).toEqual([kicks, kicks])
-    const yanked = vim(state, '<Esc>yyp')
-    expect(kickHits(yanked)).toEqual([kicks, kicks, '.... .... .... ....'])
-    expect(figureKeys(yanked)).toEqual(['1234', '1234', '    '])
     expect(kickHits(keys(state, ctrl('Backspace')))).toEqual(['.... .... .... ....'])
   })
 
@@ -1111,89 +844,34 @@ describe('the kick row (ADR 0005)', () => {
 })
 
 describe("the cursor's row", () => {
-  const fresh = () => newEditorState(newExercise({ id: 'e1', now: 0 }))
   /** Each bar's kick row, as hits per beat. */
   const kickHits = (state: EditorState) => editorBeatViews(state).map((bar) => bar.map((v) => v.kick.hits).join(' '))
 
-  it('starts in the snare row; Tab moves to the other row in either mode', () => {
+  it('starts in the snare row; Tab moves to the other row', () => {
     expect(fresh().cursor.row).toBe('snare')
     const tabbed = keys(fresh(), press('Tab'))
     expect(tabbed.cursor).toEqual(cursorAt(0, 0, 'kick'))
     expect(keys(tabbed, press('Tab')).cursor.row).toBe('snare')
-    expect(vim(fresh(), '<Esc><Tab>').cursor.row).toBe('kick')
-    expect(vim(fresh(), '<Esc><Tab><Tab>').cursor.row).toBe('snare')
-  })
-
-  it('j moves down to the kick row and k up to the snare row in Normal mode', () => {
-    const down = vim(fresh(), '<Esc>j')
-    expect(down.cursor.row).toBe('kick')
-    expect(vim(down, 'j').cursor.row).toBe('kick')
-    expect(vim(down, 'k').cursor.row).toBe('snare')
-    expect(vim(down, 'kk').cursor.row).toBe('snare')
   })
 
   it('undo takes the cursor back to the row of the change, and redo to where undo left it', () => {
-    const state = keys(fresh(), press('Tab'), press('2'), press('Tab'))
+    const state = keys(click(fresh(), 0, 1, 0, 'kick'), press('Tab'), press('ArrowRight'))
     const undone = keys(state, ctrl('z'))
-    expect(undone.cursor).toEqual(cursorAt(0, 0, 'kick'))
+    expect(undone.cursor).toEqual(cursorAt(0, 0, 'snare'))
     expect(kickHits(undone)[0]).toBe('.... .... .... ....')
-    expect(keys(undone, ctrl('z', { shiftKey: true })).cursor).toEqual(cursorAt(0, 1, 'snare'))
+    expect(keys(undone, ctrl('z', { shiftKey: true })).cursor).toEqual(cursorAt(0, 2, 'snare'))
   })
 
-  it('Tab and j / k keep a bar selection in Normal mode', () => {
-    const state = vim({ ...type('11112222'.split('')), cursor: cursorAt(0, 0) }, '<Esc>Vlj')
-    expect(state).toMatchObject({ selection: { first: 0, last: 0 }, cursor: cursorAt(0, 1, 'kick') })
+  it('stays in its row as the cursor moves', () => {
+    expect(keys(fresh(), press('Tab'), press('ArrowRight'), press('Home')).cursor.row).toBe('kick')
   })
 
-  it('Tab then 2 gives two eighths in the kick row, leaving the snare row alone', () => {
-    const state = keys(fresh(), press('Tab'), press('2'))
-    expect(kickHits(state)).toEqual(['x.x. .... .... ....'])
-    expect(figureKeys(state)).toEqual(['    '])
-    expect(state.cursor).toEqual(cursorAt(0, 1, 'kick'))
-  })
-
-  it('stays in its row as typing runs into a new bar, and as the cursor moves', () => {
-    const state = keys(fresh(), press('Tab'), ...'1111'.split('').map((k) => press(k)), press('5'))
-    expect(kickHits(state)).toEqual(['x... x... x... x...', 'x.xx .... .... ....'])
-    expect(state.cursor).toEqual(cursorAt(1, 1, 'kick'))
-    expect(keys(state, press('ArrowUp'), press('Home')).cursor.row).toBe('kick')
-  })
-
-  it('-, Backspace and Delete rest the beat in the cursor row only', () => {
+  it('Backspace and Delete rest the beat in the cursor row only', () => {
     // Snare 1111, kick 2222, cursor on the kick row's beat 3.
     const kicked = type('2222'.split(''), { ...type('1111'.split('')), cursor: cursorAt(0, 0, 'kick') })
     const both = { ...kicked, cursor: cursorAt(0, 2, 'kick') }
-    expect(kickHits(keys(both, press('-')))[0]).toBe('x.x. x.x. .... x.x.')
     expect(kickHits(keys(both, press('Backspace')))[0]).toBe('x.x. x.x. .... x.x.')
     expect(kickHits(keys(both, press('Delete')))[0]).toBe('x.x. x.x. .... x.x.')
-    for (const key of ['-', 'Backspace', 'Delete']) expect(figureKeys(keys(both, press(key)))[0]).toBe('1111')
-  })
-
-  it('T and . tie and cut short in the cursor row only', () => {
-    const kicked = type(['1', '1'], { ...type('1111'.split('')), cursor: cursorAt(0, 0, 'kick') })
-    const both = { ...kicked, cursor: cursorAt(0, 1, 'kick') }
-    const tied = keys(both, press('t'))
-    expect(editorBeatViews(tied)[0][1]).toMatchObject({ kick: { tiedInto: true }, snare: { tiedInto: false } })
-    const cut = keys(both, press('.'))
-    expect(editorBeatViews(cut)[0][1]).toMatchObject({ kick: { cutShort: true }, snare: { cutShort: false } })
-  })
-
-  it('r replaces the beat in the cursor row only', () => {
-    const state = vim({ ...type('1111'.split('')), cursor: cursorAt(0, 0) }, '<Esc>j2r2')
-    expect(kickHits(state)[0]).toBe('x.x. x.x. .... ....')
-    expect(figureKeys(state)[0]).toBe('1111')
-  })
-
-  it('. repeats the last change on the current row', () => {
-    // A figure typed in the snare row, then repeated on the kick row's next beat.
-    const typed = vim(fresh(), '2<Esc>')
-    const repeated = vim(typed, 'jl.')
-    expect(kickHits(repeated)[0]).toBe('.... x.x. .... ....')
-    expect(figureKeys(repeated)[0]).toBe('2   ')
-    // And a rest made in the kick row, repeated back on the snare row.
-    const kicked = vim({ ...type('1111'.split('')), cursor: cursorAt(0, 0, 'kick') }, '1111<Esc>')
-    const rested = vim({ ...kicked, cursor: cursorAt(0, 0, 'kick') }, 'xkl.')
-    expect(kickHits(rested)[0]).toBe('.... x... x... x...')
-    expect(figureKeys(rested)[0]).toBe('1 11')
+    for (const key of ['Backspace', 'Delete']) expect(figureKeys(keys(both, press(key)))[0]).toBe('1111')
   })
 })

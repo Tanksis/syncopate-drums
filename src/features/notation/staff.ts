@@ -8,7 +8,7 @@
 import type { StemmableNote } from 'vexflow/bravura'
 import { Beam, Dot, Formatter, Fraction, GhostNote, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
 import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, NoteSticking, PlayPosition, StaffEvent } from '@/core'
-import { NOTATION_LAYOUT, TICKS_PER_BEAT, inLoopRange, notationFit, restBar, setBeat, staffParts, sticking, swingOn } from '@/core'
+import { NOTATION_LAYOUT, TICKS_PER_BEAT, inLoopRange, notationFit, staffParts, sticking, swingOn } from '@/core'
 
 // Mirror the accent, a light tint of it and the loop range's ink and shade from the design tokens in styles/index.css.
 const ACCENT_COLOUR = '#2563eb'
@@ -352,19 +352,4 @@ function drawHand(stave: Stave, note: StaveNote, { noteId, shown: hand, override
   ctx.pointerRect(x - HAND_HIT_PAD, y - 12 - HAND_HIT_PAD, width + 2 * HAND_HIT_PAD, 14 + 2 * HAND_HIT_PAD)
   ctx.restore()
   ctx.closeGroup()
-}
-
-/** Draws one beat figure on its own, as a bare snare line writes it, shrunk to fit a palette tile. */
-export function drawFigure(el: HTMLElement, hits: string, width: number, height: number) {
-  el.replaceChildren()
-  const scale = 0.55
-  const [{ hands }] = staffParts(setBeat([restBar()], 'snare', 0, 0, hits), 'off')
-  const renderer = new Renderer(el as HTMLDivElement, Renderer.Backends.SVG)
-  renderer.resize(width, height)
-  const ctx = renderer.getContext()
-  ctx.scale(scale, scale)
-  const stave = new Stave(0, -22, width / scale).setContext(ctx)
-  stave.draw()
-  const drawn = hands.filter((e) => e.start < TICKS_PER_BEAT).map((event) => ({ event, note: eventNote(event, 'hands') }))
-  drawParts(stave, [{ limb: 'hands', drawn }], 1, width / scale - 30)
 }

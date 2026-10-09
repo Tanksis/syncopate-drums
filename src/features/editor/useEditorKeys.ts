@@ -3,8 +3,8 @@ import { useAppStore } from '@/app/store'
 import { commandForKey } from '@/core'
 
 /**
- * Turns key presses anywhere outside a text field into editor commands, via the core's key map in
- * the editor's mode; none while a dialog is open. `?` calls `onHelp` instead.
+ * Turns key presses anywhere outside a text field into editor commands, via the core's key map;
+ * none while a dialog is open. `?` calls `onHelp` instead.
  */
 export function useEditorKeys(onHelp: () => void) {
   const dispatch = useAppStore((s) => s.dispatch)
@@ -17,8 +17,7 @@ export function useEditorKeys(onHelp: () => void) {
         onHelp()
         return
       }
-      const { editor, device } = useAppStore.getState()
-      const command = commandForKey(e, { ...editor, vimKeys: device.vimKeys })
+      const command = commandForKey(e)
       if (!command) return
       e.preventDefault()
       dispatch(command)
