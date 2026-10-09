@@ -37,7 +37,7 @@ The span of bars within an exercise that repeats during practice; the whole exer
 How an exercise is practiced rather than what it contains: BPM, loop range, groove preset and swing amount. Remembered per exercise.
 
 **Device settings**:
-How the app is set up on this computer rather than how an exercise is practiced: volumes, the exercise mute, the count-in toggle, vim keys, which exercise was last open, which sidebar tab is showing, and which folders are collapsed. Kept per device and never exported.
+How the app is set up on this computer rather than how an exercise is practiced: volumes, the exercise mute, the count-in toggle, which exercise was last open, which sidebar tab is showing, and which folders are collapsed. Kept per device and never exported.
 
 **Snare row**:
 One of an exercise's two rhythms over the same bars: the notes played on the snare with the hands, written in the hands part. Sticking labels this row only.
@@ -65,15 +65,15 @@ _Avoid_: Lower voice
 The line across the staff during playback that marks the position of the latest hit, from any instrument.
 
 **Grid editor**:
-Where the user enters and edits an exercise one beat at a time, by turning grid positions on and off and dragging a note's hold, or by typing a beat figure's key; the notation view mirrors it. The app decides the spelling (notes, rests, dots, ties).
+Where the user enters and edits an exercise one beat at a time, by turning grid positions on and off and dragging a note's hold; the notation view mirrors it. Entry is the grid only (ADR 0009). The app decides the spelling (notes, rests, dots, ties).
 _Avoid_: Sequencer, piano roll
 
 **Beat figure**:
-A one-beat rhythm picked from the grid editor's palette (e.g. two eighths, or a triplet with the middle note left out), defined only by where its hits fall on a sixteenth or triplet grid. Each note holds until the next hit or the end of the beat, unless the beat's last note is cut short. It may be tied into from the previous beat. There are 22: every sixteenth-grid pattern plus every triplet pattern a sixteenth grid can't write. A beat whose notes have been given other holds has no beat figure.
+One of the 22 one-beat rhythms the speller knows (e.g. two eighths, or a triplet with the middle note left out), defined only by where its hits fall on a sixteenth or triplet grid; each note holds until the next hit or the end of the beat. Internal to the app since ADR 0009: the drummer never picks one, but a beat whose hits match one is written with its default holds.
 _Avoid_: Cell, pattern
 
 **Hold**:
-How long a note is written to last, in grid positions: by default until the next hit or the end of the beat, or set by dragging, from one grid position up to the next hit, tied on across beats and bars. It changes how the note is written, not how it sounds.
+How long a note is written to last, in grid positions: by default until the next hit or the end of the beat, or set by dragging, from one grid position up to the next hit, tied on across beats; over a barline only by the bar's first beat's "Tie over the barline". It changes how the note is written, not how it sounds.
 _Avoid_: Length, sustain
 
 **Grid position**:
