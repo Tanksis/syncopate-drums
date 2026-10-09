@@ -14,8 +14,35 @@ const CHEVRON: Record<Side, { collapse: string; open: string }> = {
 const chevronButtonClass =
   'flex size-5 shrink-0 cursor-pointer items-center justify-center rounded border-0 bg-transparent text-base/none text-mute hover:bg-line hover:text-ink'
 
-/** A sidebar's heading, with the chevron that collapses the sidebar to its rail. */
-export function SidebarHeading({ name, side, onCollapse }: { name: string; side: Side; onCollapse: () => void }) {
+/**
+ * A sidebar's heading, with the chevron that collapses the sidebar to its rail, or, shown
+ * `fullScreen` on a phone, a Close button.
+ */
+export function SidebarHeading({
+  name,
+  side,
+  fullScreen = false,
+  onCollapse,
+}: {
+  name: string
+  side: Side
+  fullScreen?: boolean
+  onCollapse: () => void
+}) {
+  if (fullScreen)
+    return (
+      <div className="flex items-center justify-between gap-2">
+        <PanelHeading>{name}</PanelHeading>
+        <button
+          type="button"
+          aria-label={`Close ${name.toLowerCase()}`}
+          onClick={onCollapse}
+          className="-my-1 cursor-pointer rounded-md border border-line bg-card px-3 py-1.5 font-semibold"
+        >
+          Close
+        </button>
+      </div>
+    )
   return (
     <div className="flex items-start justify-between gap-2">
       <PanelHeading>{name}</PanelHeading>
@@ -62,4 +89,9 @@ export function SidebarRail({ name, side, expanded, onOpen }: { name: string; si
 /** A sidebar shown over the notation from its rail in a narrow window, with a shadow. */
 export function SidebarOverlay({ side, children }: { side: Side; children: ReactNode }) {
   return <div className={`fixed inset-y-0 z-30 flex shadow-xl ${side === 'left' ? 'left-8' : 'right-8'}`}>{children}</div>
+}
+
+/** A sidebar over the whole screen, on a phone. */
+export function SidebarFullScreen({ children }: { children: ReactNode }) {
+  return <div className="fixed inset-0 z-30 flex bg-panel pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">{children}</div>
 }

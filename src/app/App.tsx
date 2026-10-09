@@ -1,5 +1,7 @@
 // Layout A, "Workstation": library sidebar | header, notation view, editor panel | settings sidebar.
 // Either sidebar collapses to a rail; below 1000 px both are rails that open over the notation.
+// Below 640 px, the phone layout: a column of header, notation and transport bar, with the
+// sidebars opening over the whole screen.
 
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
@@ -7,21 +9,23 @@ import { GridEditor } from '@/features/editor/GridEditor'
 import { ExampleNotice } from '@/features/library/ExampleNotice'
 import { LibrarySidebar } from '@/features/library/LibrarySidebar'
 import { NotationView } from '@/features/notation/NotationView'
+import { TransportBar } from '@/features/playback/TransportBar'
 import { TransportControls } from '@/features/playback/TransportControls'
 import { SettingsSidebar } from '@/features/settings/SettingsSidebar'
 import { useAppStore } from '@/app/store'
-import { useNarrowWindow } from '@/app/useNarrowWindow'
+import { useNarrowWindow, usePhoneWindow } from '@/app/useMediaQuery'
 import { NameInput } from '@/components/NameInput'
 import type { Side } from '@/components/Sidebar'
-import { SidebarOverlay, SidebarRail } from '@/components/Sidebar'
+import { SidebarFullScreen, SidebarOverlay, SidebarRail } from '@/components/Sidebar'
 import { keepFocus } from '@/components/keepFocus'
 import { isExample } from '@/core'
 
 export function App() {
-  const saving = useAppStore((s) => s.saving)
   const sidebars = useSidebars()
+  const phone = usePhoneWindow()
+  if (phone) return <PhoneLayout sidebars={sidebars} />
   return (
-    <div className="grid h-screen grid-cols-[auto_1fr_auto]">
+    <div className="grid h-dvh grid-cols-[auto_1fr_auto]">
       <SidebarSlot name="Exercises" side="left" {...sidebars.library}>
         <LibrarySidebar onCollapse={sidebars.library.onCollapse} />
       </SidebarSlot>
@@ -30,11 +34,7 @@ export function App() {
         <header className="flex items-center gap-3.5 border-b border-line bg-card px-4 py-2">
           <h1 className="m-0 text-base font-bold">Syncopate!</h1>
           <ExerciseName />
-          {!saving && (
-            <span className="font-semibold text-danger" title="This browser blocked storage, or it failed to open">
-              Not saving: changes will be lost on reload
-            </span>
-          )}
+          <NotSaving />
           <TransportControls />
         </header>
         <ExampleNotice />
@@ -46,6 +46,79 @@ export function App() {
         <SettingsSidebar onCollapse={sidebars.settings.onCollapse} />
       </SidebarSlot>
     </div>
+  )
+}
+
+/**
+ * The phone layout: a compact header (☰, the exercise name, ⚙), the notation filling the screen,
+ * and the transport bar at the bottom. ☰ and ⚙ open their sidebar over the whole screen.
+ */
+function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl> }) {
+  const { library, settings } = sidebars
+  return (
+    <div className="flex h-dvh flex-col">
+      <header className="flex shrink-0 items-center gap-1 border-b border-line bg-card px-1 pt-[env(safe-area-inset-top)]">
+        <PhoneHeaderButton label="Open exercises" expanded={library.state === 'overlay'} onClick={library.onOpen}>
+          ☰
+        </PhoneHeaderButton>
+        <div className="flex min-w-0 flex-1 justify-center text-base">
+          <ExerciseName className="w-full text-center" />
+        </div>
+        <PhoneHeaderButton label="Open settings" expanded={settings.state === 'overlay'} onClick={settings.onOpen}>
+          ⚙
+        </PhoneHeaderButton>
+      </header>
+      <NotSaving className="border-b border-line bg-card px-3 py-1 text-xs" />
+      <ExampleNotice />
+      <NotationView />
+      <TransportBar />
+
+      {library.state === 'overlay' && (
+        <SidebarFullScreen>
+          <LibrarySidebar fullScreen onCollapse={library.onCollapse} />
+        </SidebarFullScreen>
+      )}
+      {settings.state === 'overlay' && (
+        <SidebarFullScreen>
+          <SettingsSidebar fullScreen onCollapse={settings.onCollapse} />
+        </SidebarFullScreen>
+      )}
+    </div>
+  )
+}
+
+function PhoneHeaderButton({
+  label,
+  expanded,
+  onClick,
+  children,
+}: {
+  label: string
+  expanded: boolean
+  onClick: () => void
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      aria-expanded={expanded}
+      onClick={onClick}
+      className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent text-xl/none text-mute active:bg-line"
+    >
+      <span aria-hidden>{children}</span>
+    </button>
+  )
+}
+
+/** The warning shown when storage failed, so changes won't survive a reload. */
+function NotSaving({ className = '' }: { className?: string }) {
+  const saving = useAppStore((s) => s.saving)
+  if (saving) return null
+  return (
+    <span className={`font-semibold text-danger ${className}`} title="This browser blocked storage, or it failed to open">
+      Not saving: changes will be lost on reload
+    </span>
   )
 }
 
@@ -133,11 +206,11 @@ function SidebarSlot({ name, side, state, onOpen, onCollapse, children }: Sideba
 }
 
 /** The open exercise's name; click it to rename it in place. An example's name is fixed. */
-function ExerciseName() {
+function ExerciseName({ className = '' }: { className?: string }) {
   const { id, name } = useAppStore((s) => s.editor.exercise)
   const renameExercise = useAppStore((s) => s.renameExercise)
   const [renaming, setRenaming] = useState(false)
-  if (isExample(id)) return <span className="truncate px-1 text-mute">{name}</span>
+  if (isExample(id)) return <span className={`truncate px-1 text-mute ${className}`}>{name}</span>
   if (renaming)
     return (
       <NameInput
@@ -146,7 +219,7 @@ function ExerciseName() {
           if (newName !== null) renameExercise(id, newName)
           setRenaming(false)
         }}
-        className="w-56"
+        className={className || 'w-56'}
       />
     )
   return (
@@ -155,7 +228,7 @@ function ExerciseName() {
       title="Rename"
       onMouseDown={keepFocus}
       onClick={() => setRenaming(true)}
-      className="cursor-text truncate rounded border border-transparent bg-transparent px-1 text-mute hover:border-line"
+      className={`cursor-text truncate rounded border border-transparent bg-transparent px-1 text-mute hover:border-line ${className}`}
     >
       {name}
     </button>
