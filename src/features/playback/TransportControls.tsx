@@ -34,36 +34,12 @@ export function TransportControls() {
 function BpmControl() {
   const bpm = useAppStore((s) => s.editor.exercise.practice.bpm)
   const setBpm = useAppStore((s) => s.setBpm)
-  // While typing, the box holds the text as typed. A value in range applies at once, unless
-  // more digits could still follow (typing 300 shouldn't play at 30 on the way); Enter or
-  // leaving the box applies whatever is there.
-  const [draft, setDraft] = useState<string | null>(null)
   // A pointer drag on the slider saves once it ends; arrow keys on it save at once.
   const dragging = useRef(false)
 
-  const type = (text: string) => {
-    setDraft(text)
-    const value = Number(text)
-    if (text !== '' && value >= MIN_BPM && value <= MAX_BPM && value * 10 > MAX_BPM) setBpm(value)
-  }
-  const commit = () => {
-    if (draft !== null && draft !== '') setBpm(Number(draft))
-    setDraft(null)
-  }
-
   return (
     <label className="flex items-center gap-2">
-      <input
-        type="number"
-        aria-label="BPM"
-        min={MIN_BPM}
-        max={MAX_BPM}
-        value={draft ?? bpm}
-        onChange={(e) => type(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-        className="w-16 rounded-md border border-line bg-card px-1.5 py-0.5 text-right tabular-nums"
-      />
+      <BpmInput className="w-16 px-1.5 py-0.5 text-right" />
       <span className="text-mute">BPM</span>
       <input
         type="range"
@@ -85,8 +61,43 @@ function BpmControl() {
   )
 }
 
+/** The tempo as a number box to type into. */
+export function BpmInput({ className }: { className: string }) {
+  const bpm = useAppStore((s) => s.editor.exercise.practice.bpm)
+  const setBpm = useAppStore((s) => s.setBpm)
+  // While typing, the box holds the text as typed. A value in range applies at once, unless
+  // more digits could still follow (typing 300 shouldn't play at 30 on the way); Enter or
+  // leaving the box applies whatever is there.
+  const [draft, setDraft] = useState<string | null>(null)
+
+  const type = (text: string) => {
+    setDraft(text)
+    const value = Number(text)
+    if (text !== '' && value >= MIN_BPM && value <= MAX_BPM && value * 10 > MAX_BPM) setBpm(value)
+  }
+  const commit = () => {
+    if (draft !== null && draft !== '') setBpm(Number(draft))
+    setDraft(null)
+  }
+
+  return (
+    <input
+      type="number"
+      inputMode="numeric"
+      aria-label="BPM"
+      min={MIN_BPM}
+      max={MAX_BPM}
+      value={draft ?? bpm}
+      onChange={(e) => type(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+      className={`rounded-md border border-line bg-card tabular-nums ${className}`}
+    />
+  )
+}
+
 /** Whether playback starts with a bar of clicks; kept for this device, not the exercise. */
-function CountInToggle() {
+export function CountInToggle() {
   const countIn = useAppStore((s) => s.device.countIn)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   return (

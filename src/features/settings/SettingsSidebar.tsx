@@ -3,17 +3,28 @@ import { useRef } from 'react'
 import { useAppStore } from '@/app/store'
 import { PanelHeading } from '@/components/PanelHeading'
 import { SidebarHeading } from '@/components/Sidebar'
+import { LoopReadout } from '@/features/playback/LoopReadout'
+import { CountInToggle } from '@/features/playback/TransportControls'
 import { keepFocus } from '@/components/keepFocus'
 import type { ExerciseSettings, GroovePresetId, VolumeSetting } from '@/core'
 import { GROOVE_PRESETS, MAX_SWING, MAX_VOLUME, MIN_SWING, TRIPLET_SWING, groovePreset, overrideCount } from '@/core'
 
-export function SettingsSidebar({ onCollapse }: { onCollapse: () => void }) {
+export function SettingsSidebar({ onCollapse, fullScreen = false }: { onCollapse: () => void; fullScreen?: boolean }) {
   return (
     <aside
       aria-label="Settings"
-      className="flex w-[250px] flex-col gap-3.5 overflow-auto border-l border-line bg-panel p-3"
+      className={`flex flex-col gap-3.5 overflow-auto bg-panel p-3 ${fullScreen ? 'w-full' : 'w-[250px] border-l border-line'}`}
     >
-      <SidebarHeading name="Settings" side="right" onCollapse={onCollapse} />
+      <SidebarHeading name="Settings" side="right" fullScreen={fullScreen} onCollapse={onCollapse} />
+      {/* On a phone the header has no room for these, so they're here. */}
+      {fullScreen && (
+        <SettingGroup title="Playback">
+          <div className="flex items-center justify-between gap-2">
+            <LoopReadout />
+            <CountInToggle />
+          </div>
+        </SettingGroup>
+      )}
       <SettingGroup title="Groove">
         <GroovePicker />
         <Swing />
