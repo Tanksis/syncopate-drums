@@ -59,6 +59,10 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
   const { library, settings } = sidebars
   const example = useAppStore((s) => isExample(s.editor.exercise.id))
   const [editOpen, setEditOpen] = useState(false)
+  // Opening an example closes the sheet, so it doesn't come back with the next exercise.
+  useEffect(() => {
+    if (example) setEditOpen(false)
+  }, [example])
   const editing = editOpen && !example
   return (
     <div className="flex h-dvh flex-col">

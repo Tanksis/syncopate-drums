@@ -48,6 +48,7 @@ export function TransportBar({ onEdit }: { onEdit?: () => void }) {
       {onEdit && (
         <button
           type="button"
+          // Keep focus off the button, so Space pauses rather than clicking it.
           onMouseDown={keepFocus}
           onClick={onEdit}
           className="ml-auto h-11 shrink-0 cursor-pointer rounded-lg border border-line bg-card px-3.5 text-sm font-semibold touch-manipulation active:border-accent active:text-accent"
