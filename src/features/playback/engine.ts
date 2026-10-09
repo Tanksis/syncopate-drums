@@ -3,7 +3,7 @@
 // so timing is sample-accurate however late the tick itself runs.
 
 import type { DeviceSettings, Exercise, Instrument, Layer, PlayPosition, Playhead, ScheduledEvent, TimelineEntry } from '@/core'
-import { layerLevels, playheadAt, recordEvents, schedule, trimTimeline } from '@/core'
+import { layerLevels, playheadAt, recordEvents, resumePosition, schedule, trimTimeline } from '@/core'
 
 const LOOKAHEAD = 0.1
 /** Head start for the first event, so it isn't late before the first tick has run. */
@@ -70,10 +70,11 @@ const roundRobin = new Map<Instrument, number>()
 const gainTargets: Record<Layer, number> = { ...LAYER_GAIN }
 
 /**
- * Starts playback from the count-in. Call it from a user gesture (a click or key press),
- * so the browser lets audio start. Resolves once the first sounds are scheduled.
+ * Starts playback from the count-in, or from `from` to resume after a pause. Call it from a user
+ * gesture (a click or key press), so the browser lets audio start. Resolves once the first sounds
+ * are scheduled.
  */
-export async function startPlayback(input: () => PlaybackInput): Promise<void> {
+export async function startPlayback(input: () => PlaybackInput, from: PlayPosition | 'start' = 'start'): Promise<void> {
   stopPlayback()
   const mine = generation
   const { ctx } = (audio ??= createAudio())
@@ -84,7 +85,7 @@ export async function startPlayback(input: () => PlaybackInput): Promise<void> {
   await Promise.all([ctx.resume(), loading])
   if (mine !== generation) return
   read = input
-  cursor = { position: 'start', time: ctx.currentTime + START_DELAY }
+  cursor = { position: from, time: ctx.currentTime + START_DELAY }
   worker ??= createTicker()
   worker.postMessage('start')
   tick()
@@ -102,6 +103,16 @@ export function stopPlayback(): void {
     source.disconnect()
   }
   sources.clear()
+}
+
+/**
+ * Stops playback like `stopPlayback`, and returns where to resume: the first sound not yet heard.
+ * Undefined if nothing had been scheduled yet.
+ */
+export function pausePlayback(): PlayPosition | undefined {
+  const position = audio && cursor ? resumePosition(timeline, heardTime(audio.ctx)) ?? cursor.position : undefined
+  stopPlayback()
+  return position === 'start' ? undefined : position
 }
 
 /**

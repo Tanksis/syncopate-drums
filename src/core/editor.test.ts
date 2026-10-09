@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Bar, Cursor, EditorState, ExerciseSettings, KeyPress, Row } from './index'
-import { applyEdit, beatViews, commandForKey, editorBeatViews, loopAt, newEditorState, newExercise, sticking, withBpm, withGroove, withLoopRange, withSwing } from './index'
+import { REST_FIGURE, applyEdit, beatViews, commandForKey, editorBeatViews, loopAt, newEditorState, newExercise, sticking, withBpm, withGroove, withLoopRange, withSwing } from './index'
 
 const press = (key: string, mods: Partial<KeyPress> = {}): KeyPress => ({
   key,
@@ -37,7 +37,9 @@ const snareViews = (bars: Bar[], tripletBeats?: number[]) =>
 const editorSnareViews = (state: EditorState) =>
   editorBeatViews(state).map((beats) => beats.map((v) => ({ ...v.snare, triplet: v.triplet })))
 
-const figureKeys = (state: EditorState) => snareViews(state.exercise.bars).map((bar) => bar.map((v) => v.figure?.key).join(''))
+/** Each bar's beats as their figure keys, a rest beat as a space so the bar's shape shows. */
+const figureKeys = (state: EditorState) =>
+  snareViews(state.exercise.bars).map((bar) => bar.map((v) => (v.figure === REST_FIGURE ? ' ' : v.figure?.key)).join(''))
 
 describe('a new exercise', () => {
   it('starts from the fixed defaults', () => {
@@ -65,7 +67,7 @@ describe('entering figures', () => {
   })
 
   it('enters a bar in four keystrokes, then grows the exercise by a bar of rests', () => {
-    const state = type(['2', '3', '7', ' '])
+    const state = type(['2', '3', '7', '-'])
     expect(figureKeys(state)).toEqual(['237 ', '    '])
     expect(state.cursor).toEqual(cursorAt(1, 0))
   })
@@ -89,11 +91,15 @@ describe('the key map', () => {
     expect(commandForKey(press('h'))).toEqual({ type: 'enterFigure', hits: '..x' })
   })
 
-  it('maps the number row, the bottom row and Space to figures', () => {
+  it('maps the number row, the bottom row and - to figures', () => {
     expect(commandForKey(press('2'))).toEqual({ type: 'enterFigure', hits: 'x.x.' })
     expect(commandForKey(press('b'))).toEqual({ type: 'enterFigure', hits: 'xx..' })
     expect(commandForKey(press('B'))).toEqual({ type: 'enterFigure', hits: 'xx..' })
-    expect(commandForKey(press(' '))).toEqual({ type: 'enterFigure', hits: '....' })
+    expect(commandForKey(press('-'))).toEqual({ type: 'enterFigure', hits: '....' })
+  })
+
+  it('leaves Space to the transport', () => {
+    expect(commandForKey(press(' '))).toBeNull()
   })
 
   it('ignores other keys and modified keys', () => {
@@ -739,7 +745,7 @@ describe('vim Normal mode', () => {
     const state = vim(four(), 'r5')
     expect(figureKeys(state)).toEqual(['1111', '2252', '3333', '4444', '    '])
     expect(state).toMatchObject({ mode: 'normal', cursor: cursorAt(1, 2) })
-    expect(figureKeys(vim(four(), 'r '))).toEqual(['1111', '22 2', '3333', '4444', '    '])
+    expect(figureKeys(vim(four(), 'r-'))).toEqual(['1111', '22 2', '3333', '4444', '    '])
     expect(figureKeys(vim(four(), '2ra'))).toEqual(['1111', '22aa', '3333', '4444', '    '])
     const start = four()
     expect(vim(start, 'rq').exercise).toBe(start.exercise)
@@ -1153,14 +1159,14 @@ describe("the cursor's row", () => {
     expect(keys(state, press('ArrowUp'), press('Home')).cursor.row).toBe('kick')
   })
 
-  it('Space, Backspace and Delete rest the beat in the cursor row only', () => {
+  it('-, Backspace and Delete rest the beat in the cursor row only', () => {
     // Snare 1111, kick 2222, cursor on the kick row's beat 3.
     const kicked = type('2222'.split(''), { ...type('1111'.split('')), cursor: cursorAt(0, 0, 'kick') })
     const both = { ...kicked, cursor: cursorAt(0, 2, 'kick') }
-    expect(kickHits(keys(both, press(' ')))[0]).toBe('x.x. x.x. .... x.x.')
+    expect(kickHits(keys(both, press('-')))[0]).toBe('x.x. x.x. .... x.x.')
     expect(kickHits(keys(both, press('Backspace')))[0]).toBe('x.x. x.x. .... x.x.')
     expect(kickHits(keys(both, press('Delete')))[0]).toBe('x.x. x.x. .... x.x.')
-    for (const key of [' ', 'Backspace', 'Delete']) expect(figureKeys(keys(both, press(key)))[0]).toBe('1111')
+    for (const key of ['-', 'Backspace', 'Delete']) expect(figureKeys(keys(both, press(key)))[0]).toBe('1111')
   })
 
   it('T and . tie and cut short in the cursor row only', () => {

@@ -15,8 +15,8 @@ export function TransportControls() {
     <div className="flex items-center gap-3.5">
       <button
         type="button"
-        title="Play / stop (Ctrl+Space)"
-        // Keep focus off the button, so Space enters a rest rather than toggling playback.
+        title="Play from the count-in / stop (Ctrl+Space). Space pauses and resumes."
+        // Keep focus off the button, so Space pauses rather than clicking it.
         onMouseDown={keepFocus}
         onClick={togglePlayback}
         className="w-20 cursor-pointer rounded-md border border-line bg-panel px-2.5 py-1 font-semibold hover:border-accent"

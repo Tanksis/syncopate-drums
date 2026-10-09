@@ -22,7 +22,7 @@ export function Palette() {
       key={figure.key}
       type="button"
       title={figure.hits}
-      // Keep focus off the tile, so Space enters a rest rather than clicking it again.
+      // Keep focus off the tile, so Space pauses rather than clicking it again.
       onMouseDown={keepFocus}
       onClick={() => dispatch({ type: 'enterFigure', hits: figure.hits })}
       className={`relative cursor-pointer rounded-md border bg-card hover:border-accent ${
@@ -31,7 +31,7 @@ export function Palette() {
       style={wide ? { height: TILE_HEIGHT } : { width: TILE_WIDTH, height: TILE_HEIGHT }}
     >
       {wide ? (
-        'Space · rest'
+        '- · rest'
       ) : (
         <>
           <span className="absolute top-0.5 left-1 font-mono text-[11px] font-semibold text-mute">{figure.key.toUpperCase()}</span>

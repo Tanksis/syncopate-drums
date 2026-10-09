@@ -23,7 +23,7 @@ export function SidebarHeading({ name, side, onCollapse }: { name: string; side:
         type="button"
         aria-label={`Collapse ${name.toLowerCase()}`}
         title={`Collapse ${name.toLowerCase()}`}
-        // Keep focus off the button, so Space still enters a rest.
+        // Keep focus off the button, so Space still pauses.
         onMouseDown={keepFocus}
         onClick={onCollapse}
         className={`-mt-1 ${chevronButtonClass}`}
