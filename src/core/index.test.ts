@@ -66,7 +66,7 @@ describe('stored device settings', () => {
   })
 
   it('drop a stored vim keys or figures panel setting', () => {
-    const stored = { countIn: false, vimKeys: true, figuresPanelOpen: true } as Partial<typeof DEFAULT_DEVICE_SETTINGS>
+    const stored = { countIn: false, vimKeys: true, figuresPanelOpen: true }
     expect(deviceSettingsFrom(stored)).toEqual({ ...DEFAULT_DEVICE_SETTINGS, countIn: false })
   })
 })

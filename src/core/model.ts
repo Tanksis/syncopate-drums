@@ -140,7 +140,7 @@ export interface DeviceSettings {
  * Device settings as stored, over the defaults for any added since. A stored setting the app no
  * longer has (such as `vimKeys`, ADR 0009) is dropped.
  */
-export function deviceSettingsFrom(stored: Partial<DeviceSettings> | undefined): DeviceSettings {
+export function deviceSettingsFrom(stored: Record<string, unknown> | undefined): DeviceSettings {
   const known = Object.entries(stored ?? {}).filter(([key]) => key in DEFAULT_DEVICE_SETTINGS)
   return { ...DEFAULT_DEVICE_SETTINGS, ...Object.fromEntries(known) }
 }

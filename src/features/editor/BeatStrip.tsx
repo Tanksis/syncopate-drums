@@ -56,10 +56,9 @@ const countLabels = (beat: number, triplet: boolean) =>
  * hover), their count labels, and the kick row's cells under them, as the staff writes hands over
  * feet. Clicking a cell turns a hit on or off in its row; pressing on a note and dragging sets
  * where its hold ends, on into later beats of the bar in the same row, shown live and written on
- * release. Clicking elsewhere on a card
- * moves the cursor to it. A card's 16ths | trip switch, or a right-click on it, switches it between
- * the sixteenth and the triplet grid. The cursor's card is outlined with a mark beside its row, and
- * the bar selection and a set loop range are shaded.
+ * release. Clicking elsewhere on a card moves the cursor to it. A card's 16ths | trip switch, or a
+ * right-click on it, switches it between the sixteenth and the triplet grid. The cursor's card is
+ * outlined with a mark beside its row, and the bar selection and a set loop range are shaded.
  */
 export function BeatStrip() {
   const editor = useAppStore((s) => s.editor)
