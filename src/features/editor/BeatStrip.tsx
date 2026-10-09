@@ -17,10 +17,9 @@ interface Press {
   moved: boolean
   to: GridPoint | null
   /** Where the pointer went down, to tell a still long-press from the start of a drag. */
-  x: number
-  y: number
+  down: { x: number; y: number }
   /** The struck snare note a long-press here would flip, or null where it would do nothing. */
-  flips: string | null
+  flipNoteId: string | null
   /** The long-press took: the note's sticking is flipped, and the release does nothing more. */
   flipped: boolean
 }
@@ -102,7 +101,7 @@ export function BeatStrip() {
     },
     [],
   )
-  const flashedHand = flash && sticking(editor.exercise).find((n) => n.noteId === flash.noteId)?.shown
+  const flashedHand = (flash && sticking(editor.exercise).find((n) => n.noteId === flash.noteId)?.shown) ?? null
   // While dragging, the strip shows the hold as the editor would write it on release.
   const shown = press?.to ? applyEdit(editor, { type: 'setHold', from: press.from, to: press.to }) : editor
   const views = editorBeatViews(shown)
@@ -110,19 +109,31 @@ export function BeatStrip() {
   const startPress = (e: PointerEvent<HTMLElement>, from: GridPoint, position: PositionState) => {
     if (e.button !== 0) return
     e.currentTarget.setPointerCapture(e.pointerId)
-    const flips = example ? null : stickingNoteAt(editor, from)
-    const started: Press = { pointerId: e.pointerId, from, onNote: position !== 'empty', moved: false, to: null, x: e.clientX, y: e.clientY, flips, flipped: false }
-    track(started)
+    const flipNoteId = example ? null : stickingNoteAt(editor, from)
+    track({
+      pointerId: e.pointerId,
+      from,
+      onNote: position !== 'empty',
+      moved: false,
+      to: null,
+      down: { x: e.clientX, y: e.clientY },
+      flipNoteId,
+      flipped: false,
+    })
     clearTimeout(longPressTimer.current)
-    if (flips) longPressTimer.current = setTimeout(() => longPress(started.pointerId), LONG_PRESS_MS)
+    if (flipNoteId) longPressTimer.current = setTimeout(() => longPress(e.pointerId), LONG_PRESS_MS)
+  }
+  const cancelPress = () => {
+    clearTimeout(longPressTimer.current)
+    track(null)
   }
   /** The press has stayed still on its hit long enough: flip the note's sticking, and flash its new hand. */
   const longPress = (pointerId: number) => {
     const press = pressRef.current
-    if (!press?.flips || press.pointerId !== pointerId || press.moved) return
+    if (!press?.flipNoteId || press.pointerId !== pointerId) return
     track({ ...press, flipped: true })
-    dispatch({ type: 'flipOverride', note: { id: press.flips } })
-    setFlash({ point: press.from, noteId: press.flips })
+    dispatch({ type: 'flipOverride', note: { id: press.flipNoteId } })
+    setFlash({ point: press.from, noteId: press.flipNoteId })
     clearTimeout(flashTimer.current)
     flashTimer.current = setTimeout(() => setFlash(null), FLASH_MS)
   }
@@ -138,10 +149,12 @@ export function BeatStrip() {
   const movePress = (e: PointerEvent<HTMLElement>) => {
     const press = pressRef.current
     if (!press || e.pointerId !== press.pointerId || press.flipped) return
-    if (press.flips && Math.hypot(e.clientX - press.x, e.clientY - press.y) > LONG_PRESS_SLOP) {
-      // Wandering off ends the wait for a long-press; the press goes on as a click or a drag.
+    if (press.flipNoteId) {
+      // Jitter while waiting for a long-press, even over the cell's edge, is still holding still.
+      if (Math.hypot(e.clientX - press.down.x, e.clientY - press.down.y) <= LONG_PRESS_SLOP) return
+      // Wandering off ends the wait; the press goes on as a click or a drag.
       clearTimeout(longPressTimer.current)
-      return track(follow(e, { ...press, flips: null }))
+      return track(follow(e, { ...press, flipNoteId: null }))
     }
     const next = follow(e, press)
     if (next !== press) track(next)
@@ -149,11 +162,10 @@ export function BeatStrip() {
   const endPress = (e: PointerEvent<HTMLElement>) => {
     const press = pressRef.current
     if (!press || e.pointerId !== press.pointerId) return
-    track(null)
-    clearTimeout(longPressTimer.current)
+    cancelPress()
     if (press.flipped) return
-    // The release's own position counts too.
-    const last = follow(e, press)
+    // The release's own position counts too, unless it is still within a long-press's slop: a click.
+    const last = press.flipNoteId ? press : follow(e, press)
     if (!last.moved) dispatch({ type: 'toggleGridPosition', ...last.from })
     else if (last.to) dispatch({ type: 'setHold', from: last.from, to: last.to })
   }
@@ -189,10 +201,7 @@ export function BeatStrip() {
             onPointerDown={(e) => startPress(e, { row, bar: b, beat, position: i }, position)}
             onPointerMove={movePress}
             onPointerUp={endPress}
-            onPointerCancel={() => {
-              clearTimeout(longPressTimer.current)
-              track(null)
-            }}
+            onPointerCancel={cancelPress}
             flashedHand={flash && samePoint(flash.point, { row, bar: b, beat, position: i }) ? flashedHand : null}
           />
         ))}
@@ -350,7 +359,7 @@ function Cell({
   first: boolean
   last: boolean
   /** The hand a long-press here just flipped the note to, shown for a moment. */
-  flashedHand: Hand | null | undefined
+  flashedHand: Hand | null
   /** A press here is a click on release, or a drag of the note's hold once it moves. */
   onPointerDown: (e: PointerEvent<HTMLElement>) => void
   onPointerMove: (e: PointerEvent<HTMLElement>) => void
@@ -386,8 +395,8 @@ function Cell({
       ) : null}
       {flashedHand && (
         <span
-          aria-live="polite"
-          aria-label={`Sticking ${flashedHand}`}
+          aria-hidden
+          data-flashed-hand
           className="pointer-events-none absolute inset-0 flex animate-pulse items-center justify-center rounded bg-accent text-sm font-bold text-white"
         >
           {flashedHand}

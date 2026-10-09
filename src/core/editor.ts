@@ -8,6 +8,7 @@ import {
   ROWS,
   TICKS_PER_BEAT,
   beatIndex,
+  noteId,
   itemTicks,
   loopRangeAfterDelete,
   loopRangeAfterInsert,
@@ -16,7 +17,7 @@ import {
   withLoopRangeInBars,
 } from './model'
 import type { BeatView, GridPoint, RowView } from './speller'
-import { beatViews, clearBeatToDownbeat, setBeat, setHold, toggleHit, toggleTie } from './speller'
+import { beatViews, clearBeatToDownbeat, setBeat, setHold, slotTicks, toggleHit, toggleTie } from './speller'
 import type { NoteSticking } from './sticking'
 import { overrideCount, sticking } from './sticking'
 
@@ -170,9 +171,8 @@ export function canTieOverBarline(state: EditorState, bar: number, row: Row): bo
 export function stickingNoteAt(state: EditorState, { row, bar, beat, position }: GridPoint): string | null {
   const view = editorBeatViews(state)[bar]?.[beat]
   if (row !== 'snare' || !view || view.snare.positions[position] !== 'hit') return null
-  const start = beat * TICKS_PER_BEAT + (position * TICKS_PER_BEAT) / view.snare.positions.length
-  const note = sticking(state.exercise).find((n) => n.bar === bar && n.start === start)
-  return note?.shown ? note.noteId : null
+  const id = noteId('snare', bar, beat * TICKS_PER_BEAT + slotTicks(view.triplet)[position])
+  return sticking(state.exercise).find((n) => n.noteId === id)?.shown ? id : null
 }
 
 /** The bars with a bar's first beat in a row tied over the barline or untied, or null if it can't be. */
