@@ -135,6 +135,7 @@ function heardTime(ctx: AudioContext): number {
 }
 
 function createAudio(): Audio {
+  playThroughSilentSwitch()
   const ctx = new AudioContext({ latencyHint: 'interactive' })
   const master = ctx.createGain()
   master.connect(ctx.destination)
@@ -147,6 +148,15 @@ function createAudio(): Audio {
     }),
   ) as Record<Layer, GainNode>
   return { ctx, layers, buffers: new Map() }
+}
+
+/**
+ * On iOS, Web Audio is muted by the silent switch unless the page's audio session is "playback",
+ * like a music app. Set before the audio context starts; browsers without the API skip it.
+ */
+function playThroughSilentSwitch(): void {
+  const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession
+  if (session) session.type = 'playback'
 }
 
 async function loadSamples({ ctx, buffers }: Audio): Promise<void> {
