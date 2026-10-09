@@ -6,6 +6,8 @@ export interface MenuItem {
   label: string
   /** A toggle's state, shown as a tick; leave undefined for a plain action. */
   checked?: boolean
+  /** Shown greyed out, and does nothing when chosen. */
+  disabled?: boolean
   onSelect: () => void
 }
 
@@ -89,13 +91,14 @@ export function Menu({ label, items }: { label: string; items: MenuItem[] }) {
               type="button"
               role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
               aria-checked={item.checked}
+              disabled={item.disabled}
               tabIndex={-1}
               onMouseDown={keepFocus}
               onClick={() => {
                 setAnchor(null)
                 item.onSelect()
               }}
-              className="flex cursor-pointer items-center gap-2 px-3 py-2 text-left whitespace-nowrap hover:bg-panel hover:text-accent"
+              className="flex cursor-pointer items-center gap-2 px-3 py-2 text-left whitespace-nowrap hover:bg-panel hover:text-accent disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-inherit"
             >
               <span aria-hidden className="w-3 text-accent">
                 {item.checked ? '✓' : ''}
