@@ -88,7 +88,7 @@ export function SidebarRail({ name, side, expanded, onOpen }: { name: string; si
 
 /** A sidebar shown over the notation from its rail in a narrow window, with a shadow. */
 export function SidebarOverlay({ side, children }: { side: Side; children: ReactNode }) {
-  return <div className={`fixed inset-y-0 z-30 flex shadow-xl ${side === 'left' ? 'left-8' : 'right-8'}`}>{children}</div>
+  return <div className={`fixed inset-y-0 z-30 flex shadow-xl shadow-ink/10 ${side === 'left' ? 'left-8' : 'right-8'}`}>{children}</div>
 }
 
 /** A sidebar over the whole screen, on a phone. */

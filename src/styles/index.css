@@ -1,7 +1,8 @@
 @import 'tailwindcss';
 
 /*
- * Design tokens: use them as Tailwind utilities, e.g. bg-panel, text-mute, border-line. Every colour
+ * Design tokens: use them as Tailwind utilities, e.g. bg-panel, text-mute, border-line for a divider
+ * and border-edge for a control's border (a button, field or cell). Every colour
  * in the app comes from here; the notation reads them as CSS variables when it draws (staff.ts), so
  * they are always emitted (static). The light theme meets WCAG AA: text 4.5:1 against the surface it
  * sits on (the loop fill and a hovered bg-line included), large text, control borders and states 3:1.
