@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import { keepFocus } from '@/components/keepFocus'
+import { BarActions } from './BarActions'
 import { BarTabs } from './BarTabs'
 import { BeatStrip } from './BeatStrip'
 import { CheatSheet } from './CheatSheet'
@@ -16,6 +17,7 @@ export function GridEditor() {
     >
       <div className="flex flex-wrap items-center gap-3">
         <BarTabs />
+        <BarActions />
         <button
           type="button"
           aria-pressed={helpOpen}
