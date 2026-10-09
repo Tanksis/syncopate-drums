@@ -78,7 +78,7 @@ describe('an unchanged new exercise', () => {
   })
 
   it('stops being unchanged once a note is entered', () => {
-    const edited = applyEdit(newEditorState(untitled), { type: 'enterFigure', hits: 'x...' })
+    const edited = applyEdit(newEditorState(untitled), { type: 'toggleGridPosition', row: 'snare', bar: 0, beat: 0, position: 0 })
     expect(isUnchangedNew(edited.exercise)).toBe(false)
     const kicked = applyEdit(newEditorState(untitled), { type: 'toggleGridPosition', row: 'kick', bar: 0, beat: 0, position: 0 })
     expect(isUnchangedNew(kicked.exercise)).toBe(false)
@@ -108,7 +108,7 @@ describe('a new exercise', () => {
 
 describe('duplicating an exercise', () => {
   const original = {
-    ...applyEdit(newEditorState(newExercise({ id: 'orig', now: 100 })), { type: 'enterFigure', hits: 'x...' }).exercise,
+    ...applyEdit(newEditorState(newExercise({ id: 'orig', now: 100 })), { type: 'toggleGridPosition', row: 'snare', bar: 0, beat: 0, position: 0 }).exercise,
     name: 'p.37 #4',
     sticking: 'alternate' as const,
     practice: { bpm: 132, loopRange: { first: 0, last: 0 }, groove: 'off' as const, swing: 0.58 },

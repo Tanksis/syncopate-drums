@@ -1,4 +1,5 @@
-// The beat figures of the grid editor's palette and the keys that pick them.
+// The beat figures: the one-beat rhythms the speller writes with default holds. Once entered by
+// keys from a palette; since ADR 0009 the grid is the only entry, and the keys are their names.
 
 /**
  * A one-beat rhythm, defined by where its hits fall: `x` is a hit, `.` no hit, one character
@@ -6,11 +7,9 @@
  * until the next hit or the end of the beat.
  */
 export interface Figure {
-  /** The key that enters it, as `KeyboardEvent.key` reports it unshifted. */
+  /** Its name: the key that once entered it. */
   key: string
   hits: string
-  /** Keyboard row: 0 = number row, 1 = home row (the triplets), 2 = bottom row. */
-  row: 0 | 1 | 2
 }
 
 export const FIGURES: readonly Figure[] = [
@@ -18,15 +17,15 @@ export const FIGURES: readonly Figure[] = [
   ['6', 'xxx.'], ['7', 'x..x'], ['8', 'xx.x'], ['9', '.xxx'], ['0', '..xx'],
   ['a', 'xxx'], ['s', 'x.x'], ['d', 'xx.'], ['f', '.xx'], ['g', '.x.'], ['h', '..x'],
   ['z', '.x..'], ['x', '...x'], ['c', '.xx.'], ['v', '.x.x'], ['b', 'xx..'],
-].map(([key, hits]): Figure => ({ key, hits, row: /\d/.test(key) ? 0 : isTripletHits(hits) ? 1 : 2 }))
+].map(([key, hits]): Figure => ({ key, hits }))
 
 /** Three characters, one per triplet eighth, make a triplet figure. */
 export function isTripletHits(hits: string): boolean {
   return hits.length === 3
 }
 
-/** `-`: a beat with no hits. (Space is the transport's pause.) */
-export const REST_FIGURE: Figure = { key: '-', hits: '....', row: 2 }
+/** `-`: a beat with no hits. */
+export const REST_FIGURE: Figure = { key: '-', hits: '....' }
 
 export function figureOfHits(hits: string): Figure | undefined {
   return hits === REST_FIGURE.hits ? REST_FIGURE : FIGURES.find((f) => f.hits === hits)

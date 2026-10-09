@@ -8,7 +8,7 @@ const HIGHLIGHT_MS = 700
 
 /**
  * With an example open, says that it's read-only (ADR 0008) and offers Copy to Library. Each edit
- * the example refuses (a click on a cell, a figure key) highlights the notice briefly, so the
+ * the example refuses (a click on a cell, Backspace) highlights the notice briefly, so the
  * drummer can see why nothing changed.
  */
 export function ExampleNotice() {

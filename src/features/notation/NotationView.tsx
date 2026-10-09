@@ -72,7 +72,7 @@ export function NotationView() {
           // Centred over the staff, which it leaves to take the clicks.
           <p style={hintBox} className="pointer-events-none absolute z-10 m-0 flex items-center justify-center text-center">
             <span className="rounded-md bg-card/90 px-3 py-1 text-mute">
-              Click a grid position below, or type a figure key, to add hits.
+              Tap or click a grid position below to add hits.
             </span>
           </p>
         )}

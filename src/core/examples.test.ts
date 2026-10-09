@@ -120,51 +120,34 @@ describe('the edits an example accepts', () => {
         { type: 'moveTo', bar: 1, beat: 2 },
         { type: 'moveRow' },
         { type: 'jump', to: 'end' },
-        { type: 'goToBar', bar: 2 },
-        { type: 'moveWord', step: -1 },
       ),
-    ).toEqual([true, true, true, true, true, true])
+    ).toEqual([true, true, true, true])
   })
 
-  it('accepts selecting and copying bars, and changing mode', () => {
-    expect(
-      accepts(
-        { type: 'selectBars', step: 1 },
-        { type: 'copyBars' },
-        { type: 'normal' },
-        { type: 'insert', after: true },
-        { type: 'pending', keys: '2' },
-      ),
-    ).toEqual([true, true, true, true, true])
+  it('accepts selecting and copying bars', () => {
+    expect(accepts({ type: 'selectBars', step: 1 }, { type: 'copyBars' })).toEqual([true, true])
   })
 
-  it('refuses a figure key, a hit toggle, a hold drag and a grid switch', () => {
+  it('refuses a hit toggle, a hold drag, a grid switch and a rest', () => {
     expect(
       accepts(
-        { type: 'enterFigure', hits: 'x...' },
         { type: 'toggleGridPosition', row: 'snare', bar: 0, beat: 0, position: 0 },
         { type: 'setHold', from: { row: 'snare', bar: 0, beat: 0, position: 0 }, to: { row: 'snare', bar: 0, beat: 1, position: 0 } },
         { type: 'setBeatGrid', bar: 0, beat: 0, triplet: true },
-        { type: 'replaceBeats', hits: 'x.x.' },
         { type: 'rest', stepBack: true },
-        { type: 'toggleTie' },
-        { type: 'toggleCutShort' },
       ),
-    ).toEqual([false, false, false, false, false, false, false, false])
+    ).toEqual([false, false, false, false])
   })
 
   it('refuses adding, deleting and pasting bars', () => {
     expect(
       accepts(
         { type: 'addBar' },
-        { type: 'openBar', above: false },
         { type: 'duplicateBar' },
         { type: 'deleteBar' },
         { type: 'pasteBars' },
-        { type: 'putBars', before: false },
-        { type: 'replaceBars' },
       ),
-    ).toEqual([false, false, false, false, false, false, false])
+    ).toEqual([false, false, false, false])
   })
 
   it('refuses a sticking or lead hand change and sticking overrides', () => {
@@ -178,8 +161,8 @@ describe('the edits an example accepts', () => {
     ).toEqual([false, false, false, false])
   })
 
-  it('refuses undo, redo and repeating a change, having no changes of its own', () => {
-    expect(accepts({ type: 'undo' }, { type: 'redo' }, { type: 'repeatChange' })).toEqual([false, false, false])
+  it('refuses undo and redo, having no changes of its own', () => {
+    expect(accepts({ type: 'undo' }, { type: 'redo' })).toEqual([false, false])
   })
 })
 
@@ -229,7 +212,7 @@ describe('examples left in the library by an earlier version', () => {
   })
 
   it('are not found once a bar, the name or a practice setting changed', () => {
-    const edited = applyEdit(newEditorState(eighths), { type: 'enterFigure', hits: 'xxxx' }).exercise
+    const edited = applyEdit(newEditorState(eighths), { type: 'toggleGridPosition', row: 'snare', bar: 0, beat: 0, position: 1 }).exercise
     const renamed = { ...comping, name: 'My comping' }
     const slowed = withBpm(rock, 60)
     const leftHanded = { ...triplets, leadHand: 'L' as const }

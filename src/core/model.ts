@@ -124,10 +124,6 @@ export interface DeviceSettings {
   grooveVolume: number
   /** Silences the exercise, so the drummer can play the line over the click and the groove. */
   exerciseMuted: boolean
-  /** The grid editor's vim keys: Normal mode and its commands. Off, there's no Normal mode. */
-  vimKeys: boolean
-  /** The grid editor's "Figures" panel of palette tiles is open. */
-  figuresPanelOpen: boolean
   /** The exercise open when the app was last used, reopened at launch. */
   lastOpenedId: string | null
   /** The library sidebar's tab: the drummer's own exercises, or the built-in examples. */
@@ -140,6 +136,15 @@ export interface DeviceSettings {
   settingsSidebarOpen: boolean
 }
 
+/**
+ * Device settings as stored, over the defaults for any added since. A stored setting the app no
+ * longer has (such as `vimKeys`, ADR 0009) is dropped.
+ */
+export function deviceSettingsFrom(stored: Partial<DeviceSettings> | undefined): DeviceSettings {
+  const known = Object.entries(stored ?? {}).filter(([key]) => key in DEFAULT_DEVICE_SETTINGS)
+  return { ...DEFAULT_DEVICE_SETTINGS, ...Object.fromEntries(known) }
+}
+
 /** The library sidebar's tabs: the drummer's own exercises, and the built-in examples. */
 export type LibraryTab = 'library' | 'examples'
 
@@ -149,8 +154,6 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   exerciseVolume: 1,
   grooveVolume: 1,
   exerciseMuted: false,
-  vimKeys: false,
-  figuresPanelOpen: false,
   lastOpenedId: null,
   libraryTab: 'library',
   collapsedFolderIds: [],

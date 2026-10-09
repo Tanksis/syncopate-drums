@@ -3,7 +3,7 @@
 import type { DBSchema, IDBPDatabase } from 'idb'
 import { openDB } from 'idb'
 import type { DeviceSettings, Exercise, Folder } from '@/core'
-import { DEFAULT_DEVICE_SETTINGS, SCHEMA_VERSION, migrateExercise } from '@/core'
+import { SCHEMA_VERSION, deviceSettingsFrom, migrateExercise } from '@/core'
 
 export interface ExerciseRepository {
   list(): Promise<Exercise[]>
@@ -102,7 +102,7 @@ function folderRepository(db: Db): FolderRepository {
 
 function deviceSettingsStore(db: Db): DeviceSettingsStore {
   return {
-    load: async () => ({ ...DEFAULT_DEVICE_SETTINGS, ...(await db.get('settings', 'device')) }),
+    load: async () => deviceSettingsFrom(await db.get('settings', 'device')),
     save: async (settings) => {
       await db.put('settings', settings, 'device')
     },

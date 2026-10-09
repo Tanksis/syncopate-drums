@@ -1,14 +1,12 @@
-// The cheat sheet's lists of keys, one per mode. Keep them in step with the core's key map (`commandForKey`).
-
-import type { EditorMode } from '@/core'
+// The cheat sheet's list of keys. Keep it in step with the core's key map (`commandForKey`).
 
 export interface KeyHelpGroup {
   title: string
   keys: [keys: string, does: string][]
 }
 
-/** The keys that work in both modes. */
-const SHARED: KeyHelpGroup[] = [
+/** Every key the editor takes; notes are entered on the grid (ADR 0009). */
+export const KEY_HELP: KeyHelpGroup[] = [
   {
     title: 'Move',
     keys: [
@@ -23,7 +21,6 @@ const SHARED: KeyHelpGroup[] = [
     keys: [
       ['Backspace', 'rest, then step back'],
       ['Delete', 'rest in place'],
-      ['Alt+1–4', 'flip the sticking of note 1–4 of the beat'],
     ],
   },
   {
@@ -46,56 +43,3 @@ const SHARED: KeyHelpGroup[] = [
     ],
   },
 ]
-
-function insertKeys(vimKeys: boolean): KeyHelpGroup {
-  return {
-    title: 'Insert',
-    keys: [
-      ['1–0  Z X C V B', 'enter a figure (sixteenths)'],
-      ['A S D F G H', 'enter a figure (triplets)'],
-      ['-', 'enter a rest'],
-      ['T', 'tie into the beat'],
-      ['.', 'cut the beat’s last note short'],
-      ...(vimKeys ? [['Esc', 'Normal mode'] as [string, string]] : []),
-    ],
-  }
-}
-
-const NORMAL: KeyHelpGroup[] = [
-  {
-    title: 'Normal: move (a beat is a character, a bar a word)',
-    keys: [
-      ['h l', 'beat back / on'],
-      ['j k', 'kick row / snare row'],
-      ['w b', 'next bar / start of the bar'],
-      ['0 $', 'first / last beat of the bar'],
-      ['gg G', 'start / end; with a count, that bar'],
-    ],
-  },
-  {
-    title: 'Normal: edit',
-    keys: [
-      ['i a', 'Insert mode on / after the beat'],
-      ['x', 'rest the beat'],
-      ['r + figure key', 'replace the beat'],
-      ['dd yy', 'delete / yank the bar'],
-      ['p P', 'put the yanked bars after / before'],
-      ['o O', 'open a bar below / above'],
-      ['u  Ctrl+R', 'undo / redo'],
-      ['.', 'repeat the last change'],
-      ['3p  2dd …', 'a count repeats the command'],
-    ],
-  },
-  {
-    title: 'Normal: select bars',
-    keys: [
-      ['V', 'select the bar; moves extend it'],
-      ['y d p', 'yank / delete / replace the selection'],
-      ['Esc', 'end the selection'],
-    ],
-  },
-]
-
-export function keyHelp(mode: EditorMode, vimKeys: boolean): KeyHelpGroup[] {
-  return mode === 'normal' && vimKeys ? [...NORMAL, ...SHARED] : [insertKeys(vimKeys), ...SHARED]
-}
