@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Exercise, GroovePresetId, TimelineEntry } from './index'
-import { DEFAULT_DEVICE_SETTINGS, newExercise, playheadAt, positionLabel, recordEvents, schedule, trimTimeline } from './index'
+import { DEFAULT_DEVICE_SETTINGS, newExercise, playheadAt, positionLabel, recordEvents, resumePosition, schedule, trimTimeline } from './index'
 
 /** Count-in beat 4 at 0, then bar 1: a note with the click at 1, a click at 1.5, a note at 1.75. */
 const timeline: TimelineEntry[] = [
@@ -90,5 +90,20 @@ describe('the position shown in the header', () => {
   it('shows bar · beat, counting from 1', () => {
     expect(positionLabel({ bar: 0, tick: 0 })).toBe('1 · 1')
     expect(positionLabel({ bar: 6, tick: 30 })).toBe('7 · 3')
+  })
+})
+
+describe('resuming after a pause', () => {
+  it('carries on from the first event not yet heard', () => {
+    expect(resumePosition(timeline, -0.1)).toEqual({ bar: -1, tick: 36 })
+    expect(resumePosition(timeline, 1.2)).toEqual({ bar: 0, tick: 12 })
+  })
+
+  it('does not replay an event heard at the moment of pausing', () => {
+    expect(resumePosition(timeline, 1.5)).toEqual({ bar: 0, tick: 18 })
+  })
+
+  it('leaves it to the engine once everything scheduled has been heard', () => {
+    expect(resumePosition(timeline, 2)).toBeUndefined()
   })
 })

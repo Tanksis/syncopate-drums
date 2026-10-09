@@ -25,8 +25,8 @@ export function isTripletHits(hits: string): boolean {
   return hits.length === 3
 }
 
-/** Space: a beat with no hits. */
-export const REST_FIGURE: Figure = { key: ' ', hits: '....', row: 2 }
+/** `-`: a beat with no hits. (Space is the transport's pause.) */
+export const REST_FIGURE: Figure = { key: '-', hits: '....', row: 2 }
 
 export function figureOfHits(hits: string): Figure | undefined {
   return hits === REST_FIGURE.hits ? REST_FIGURE : FIGURES.find((f) => f.hits === hits)

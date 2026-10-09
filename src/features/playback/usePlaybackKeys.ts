@@ -1,13 +1,22 @@
 import { useEffect } from 'react'
-import { togglePlayback } from './transport'
+import { togglePause, togglePlayback } from './transport'
 
-/** Ctrl+Space toggles playback from anywhere, even inside a text field. Plain Space is the rest beat. */
+/**
+ * Ctrl+Space plays from the count-in or stops, from anywhere, even inside a text field. Space
+ * pauses and resumes, outside text fields and buttons and while no dialog is open.
+ */
 export function usePlaybackKeys() {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (!e.ctrlKey || e.altKey || e.metaKey || e.code !== 'Space') return
+      if (e.altKey || e.metaKey || e.shiftKey || e.code !== 'Space') return
+      if (!e.ctrlKey) {
+        if (e.target instanceof HTMLElement && e.target.closest('input, textarea, select, button, [contenteditable]')) return
+        if (document.querySelector('dialog[open]')) return
+      }
       e.preventDefault()
-      if (!e.repeat) togglePlayback()
+      if (e.repeat) return
+      if (e.ctrlKey) togglePlayback()
+      else togglePause()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)

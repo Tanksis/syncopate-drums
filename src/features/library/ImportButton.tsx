@@ -46,7 +46,7 @@ export function ImportButton({ className, onImported }: { className: string; onI
       <button
         type="button"
         title="Add exercises from an exported file"
-        // Keeps focus off the button, so Space still enters a rest rather than clicking it again.
+        // Keeps focus off the button, so Space still pauses rather than clicking it again.
         onMouseDown={keepFocus}
         onClick={() => picker.current?.click()}
         className={className}

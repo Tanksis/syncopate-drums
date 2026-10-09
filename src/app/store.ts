@@ -2,7 +2,7 @@
 // change, unless it is an example, which is never stored (ADR 0008).
 
 import { create } from 'zustand'
-import type { DeviceSettings, EditCommand, EditorState, Exercise, Folder, GroovePresetId, ImportChoice } from '@/core'
+import type { DeviceSettings, EditCommand, EditorState, Exercise, Folder, GroovePresetId, ImportChoice, PlayPosition } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
   addedOnTop,
@@ -36,6 +36,12 @@ import {
 import type { AppStorage } from './repository'
 import { openStorage } from './repository'
 
+/** A paused playback: the exercise it was paused in and where it resumes. */
+export interface PausedAt {
+  exerciseId: string
+  position: PlayPosition
+}
+
 interface AppState {
   editor: EditorState
   /** Every exercise, in the session's list order; the open one as it is now. */
@@ -47,6 +53,8 @@ interface AppState {
   saving: boolean
   /** Transport: whether playback is running (or starting). */
   playing: boolean
+  /** Where a paused playback resumes, in the exercise it was paused in. */
+  paused: PausedAt | undefined
   /** How many edits an open example has refused, so the read-only notice can flash at each. */
   refusedEdits: number
   dispatch: (command: EditCommand) => void
@@ -57,6 +65,7 @@ interface AppState {
   /** The groove layer played and drawn with the exercise. */
   setGroove: (groove: GroovePresetId) => void
   setPlaying: (playing: boolean) => void
+  setPaused: (paused: PausedAt | undefined) => void
   /** Volumes, the exercise mute, the count-in and vim keys, kept for this device; `dragging` as for `setBpm`. */
   setDeviceSettings: (settings: Partial<DeviceSettings>, options?: { dragging?: boolean }) => void
   /** Loops just that bar, or with `extend` grows the loop range to take it in. */
@@ -215,6 +224,7 @@ export const useAppStore = create<AppState>()((set, get) => {
     device: DEFAULT_DEVICE_SETTINGS,
     saving: false,
     playing: false,
+    paused: undefined,
     refusedEdits: 0,
     dispatch: (command) => {
       const { editor } = get()
@@ -239,6 +249,7 @@ export const useAppStore = create<AppState>()((set, get) => {
       if (exercise !== editor.exercise) change(exercise, { ...editor, exercise })
     },
     setPlaying: (playing) => set({ playing }),
+    setPaused: (paused) => set({ paused }),
     setDeviceSettings: (settings, { dragging = false } = {}) => {
       const { editor } = get()
       const device = { ...get().device, ...settings }

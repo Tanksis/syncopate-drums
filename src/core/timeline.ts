@@ -53,6 +53,15 @@ export function playheadAt(timeline: readonly TimelineEntry[], time: number): Pl
   return hit < 0 ? { position } : { hit: timeline[hit].position, position }
 }
 
+/**
+ * Where to carry on after pausing at `time`: the first event not yet heard, so nothing heard is
+ * played twice. Undefined when the timeline holds nothing later; the engine then carries on from
+ * where it stopped scheduling.
+ */
+export function resumePosition(timeline: readonly TimelineEntry[], time: number): PlayPosition | undefined {
+  return timeline[lastAt(timeline, time) + 1]?.position
+}
+
 /** The position as the header shows it: the count-in's beat, then bar · beat, counted from 1. */
 export function positionLabel({ bar, tick }: PlayPosition): string {
   const beat = Math.floor(tick / TICKS_PER_BEAT) + 1

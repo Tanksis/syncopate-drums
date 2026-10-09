@@ -40,7 +40,8 @@ const SHARED: KeyHelpGroup[] = [
   {
     title: 'App',
     keys: [
-      ['Ctrl+Space', 'play / stop'],
+      ['Space', 'pause / resume'],
+      ['Ctrl+Space', 'play from the count-in / stop'],
       ['?', 'show / hide this sheet'],
     ],
   },
@@ -52,7 +53,7 @@ function insertKeys(vimKeys: boolean): KeyHelpGroup {
     keys: [
       ['1–0  Z X C V B', 'enter a figure (sixteenths)'],
       ['A S D F G H', 'enter a figure (triplets)'],
-      ['Space', 'enter a rest'],
+      ['-', 'enter a rest'],
       ['T', 'tie into the beat'],
       ['.', 'cut the beat’s last note short'],
       ...(vimKeys ? [['Esc', 'Normal mode'] as [string, string]] : []),
