@@ -258,7 +258,7 @@ export function BeatStrip({ twoPerRow = false }: { twoPerRow?: boolean }) {
                 aria-current={current || undefined}
                 onClick={() => dispatch({ type: 'moveTo', bar: b, beat })}
                 className={`relative flex min-w-0 cursor-pointer flex-col gap-1 rounded-xl border p-2 ${looped || selected ? 'bg-card/60' : 'bg-card'} ${
-                  current ? 'border-accent ring-2 ring-accent' : 'border-line'
+                  current ? 'border-accent ring-2 ring-accent dark:ring-0' : 'border-line'
                 }`}
               >
                 <div className="flex items-center gap-1.5">
