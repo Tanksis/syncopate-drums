@@ -1,23 +1,38 @@
 @import 'tailwindcss';
 
-/* Design tokens: use them as Tailwind utilities, e.g. bg-panel, text-mute, border-line. */
-@theme {
-  --color-accent: #2563eb;
+/*
+ * Design tokens: use them as Tailwind utilities, e.g. bg-panel, text-mute, border-line for a divider
+ * and border-edge for a control's border (a button, field or cell). Every colour
+ * in the app comes from here; the notation reads them as CSS variables when it draws (staff.ts), so
+ * they are always emitted (static). The light theme meets WCAG AA: text 4.5:1 against the surface it
+ * sits on (the loop fill and a hovered bg-line included), large text, control borders and states 3:1.
+ */
+@theme static {
+  --color-accent: #2158df;
+  /* Text on an accent or danger fill. */
+  --color-on-accent: #fff;
+  /* The current bar's shading in the notation. */
+  --color-accent-tint: #eff6ff;
+  /* The selected bar tab and selected bars in the editor (shown by an accent border too). */
+  --color-select: #e0f2fe;
   --color-bg: #f5f5f4;
   --color-card: #fff;
   --color-ink: #1c1917;
-  --color-mute: #78716c;
+  --color-mute: #6b6560;
+  /* Dividers between areas. */
   --color-line: #e7e5e4;
+  /* A control's border: buttons, fields, cells, so it reads at 3:1. */
+  --color-edge: #857f7a;
   --color-panel: #fafaf9;
   --color-danger: #b91c1c;
   /* The playhead line during playback, apart from the blue cursor and the amber loop. */
   --color-play: #059669;
   /* The kick row's hits in the beat cards, apart from the snare row's ink. */
-  --color-kick: #ea580c;
+  --color-kick: #c2410c;
   /* The loop range: its shading, border and bar numbers. */
   --color-loop: #fde68a;
-  --color-loop-line: #f59e0b;
-  --color-loop-ink: #b45309;
+  --color-loop-line: #d97706;
+  --color-loop-ink: #a14a08;
 
   --font-sans: system-ui, sans-serif;
 }
@@ -31,5 +46,10 @@
 
   body {
     @apply overflow-hidden bg-bg font-sans text-sm/[1.4] text-ink;
+  }
+
+  /* Tailwind's default placeholder is the text at half strength, short of 4.5:1. */
+  ::placeholder {
+    @apply text-mute;
   }
 }

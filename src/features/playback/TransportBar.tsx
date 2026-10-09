@@ -32,7 +32,7 @@ export function TransportBar({ onEdit }: { onEdit?: () => void }) {
         // Keep focus off the buttons, so Space pauses rather than clicking them.
         onMouseDown={keepFocus}
         onClick={togglePause}
-        className={`${roundButtonClass} size-12 border-accent bg-accent text-lg/none text-white active:opacity-80`}
+        className={`${roundButtonClass} size-12 border-accent bg-accent text-lg/none text-on-accent active:opacity-80`}
       >
         <span aria-hidden>{playing ? '❚❚' : '▶'}</span>
       </button>
@@ -51,7 +51,7 @@ export function TransportBar({ onEdit }: { onEdit?: () => void }) {
           // Keep focus off the button, so Space pauses rather than clicking it.
           onMouseDown={keepFocus}
           onClick={onEdit}
-          className="ml-auto h-11 shrink-0 cursor-pointer rounded-lg border border-line bg-card px-3.5 text-sm font-semibold touch-manipulation active:border-accent active:text-accent"
+          className="ml-auto h-11 shrink-0 cursor-pointer rounded-lg border border-edge bg-card px-3.5 text-sm font-semibold touch-manipulation active:border-accent active:text-accent"
         >
           Edit
         </button>
@@ -99,7 +99,7 @@ function BpmStep({ step }: { step: 1 | -1 }) {
       // A pointer changes the tempo as it goes down; the keyboard (detail 0) clicks.
       onClick={(e) => e.detail === 0 && change(step, false)}
       onContextMenu={(e) => e.preventDefault()}
-      className={`${roundButtonClass} size-11 border-line bg-panel text-xl/none active:border-accent active:text-accent`}
+      className={`${roundButtonClass} size-11 border-edge bg-panel text-xl/none active:border-accent active:text-accent`}
     >
       <span aria-hidden>{step > 0 ? '+' : '−'}</span>
     </button>

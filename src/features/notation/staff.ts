@@ -10,11 +10,8 @@ import { Beam, Dot, Formatter, Fraction, GhostNote, Renderer, Stave, StaveNote, 
 import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, NoteSticking, PlayPosition, StaffEvent } from '@/core'
 import { NOTATION_LAYOUT, TICKS_PER_BEAT, inLoopRange, notationFit, staffParts, sticking, swingOn } from '@/core'
 
-// Mirror the accent, a light tint of it and the loop range's ink and shade from the design tokens in styles/index.css.
-const ACCENT_COLOUR = '#2563eb'
-const CURRENT_BAR_SHADE = '#eff6ff'
-const LOOP_COLOUR = '#b45309'
-const LOOP_SHADE = '#fde68a'
+/** A colour design token from styles/index.css, read when the notation draws so it follows the theme. */
+const token = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(`--color-${name}`).trim()
 /** Height of the loop band drawn behind the bar numbers of the looped bars. */
 const LOOP_BAND_HEIGHT = 12
 
@@ -199,6 +196,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   renderer.resize(area.width, Math.ceil((lines * height + STAVE_TOP) * scale))
   const ctx = renderer.getContext()
   ctx.scale(scale, scale)
+  const colour = { ink: token('ink'), accent: token('accent'), currentBar: token('accent-tint'), loopInk: token('loop-ink'), loop: token('loop') }
   const stickings = new Map(sticking(exercise).map((n) => [n.noteId, n]))
   /** The last drawn note of each drum, with its line, to tie the next one to. */
   const lastOf = new Map<string, TieEnd>()
@@ -219,7 +217,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
     if (b === 0) stave.addTimeSignature('4/4')
     if (b === cursor?.bar) {
       ctx.save()
-      ctx.setFillStyle(CURRENT_BAR_SHADE)
+      ctx.setFillStyle(colour.currentBar)
       ctx.fillRect(x, stave.getYForLine(-1), w, stave.getYForLine(5) - stave.getYForLine(-1))
       ctx.restore()
     }
@@ -227,7 +225,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
       // A band across the top of each looped bar, behind its number, so the range reads as one strip.
       const bandTop = stave.getYForTopText(barNumberLine) + 3 - LOOP_BAND_HEIGHT + 2
       ctx.save()
-      ctx.setFillStyle(LOOP_SHADE)
+      ctx.setFillStyle(colour.loop)
       ctx.fillRect(x, bandTop, w, LOOP_BAND_HEIGHT)
       ctx.restore()
     }
@@ -236,7 +234,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
       const top = stave.getYForLine(0)
       Object.assign(firstStaff, { left: MARGIN * scale, top: top * scale, width: (x + w - MARGIN) * scale, height: (stave.getYForLine(4) - top) * scale })
     }
-    drawBarNumber(stave, b, exercise.practice.loopRange, barNumberLine)
+    drawBarNumber(stave, b, exercise.practice.loopRange, barNumberLine, colour.loopInk)
 
     const drawings = drawnLimbs
       .filter((limb) => parts[b][limb].length)
@@ -245,7 +243,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
     for (const { drawn } of drawings) {
       if (b !== cursor?.bar) continue
       for (const { event, note } of drawn) {
-        if (Math.floor(event.start / TICKS_PER_BEAT) === cursor.beat) note.setStyle({ fillStyle: ACCENT_COLOUR, strokeStyle: ACCENT_COLOUR })
+        if (Math.floor(event.start / TICKS_PER_BEAT) === cursor.beat) note.setStyle({ fillStyle: colour.accent, strokeStyle: colour.accent })
       }
     }
     drawParts(stave, drawings, 4, Math.max(30, x + w - stave.getNoteStartX() - 18))
@@ -267,12 +265,16 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
           if (n.tied && previous) ties.push(...tie(previous, { note, index, line }))
           lastOf.set(n.drum, { note, index, line })
           const noteSticking = n.noteId && !n.tied ? stickings.get(n.noteId) : undefined
-          if (noteSticking) drawHand(stave, note, noteSticking, handRow)
+          if (noteSticking) drawHand(stave, note, noteSticking, handRow, colour.accent)
         }
       }
     }
   })
   ties.forEach((t) => t.setContext(ctx).draw())
+  // VexFlow draws in black, some of it (stems) from its own defaults, so its black becomes the ink.
+  for (const attr of ['fill', 'stroke']) {
+    for (const node of el.querySelectorAll(`[${attr}="black"], [${attr}="#000000"]`)) node.setAttribute(attr, colour.ink)
+  }
 
   // In the page's pixels, so scaled.
   const line = (bar: number) => {
@@ -302,7 +304,7 @@ function tie(from: TieEnd, to: TieEnd): StaveTie[] {
  * click can loop it, on the given text line above the stave. Bars in a set loop range are numbered
  * in bold, in the loop colour.
  */
-function drawBarNumber(stave: Stave, bar: number, loopRange: LoopRange | null, line: number) {
+function drawBarNumber(stave: Stave, bar: number, loopRange: LoopRange | null, line: number, loopInk: string) {
   const ctx = stave.checkContext()
   const looped = inLoopRange(loopRange, bar)
   const group: SVGGElement = ctx.openGroup('bar-number')
@@ -313,7 +315,7 @@ function drawBarNumber(stave: Stave, bar: number, loopRange: LoopRange | null, l
   group.append(title)
   ctx.save()
   ctx.setFont({ ...stave.fontInfo, weight: looped ? 'bold' : stave.fontInfo.weight })
-  if (looped) ctx.setFillStyle(LOOP_COLOUR)
+  if (looped) ctx.setFillStyle(loopInk)
   const text = String(bar + 1)
   const width = ctx.measureText(text).width
   const height = Number.parseFloat(String(stave.fontInfo.size))
@@ -330,7 +332,7 @@ function drawBarNumber(stave: Stave, bar: number, loopRange: LoopRange | null, l
  * Prints the shown R or L centred under a note, on the given stave line, in a group tagged with the
  * note's id so a click can flip it. An override is printed in the accent colour, with a hover hint.
  */
-function drawHand(stave: Stave, note: StaveNote, { noteId, shown: hand, override }: NoteSticking, line: number) {
+function drawHand(stave: Stave, note: StaveNote, { noteId, shown: hand, override }: NoteSticking, line: number, accent: string) {
   if (!hand) return
   const ctx = stave.checkContext()
   const group: SVGGElement = ctx.openGroup('hand')
@@ -343,7 +345,7 @@ function drawHand(stave: Stave, note: StaveNote, { noteId, shown: hand, override
   }
   ctx.save()
   ctx.setFont('Academico', 12, 'bold')
-  if (override) ctx.setFillStyle(ACCENT_COLOUR)
+  if (override) ctx.setFillStyle(accent)
   const width = ctx.measureText(hand).width
   const x = noteCentre(note) - width / 2
   const y = stave.getYForLine(line)

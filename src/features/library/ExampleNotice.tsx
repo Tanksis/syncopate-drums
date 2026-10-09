@@ -41,7 +41,7 @@ export function ExampleNotice() {
         title="Make an editable copy of this example"
         onMouseDown={keepFocus}
         onClick={copyToLibrary}
-        className="cursor-pointer rounded-md border border-line bg-card px-2 py-0.5 font-semibold text-ink hover:border-accent"
+        className="cursor-pointer rounded-md border border-edge bg-card px-2 py-0.5 font-semibold text-ink hover:border-accent"
       >
         Copy to Library
       </button>
