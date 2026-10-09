@@ -15,9 +15,9 @@ export interface MenuItem {
  * A ⋯ button that opens a small popover of items under it, or over it where there's no room
  * below. It closes on a choice, `Esc`, a click or tap outside it, or a scroll. Neither the button
  * nor the items take focus, so the editor's keys work as before once it closes; `Esc` goes to the
- * menu only while it's open.
+ * menu only while it's open. A `large` button is big enough for a finger.
  */
-export function Menu({ label, items }: { label: string; items: MenuItem[] }) {
+export function Menu({ label, items, large = false }: { label: string; items: MenuItem[]; large?: boolean }) {
   // The button's box, which the popover hangs from; null while closed.
   const [anchor, setAnchor] = useState<{ top: number; bottom: number; right: number } | null>(null)
   const root = useRef<HTMLDivElement>(null)
@@ -72,7 +72,9 @@ export function Menu({ label, items }: { label: string; items: MenuItem[] }) {
           const box = e.currentTarget.getBoundingClientRect()
           setAnchor(anchor ? null : { top: box.top, bottom: box.bottom, right: window.innerWidth - box.right })
         }}
-        className="cursor-pointer rounded px-1 text-sm/none text-mute hover:bg-line hover:text-accent aria-expanded:bg-line aria-expanded:text-accent"
+        className={`cursor-pointer text-mute hover:bg-line hover:text-accent aria-expanded:bg-line aria-expanded:text-accent ${
+          large ? 'size-9 rounded-lg border border-line bg-card text-base/none' : 'rounded px-1 text-sm/none'
+        }`}
       >
         ⋯
       </button>
