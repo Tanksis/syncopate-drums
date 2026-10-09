@@ -16,6 +16,7 @@ import {
   restBar,
   setBeat,
   sticking,
+  stickingNoteAt,
   toggleCutShort,
   toggleTie,
   withBpm,
@@ -668,6 +669,32 @@ describe('sticking overrides', () => {
   it('cannot be flipped while sticking is hidden', () => {
     const off = applyEdit(start(), { type: 'setExerciseSettings', settings: { sticking: 'off' } })
     expect(flip(off, 0)).toBe(off)
+  })
+
+  it('a struck snare hit names its note for a long-press to flip', () => {
+    const at = (state: EditorState, beat: number, position: number, row: Row = 'snare') =>
+      stickingNoteAt(state, { row, bar: 0, beat, position })
+    expect(at(start(), 1, 1)).toBe('0:15')
+    expect(at(start(), 0, 2)).toBe('0:6')
+  })
+
+  it('names no note on a rest, a hold, the kick row, or with sticking off', () => {
+    const at = (state: EditorState, beat: number, position: number, row: Row = 'snare') =>
+      stickingNoteAt(state, { row, bar: 0, beat, position })
+    expect(at(start(), 0, 1)).toBeNull()
+    expect(at(start(), 2, 0)).toBeNull()
+    const kicked = click(start(), 0, 0, 0, 'kick')
+    expect(at(kicked, 0, 0, 'kick')).toBeNull()
+    const held = applyEdit(start(), { type: 'setHold', from: { row: 'snare', bar: 0, beat: 0, position: 0 }, to: { row: 'snare', bar: 0, beat: 0, position: 2 } })
+    expect(editorBeatViews(held)[0][0].snare.positions[1]).toBe('hold')
+    expect(at(held, 0, 1)).toBeNull()
+    const off = applyEdit(start(), { type: 'setExerciseSettings', settings: { sticking: 'off' } })
+    expect(at(off, 1, 1)).toBeNull()
+  })
+
+  it('reads a triplet beat on its own grid', () => {
+    const triplets = click(applyEdit(start(), { type: 'setBeatGrid', bar: 0, beat: 2, triplet: true }), 0, 2, 2)
+    expect(stickingNoteAt(triplets, { row: 'snare', bar: 0, beat: 2, position: 2 })).toBe('0:32')
   })
 
   it('reset clears every override in one undoable step, and is not a change with none set', () => {

@@ -6,7 +6,9 @@ import type { Bar, Exercise, Hand, Item, LoopRange, Row } from './model'
 import {
   BEATS_PER_BAR,
   ROWS,
+  TICKS_PER_BEAT,
   beatIndex,
+  noteId,
   itemTicks,
   loopRangeAfterDelete,
   loopRangeAfterInsert,
@@ -15,7 +17,7 @@ import {
   withLoopRangeInBars,
 } from './model'
 import type { BeatView, GridPoint, RowView } from './speller'
-import { beatViews, clearBeatToDownbeat, setBeat, setHold, toggleHit, toggleTie } from './speller'
+import { beatViews, clearBeatToDownbeat, setBeat, setHold, slotTicks, toggleHit, toggleTie } from './speller'
 import type { NoteSticking } from './sticking'
 import { overrideCount, sticking } from './sticking'
 
@@ -159,6 +161,18 @@ export function newEditorState(exercise: Exercise): EditorState {
  */
 export function canTieOverBarline(state: EditorState, bar: number, row: Row): boolean {
   return tiedOverBarline(state.exercise.bars, bar, row) !== null
+}
+
+/**
+ * The id of the snare note struck at a grid position, as the editor shows its grid, for a
+ * long-press to flip its sticking; null where there is no hand to flip: a rest, a hold, the kick
+ * row, or sticking off.
+ */
+export function stickingNoteAt(state: EditorState, { row, bar, beat, position }: GridPoint): string | null {
+  const view = editorBeatViews(state)[bar]?.[beat]
+  if (row !== 'snare' || !view || view.snare.positions[position] !== 'hit') return null
+  const id = noteId('snare', bar, beat * TICKS_PER_BEAT + slotTicks(view.triplet)[position])
+  return sticking(state.exercise).find((n) => n.noteId === id)?.shown ? id : null
 }
 
 /** The bars with a bar's first beat in a row tied over the barline or untied, or null if it can't be. */

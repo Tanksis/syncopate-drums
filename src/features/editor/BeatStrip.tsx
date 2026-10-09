@@ -1,11 +1,11 @@
 import type { PointerEvent } from 'react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { keepFocus } from '@/components/keepFocus'
 import type { MenuItem } from '@/components/Menu'
 import { Menu } from '@/components/Menu'
-import type { BeatView, EditCommand, EditorState, GridPoint, PositionState, Row, RowView } from '@/core'
-import { ROWS, applyEdit, canTieOverBarline, editorBeatViews, inLoopRange, isExample } from '@/core'
+import type { BeatView, EditCommand, EditorState, GridPoint, Hand, PositionState, Row, RowView } from '@/core'
+import { ROWS, applyEdit, canTieOverBarline, editorBeatViews, inLoopRange, isExample, sticking, stickingNoteAt } from '@/core'
 
 /** A press on a grid position, and (once it moves to another position) the hold end it drags to. */
 interface Press {
@@ -16,7 +16,20 @@ interface Press {
   /** The pointer has left the pressed position, so the release is not a click. */
   moved: boolean
   to: GridPoint | null
+  /** Where the pointer went down, to tell a still long-press from the start of a drag. */
+  down: { x: number; y: number }
+  /** The struck snare note a long-press here would flip, or null where it would do nothing. */
+  flipNoteId: string | null
+  /** The long-press took: the note's sticking is flipped, and the release does nothing more. */
+  flipped: boolean
 }
+
+/** How long a still press on a hit lasts before it flips the note's sticking. */
+const LONG_PRESS_MS = 500
+/** How far the pointer may wander, in pixels, and still be a long-press. */
+const LONG_PRESS_SLOP = 8
+/** How long the flipped hand shows on its cell. */
+const FLASH_MS = 700
 
 /**
  * The grid position of a row under the pointer, anywhere in the strip: in the beat card nearest the
@@ -58,7 +71,8 @@ const countLabels = (beat: number, triplet: boolean) =>
  * hover), their count labels, and the kick row's cells under them, as the staff writes hands over
  * feet. Clicking a cell turns a hit on or off in its row; pressing on a note and dragging sets
  * where its hold ends, on into later beats of the bar in the same row, shown live and written on
- * release. Clicking elsewhere on a card moves the cursor to it. A card's 16ths | trip switch puts
+ * release. Holding still on a snare hit for half a second flips its sticking instead, flashing the
+ * new hand on the cell. Clicking elsewhere on a card moves the cursor to it. A card's 16ths | trip switch puts
  * it on the sixteenth or the triplet grid, and its ⋯ menu (not on an example) switches the grid,
  * rests the beat, or ties a bar's first beat over the barline. The cursor's card is outlined with a
  * mark beside its row, and the bar selection and a set loop range are shaded.
@@ -76,6 +90,18 @@ export function BeatStrip() {
     pressRef.current = next
     setPress(next)
   }
+  // A pending long-press, and the note whose flipped hand is flashing on its cell.
+  const longPressTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const [flash, setFlash] = useState<{ point: GridPoint; noteId: string } | null>(null)
+  const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  useEffect(
+    () => () => {
+      clearTimeout(longPressTimer.current)
+      clearTimeout(flashTimer.current)
+    },
+    [],
+  )
+  const flashedHand = (flash && sticking(editor.exercise).find((n) => n.noteId === flash.noteId)?.shown) ?? null
   // While dragging, the strip shows the hold as the editor would write it on release.
   const shown = press?.to ? applyEdit(editor, { type: 'setHold', from: press.from, to: press.to }) : editor
   const views = editorBeatViews(shown)
@@ -83,7 +109,33 @@ export function BeatStrip() {
   const startPress = (e: PointerEvent<HTMLElement>, from: GridPoint, position: PositionState) => {
     if (e.button !== 0) return
     e.currentTarget.setPointerCapture(e.pointerId)
-    track({ pointerId: e.pointerId, from, onNote: position !== 'empty', moved: false, to: null })
+    const flipNoteId = example ? null : stickingNoteAt(editor, from)
+    track({
+      pointerId: e.pointerId,
+      from,
+      onNote: position !== 'empty',
+      moved: false,
+      to: null,
+      down: { x: e.clientX, y: e.clientY },
+      flipNoteId,
+      flipped: false,
+    })
+    clearTimeout(longPressTimer.current)
+    if (flipNoteId) longPressTimer.current = setTimeout(() => longPress(e.pointerId), LONG_PRESS_MS)
+  }
+  const cancelPress = () => {
+    clearTimeout(longPressTimer.current)
+    track(null)
+  }
+  /** The press has stayed still on its hit long enough: flip the note's sticking, and flash its new hand. */
+  const longPress = (pointerId: number) => {
+    const press = pressRef.current
+    if (!press?.flipNoteId || press.pointerId !== pointerId) return
+    track({ ...press, flipped: true })
+    dispatch({ type: 'flipOverride', note: { id: press.flipNoteId } })
+    setFlash({ point: press.from, noteId: press.flipNoteId })
+    clearTimeout(flashTimer.current)
+    flashTimer.current = setTimeout(() => setFlash(null), FLASH_MS)
   }
   /** The press followed to the pointer: the hold runs through the position under it, in this beat or a later one. */
   const follow = (e: PointerEvent<HTMLElement>, press: Press): Press => {
@@ -96,16 +148,24 @@ export function BeatStrip() {
   }
   const movePress = (e: PointerEvent<HTMLElement>) => {
     const press = pressRef.current
-    if (!press || e.pointerId !== press.pointerId) return
+    if (!press || e.pointerId !== press.pointerId || press.flipped) return
+    if (press.flipNoteId) {
+      // Jitter while waiting for a long-press, even over the cell's edge, is still holding still.
+      if (Math.hypot(e.clientX - press.down.x, e.clientY - press.down.y) <= LONG_PRESS_SLOP) return
+      // Wandering off ends the wait; the press goes on as a click or a drag.
+      clearTimeout(longPressTimer.current)
+      return track(follow(e, { ...press, flipNoteId: null }))
+    }
     const next = follow(e, press)
     if (next !== press) track(next)
   }
   const endPress = (e: PointerEvent<HTMLElement>) => {
     const press = pressRef.current
     if (!press || e.pointerId !== press.pointerId) return
-    track(null)
-    // The release's own position counts too.
-    const last = follow(e, press)
+    cancelPress()
+    if (press.flipped) return
+    // The release's own position counts too, unless it is still within a long-press's slop: a click.
+    const last = press.flipNoteId ? press : follow(e, press)
     if (!last.moved) dispatch({ type: 'toggleGridPosition', ...last.from })
     else if (last.to) dispatch({ type: 'setHold', from: last.from, to: last.to })
   }
@@ -141,7 +201,8 @@ export function BeatStrip() {
             onPointerDown={(e) => startPress(e, { row, bar: b, beat, position: i }, position)}
             onPointerMove={movePress}
             onPointerUp={endPress}
-            onPointerCancel={() => track(null)}
+            onPointerCancel={cancelPress}
+            flashedHand={flash && samePoint(flash.point, { row, bar: b, beat, position: i }) ? flashedHand : null}
           />
         ))}
       </div>
@@ -285,6 +346,7 @@ function Cell({
   holdsOn,
   first,
   last,
+  flashedHand,
   ...pointer
 }: {
   /** The kick row's hits are drawn in its own colour. */
@@ -296,6 +358,8 @@ function Cell({
   /** The beat's first or last cell, whose bar runs on across the card's edge. */
   first: boolean
   last: boolean
+  /** The hand a long-press here just flipped the note to, shown for a moment. */
+  flashedHand: Hand | null
   /** A press here is a click on release, or a drag of the note's hold once it moves. */
   onPointerDown: (e: PointerEvent<HTMLElement>) => void
   onPointerMove: (e: PointerEvent<HTMLElement>) => void
@@ -318,7 +382,9 @@ function Cell({
       {...pointer}
       // The press handles the click; the card's own click (moving the cursor) must not follow.
       onClick={(e) => e.stopPropagation()}
-      className="group/cell relative flex h-10 min-w-0 flex-1 cursor-pointer touch-none items-center justify-center rounded border border-line bg-card hover:border-accent"
+      // A long-press is the strip's own: no context menu, callout or text selection on top of it.
+      onContextMenu={(e) => e.preventDefault()}
+      className="group/cell relative flex h-10 min-w-0 flex-1 cursor-pointer touch-none items-center justify-center rounded border border-line bg-card select-none [-webkit-touch-callout:none] hover:border-accent"
     >
       {position === 'hold' && <span className={`${holdLine} right-1/2 ${first ? '-left-[14px]' : '-left-[3px]'}`} />}
       {sounding && holdsOn && <span className={`${holdLine} left-1/2 ${last ? '-right-[14px]' : '-right-[3px]'}`} />}
@@ -327,6 +393,15 @@ function Cell({
       ) : position === 'empty' ? (
         <span className={`${disc} opacity-0 group-hover/cell:opacity-25`} />
       ) : null}
+      {flashedHand && (
+        <span
+          aria-hidden
+          data-flashed-hand
+          className="pointer-events-none absolute inset-0 flex animate-pulse items-center justify-center rounded bg-accent text-sm font-bold text-white"
+        >
+          {flashedHand}
+        </span>
+      )}
     </button>
   )
 }

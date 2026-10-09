@@ -233,7 +233,7 @@ function fromTimeline({ cells, triplet }: Timeline): Item[][] {
 }
 
 /** The ticks within a beat where a figure's characters fall: sixteenths, or triplet eighths. */
-function slotTicks(triplet: boolean): number[] {
+export function slotTicks(triplet: boolean): number[] {
   return triplet ? [0, 4, 8] : [0, 3, 6, 9]
 }
 
