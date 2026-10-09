@@ -68,13 +68,13 @@ export function NotationView() {
     <section
       ref={scrollerRef}
       aria-label="Notation view"
-      className="relative min-h-0 flex-1 overflow-auto bg-card px-4 py-2.5"
+      className="relative min-h-0 flex-1 overflow-auto bg-paper px-4 py-2.5"
     >
       <div className="relative">
         {!hasHits(exercise) && hintBox && (
           // Centred over the staff, which it leaves to take the clicks.
           <p style={hintBox} className="pointer-events-none absolute z-10 m-0 flex items-center justify-center text-center">
-            <span className="rounded-md bg-card/90 px-3 py-1 text-mute">
+            <span className="rounded-md bg-paper/90 px-3 py-1 text-mute">
               Tap or click a grid position below to add hits.
             </span>
           </p>
