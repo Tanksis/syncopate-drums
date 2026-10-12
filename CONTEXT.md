@@ -34,7 +34,7 @@ _Avoid_: Hit, stroke, event
 The span of bars within an exercise that repeats during practice; the whole exercise by default.
 
 **Practice settings**:
-How an exercise is practiced rather than what it contains: BPM, loop range, groove preset and swing amount. Remembered per exercise.
+How an exercise is practiced rather than what it contains: BPM, loop range, groove preset, swing amount and hi-hat foot. Remembered per exercise.
 
 **Device settings**:
 How the app is set up on this computer rather than how an exercise is practiced: volumes, the exercise mute, the count-in toggle, which exercise was last open, which sidebar tab is showing, and which folders are collapsed. Kept per device and never exported.
@@ -105,6 +105,13 @@ _Avoid_: Hand-to-hand
 **Lead hand**:
 The hand that plays the first grid position under natural sticking, or the first note under alternate sticking; R by default.
 
+**Sticking pattern**:
+A short run of R, L, K (kick) and `.` (rest), such as `RLRK`, laid on a grid (sixteenths or triplets) and repeated through a bar or an exercise by a **pattern fill**, which writes the typed hands as the sticking. In the sticking line under the staff, a kick that isn't played with a hand shows K.
+_Avoid_: Permutation, rudiment
+
+**Kicks in the gaps**:
+Turning every grid position where neither row strikes into a kick, on the grid each beat is already on: a GRID line such as `RLRL RL.L` becomes `RLRL RLKL`.
+
 **Sticking override**:
 A hand the user has set manually on one note, replacing the computed sticking; always the hand opposite the one computed when it was set. Hidden but kept when sticking is off. Only the snare row's notes carry one.
 
@@ -116,6 +123,10 @@ _Avoid_: Overlay, accompaniment, backing
 
 **Groove preset**:
 A named, predefined groove layer the user picks from (e.g. "Jazz ride + hi-hat 2 & 4").
+
+**Hi-hat foot**:
+A practice setting that plays the hi-hat pedal as an ostinato in every bar (on 1, quarters, 2 & 4 or the &s), alongside any groove preset and replacing the preset's own hi-hat foot (ADR 0010).
+_Avoid_: Hi-hat row, chick
 
 **Swing feel**:
 Playback where off-beat eighths are delayed into a long-short (triplet-like) feel; the opposite is straight feel.
