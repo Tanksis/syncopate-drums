@@ -265,7 +265,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
           if (n.tied && previous) ties.push(...tie(previous, { note, index, line }))
           lastOf.set(n.drum, { note, index, line })
           const noteSticking = n.noteId && !n.tied ? stickings.get(n.noteId) : undefined
-          if (noteSticking) drawHand(stave, note, noteSticking, handRow, colour.accent)
+          if (noteSticking) drawSticking(stave, note, noteSticking, handRow, colour.accent)
         }
       }
     }
@@ -329,12 +329,12 @@ function drawBarNumber(stave: Stave, bar: number, loopRange: LoopRange | null, l
 }
 
 /**
- * Prints the shown R or L centred under a note, on the given stave line, in a group tagged with the
- * note's id so a click can flip it. An override is printed in the accent colour, with a hover hint.
- * A kick's K is printed the same way in line with the hands, but has nothing to flip.
+ * Prints the shown R, L or K centred under a note, on the given stave line. A hand's group is tagged
+ * with the note's id so a click can flip it, and an override is printed in the accent colour, with
+ * a hover hint. A kick's K has nothing to flip.
  */
-function drawHand(stave: Stave, note: StaveNote, { noteId, shown: hand, override, row }: NoteSticking, line: number, accent: string) {
-  if (!hand) return
+function drawSticking(stave: Stave, note: StaveNote, { noteId, shown: label, override, row }: NoteSticking, line: number, accent: string) {
+  if (!label) return
   const ctx = stave.checkContext()
   const flippable = row === 'snare'
   const group: SVGGElement = ctx.openGroup(flippable ? 'hand' : 'kick')
@@ -350,10 +350,10 @@ function drawHand(stave: Stave, note: StaveNote, { noteId, shown: hand, override
   ctx.save()
   ctx.setFont('Academico', 12, 'bold')
   if (override) ctx.setFillStyle(accent)
-  const width = ctx.measureText(hand).width
+  const width = ctx.measureText(label).width
   const x = noteCentre(note) - width / 2
   const y = stave.getYForLine(line)
-  ctx.fillText(hand, x, y)
+  ctx.fillText(label, x, y)
   // VexFlow's SVG ignores the pointer, so the hand needs its own invisible hit area to be clicked.
   if (flippable) ctx.pointerRect(x - HAND_HIT_PAD, y - 12 - HAND_HIT_PAD, width + 2 * HAND_HIT_PAD, 14 + 2 * HAND_HIT_PAD)
   ctx.restore()

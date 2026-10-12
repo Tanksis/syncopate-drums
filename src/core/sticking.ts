@@ -1,8 +1,8 @@
 // Sticking: which hand plays each struck note of the snare row, and K for each kick that no hand
-// plays with. Computed once over the whole exercise from bar 1, so it never depends on the loop range or
-// which pass is playing.
+// plays with. Computed once over the whole exercise from bar 1, so it never depends on the loop
+// range or which pass is playing.
 
-import type { Exercise, Hand } from './model'
+import type { Exercise, Hand, Note } from './model'
 import { BEATS_PER_BAR, TICKS_PER_BEAT, noteId } from './model'
 import type { PlacedItem } from './speller'
 import { placeItems } from './speller'
@@ -47,7 +47,7 @@ export function sticking(exercise: Exercise): NoteSticking[] {
   const placed = placeItems(exercise.bars, 'snare')
   const hands = mode === 'alternate' ? alternate(placed, leadHand) : natural(placed, leadHand)
   const snare = placed.flatMap((p, i): HandSticking[] => {
-    if (!isStruck(p) || p.item.kind !== 'note') return []
+    if (!isStruck(p)) return []
     // Hidden hands keep their overrides, so switching back brings them back.
     const computed = mode === 'off' ? null : hands[i]
     const { override } = p.item
@@ -55,9 +55,10 @@ export function sticking(exercise: Exercise): NoteSticking[] {
     return [{ row: 'snare', noteId: noteId('snare', p.bar, p.start), bar: p.bar, start: p.start, computed, override, shown }]
   })
   if (mode === 'off') return snare
-  const handTicks = new Set(snare.map((n) => n.noteId))
+  // A snare note's id is its `bar:tick`, so a kick with a hand at its tick finds it here.
+  const handed = new Set(snare.map((n) => n.noteId))
   const kicks = placeItems(exercise.bars, 'kick').flatMap((p): KickSticking[] =>
-    isStruck(p) && !handTicks.has(noteId('snare', p.bar, p.start))
+    isStruck(p) && !handed.has(noteId('snare', p.bar, p.start))
       ? [{ row: 'kick', noteId: noteId('kick', p.bar, p.start), bar: p.bar, start: p.start, computed: 'K', shown: 'K' }]
       : [],
   )
@@ -69,7 +70,7 @@ export function overrideCount(exercise: Exercise): number {
   return sticking(exercise).filter((n) => n.override).length
 }
 
-const isStruck = (p: PlacedItem) => p.item.kind === 'note' && !p.continuation
+const isStruck = (p: PlacedItem): p is PlacedItem & { item: Note } => p.item.kind === 'note' && !p.continuation
 
 /** Alternates hand to hand over the struck notes, starting on the lead hand. */
 function alternate(placed: readonly PlacedItem[], lead: Hand): Hand[] {

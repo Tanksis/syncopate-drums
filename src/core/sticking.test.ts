@@ -93,18 +93,17 @@ describe('overrides and hidden sticking', () => {
 })
 
 describe('sticking and the kick row', () => {
-  it('labels only the snare row: kicks get no hand and leave the snare hands as they were', () => {
-    const ex = line(['x.x.', 'xxxx'], { mode: 'alternate' })
-    const kicks = ['x.x.', '.x.x'].reduce((bars, hits, beat) => setBeat(bars, 'kick', 0, beat, hits), ex.bars)
-    const withKicks = { ...ex, bars: kicks }
-    expect(shown(withKicks)).toBe('RLRLRL')
-    expect(sticking(withKicks).map((n) => n.noteId)).toEqual(sticking(ex).map((n) => n.noteId))
-  })
-
   /** The exercise with the kick row's beats set, one string per beat of bar 1. */
   const withKicks = (ex: Exercise, beats: string[]): Exercise => ({
     ...ex,
     bars: beats.reduce((bars, hits, beat) => setBeat(bars, 'kick', 0, beat, hits), ex.bars),
+  })
+
+  it('gives kicks under hands no label, and leaves the snare hands as they were', () => {
+    const ex = line(['x.x.', 'xxxx'], { mode: 'alternate' })
+    const kicked = withKicks(ex, ['x.x.', '.x.x'])
+    expect(shown(kicked)).toBe('RLRLRL')
+    expect(sticking(kicked).map((n) => n.noteId)).toEqual(sticking(ex).map((n) => n.noteId))
   })
 
   it('shows K under a kick that no hand plays with, in order with the hands: RLRK', () => {
