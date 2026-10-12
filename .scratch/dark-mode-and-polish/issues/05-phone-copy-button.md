@@ -4,8 +4,8 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Below 640 px, `ExampleNotice` isn't shown. From 640 px up it is unchanged
-- [ ] On an example, the transport bar shows a **Copy** button (aria-label "Copy to Library") in Edit's place. Tapping it copies the example and opens the copy, and the button becomes Edit
-- [ ] Checked in Playwright WebKit at 390 × 844 with touch, and at 1280 px for no change
+- [x] Below 640 px, `ExampleNotice` isn't shown. From 640 px up it is unchanged
+- [x] On an example, the transport bar shows a **Copy** button (aria-label "Copy to Library") in Edit's place. Tapping it copies the example and opens the copy, and the button becomes Edit
+- [x] Checked in Playwright WebKit at 390 × 844 with touch, and at 1280 px for no change

@@ -16,8 +16,9 @@ const roundButtonClass =
 /**
  * The phone layout's transport, fixed at the bottom within reach of a thumb: play/pause, the tempo
  * with − and + buttons that repeat while held, and Edit, given `onEdit`, to open the editor sheet.
+ * On an example, given `onCopy`, Copy takes Edit's place to make an editable copy.
  */
-export function TransportBar({ onEdit }: { onEdit?: () => void }) {
+export function TransportBar({ onEdit, onCopy }: { onEdit?: () => void; onCopy?: () => void }) {
   usePlaybackKeys()
   const playing = useAppStore((s) => s.playing)
   return (
@@ -45,18 +46,27 @@ export function TransportBar({ onEdit }: { onEdit?: () => void }) {
         </label>
         <BpmStep step={1} />
       </div>
-      {onEdit && (
-        <button
-          type="button"
-          // Keep focus off the button, so Space pauses rather than clicking it.
-          onMouseDown={keepFocus}
-          onClick={onEdit}
-          className="ml-auto h-11 shrink-0 cursor-pointer rounded-lg border border-edge bg-card px-3.5 text-sm font-semibold touch-manipulation active:border-accent active:text-accent"
-        >
-          Edit
-        </button>
+      {onCopy ? (
+        <SlotButton aria-label="Copy to Library" onClick={onCopy}>
+          Copy
+        </SlotButton>
+      ) : (
+        onEdit && <SlotButton onClick={onEdit}>Edit</SlotButton>
       )}
     </div>
+  )
+}
+
+/** The button at the right of the bar: Edit, or Copy on an example. */
+function SlotButton(props: { 'aria-label'?: string; onClick: () => void; children: string }) {
+  return (
+    <button
+      type="button"
+      {...props}
+      // Keep focus off the button, so Space pauses rather than clicking it.
+      onMouseDown={keepFocus}
+      className="ml-auto h-11 shrink-0 cursor-pointer rounded-lg border border-edge bg-card px-3.5 text-sm font-semibold touch-manipulation active:border-accent active:text-accent"
+    />
   )
 }
 
