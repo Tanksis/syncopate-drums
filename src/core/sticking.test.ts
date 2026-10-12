@@ -93,12 +93,37 @@ describe('overrides and hidden sticking', () => {
 })
 
 describe('sticking and the kick row', () => {
-  it('labels only the snare row: kicks get no hand and leave the snare hands as they were', () => {
+  /** The exercise with the kick row's beats set, one string per beat of bar 1. */
+  const withKicks = (ex: Exercise, beats: string[]): Exercise => ({
+    ...ex,
+    bars: beats.reduce((bars, hits, beat) => setBeat(bars, 'kick', 0, beat, hits), ex.bars),
+  })
+
+  it('gives kicks under hands no label, and leaves the snare hands as they were', () => {
     const ex = line(['x.x.', 'xxxx'], { mode: 'alternate' })
-    const kicks = ['x.x.', '.x.x'].reduce((bars, hits, beat) => setBeat(bars, 'kick', 0, beat, hits), ex.bars)
-    const withKicks = { ...ex, bars: kicks }
-    expect(shown(withKicks)).toBe('RLRLRL')
-    expect(sticking(withKicks).map((n) => n.noteId)).toEqual(sticking(ex).map((n) => n.noteId))
+    const kicked = withKicks(ex, ['x.x.', '.x.x'])
+    expect(shown(kicked)).toBe('RLRLRL')
+    expect(sticking(kicked).map((n) => n.noteId)).toEqual(sticking(ex).map((n) => n.noteId))
+  })
+
+  it('shows K under a kick that no hand plays with, in order with the hands: RLRK', () => {
+    const ex = withKicks(line(['xxx.']), ['...x'])
+    expect(shown(ex)).toBe('RLRK')
+    expect(sticking(ex)[3]).toMatchObject({ noteId: 'kick:0:9', bar: 0, start: 9, shown: 'K' })
+  })
+
+  it('shows only the hand where a kick lands with a snare note', () => {
+    // R L . L on the snare, kicks on 1, 3 and 4: only the 3rd sixteenth has no hand.
+    expect(shown(withKicks(line(['xx.x']), ['x.xx']))).toBe('RLKL')
+  })
+
+  it('shows K under a kick held under a tied snare note, which no hand strikes', () => {
+    const ex = withKicks(tiedInto(line(['x.x.', 'x...']), 0, 1), ['....', 'x...'])
+    expect(shown(ex)).toBe('RL' + 'K')
+  })
+
+  it('shows no K with sticking off', () => {
+    expect(shown(withKicks(line(['xxx.'], { mode: 'off' }), ['...x']))).toBe('---')
   })
 })
 

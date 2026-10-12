@@ -103,7 +103,8 @@ export function BeatStrip({ twoPerRow = false }: { twoPerRow?: boolean }) {
     },
     [],
   )
-  const flashedHand = (flash && sticking(editor.exercise).find((n) => n.noteId === flash.noteId)?.shown) ?? null
+  const flashed = flash && sticking(editor.exercise).find((n) => n.noteId === flash.noteId)
+  const flashedHand = flashed?.row === 'snare' ? flashed.shown : null
   // While dragging, the strip shows the hold as the editor would write it on release.
   const shown = press?.to ? applyEdit(editor, { type: 'setHold', from: press.from, to: press.to }) : editor
   const views = editorBeatViews(shown)

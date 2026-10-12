@@ -40,7 +40,7 @@ How an exercise is practiced rather than what it contains: BPM, loop range, groo
 How the app is set up on this computer rather than how an exercise is practiced: volumes, the exercise mute, the count-in toggle, which exercise was last open, which sidebar tab is showing, and which folders are collapsed. Kept per device and never exported.
 
 **Snare row**:
-One of an exercise's two rhythms over the same bars: the notes played on the snare with the hands, written in the hands part. Sticking labels this row only.
+One of an exercise's two rhythms over the same bars: the notes played on the snare with the hands, written in the hands part. Sticking gives this row's notes their hands; a kick row note gets K only where no hand plays with it.
 _Avoid_: Voice, lane, track
 
 **Kick row**:
@@ -90,7 +90,7 @@ One bar of click played before an exercise starts.
 ### Sticking
 
 **Sticking**:
-The hand (R or L) assigned to each note of an exercise. It belongs to the exercise as printed, not to a playback pass: every loop repeat, and any loop range, plays the printed hands.
+The hand (R or L) assigned to each note of the snare row, with K under each kick that no hand plays with. It belongs to the exercise as printed, not to a playback pass: every loop repeat, and any loop range, plays the printed hands.
 
 **Sticking off**:
 A sticking mode in which no hands are shown, for lines where the other hand is busy with the groove (e.g. right hand on the ride, left hand comping).

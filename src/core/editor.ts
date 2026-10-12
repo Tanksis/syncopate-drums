@@ -382,8 +382,8 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
     }
     case 'flipOverride': {
       const target = overrideTarget(state, command.note)
-      // Hidden sticking keeps its overrides as they are.
-      if (!target || target.shown === null) return state
+      // Hidden sticking keeps its overrides as they are, and a kick's K has none.
+      if (target?.row !== 'snare' || target.shown === null) return state
       const hand = target.override ? undefined : target.computed === 'R' ? 'L' : 'R'
       return withBars(state, withOverride(state.exercise.bars, target, hand))
     }

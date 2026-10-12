@@ -1,19 +1,26 @@
-// Sticking: which hand plays each struck note of the snare row (the kick row is played with the
-// feet). Computed once over the whole exercise from bar 1, so it never depends on the loop range or
-// which pass is playing.
+// Sticking: which hand plays each struck note of the snare row, and K for each kick that no hand
+// plays with. Computed once over the whole exercise from bar 1, so it never depends on the loop
+// range or which pass is playing.
 
-import type { Exercise, Hand } from './model'
+import type { Exercise, Hand, Note } from './model'
 import { BEATS_PER_BAR, TICKS_PER_BEAT, noteId } from './model'
 import type { PlacedItem } from './speller'
 import { placeItems } from './speller'
 
-/** The hand for one struck note. */
-export interface NoteSticking {
-  /** The struck note, as `bar:tick`, the same id the schedule uses. */
+/** The label under one struck note: a snare note's hand, or K for a kick played without a hand. */
+export type NoteSticking = HandSticking | KickSticking
+
+interface StruckNote {
+  /** The struck note's id, the same id the schedule uses. */
   noteId: string
   bar: number
   /** Start tick within the bar. */
   start: number
+}
+
+/** The hand for one struck snare note. */
+export interface HandSticking extends StruckNote {
+  row: 'snare'
   /** The hand the sticking mode gives this note; null with sticking off. */
   computed: Hand | null
   override?: Hand
@@ -21,21 +28,41 @@ export interface NoteSticking {
   shown: Hand | null
 }
 
+/** A struck kick with no struck snare note at its tick. It never carries an override. */
+export interface KickSticking extends StruckNote {
+  row: 'kick'
+  computed: 'K'
+  override?: never
+  shown: 'K'
+}
+
 const other = (hand: Hand): Hand => (hand === 'R' ? 'L' : 'R')
 
-/** A hand for each struck note of the snare row, in order. Rests and tied continuations get none. */
+/**
+ * A hand for each struck note of the snare row, and K for each struck kick with no struck snare
+ * note at its tick (none with sticking off), in order. Rests and tied continuations get none.
+ */
 export function sticking(exercise: Exercise): NoteSticking[] {
   const { leadHand, sticking: mode } = exercise
   const placed = placeItems(exercise.bars, 'snare')
   const hands = mode === 'alternate' ? alternate(placed, leadHand) : natural(placed, leadHand)
-  return placed.flatMap((p, i) => {
-    if (p.item.kind !== 'note' || p.continuation) return []
+  const snare = placed.flatMap((p, i): HandSticking[] => {
+    if (!isStruck(p)) return []
     // Hidden hands keep their overrides, so switching back brings them back.
     const computed = mode === 'off' ? null : hands[i]
     const { override } = p.item
     const shown = computed && (override ?? computed)
-    return [{ noteId: noteId('snare', p.bar, p.start), bar: p.bar, start: p.start, computed, override, shown }]
+    return [{ row: 'snare', noteId: noteId('snare', p.bar, p.start), bar: p.bar, start: p.start, computed, override, shown }]
   })
+  if (mode === 'off') return snare
+  // A snare note's id is its `bar:tick`, so a kick with a hand at its tick finds it here.
+  const handed = new Set(snare.map((n) => n.noteId))
+  const kicks = placeItems(exercise.bars, 'kick').flatMap((p): KickSticking[] =>
+    isStruck(p) && !handed.has(noteId('snare', p.bar, p.start))
+      ? [{ row: 'kick', noteId: noteId('kick', p.bar, p.start), bar: p.bar, start: p.start, computed: 'K', shown: 'K' }]
+      : [],
+  )
+  return [...snare, ...kicks].sort((a, b) => a.bar - b.bar || a.start - b.start)
 }
 
 /** How many notes carry a sticking override, shown or hidden. */
@@ -43,7 +70,7 @@ export function overrideCount(exercise: Exercise): number {
   return sticking(exercise).filter((n) => n.override).length
 }
 
-const isStruck = (p: PlacedItem) => p.item.kind === 'note' && !p.continuation
+const isStruck = (p: PlacedItem): p is PlacedItem & { item: Note } => p.item.kind === 'note' && !p.continuation
 
 /** Alternates hand to hand over the struck notes, starting on the lead hand. */
 function alternate(placed: readonly PlacedItem[], lead: Hand): Hand[] {
