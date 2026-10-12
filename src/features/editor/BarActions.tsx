@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { keepFocus } from '@/components/keepFocus'
 import { Menu } from '@/components/Menu'
 import { isExample } from '@/core'
+import { PatternDialog } from './PatternDialog'
 
 /**
  * Undo, redo and the bar menu, for editing without the keyboard. The menu's items are the bar keys'
@@ -11,6 +13,8 @@ import { isExample } from '@/core'
 export function BarActions({ large = false }: { large?: boolean }) {
   const editor = useAppStore((s) => s.editor)
   const dispatch = useAppStore((s) => s.dispatch)
+  // The bar "Fill with pattern…" fills, kept from when the dialog opened; null while it's closed.
+  const [filling, setFilling] = useState<number | null>(null)
   if (isExample(editor.exercise.id)) return null
   const { first, last } = editor.selection ?? { first: editor.cursor.bar, last: editor.cursor.bar }
   const { bar } = editor.cursor
@@ -33,6 +37,7 @@ export function BarActions({ large = false }: { large?: boolean }) {
           { label: `Add a bar after ${cursorBar}`, onSelect: () => dispatch({ type: 'addBar' }) },
           { label: `Duplicate ${cursorBar}`, onSelect: () => dispatch({ type: 'duplicateBar' }) },
           { label: `Copy ${bars}`, onSelect: () => dispatch({ type: 'copyBars' }) },
+          { label: `Fill ${cursorBar} with pattern…`, onSelect: () => setFilling(bar) },
           {
             label: `Paste over ${pasted}`,
             disabled: editor.clipboard === null,
@@ -45,6 +50,17 @@ export function BarActions({ large = false }: { large?: boolean }) {
           },
         ]}
       />
+      {filling !== null && (
+        <PatternDialog
+          title={`Fill bar ${filling + 1} with a pattern`}
+          submitLabel="Fill"
+          onCancel={() => setFilling(null)}
+          onSubmit={(pattern, grid) => {
+            dispatch({ type: 'fillPattern', bar: filling, pattern, grid })
+            setFilling(null)
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -1,27 +1,38 @@
 import type { ReactNode } from 'react'
 import { useEffect, useRef } from 'react'
 
-/** A dialog button; `danger` marks the one that changes something for good. */
+/**
+ * A dialog button; `danger` marks the one that changes something for good, `primary` the one that
+ * does what the dialog is for.
+ */
 export function DialogButton({
   children,
   onClick,
   danger = false,
+  primary = false,
+  disabled = false,
   autoFocus = false,
 }: {
   children: ReactNode
   onClick: () => void
   danger?: boolean
+  primary?: boolean
+  disabled?: boolean
   /** Takes the focus when the dialog opens, so Enter presses it. */
   autoFocus?: boolean
 }) {
+  const look = danger
+    ? 'border-danger bg-danger text-on-accent hover:opacity-90'
+    : primary
+      ? 'border-accent bg-accent text-on-accent hover:opacity-90'
+      : 'border-edge bg-card hover:border-accent'
   return (
     <button
       type="button"
       data-autofocus={autoFocus || undefined}
+      disabled={disabled}
       onClick={onClick}
-      className={`cursor-pointer rounded-md border px-3 py-1 font-semibold ${
-        danger ? 'border-danger bg-danger text-on-accent hover:opacity-90' : 'border-edge bg-card hover:border-accent'
-      }`}
+      className={`cursor-pointer rounded-md border px-3 py-1 font-semibold disabled:cursor-default disabled:opacity-40 ${look}`}
     >
       {children}
     </button>
