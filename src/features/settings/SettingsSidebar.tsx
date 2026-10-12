@@ -6,9 +6,10 @@ import { SidebarHeading } from '@/components/Sidebar'
 import { LoopReadout } from '@/features/playback/LoopReadout'
 import { CountInToggle } from '@/features/playback/TransportControls'
 import { keepFocus } from '@/components/keepFocus'
-import { PercentField, useDoubleTap } from '@/features/settings/PercentField'
+import { PercentField } from '@/features/settings/PercentField'
+import { useDoubleTap } from '@/features/settings/useDoubleTap'
 import type { ExerciseSettings, GroovePresetId, Theme, VolumeSetting } from '@/core'
-import { GROOVE_PRESETS, MAX_SWING, MAX_VOLUME, MIN_SWING, THEMES, TRIPLET_SWING, groovePreset, overrideCount } from '@/core'
+import { DEFAULT_DEVICE_SETTINGS, GROOVE_PRESETS, MAX_SWING, MAX_VOLUME, MIN_SWING, THEMES, TRIPLET_SWING, groovePreset, overrideCount } from '@/core'
 
 export function SettingsSidebar({ onCollapse, fullScreen = false }: { onCollapse: () => void; fullScreen?: boolean }) {
   return (
@@ -95,6 +96,10 @@ const SWING_PRESETS = [
   { name: 'dotted', swing: 0.75 },
 ]
 
+/** A typed swing, as an amount; one that shows as a preset (66.7% is triplet) is that preset. */
+const swingFromPercent = (percent: number) =>
+  SWING_PRESETS.find((preset) => Math.abs(preset.swing * 100 - percent) < 0.05)?.swing ?? percent / 100
+
 /** The swing amount: a slider from straight to dotted, and buttons for off (straight) and the common feels. */
 function Swing() {
   const swing = useAppStore((s) => s.editor.exercise.practice.swing)
@@ -120,10 +125,10 @@ function Swing() {
             // A double-click or double-tap puts it back to straight.
             onPointerUp={(e) => {
               dragging.current = false
-              setSwing(doubleTap() ? MIN_SWING : Number(e.currentTarget.value))
+              setSwing(doubleTap(e) ? MIN_SWING : Number(e.currentTarget.value))
               e.currentTarget.blur()
             }}
-            className="min-w-0 flex-1 accent-accent"
+            className="min-w-0 flex-1 touch-manipulation accent-accent"
           />
         </label>
         <PercentField
@@ -132,7 +137,7 @@ function Swing() {
           min={MIN_SWING * 100}
           max={MAX_SWING * 100}
           decimals={1}
-          onChange={(percent) => setSwing(percent / 100)}
+          onChange={(percent) => setSwing(swingFromPercent(percent))}
           className="w-16 sm:w-14"
         />
       </div>
@@ -180,10 +185,10 @@ function Volume({ label, setting, children }: { label: string; setting: VolumeSe
           // A double-click or double-tap puts it back to 100%.
           onPointerUp={(e) => {
             dragging.current = false
-            setVolume(doubleTap() ? 1 : Number(e.currentTarget.value))
+            setVolume(doubleTap(e) ? DEFAULT_DEVICE_SETTINGS[setting] : Number(e.currentTarget.value))
             e.currentTarget.blur()
           }}
-          className="min-w-0 flex-1 accent-accent"
+          className="min-w-0 flex-1 touch-manipulation accent-accent"
         />
       </label>
       <PercentField

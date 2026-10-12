@@ -28,10 +28,11 @@ export function PercentField({
   // Escape leaves the field without applying what was typed.
   const reverting = useRef(false)
   const round = (percent: number) => Number(percent.toFixed(decimals))
+  const read = (text: string) => round(parsePercent(text, { min, max, previous: value }))
   const shown = `${value.toFixed(decimals)}%`
 
   const commit = () => {
-    if (draft !== null && !reverting.current) onChange(round(parsePercent(draft, { min, max, previous: value })))
+    if (draft !== null && !reverting.current) onChange(read(draft))
     reverting.current = false
     setDraft(null)
   }
@@ -54,7 +55,7 @@ export function PercentField({
           e.currentTarget.blur()
         } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
           e.preventDefault()
-          const from = round(parsePercent(draft ?? shown, { min, max, previous: value }))
+          const from = read(draft ?? shown)
           const step = (e.shiftKey ? 10 : 1) * (e.key === 'ArrowUp' ? 1 : -1)
           onChange(Math.min(max, Math.max(min, round(from + step))))
           setDraft(null)
@@ -66,13 +67,3 @@ export function PercentField({
   )
 }
 
-/** Tells a slider's second quick release from its first, so a double-click or double-tap can reset it. */
-export function useDoubleTap() {
-  const lastRelease = useRef(0)
-  return () => {
-    const now = performance.now()
-    const second = now - lastRelease.current < 350
-    lastRelease.current = second ? 0 : now
-    return second
-  }
-}
