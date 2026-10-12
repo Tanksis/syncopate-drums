@@ -16,6 +16,8 @@ import {
   withLoopRange,
   withLoopRangeInBars,
 } from './model'
+import type { PatternGrid, PatternStep } from './pattern'
+import { withPattern } from './pattern'
 import type { BeatView, GridPoint, RowView } from './speller'
 import { beatViews, clearBeatToDownbeat, setBeat, setHold, slotTicks, toggleHit, toggleTie } from './speller'
 import type { NoteSticking } from './sticking'
@@ -123,6 +125,11 @@ export type EditCommand =
   | { type: 'pasteBars' }
   | { type: 'setExerciseSettings'; settings: Partial<ExerciseSettings> }
   /**
+   * The bar ⋯ menu's "Fill with pattern…": replaces both rows of a bar with a sticking pattern on
+   * the grid given, as `withPattern` lays it, and moves the cursor to the bar's first beat.
+   */
+  | { type: 'fillPattern'; bar: number; pattern: PatternStep[]; grid: PatternGrid }
+  /**
    * Sets the opposite hand as a sticking override on a struck note, or clears its override. Does
    * nothing while sticking is hidden.
    */
@@ -204,7 +211,7 @@ type RecordedCommand = Exclude<EditCommand, { type: 'selectBars' }>
  * The beat strip's own edits, which look after the pending grid themselves. A tie over the barline
  * leaves it as it was: a beat on it holds only its downbeat, tied or struck.
  */
-const GRID_COMMANDS = new Set<EditCommand['type']>(['toggleGridPosition', 'setBeatGrid', 'setHold', 'tieOverBarline'])
+const GRID_COMMANDS = new Set<EditCommand['type']>(['toggleGridPosition', 'setBeatGrid', 'setHold', 'tieOverBarline', 'fillPattern'])
 
 function record(state: EditorState, command: RecordedCommand): EditorState {
   if (command.type === 'undo' || command.type === 'redo') return clearSelection(travel(state, command.type))
@@ -379,6 +386,17 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
     case 'setExerciseSettings': {
       const exercise = { ...state.exercise, ...command.settings }
       return sameSettings(exercise, state.exercise) ? state : { ...state, exercise }
+    }
+    case 'fillPattern': {
+      const moved = moveTo(state, command.bar, 0)
+      const { bar } = moved.cursor
+      const { exercise } = withPattern(state.exercise, bar, command.pattern, command.grid)
+      // A triplet beat that reads the same on either grid stays on the triplet grid it was filled on.
+      const beats = Array.from({ length: BEATS_PER_BAR }, (_, beat) => beatIndex(bar, beat))
+      const others = state.pendingGrid.filter((i) => !beats.includes(i))
+      const views = beatViews(exercise.bars)[bar]
+      const pending = command.grid === 'triplets' ? beats.filter((_, beat) => !views[beat].triplet) : []
+      return { ...moved, exercise, pendingGrid: [...others, ...pending] }
     }
     case 'flipOverride': {
       const target = overrideTarget(state, command.note)

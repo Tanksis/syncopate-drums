@@ -124,6 +124,7 @@ const EXAMPLE_ACCEPTS: Record<EditCommand['type'], boolean> = {
   duplicateBar: false,
   deleteBar: false,
   pasteBars: false,
+  fillPattern: false,
   setExerciseSettings: false,
   flipOverride: false,
   resetOverrides: false,

@@ -141,15 +141,16 @@ describe('the edits an example accepts', () => {
     ).toEqual([false, false, false, false, false, false])
   })
 
-  it('refuses adding, deleting and pasting bars', () => {
+  it('refuses adding, deleting, pasting and filling bars', () => {
     expect(
       accepts(
         { type: 'addBar' },
         { type: 'duplicateBar' },
         { type: 'deleteBar' },
         { type: 'pasteBars' },
+        { type: 'fillPattern', bar: 0, pattern: ['R', 'L', 'K'], grid: 'sixteenths' },
       ),
-    ).toEqual([false, false, false, false])
+    ).toEqual([false, false, false, false, false])
   })
 
   it('refuses a sticking or lead hand change and sticking overrides', () => {
