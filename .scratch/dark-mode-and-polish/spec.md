@@ -85,7 +85,7 @@ Practising in a dim room, the white app glares from the music stand. On desktop,
   - The BPM slider shrinks (about w-24).
   - "count-in" and the loop readout don't wrap (`whitespace-nowrap`).
   - The exercise name takes the remaining width, at least about 12 characters before truncating.
-  - Below 900 px (and above the phone layout), the BPM slider is hidden, and the BPM field stays.
+  - ~~Below 900 px (and above the phone layout), the BPM slider is hidden, and the BPM field stays.~~ Changed while building ticket 04: what shows depends on the header's own width (the window less any open sidebars). Under 860 px the BPM slider is hidden and the BPM field stays. Under 750 px the count-in and loop readout move to a Playback group in the Settings sidebar too, as on the phone. Hiding only the slider couldn't keep a 640 px window on one line.
 - **Phone examples:**
   - Below 640 px, `ExampleNotice` isn't shown.
   - On an example, the transport bar's Edit slot shows **Copy** (aria-label "Copy to Library"), which copies the example and opens the copy, as Copy to Library does on desktop. The button then becomes Edit.

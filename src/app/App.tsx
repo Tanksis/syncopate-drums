@@ -48,7 +48,7 @@ export function App() {
       </main>
 
       <SidebarSlot name="Settings" side="right" {...sidebars.settings}>
-        <SettingsSidebar playback={room === 'compact'} onCollapse={sidebars.settings.onCollapse} />
+        <SettingsSidebar playbackGroup={room === 'compact'} onCollapse={sidebars.settings.onCollapse} />
       </SidebarSlot>
     </div>
   )
@@ -95,7 +95,7 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
       )}
       {settings.state === 'overlay' && (
         <SidebarFullScreen>
-          <SettingsSidebar fullScreen playback onCollapse={settings.onCollapse} />
+          <SettingsSidebar fullScreen playbackGroup onCollapse={settings.onCollapse} />
         </SidebarFullScreen>
       )}
     </div>
@@ -142,14 +142,19 @@ const HEADER_WIDTH = { full: 860, withoutSlider: 750 }
  */
 function useHeaderRoom(): [(header: HTMLElement | null) => void, HeaderRoom] {
   const [header, setHeader] = useState<HTMLElement | null>(null)
-  const [width, setWidth] = useState(0)
+  const [room, setRoom] = useState<HeaderRoom>('compact')
   useLayoutEffect(() => {
     if (!header) return
-    const observer = new ResizeObserver(() => setWidth(header.getBoundingClientRect().width))
+    // Kept as the step, not the width, so a resize re-renders only when the step changes.
+    const observer = new ResizeObserver(() => {
+      const width = header.getBoundingClientRect().width
+      if (width >= HEADER_WIDTH.full) setRoom('full')
+      else if (width >= HEADER_WIDTH.withoutSlider) setRoom('withoutSlider')
+      else setRoom('compact')
+    })
     observer.observe(header)
     return () => observer.disconnect()
   }, [header])
-  const room = width >= HEADER_WIDTH.full ? 'full' : width >= HEADER_WIDTH.withoutSlider ? 'withoutSlider' : 'compact'
   return [setHeader, room]
 }
 
@@ -261,7 +266,7 @@ function ExerciseName({ className = '' }: { className?: string }) {
           if (newName !== null) renameExercise(id, newName)
           setRenaming(false)
         }}
-        className={className || 'w-56'}
+        className={className || 'w-56 max-w-full'}
       />
     )
   return (
