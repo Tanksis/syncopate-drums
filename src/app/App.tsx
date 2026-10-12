@@ -57,12 +57,14 @@ export function App() {
 /**
  * The phone layout: a compact header (☰, the exercise name, ⚙), the notation filling the screen,
  * and the transport bar at the bottom. ☰ and ⚙ open their sidebar over the whole screen. Edit, in
- * the transport bar, opens the grid editor as a sheet under the notation, which Done closes; an
- * example, which can't be changed, has no Edit and shows the notation only.
+ * the transport bar, opens the grid editor as a sheet under the notation, which Done closes. An
+ * example, which can't be changed, has no read-only notice; Copy takes Edit's place instead, and
+ * opens an editable copy.
  */
 function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl> }) {
   const { library, settings } = sidebars
   const example = useAppStore((s) => isExample(s.editor.exercise.id))
+  const copyToLibrary = useAppStore((s) => s.duplicateOpenExercise)
   const [editOpen, setEditOpen] = useState(false)
   // Opening an example closes the sheet, so it doesn't come back with the next exercise.
   useEffect(() => {
@@ -83,10 +85,12 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
         </PhoneHeaderButton>
       </header>
       <NotSaving className="border-b border-line bg-card px-3 py-1 text-xs" />
-      <ExampleNotice />
       <NotationView />
       {editing && <GridEditor onDone={() => setEditOpen(false)} />}
-      <TransportBar onEdit={example || editing ? undefined : () => setEditOpen(true)} />
+      <TransportBar
+        onEdit={example || editing ? undefined : () => setEditOpen(true)}
+        onCopy={example ? copyToLibrary : undefined}
+      />
 
       {library.state === 'overlay' && (
         <SidebarFullScreen>
