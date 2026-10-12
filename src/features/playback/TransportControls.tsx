@@ -7,12 +7,18 @@ import { PlaybackPosition } from './PlaybackPosition'
 import { togglePlayback } from './transport'
 import { usePlaybackKeys } from './usePlaybackKeys'
 
+/**
+ * How much of the transport the header has room for: all of it, all but the BPM slider, or only
+ * play, the position and the BPM box, with the count-in and loop readout in the Settings sidebar.
+ */
+export type HeaderRoom = 'full' | 'withoutSlider' | 'compact'
+
 /** The header's play/stop button, tempo controls and loop range. */
-export function TransportControls() {
+export function TransportControls({ room }: { room: HeaderRoom }) {
   usePlaybackKeys()
   const playing = useAppStore((s) => s.playing)
   return (
-    <div className="flex items-center gap-3.5">
+    <div className="flex shrink-0 items-center gap-2.5 whitespace-nowrap">
       <button
         type="button"
         title="Play from the count-in / stop (Ctrl+Space). Space pauses and resumes."
@@ -24,14 +30,18 @@ export function TransportControls() {
         {playing ? '■ Stop' : '▶ Play'}
       </button>
       <PlaybackPosition />
-      <BpmControl />
-      <CountInToggle />
-      <LoopReadout />
+      <BpmControl slider={room === 'full'} />
+      {room !== 'compact' && (
+        <>
+          <CountInToggle />
+          <LoopReadout />
+        </>
+      )}
     </div>
   )
 }
 
-function BpmControl() {
+function BpmControl({ slider }: { slider: boolean }) {
   const bpm = useAppStore((s) => s.editor.exercise.practice.bpm)
   const setBpm = useAppStore((s) => s.setBpm)
   // A pointer drag on the slider saves once it ends; arrow keys on it save at once.
@@ -41,22 +51,24 @@ function BpmControl() {
     <label className="flex items-center gap-2">
       <BpmInput className="w-16 px-1.5 py-0.5 text-right" />
       <span className="text-mute">BPM</span>
-      <input
-        type="range"
-        aria-label="BPM slider"
-        min={MIN_BPM}
-        max={MAX_BPM}
-        value={bpm}
-        onChange={(e) => setBpm(Number(e.target.value), { dragging: dragging.current })}
-        onPointerDown={() => (dragging.current = true)}
-        // Once a drag ends, save the tempo it settled on and hand the keyboard back to the editor.
-        onPointerUp={(e) => {
-          dragging.current = false
-          setBpm(Number(e.currentTarget.value))
-          e.currentTarget.blur()
-        }}
-        className="w-36 accent-accent"
-      />
+      {slider && (
+        <input
+          type="range"
+          aria-label="BPM slider"
+          min={MIN_BPM}
+          max={MAX_BPM}
+          value={bpm}
+          onChange={(e) => setBpm(Number(e.target.value), { dragging: dragging.current })}
+          onPointerDown={() => (dragging.current = true)}
+          // Once a drag ends, save the tempo it settled on and hand the keyboard back to the editor.
+          onPointerUp={(e) => {
+            dragging.current = false
+            setBpm(Number(e.currentTarget.value))
+            e.currentTarget.blur()
+          }}
+          className="w-24 accent-accent"
+        />
+      )}
     </label>
   )
 }
