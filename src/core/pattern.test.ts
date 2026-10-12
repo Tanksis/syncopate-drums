@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { EditorState, PatternGrid, PatternStep, Row } from './index'
-import { applyEdit, editorBeatViews, newEditorState, newExercise, parsePattern, restBar, sticking } from './index'
+import { applyEdit, editorBeatViews, newEditorState, newExercise, parsePattern, restBar, setBeat, sticking, toggleTie } from './index'
 
 describe('parsing a sticking pattern', () => {
   it('reads R, L, K and . in any case, ignoring whitespace', () => {
@@ -87,6 +87,17 @@ describe('filling a bar with a pattern', () => {
     expect(hits(state, 'kick', 1)).toEqual(['....', '....', '....', '....'])
     expect(hits(state, 'snare', 0)).toEqual(['....', '....', '....', '....'])
     expect(state.cursor).toEqual({ bar: 1, beat: 0, row: 'snare' })
+  })
+
+  it('unties a tie into the bar, and rests a note that was tied over out of it', () => {
+    // Bar 1's last quarter tied into bar 2's first, and bar 2's last into bar 3's first.
+    let bars = Array.from({ length: 3 }, restBar)
+    for (const [bar, beat] of [[0, 3], [1, 0], [1, 3], [2, 0]]) bars = setBeat(bars, 'snare', bar, beat, 'x...')
+    bars = toggleTie(toggleTie(bars, 'snare', 1, 0), 'snare', 2, 0)
+    const state = fill({ ...editor(), exercise: { ...editor().exercise, bars } }, 'KKKK', 'sixteenths', 1)
+    expect(hits(state, 'snare', 0)).toEqual(['....', '....', '....', 'x...'])
+    expect(hits(state, 'snare', 2)).toEqual(['....', '....', '....', '....'])
+    expect(sticking(state.exercise).filter((n) => n.row === 'snare')).toHaveLength(1)
   })
 
   it('is one undo step', () => {
