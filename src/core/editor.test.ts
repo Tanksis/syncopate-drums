@@ -671,6 +671,12 @@ describe('sticking overrides', () => {
     expect(flip(off, 0)).toBe(off)
   })
 
+  it('does nothing for a kick, which shows K and carries no override', () => {
+    const kicked = click(start(), 0, 2, 0, 'kick')
+    expect(hands(kicked)).toBe('RL' + 'RLRL' + 'K')
+    expect(applyEdit(kicked, { type: 'flipOverride', note: { id: 'kick:0:24' } })).toBe(kicked)
+  })
+
   it('a struck snare hit names its note for a long-press to flip', () => {
     const at = (state: EditorState, beat: number, position: number, row: Row = 'snare') =>
       stickingNoteAt(state, { row, bar: 0, beat, position })

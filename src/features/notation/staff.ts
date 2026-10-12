@@ -331,13 +331,17 @@ function drawBarNumber(stave: Stave, bar: number, loopRange: LoopRange | null, l
 /**
  * Prints the shown R or L centred under a note, on the given stave line, in a group tagged with the
  * note's id so a click can flip it. An override is printed in the accent colour, with a hover hint.
+ * A kick's K is printed the same way in line with the hands, but has nothing to flip.
  */
-function drawHand(stave: Stave, note: StaveNote, { noteId, shown: hand, override }: NoteSticking, line: number, accent: string) {
+function drawHand(stave: Stave, note: StaveNote, { noteId, shown: hand, override, row }: NoteSticking, line: number, accent: string) {
   if (!hand) return
   const ctx = stave.checkContext()
-  const group: SVGGElement = ctx.openGroup('hand')
-  group.dataset.noteId = noteId
-  group.classList.add('cursor-pointer')
+  const flippable = row === 'snare'
+  const group: SVGGElement = ctx.openGroup(flippable ? 'hand' : 'kick')
+  if (flippable) {
+    group.dataset.noteId = noteId
+    group.classList.add('cursor-pointer')
+  }
   if (override) {
     const title = document.createElementNS('http://www.w3.org/2000/svg', 'title')
     title.textContent = 'override, click to reset'
@@ -351,7 +355,7 @@ function drawHand(stave: Stave, note: StaveNote, { noteId, shown: hand, override
   const y = stave.getYForLine(line)
   ctx.fillText(hand, x, y)
   // VexFlow's SVG ignores the pointer, so the hand needs its own invisible hit area to be clicked.
-  ctx.pointerRect(x - HAND_HIT_PAD, y - 12 - HAND_HIT_PAD, width + 2 * HAND_HIT_PAD, 14 + 2 * HAND_HIT_PAD)
+  if (flippable) ctx.pointerRect(x - HAND_HIT_PAD, y - 12 - HAND_HIT_PAD, width + 2 * HAND_HIT_PAD, 14 + 2 * HAND_HIT_PAD)
   ctx.restore()
   ctx.closeGroup()
 }
