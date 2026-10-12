@@ -6,6 +6,7 @@ import { SidebarHeading } from '@/components/Sidebar'
 import { LoopReadout } from '@/features/playback/LoopReadout'
 import { CountInToggle } from '@/features/playback/TransportControls'
 import { keepFocus } from '@/components/keepFocus'
+import { PercentField, useDoubleTap } from '@/features/settings/PercentField'
 import type { ExerciseSettings, GroovePresetId, Theme, VolumeSetting } from '@/core'
 import { GROOVE_PRESETS, MAX_SWING, MAX_VOLUME, MIN_SWING, THEMES, TRIPLET_SWING, groovePreset, overrideCount } from '@/core'
 
@@ -100,29 +101,41 @@ function Swing() {
   const setSwing = useAppStore((s) => s.setSwing)
   // A pointer drag on the slider saves once it ends; arrow keys on it save at once.
   const dragging = useRef(false)
+  const doubleTap = useDoubleTap()
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="flex items-center justify-between gap-2">
-        <span className="text-mute">Swing</span>
-        <input
-          type="range"
-          aria-label="Swing"
-          min={MIN_SWING}
-          max={MAX_SWING}
-          step={0.005}
-          value={swing}
-          onChange={(e) => setSwing(Number(e.target.value), { dragging: dragging.current })}
-          onPointerDown={() => (dragging.current = true)}
-          // Once a drag ends, save the amount it settled on and hand the keyboard back to the editor.
-          onPointerUp={(e) => {
-            dragging.current = false
-            setSwing(Number(e.currentTarget.value))
-            e.currentTarget.blur()
-          }}
-          className="min-w-0 flex-1 accent-accent"
+      <div className="flex items-center gap-2">
+        <label className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="text-mute">Swing</span>
+          <input
+            type="range"
+            aria-label="Swing"
+            min={MIN_SWING}
+            max={MAX_SWING}
+            step={0.005}
+            value={swing}
+            onChange={(e) => setSwing(Number(e.target.value), { dragging: dragging.current })}
+            onPointerDown={() => (dragging.current = true)}
+            // Once a drag ends, save the amount it settled on and hand the keyboard back to the editor.
+            // A double-click or double-tap puts it back to straight.
+            onPointerUp={(e) => {
+              dragging.current = false
+              setSwing(doubleTap() ? MIN_SWING : Number(e.currentTarget.value))
+              e.currentTarget.blur()
+            }}
+            className="min-w-0 flex-1 accent-accent"
+          />
+        </label>
+        <PercentField
+          label="Swing %"
+          value={swing * 100}
+          min={MIN_SWING * 100}
+          max={MAX_SWING * 100}
+          decimals={1}
+          onChange={(percent) => setSwing(percent / 100)}
+          className="w-16 sm:w-14"
         />
-        <span className="w-12 text-right tabular-nums">{(swing * 100).toFixed(1)}%</span>
-      </label>
+      </div>
       <div role="group" aria-label="Swing presets" className="flex overflow-hidden rounded-md border border-edge">
         {SWING_PRESETS.map((preset) => (
           <button
@@ -149,6 +162,7 @@ function Volume({ label, setting, children }: { label: string; setting: VolumeSe
     setDeviceSettings({ [setting]: value }, { dragging })
   // A pointer drag on the slider saves once it ends; arrow keys on it save at once.
   const dragging = useRef(false)
+  const doubleTap = useDoubleTap()
   return (
     <div className="flex items-center gap-2">
       <label className="flex min-w-0 flex-1 items-center gap-2">
@@ -163,15 +177,24 @@ function Volume({ label, setting, children }: { label: string; setting: VolumeSe
           onChange={(e) => setVolume(Number(e.target.value), dragging.current)}
           onPointerDown={() => (dragging.current = true)}
           // Once a drag ends, save the volume it settled on and hand the keyboard back to the editor.
+          // A double-click or double-tap puts it back to 100%.
           onPointerUp={(e) => {
             dragging.current = false
-            setVolume(Number(e.currentTarget.value))
+            setVolume(doubleTap() ? 1 : Number(e.currentTarget.value))
             e.currentTarget.blur()
           }}
           className="min-w-0 flex-1 accent-accent"
         />
-        <span className="w-9 text-right tabular-nums">{Math.round(volume * 100)}%</span>
       </label>
+      <PercentField
+        label={`${label} volume %`}
+        value={volume * 100}
+        min={0}
+        max={MAX_VOLUME * 100}
+        decimals={0}
+        onChange={(percent) => setVolume(percent / 100)}
+        className="w-14 sm:w-12"
+      />
       {/* The same width on every row, so the sliders line up. */}
       <div className="flex w-11 justify-end">{children}</div>
     </div>
