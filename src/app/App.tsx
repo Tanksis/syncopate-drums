@@ -4,12 +4,13 @@
 // and transport bar, with the sidebars opening over the whole screen.
 
 import type { ReactNode } from 'react'
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 import { GridEditor } from '@/features/editor/GridEditor'
 import { ExampleNotice } from '@/features/library/ExampleNotice'
 import { LibrarySidebar } from '@/features/library/LibrarySidebar'
 import { NotationView } from '@/features/notation/NotationView'
 import { TransportBar } from '@/features/playback/TransportBar'
+import type { HeaderRoom } from '@/features/playback/TransportControls'
 import { TransportControls } from '@/features/playback/TransportControls'
 import { SettingsSidebar } from '@/features/settings/SettingsSidebar'
 import { useAppStore } from '@/app/store'
@@ -23,6 +24,7 @@ import { isExample } from '@/core'
 export function App() {
   const sidebars = useSidebars()
   const phone = usePhoneWindow()
+  const [headerRef, room] = useHeaderRoom()
   if (phone) return <PhoneLayout sidebars={sidebars} />
   return (
     <div className="grid h-dvh grid-cols-[auto_1fr_auto]">
@@ -31,11 +33,14 @@ export function App() {
       </SidebarSlot>
 
       <main className="flex min-h-0 min-w-0 flex-col">
-        <header className="flex items-center gap-3.5 border-b border-line bg-card px-4 py-2">
-          <h1 className="m-0 text-base font-bold">Syncopate!</h1>
-          <ExerciseName />
+        <header ref={headerRef} className="flex items-center gap-3 border-b border-line bg-card px-4 py-2">
+          <h1 className="m-0 shrink-0 text-base font-bold whitespace-nowrap">Syncopate!</h1>
+          {/* The name takes the room the controls leave, and always shows about 12 characters. */}
+          <div className="flex min-w-[12ch] flex-1">
+            <ExerciseName />
+          </div>
           <NotSaving />
-          <TransportControls />
+          <TransportControls room={room} />
         </header>
         <ExampleNotice />
         <NotationView />
@@ -43,7 +48,7 @@ export function App() {
       </main>
 
       <SidebarSlot name="Settings" side="right" {...sidebars.settings}>
-        <SettingsSidebar onCollapse={sidebars.settings.onCollapse} />
+        <SettingsSidebar playbackGroup={room === 'compact'} onCollapse={sidebars.settings.onCollapse} />
       </SidebarSlot>
     </div>
   )
@@ -90,7 +95,7 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
       )}
       {settings.state === 'overlay' && (
         <SidebarFullScreen>
-          <SettingsSidebar fullScreen onCollapse={settings.onCollapse} />
+          <SettingsSidebar fullScreen playbackGroup onCollapse={settings.onCollapse} />
         </SidebarFullScreen>
       )}
     </div>
@@ -122,6 +127,35 @@ function PhoneHeaderButton({
       <span aria-hidden>{children}</span>
     </button>
   )
+}
+
+/**
+ * The header widths, in px, below which its controls don't all fit while leaving the exercise name
+ * its 12 characters or so: under `full` the BPM slider goes, and under `withoutSlider` the count-in
+ * and loop readout move to the Settings sidebar too.
+ */
+const HEADER_WIDTH = { full: 860, withoutSlider: 750 }
+
+/**
+ * A ref for the desktop header, and how much of the transport fits in it. That depends on the
+ * header's own width, which the window and the open sidebars both take from.
+ */
+function useHeaderRoom(): [(header: HTMLElement | null) => void, HeaderRoom] {
+  const [header, setHeader] = useState<HTMLElement | null>(null)
+  const [room, setRoom] = useState<HeaderRoom>('compact')
+  useLayoutEffect(() => {
+    if (!header) return
+    // Kept as the step, not the width, so a resize re-renders only when the step changes.
+    const observer = new ResizeObserver(() => {
+      const width = header.getBoundingClientRect().width
+      if (width >= HEADER_WIDTH.full) setRoom('full')
+      else if (width >= HEADER_WIDTH.withoutSlider) setRoom('withoutSlider')
+      else setRoom('compact')
+    })
+    observer.observe(header)
+    return () => observer.disconnect()
+  }, [header])
+  return [setHeader, room]
 }
 
 /** The warning shown when storage failed, so changes won't survive a reload. */
@@ -232,7 +266,7 @@ function ExerciseName({ className = '' }: { className?: string }) {
           if (newName !== null) renameExercise(id, newName)
           setRenaming(false)
         }}
-        className={className || 'w-56'}
+        className={className || 'w-56 max-w-full'}
       />
     )
   return (

@@ -11,15 +11,23 @@ import { useDoubleTap } from '@/features/settings/useDoubleTap'
 import type { ExerciseSettings, GroovePresetId, Theme, VolumeSetting } from '@/core'
 import { DEFAULT_DEVICE_SETTINGS, GROOVE_PRESETS, MAX_SWING, MAX_VOLUME, MIN_SWING, THEMES, TRIPLET_SWING, groovePreset, overrideCount } from '@/core'
 
-export function SettingsSidebar({ onCollapse, fullScreen = false }: { onCollapse: () => void; fullScreen?: boolean }) {
+/** `playbackGroup` adds the count-in and loop readout, for when the header has no room for them. */
+export function SettingsSidebar({
+  onCollapse,
+  fullScreen = false,
+  playbackGroup = false,
+}: {
+  onCollapse: () => void
+  fullScreen?: boolean
+  playbackGroup?: boolean
+}) {
   return (
     <aside
       aria-label="Settings"
       className={`flex flex-col gap-3.5 overflow-auto bg-panel p-3 ${fullScreen ? 'w-full' : 'w-[250px] border-l border-line'}`}
     >
       <SidebarHeading name="Settings" side="right" fullScreen={fullScreen} onCollapse={onCollapse} />
-      {/* On a phone the header has no room for these, so they're here. */}
-      {fullScreen && (
+      {playbackGroup && (
         <SettingGroup title="Playback">
           <div className="flex items-center justify-between gap-2">
             <LoopReadout />
