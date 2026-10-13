@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { DuplicateIcon, MoreIcon, PlusIcon, TrashIcon } from '@/components/icons'
+import { Menu } from '@/components/Menu'
 import { NameInput } from '@/components/NameInput'
 import { PatternDialog } from '@/components/PatternDialog'
 import { SidebarHeading } from '@/components/Sidebar'
@@ -9,7 +11,7 @@ import type { Exercise, Folder, LibraryTab } from '@/core'
 import { exampleExercises, foldersByName, isExample, libraryView, tabListing } from '@/core'
 import { downloadExport } from './download'
 import { exerciseCount } from './exerciseCount'
-import { ImportButton } from './ImportButton'
+import { ImportFile } from './ImportFile'
 import { useExerciseDrop } from './useExerciseDrop'
 
 /** The built-in examples, the same every time; never stored (ADR 0008). */
@@ -20,6 +22,12 @@ const buttonClass =
 
 /** A sidebar button that's disabled for an example, or with no example open. */
 const disablableButtonClass = `${buttonClass} disabled:cursor-default disabled:text-mute disabled:hover:border-edge`
+
+/** A toolbar icon button or menu button; `large` is big enough for a finger. */
+const toolClass = (large: boolean) =>
+  `flex shrink-0 cursor-pointer items-center justify-center rounded-md border border-edge bg-card hover:border-accent hover:text-accent aria-expanded:border-accent aria-expanded:text-accent disabled:cursor-default disabled:text-mute disabled:opacity-50 disabled:hover:border-edge ${
+    large ? 'size-11' : 'size-8'
+  }`
 
 /** An exercise's button in a list, marked when it's the open one. */
 const listButtonClass = (open: boolean) =>
@@ -39,8 +47,8 @@ const TABS: { id: LibraryTab; label: string }[] = [
 ]
 
 /**
- * The sidebar's two tabs. Library: New, New from pattern, Duplicate, Delete, Import, Export all,
- * the filter and New folder, and the list: the folders (chevron to collapse, double-click to
+ * The sidebar's two tabs. Library: a toolbar (a + menu of New, New from pattern… and New folder;
+ * Duplicate and Delete; a ⋯ menu of Import… and Export all), the filter, and the list: the folders (chevron to collapse, double-click to
  * rename, × to delete), each with its exercises, then the exercises in no folder (click to open,
  * double-click to rename, tick to select, drag onto a folder or "No folder" to move it there). The
  * selection stays through filtering and can be exported, deleted or moved to a folder together.
@@ -194,52 +202,60 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
       )}
       {tab === 'library' && (
         <>
-          <div className="flex gap-1.5">
-            <button type="button" onMouseDown={keepFocus} onClick={createExercise} className={`${buttonClass} flex-none px-4`}>
-              New
-            </button>
+          <div role="toolbar" aria-label="Library actions" className="flex gap-1.5">
+            <Menu
+              label="New"
+              icon={<PlusIcon />}
+              align="left"
+              buttonClassName={toolClass(fullScreen)}
+              items={[
+                { label: 'New', onSelect: createExercise },
+                { label: 'New from pattern…', onSelect: () => setNewFromPatternOpen(true) },
+                {
+                  label: 'New folder',
+                  onSelect: () => {
+                    // The filter would hide the new, empty folder.
+                    setFilter('')
+                    setRenamingId(createFolder())
+                  },
+                },
+              ]}
+            />
             <button
               type="button"
-              title="New exercise from a sticking pattern, such as RLKK"
-              onMouseDown={keepFocus}
-              onClick={() => setNewFromPatternOpen(true)}
-              className={buttonClass}
-            >
-              New from pattern
-            </button>
-          </div>
-          <div className="flex gap-1.5">
-            <button
-              type="button"
-              title={exampleOpen ? 'Copy the open example to the Library' : 'Copy the open exercise'}
+              aria-label="Duplicate"
+              title={exampleOpen ? 'Copy the open example to the Library' : 'Duplicate the open exercise'}
               onMouseDown={keepFocus}
               onClick={duplicateOpenExercise}
-              className={buttonClass}
+              className={toolClass(fullScreen)}
             >
-              Duplicate
+              <DuplicateIcon />
             </button>
             <button
               type="button"
+              aria-label="Delete"
               title={exampleOpen ? 'An example can’t be deleted' : 'Delete the open exercise'}
               disabled={exampleOpen}
               onMouseDown={keepFocus}
               onClick={() => setToDelete(library.filter((e) => e.id === openId))}
-              className={disablableButtonClass}
+              className={toolClass(fullScreen)}
             >
-              Delete
+              <TrashIcon />
             </button>
-          </div>
-          <div className="flex gap-1.5">
-            <ImportButton className={buttonClass} onImported={setImported} />
-            <button
-              type="button"
-              title="Download every exercise as one file"
-              onMouseDown={keepFocus}
-              onClick={() => downloadExport(library, folders)}
-              className={buttonClass}
-            >
-              Export all
-            </button>
+            <span className="flex-1" />
+            <ImportFile onImported={setImported}>
+              {(pick) => (
+                <Menu
+                  label="More library actions"
+                  icon={<MoreIcon />}
+                  buttonClassName={toolClass(fullScreen)}
+                  items={[
+                    { label: 'Import…', onSelect: pick },
+                    { label: 'Export all', onSelect: () => downloadExport(library, folders) },
+                  ]}
+                />
+              )}
+            </ImportFile>
           </div>
           {imported !== null && (
             <p role="status" className="m-0 flex items-center gap-1.5 text-xs text-mute">
@@ -255,29 +271,15 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
               </button>
             </p>
           )}
-          <div className="flex gap-1.5">
-            <input
-              type="search"
-              aria-label="Filter exercises"
-              placeholder="Filter…"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="min-w-0 flex-1 rounded-md border border-edge bg-card px-2 py-1 outline-none focus:border-accent"
-            />
-            <button
-              type="button"
-              title="Make a folder in the Library"
-              onMouseDown={keepFocus}
-              onClick={() => {
-                // The filter would hide the new, empty folder.
-                setFilter('')
-                setRenamingId(createFolder())
-              }}
-              className={`${buttonClass} flex-none`}
-            >
-              New folder
-            </button>
-          </div>
+          <input
+            type="search"
+            aria-label="Filter exercises"
+            placeholder="Filter…"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            // 16 px on the phone, where iOS zooms into a smaller field it focuses.
+            className={`rounded-md border border-edge bg-card px-2 outline-none focus:border-accent ${fullScreen ? 'py-2 text-base' : 'py-1'}`}
+          />
           {selected.length > 0 && (
             <div className="flex flex-col gap-1.5 text-xs whitespace-nowrap">
               <div className="flex items-center gap-1.5">

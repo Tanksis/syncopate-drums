@@ -1,8 +1,7 @@
-import type { ChangeEvent } from 'react'
+import type { ChangeEvent, ReactNode } from 'react'
 import { useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { Dialog, DialogButton } from '@/components/Dialog'
-import { keepFocus } from '@/components/keepFocus'
 import type { ImportChoice, ParsedImport } from '@/core'
 import { importConflicts, parseImport } from '@/core'
 import { exerciseCount } from './exerciseCount'
@@ -11,11 +10,18 @@ import { exerciseCount } from './exerciseCount'
 type ReadImport = Extract<ParsedImport, { ok: true }>
 
 /**
- * Import: picks a JSON file and adds its exercises to the library. When some are already there it
- * asks once, with the count, whether to replace, keep both or skip them; a refused file says why.
- * `onImported` hears how many exercises were stored.
+ * Import: `children` gets `pick`, which opens the file picker (call it in a click, as browsers
+ * open one only from a user's gesture), and the picked JSON file's exercises go into the library.
+ * When some are already there it asks once, with the count, whether to replace, keep both or skip
+ * them; a refused file says why. `onImported` hears how many exercises were stored.
  */
-export function ImportButton({ className, onImported }: { className: string; onImported: (count: number) => void }) {
+export function ImportFile({
+  onImported,
+  children,
+}: {
+  onImported: (count: number) => void
+  children: (pick: () => void) => ReactNode
+}) {
   const importExercises = useAppStore((s) => s.importExercises)
   const picker = useRef<HTMLInputElement>(null)
   /** An import waiting on the conflict choice. */
@@ -43,16 +49,7 @@ export function ImportButton({ className, onImported }: { className: string; onI
 
   return (
     <>
-      <button
-        type="button"
-        title="Add exercises from an exported file"
-        // Keeps focus off the button, so Space still pauses rather than clicking it again.
-        onMouseDown={keepFocus}
-        onClick={() => picker.current?.click()}
-        className={className}
-      >
-        Import
-      </button>
+      {children(() => picker.current?.click())}
       <input
         ref={picker}
         type="file"

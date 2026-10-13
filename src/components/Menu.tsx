@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { keepFocus } from './keepFocus'
 
@@ -12,14 +13,29 @@ export interface MenuItem {
 }
 
 /**
- * A ⋯ button that opens a small popover of items under it, or over it where there's no room
- * below. It closes on a choice, `Esc`, a click or tap outside it, or a scroll. Neither the button
+ * A ⋯ button (or `icon`) that opens a small popover of items under it, or over it where there's no
+ * room below; the popover lines up with the button's right edge, or its left with `align="left"`. It closes on a choice, `Esc`, a click or tap outside it, or a scroll. Neither the button
  * nor the items take focus, so the editor's keys work as before once it closes; `Esc` goes to the
- * menu only while it's open. A `large` button is big enough for a finger.
+ * menu only while it's open. A `large` button is big enough for a finger; `buttonClassName`
+ * replaces the button's look.
  */
-export function Menu({ label, items, large = false }: { label: string; items: MenuItem[]; large?: boolean }) {
+export function Menu({
+  label,
+  items,
+  large = false,
+  icon = '⋯',
+  align = 'right',
+  buttonClassName,
+}: {
+  label: string
+  items: MenuItem[]
+  large?: boolean
+  icon?: ReactNode
+  align?: 'left' | 'right'
+  buttonClassName?: string
+}) {
   // The button's box, which the popover hangs from; null while closed.
-  const [anchor, setAnchor] = useState<{ top: number; bottom: number; right: number } | null>(null)
+  const [anchor, setAnchor] = useState<{ top: number; bottom: number; left: number; right: number } | null>(null)
   const root = useRef<HTMLDivElement>(null)
   const popover = useRef<HTMLDivElement>(null)
 
@@ -70,13 +86,16 @@ export function Menu({ label, items, large = false }: { label: string; items: Me
         onMouseDown={keepFocus}
         onClick={(e) => {
           const box = e.currentTarget.getBoundingClientRect()
-          setAnchor(anchor ? null : { top: box.top, bottom: box.bottom, right: window.innerWidth - box.right })
+          setAnchor(anchor ? null : { top: box.top, bottom: box.bottom, left: box.left, right: window.innerWidth - box.right })
         }}
-        className={`cursor-pointer text-mute hover:bg-line hover:text-accent aria-expanded:bg-line aria-expanded:text-accent ${
-          large ? 'size-9 rounded-lg border border-edge bg-card text-base/none' : 'rounded px-1 text-sm/none'
-        }`}
+        className={
+          buttonClassName ??
+          `cursor-pointer text-mute hover:bg-line hover:text-accent aria-expanded:bg-line aria-expanded:text-accent ${
+            large ? 'size-9 rounded-lg border border-edge bg-card text-base/none' : 'rounded px-1 text-sm/none'
+          }`
+        }
       >
-        ⋯
+        {icon}
       </button>
       {anchor && (
         // Fixed, so a scrolling panel around the button doesn't clip it.
@@ -84,7 +103,7 @@ export function Menu({ label, items, large = false }: { label: string; items: Me
           ref={popover}
           role="menu"
           aria-label={label}
-          style={{ right: anchor.right }}
+          style={align === 'left' ? { left: anchor.left } : { right: anchor.right }}
           className="fixed z-30 flex min-w-44 flex-col rounded-lg border border-line bg-card py-1 text-sm shadow-lg shadow-shade/10"
         >
           {items.map((item) => (
