@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Bar, GroovePresetId } from './index'
-import { minBarWidth, notationFit, restBar, setBeat, staffParts } from './index'
+import { minBarWidthFor, notationFit, restBar, setBeat, staffParts } from './index'
 
 /** One line of staff at scale 1, about what the renderer draws with both parts. */
 const LINE = 150
@@ -56,9 +56,9 @@ function bars(count: number, hits: string): Bar[] {
     Array.from({ length: count }, () => restBar()),
   )
 }
-const widthOf = (count: number, hits: string, groove: GroovePresetId = 'off') => minBarWidth(staffParts(bars(count, hits), groove))
+const widthOf = (count: number, hits: string, groove: GroovePresetId = 'off') => minBarWidthFor(staffParts(bars(count, hits), groove))
 
-describe('minBarWidth', () => {
+describe('minBarWidthFor', () => {
   it('keeps 190 for quarters and eighths', () => {
     expect(widthOf(4, 'x...')).toBe(190)
     expect(widthOf(4, 'x.x.')).toBe(190)
@@ -79,13 +79,13 @@ describe('minBarWidth', () => {
 
   it('counts either part: sixteenth kicks under quarter snares get 330', () => {
     const kicks = [0, 1, 2, 3].reduce((acc, beat) => setBeat(acc, 'kick', 0, beat, 'xxxx'), bars(1, 'x...'))
-    expect(minBarWidth(staffParts(kicks, 'off'))).toBe(330)
+    expect(minBarWidthFor(staffParts(kicks, 'off'))).toBe(330)
   })
 
   it('takes the busiest beat of the whole exercise', () => {
     const one = bars(4, 'x...')
     const busy = setBeat(one, 'snare', 3, 2, 'xxxx')
-    expect(minBarWidth(staffParts(busy, 'off'))).toBe(330)
+    expect(minBarWidthFor(staffParts(busy, 'off'))).toBe(330)
   })
 })
 
@@ -97,7 +97,7 @@ describe('notationFit with a busy minimum bar width', () => {
   })
 
   it('draws one sixteenth bar at 390 px below 1x so the bar fits its minimum', () => {
-    // 390 / 0.9 = 433, less 2 × 10 margin and the 70 clef: 343, the first scale with room for 330.
+    // 390 / 0.9 = 433, less 2 Ã— 10 margin and the 70 clef: 343, the first scale with room for 330.
     expect(notationFit({ bars: 1, width: 390, height: 800, lineHeight: LINE, minBarWidth: 330 })).toEqual({
       scale: 0.9,
       barsPerLine: 1,

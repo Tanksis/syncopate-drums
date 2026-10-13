@@ -11,9 +11,9 @@ export const NOTATION_LAYOUT = {
   barsPerLine: 4,
   /** A bar of one or two events a beat is never drawn narrower than this; a narrow area gets fewer bars a line. */
   minBarWidth: 190,
-  /** ...of three events a beat (triplets), this. */
+  /** A bar of three events a beat (triplets) is never narrower than this. */
   tripletBarWidth: 260,
-  /** ...of four or more (sixteenths), this. */
+  /** A bar of four or more events a beat (sixteenths) is never narrower than this. */
   sixteenthBarWidth: 330,
   /** An exercise on one line spreads its bars across it, but never wider than this. */
   maxBarWidth: 475,
@@ -47,7 +47,7 @@ function barsPerLineAt(width: number, scale: number, minBarWidth: number): numbe
  * and rests) in one beat of either part, anywhere in the exercise. One width for the whole exercise,
  * so its bars stay equal and line up.
  */
-export function minBarWidth(parts: readonly StaffBar[]): number {
+export function minBarWidthFor(parts: readonly StaffBar[]): number {
   let busiest = 0
   for (const bar of parts) {
     for (const part of [bar.hands, bar.feet]) {
