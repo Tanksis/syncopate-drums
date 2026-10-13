@@ -4,31 +4,22 @@ import { keepFocus } from '@/components/keepFocus'
 import { MAX_BPM, MIN_BPM } from '@/core'
 import { LoopReadout } from './LoopReadout'
 import { PlaybackPosition } from './PlaybackPosition'
-import { togglePlayback } from './transport'
 import { usePlaybackKeys } from './usePlaybackKeys'
 
 /**
  * How much of the transport the header has room for: all of it, all but the BPM slider, or only
- * play, the position and the BPM box, with the count-in and loop readout in the Settings sidebar.
+ * the position and the BPM box, with the count-in and loop readout in the Settings sidebar.
  */
 export type HeaderRoom = 'full' | 'withoutSlider' | 'compact'
 
-/** The header's play/stop button, tempo controls and loop range. */
+/**
+ * The header's playback position, tempo controls and loop range. Play is on the staff
+ * (`StaffPlayButton`); Ctrl+Space and Space work from here.
+ */
 export function TransportControls({ room }: { room: HeaderRoom }) {
   usePlaybackKeys()
-  const playing = useAppStore((s) => s.playing)
   return (
     <div className="flex shrink-0 items-center gap-2.5 whitespace-nowrap">
-      <button
-        type="button"
-        title="Play from the count-in / stop (Ctrl+Space). Space pauses and resumes."
-        // Keep focus off the button, so Space pauses rather than clicking it.
-        onMouseDown={keepFocus}
-        onClick={togglePlayback}
-        className="w-20 cursor-pointer rounded-md border border-edge bg-panel px-2.5 py-1 font-semibold hover:border-accent"
-      >
-        {playing ? '■ Stop' : '▶ Play'}
-      </button>
       <PlaybackPosition />
       <BpmControl slider={room === 'full'} />
       {room !== 'compact' && (
