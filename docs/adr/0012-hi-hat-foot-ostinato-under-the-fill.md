@@ -10,10 +10,10 @@ Weinberg's guidelines (quoted in ADR 0004) write an ostinato under a freer figur
 
 So the setting's hits no longer take part in choosing the voicing:
 
-1. Each bar picks one voice or two from the exercise's rows and the groove preset's hits only, by ADR 0004 and 0011, as if the setting were off. A preset's own hi-hat foot, which is part of the groove, still counts when the setting is off.
+1. Each bar picks one voice or two from the exercise's rows and the groove preset's hits only, by ADR 0004 and 0011, as if the setting were off. A preset's own hi-hat foot, which is part of the groove, still counts, even when the setting replaces it (so the jazz groove picks the same voicing whatever the setting).
 2. The setting's hits then go where they're clearest:
-   - In a bar of one voice, if every one of them lands on a struck chord of the hands part, they join those chords.
-   - Otherwise, in a bar of one voice, the bar gets a feet part holding only the setting's hits, stems down with their rests. The fill stays as it was above it.
+   - In a bar of one voice, or of the hands alone, if every one of them lands on a struck chord of the hands part, as heard (a foot on the & of a triplet beat lands on none), they join those chords.
+   - Otherwise, in a bar of one voice or of the hands alone, the bar gets a feet part holding only the setting's hits, stems down with their rests. The fill stays as it was above it.
    - In a bar of two voices, they join the feet part as before.
 
 ## Consequences
