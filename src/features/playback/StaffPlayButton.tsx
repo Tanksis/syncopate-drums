@@ -16,7 +16,7 @@ export function StaffPlayButton() {
       // Keep focus off the button, so Space pauses rather than clicking it.
       onMouseDown={keepFocus}
       onClick={togglePlayback}
-      className="flex size-9 cursor-pointer items-center justify-center rounded-full border border-accent bg-accent text-sm/none text-on-accent shadow-sm shadow-shade hover:opacity-85"
+      className="flex size-9 cursor-pointer items-center justify-center rounded-full border border-accent bg-accent text-sm/none text-on-accent shadow-md shadow-shade/10 hover:opacity-90"
     >
       <span aria-hidden>{playing ? '■' : '▶'}</span>
     </button>

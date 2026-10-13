@@ -12,7 +12,7 @@ import { drawExercise, notationFontsReady } from './staff'
  * at the top left, in a gutter of its own so it never covers bar 1's number, and stays put as the
  * staff scrolls.
  */
-export function NotationView({ corner }: { corner?: ReactNode } = {}) {
+export function NotationView({ corner }: { corner?: ReactNode }) {
   const exercise = useAppStore((s) => s.editor.exercise)
   const cursor = useAppStore((s) => s.editor.cursor)
   const dispatch = useAppStore((s) => s.dispatch)
