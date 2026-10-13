@@ -98,8 +98,12 @@ export function exerciseFromPattern({
     sticking: 'natural',
     bars: Array.from({ length: bars }, restBar),
   }
-  let from = 0
-  for (let bar = 0; bar < bars; bar++) ({ exercise, next: from } = withPattern(exercise, bar, parsed.steps, grid, from))
+  let step = 0
+  for (let bar = 0; bar < bars; bar++) {
+    const filled = withPattern(exercise, bar, parsed.steps, grid, step)
+    exercise = filled.exercise
+    step = filled.next
+  }
   return exercise
 }
 

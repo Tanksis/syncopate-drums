@@ -11,8 +11,8 @@ import {
   duplicateExercise,
   exampleAccepts,
   exampleExercises,
-  exerciseToOpenAfterDelete,
   exerciseFromPattern,
+  exerciseToOpenAfterDelete,
   exerciseToOpenAtLaunch,
   fileIntoFolders,
   isExample,
@@ -205,6 +205,12 @@ export const useAppStore = create<AppState>()((set, get) => {
     saveDevice(deviceNow)
   }
 
+  /** Opens a new exercise on top of the list. A collapsed folder it is filed in opens, so it shows there. */
+  function openNew(created: Exercise) {
+    if (created.folderId !== null) get().setFolderCollapsed(created.folderId, false)
+    switchTo(created, addedOnTop)
+  }
+
   /**
    * Sets the library (and folders, if they changed) once exercises moved folder, and saves the
    * `moved` ones. The open exercise moves too (its list entry is kept in step with it), so its next
@@ -276,17 +282,10 @@ export const useAppStore = create<AppState>()((set, get) => {
       const target = [...get().library, ...exampleExercises()].find((e) => e.id === id)
       if (target && id !== get().editor.exercise.id) switchTo(target, updatedInPlace)
     },
-    createExercise: () => {
-      const created = newExerciseBeside(get().editor.exercise, { id: crypto.randomUUID(), now: Date.now() })
-      // A collapsed folder opens, so the new exercise shows in it.
-      if (created.folderId !== null) get().setFolderCollapsed(created.folderId, false)
-      switchTo(created, addedOnTop)
-    },
+    createExercise: () => openNew(newExerciseBeside(get().editor.exercise, { id: crypto.randomUUID(), now: Date.now() })),
     createFromPattern: ({ pattern, grid, bars }) => {
       const { folderId } = get().editor.exercise
-      const created = exerciseFromPattern({ id: crypto.randomUUID(), now: Date.now(), folderId, pattern, grid, bars })
-      if (folderId !== null) get().setFolderCollapsed(folderId, false)
-      switchTo(created, addedOnTop)
+      openNew(exerciseFromPattern({ id: crypto.randomUUID(), now: Date.now(), folderId, pattern, grid, bars }))
     },
     createFolder: () => {
       const folder = newFolder({ id: crypto.randomUUID(), name: '' })

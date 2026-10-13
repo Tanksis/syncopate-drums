@@ -14,7 +14,7 @@ export interface PatternChoice {
   text: string
   steps: PatternStep[]
   grid: PatternGrid
-  /** Only when the dialog asks for bars. */
+  /** As asked for, or 1 when the dialog doesn't ask (a fill). */
   bars: number
 }
 
