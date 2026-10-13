@@ -19,7 +19,7 @@ import {
 import type { PatternGrid, PatternStep } from './pattern'
 import { withPattern } from './pattern'
 import type { BeatView, GridPoint, RowView } from './speller'
-import { beatViews, clearBeatToDownbeat, setBeat, setHold, slotTicks, toggleHit, toggleTie } from './speller'
+import { beatViews, clearBeatToDownbeat, kicksInGaps, setBeat, setHold, slotTicks, toggleHit, toggleTie } from './speller'
 import type { NoteSticking } from './sticking'
 import { overrideCount, sticking } from './sticking'
 
@@ -129,6 +129,12 @@ export type EditCommand =
    * the grid given, as `withPattern` lays it, and moves the cursor to the bar's first beat.
    */
   | { type: 'fillPattern'; bar: number; pattern: PatternStep[]; grid: PatternGrid }
+  /**
+   * The bar ⋯ menu's "Kicks in the gaps": puts a kick wherever neither row strikes, on the grid
+   * each beat is on, as `kicksInGaps` does, in one bar (moving the cursor to its first beat) or in
+   * every bar. The sticking is left as it was.
+   */
+  | { type: 'kicksInGaps'; bar: number | 'all' }
   /**
    * Sets the opposite hand as a sticking override on a struck note, or clears its override. Does
    * nothing while sticking is hidden.
@@ -392,11 +398,18 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
       const { bar } = moved.cursor
       const { exercise } = withPattern(state.exercise, bar, command.pattern, command.grid)
       // A triplet beat that reads the same on either grid stays on the triplet grid it was filled on.
-      const beats = Array.from({ length: BEATS_PER_BAR }, (_, beat) => beatIndex(bar, beat))
+      const beats = beatsOf(bar)
       const others = state.pendingGrid.filter((i) => !beats.includes(i))
       const views = beatViews(exercise.bars)[bar]
       const pending = command.grid === 'triplets' ? beats.filter((_, beat) => !views[beat].triplet) : []
       return { ...moved, exercise, pendingGrid: [...others, ...pending] }
+    }
+    case 'kicksInGaps': {
+      // Every bar leaves the cursor where it was.
+      const moved = command.bar === 'all' ? state : moveTo(state, command.bar, 0)
+      const targets = command.bar === 'all' ?state.exercise.bars.map((_, bar) => bar) : [moved.cursor.bar]
+      const bars = kicksInGaps(state.exercise.bars, targets.flatMap(beatsOf), state.pendingGrid)
+      return bars === state.exercise.bars ? moved : withBars(moved, bars)
     }
     case 'flipOverride': {
       const target = overrideTarget(state, command.note)
@@ -526,6 +539,9 @@ function moveTo(state: EditorState, bar: number, beat: number, row = state.curso
   const last = state.exercise.bars.length - 1
   return { ...state, cursor: { bar: clamp(bar, 0, last), beat: clamp(beat, 0, BEATS_PER_BAR - 1), row } }
 }
+
+/** A bar's four beats, as indices across the exercise. */
+const beatsOf = (bar: number) => Array.from({ length: BEATS_PER_BAR }, (_, beat) => beatIndex(bar, beat))
 
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n))
 
