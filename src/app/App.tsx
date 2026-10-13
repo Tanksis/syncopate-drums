@@ -9,6 +9,7 @@ import { GridEditor } from '@/features/editor/GridEditor'
 import { ExampleNotice } from '@/features/library/ExampleNotice'
 import { LibrarySidebar } from '@/features/library/LibrarySidebar'
 import { NotationView } from '@/features/notation/NotationView'
+import { StaffPlayButton } from '@/features/playback/StaffPlayButton'
 import { TransportBar } from '@/features/playback/TransportBar'
 import type { HeaderRoom } from '@/features/playback/TransportControls'
 import { TransportControls } from '@/features/playback/TransportControls'
@@ -43,7 +44,7 @@ export function App() {
           <TransportControls room={room} />
         </header>
         <ExampleNotice />
-        <NotationView />
+        <NotationView corner={<StaffPlayButton />} />
         <GridEditor />
       </main>
 
@@ -138,7 +139,7 @@ function PhoneHeaderButton({
  * its 12 characters or so: under `full` the BPM slider goes, and under `withoutSlider` the count-in
  * and loop readout move to the Settings sidebar too.
  */
-const HEADER_WIDTH = { full: 860, withoutSlider: 750 }
+const HEADER_WIDTH = { full: 770, withoutSlider: 660 }
 
 /**
  * A ref for the desktop header, and how much of the transport fits in it. That depends on the

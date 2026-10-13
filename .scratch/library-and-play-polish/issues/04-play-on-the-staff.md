@@ -4,10 +4,14 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The button plays from the count-in and stops, with the same title and keys as today's Play
-- [ ] It doesn't cover bar 1's number or its loop click, and it stays put while the notation scrolls
-- [ ] The header's Play is gone on desktop, and the header's narrower steps (`useHeaderRoom`) still fit
-- [ ] The phone layout is unchanged
-- [ ] Checked in the browser at 1280 px and in a narrow desktop window, light and dark
+- [x] The button plays from the count-in and stops, with the same title and keys as today's Play
+- [x] It doesn't cover bar 1's number or its loop click, and it stays put while the notation scrolls
+- [x] The header's Play is gone on desktop, and the header's narrower steps (`useHeaderRoom`) still fit
+- [x] The phone layout is unchanged
+- [x] Checked in the browser at 1280 px and in a narrow desktop window, light and dark
+
+## Comments
+
+- Done in the PR for `feature/04-play-on-the-staff`. The button sits in a gutter of its own (`pl-14` on the desktop notation area), so it never covers bar 1's number at any scale. With the header's Play gone, `useHeaderRoom`'s steps dropped by its 90 px, to 770 and 660. The browser check ran headless at 1280, 900, 760 and 660 px, light and dark, plus 390 × 844 for the phone.

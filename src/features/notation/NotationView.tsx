@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { useResolvedTheme } from '@/app/theme'
@@ -6,7 +7,12 @@ import { followPlayback, scrollLineIntoView } from './followPlayback'
 import type { Drawing, NotationArea } from './staff'
 import { drawExercise, notationFontsReady } from './staff'
 
-export function NotationView() {
+/**
+ * The notation, scrolling in its own area. Given `corner` (the desktop play button), that's pinned
+ * at the top left, in a gutter of its own so it never covers bar 1's number, and stays put as the
+ * staff scrolls.
+ */
+export function NotationView({ corner }: { corner?: ReactNode }) {
   const exercise = useAppStore((s) => s.editor.exercise)
   const cursor = useAppStore((s) => s.editor.cursor)
   const dispatch = useAppStore((s) => s.dispatch)
@@ -65,36 +71,39 @@ export function NotationView() {
   }, [playing])
 
   return (
-    <section
-      ref={scrollerRef}
-      aria-label="Notation view"
-      className="relative min-h-0 flex-1 overflow-auto bg-paper px-4 py-2.5"
-    >
-      <div className="relative">
-        {!hasHits(exercise) && hintBox && (
-          // Centred over the staff, which it leaves to take the clicks.
-          <p style={hintBox} className="pointer-events-none absolute z-10 m-0 flex items-center justify-center text-center">
-            <span className="rounded-md bg-paper/90 px-3 py-1 text-mute">
-              Tap or click a grid position below to add hits.
-            </span>
-          </p>
-        )}
-        <div
-          ref={staffRef}
-          // Shift+click on a bar number would otherwise select text.
-          className="select-none"
-          onClick={(e) => {
-            // A click on a bar number loops that bar (Shift extends the loop), on a hand flips its
-            // sticking, and on a note moves the cursor to its beat.
-            const barNumber = (e.target as Element).closest<SVGElement>('[data-loop-bar]')
-            if (barNumber) return loopBar(Number(barNumber.dataset.loopBar), { extend: e.shiftKey })
-            const handGroup = (e.target as Element).closest<SVGElement>('[data-note-id]')
-            if (handGroup) return dispatch({ type: 'flipOverride', note: { id: handGroup.dataset.noteId! } })
-            const note = (e.target as Element).closest<SVGElement>('[data-bar]')
-            if (note) dispatch({ type: 'moveTo', bar: Number(note.dataset.bar), beat: Number(note.dataset.beat) })
-          }}
-        />
-      </div>
-    </section>
+    <div className="relative flex min-h-0 flex-1 flex-col">
+      <section
+        ref={scrollerRef}
+        aria-label="Notation view"
+        className={`relative min-h-0 flex-1 overflow-auto bg-paper py-2.5 pr-4 ${corner ? 'pl-14' : 'pl-4'}`}
+      >
+        <div className="relative">
+          {!hasHits(exercise) && hintBox && (
+            // Centred over the staff, which it leaves to take the clicks.
+            <p style={hintBox} className="pointer-events-none absolute z-10 m-0 flex items-center justify-center text-center">
+              <span className="rounded-md bg-paper/90 px-3 py-1 text-mute">
+                Tap or click a grid position below to add hits.
+              </span>
+            </p>
+          )}
+          <div
+            ref={staffRef}
+            // Shift+click on a bar number would otherwise select text.
+            className="select-none"
+            onClick={(e) => {
+              // A click on a bar number loops that bar (Shift extends the loop), on a hand flips its
+              // sticking, and on a note moves the cursor to its beat.
+              const barNumber = (e.target as Element).closest<SVGElement>('[data-loop-bar]')
+              if (barNumber) return loopBar(Number(barNumber.dataset.loopBar), { extend: e.shiftKey })
+              const handGroup = (e.target as Element).closest<SVGElement>('[data-note-id]')
+              if (handGroup) return dispatch({ type: 'flipOverride', note: { id: handGroup.dataset.noteId! } })
+              const note = (e.target as Element).closest<SVGElement>('[data-bar]')
+              if (note) dispatch({ type: 'moveTo', bar: Number(note.dataset.bar), beat: Number(note.dataset.beat) })
+            }}
+          />
+        </div>
+      </section>
+      {corner && <div className="absolute top-2.5 left-2.5 z-10">{corner}</div>}
+    </div>
   )
 }
