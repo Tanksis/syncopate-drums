@@ -446,6 +446,44 @@ export function setHold(bars: Bar[], from: GridPoint, to: GridPoint, tripletBeat
 }
 
 /**
+ * Puts a kick on every grid position of the given beats (indices across the exercise, bar × 4 +
+ * beat) where neither row strikes, and re-spells the bars. Each beat keeps the grid the editor
+ * shows it on (`tripletBeats` as for `beatViews`); an empty beat is on the sixteenth grid.
+ *
+ * A note sounding over a gap, in either row, is cut short there, and each new kick holds until the
+ * next kick or the end of its beat. Struck notes and their sticking overrides are untouched. With
+ * no gap, the same bars are returned.
+ */
+export function kicksInGaps(bars: Bar[], beats: readonly number[], tripletBeats: readonly number[] = []): Bar[] {
+  const views = beatViews(bars, tripletBeats).flat()
+  const [snare, kick] = ROWS.map((row) => toTimeline(rowOf(bars, row)))
+  const was = [snare, kick].map(({ cells }) => [...cells])
+  for (const index of beats) {
+    const first = index * TICKS_PER_BEAT
+    for (const offset of slotTicks(views[index].triplet)) {
+      const tick = first + offset
+      if (snare.cells[tick].state === 'hit' || kick.cells[tick].state === 'hit') continue
+      for (const { cells } of [snare, kick]) {
+        for (let t = tick; t < cells.length && cells[t].state === 'hold'; t++) cells[t] = { state: 'rest' }
+      }
+      kick.cells[tick] = { state: 'hit' }
+      for (let t = tick + 1; t < first + TICKS_PER_BEAT && kick.cells[t].state === 'rest'; t++) kick.cells[t] = { state: 'hold' }
+    }
+  }
+  const changedBeats = [snare, kick].map(
+    ({ cells }, r) => new Set(cells.flatMap((cell, t) => (cell === was[r][t] ? [] : [Math.floor(t / TICKS_PER_BEAT)]))),
+  )
+  if (changedBeats.every((changed) => changed.size === 0)) return bars
+  // A changed beat is a triplet group where it's on the triplet grid and doesn't read the same on either.
+  ;[snare, kick].forEach((timeline, r) =>
+    changedBeats[r].forEach((index) => {
+      timeline.triplet[index] = views[index].triplet && !readsOnEitherGrid(timeline, index)
+    }),
+  )
+  return withRow(withRow(bars, 'snare', fromTimeline(snare)), 'kick', fromTimeline(kick))
+}
+
+/**
  * Clears a beat in both rows for a switch between the sixteenth and the triplet grid. Only the
  * downbeat is on both, so in each row a note on the downbeat (struck, or tied into the beat) is
  * kept and holds to the end of the beat, and the other positions are cleared. With nothing off the

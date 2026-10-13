@@ -38,6 +38,8 @@ export function BarActions({ large = false }: { large?: boolean }) {
           { label: `Duplicate ${cursorBar}`, onSelect: () => dispatch({ type: 'duplicateBar' }) },
           { label: `Copy ${bars}`, onSelect: () => dispatch({ type: 'copyBars' }) },
           { label: `Fill ${cursorBar} with pattern…`, onSelect: () => setFilling(bar) },
+          { label: `Kicks in the gaps: ${cursorBar}`, onSelect: () => dispatch({ type: 'kicksInGaps', bars: bar }) },
+          { label: 'Kicks in the gaps: every bar', onSelect: () => dispatch({ type: 'kicksInGaps', bars: 'all' }) },
           {
             label: `Paste over ${pasted}`,
             disabled: editor.clipboard === null,

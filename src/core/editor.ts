@@ -19,7 +19,7 @@ import {
 import type { PatternGrid, PatternStep } from './pattern'
 import { withPattern } from './pattern'
 import type { BeatView, GridPoint, RowView } from './speller'
-import { beatViews, clearBeatToDownbeat, setBeat, setHold, slotTicks, toggleHit, toggleTie } from './speller'
+import { beatViews, clearBeatToDownbeat, kicksInGaps, setBeat, setHold, slotTicks, toggleHit, toggleTie } from './speller'
 import type { NoteSticking } from './sticking'
 import { overrideCount, sticking } from './sticking'
 
@@ -129,6 +129,12 @@ export type EditCommand =
    * the grid given, as `withPattern` lays it, and moves the cursor to the bar's first beat.
    */
   | { type: 'fillPattern'; bar: number; pattern: PatternStep[]; grid: PatternGrid }
+  /**
+   * The bar ⋯ menu's "Kicks in the gaps": puts a kick wherever neither row strikes, on the grid
+   * each beat is on, as `kicksInGaps` does, in one bar (moving the cursor to its first beat) or in
+   * every bar. The sticking is left as it was.
+   */
+  | { type: 'kicksInGaps'; bars: number | 'all' }
   /**
    * Sets the opposite hand as a sticking override on a struck note, or clears its override. Does
    * nothing while sticking is hidden.
@@ -397,6 +403,13 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
       const views = beatViews(exercise.bars)[bar]
       const pending = command.grid === 'triplets' ? beats.filter((_, beat) => !views[beat].triplet) : []
       return { ...moved, exercise, pendingGrid: [...others, ...pending] }
+    }
+    case 'kicksInGaps': {
+      const moved = command.bars === 'all' ? state : moveTo(state, command.bars, 0)
+      const filled = command.bars === 'all' ? state.exercise.bars.map((_, bar) => bar) : [moved.cursor.bar]
+      const beats = filled.flatMap((bar) => Array.from({ length: BEATS_PER_BAR }, (_, beat) => beatIndex(bar, beat)))
+      const bars = kicksInGaps(state.exercise.bars, beats, state.pendingGrid)
+      return bars === state.exercise.bars ? moved : withBars(moved, bars)
     }
     case 'flipOverride': {
       const target = overrideTarget(state, command.note)
