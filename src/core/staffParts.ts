@@ -1,8 +1,8 @@
 // The staff parts: the exercise and its groove layer written by limb, as drum-set charts are (ADRs
 // 0002, 0004 and 0005). Everything played with the hands (the snare row among it) is one part, stems
 // up; everything played with the feet (the kick row among it) is the other, stems down, unless the
-// feet only ever play with the hands in a bar: then the bar is one voice and the feet hang on the
-// hands' stems. Hits at the same tick share a stem.
+// feet only ever play with the hands in a bar, or never do (a linear fill, ADR 0011): then the bar
+// is one voice and the feet hang on the hands' stems. Hits at the same tick share a stem.
 
 import type { Bar, Duration, GroovePresetId, Limb, Row } from './model'
 import { ROWS, TICKS_PER_BAR, TICKS_PER_BEAT, itemTicks, noteId } from './model'
@@ -116,9 +116,10 @@ interface Sound {
  * up) and a feet part (stems down) of chords, rests and space. The snare row is in the hands part
  * and the kick row in the feet part.
  *
- * - A bar where the feet play (the kick row or the groove), but only ever together with the hands,
- *   is one voice: the feet's notes join the hands' chords and the feet part is empty. Otherwise the
- *   bar is two voices.
+ * - A bar where the hands and the feet (the kick row or the groove) both play, and the feet either
+ *   only ever play together with the hands or never do (a linear fill such as RLKK), is one voice:
+ *   the feet's notes join the hands' chords and the feet part is empty. Otherwise the bar is two
+ *   voices.
  * - Hits at the same tick in a part share a chord. A chord holds until the part's next chord, or
  *   until all its notes' holds have ended if that is sooner. A groove note holds to the end of its
  *   beat.
@@ -181,7 +182,10 @@ export function staffParts(bars: readonly Bar[], groove: GroovePresetId, { swung
     const inBar = all.filter((s) => barOf(s) === b)
     const handStarts = new Set(inBar.filter((s) => LIMB[s.drum] === 'hands').map((s) => s.start))
     const feet = inBar.filter((s) => LIMB[s.drum] === 'feet')
-    return feet.length > 0 && feet.every((s) => handStarts.has(s.start))
+    if (feet.length === 0 || handStarts.size === 0) return false
+    // The feet only ever play with the hands, or never do: a linear fill.
+    const withHands = feet.filter((s) => handStarts.has(s.start)).length
+    return withHands === feet.length || withHands === 0
   })
   const limbOf = (s: Sound): Limb => (oneVoice[barOf(s)] ? 'hands' : LIMB[s.drum])
   const barOfBeat = (beat: number) => Math.floor((beat * TICKS_PER_BEAT) / TICKS_PER_BAR)
