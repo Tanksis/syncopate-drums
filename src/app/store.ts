@@ -2,7 +2,7 @@
 // change, unless it is an example, which is never stored (ADR 0008).
 
 import { create } from 'zustand'
-import type { DeviceSettings, EditCommand, EditorState, Exercise, Folder, GroovePresetId, ImportChoice, PlayPosition } from '@/core'
+import type { DeviceSettings, EditCommand, EditorState, Exercise, Folder, GroovePresetId, ImportChoice, PatternGrid, PlayPosition } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
   addedOnTop,
@@ -12,6 +12,7 @@ import {
   exampleAccepts,
   exampleExercises,
   exerciseToOpenAfterDelete,
+  exerciseFromPattern,
   exerciseToOpenAtLaunch,
   fileIntoFolders,
   isExample,
@@ -76,6 +77,11 @@ interface AppState {
   openExercise: (id: string) => void
   /** Opens a new Untitled exercise, on top of the list, in the open exercise's folder. */
   createExercise: () => void
+  /**
+   * Opens a new exercise of `bars` bars filled with a typed pattern (see `exerciseFromPattern`), on
+   * top of the list, in the open exercise's folder.
+   */
+  createFromPattern: (choice: { pattern: string; grid: PatternGrid; bars: number }) => void
   /** Makes an empty folder called "New folder" and returns its id. */
   createFolder: () => string
   /** Empty or blank names are ignored. */
@@ -274,6 +280,12 @@ export const useAppStore = create<AppState>()((set, get) => {
       const created = newExerciseBeside(get().editor.exercise, { id: crypto.randomUUID(), now: Date.now() })
       // A collapsed folder opens, so the new exercise shows in it.
       if (created.folderId !== null) get().setFolderCollapsed(created.folderId, false)
+      switchTo(created, addedOnTop)
+    },
+    createFromPattern: ({ pattern, grid, bars }) => {
+      const { folderId } = get().editor.exercise
+      const created = exerciseFromPattern({ id: crypto.randomUUID(), now: Date.now(), folderId, pattern, grid, bars })
+      if (folderId !== null) get().setFolderCollapsed(folderId, false)
       switchTo(created, addedOnTop)
     },
     createFolder: () => {

@@ -1,7 +1,7 @@
 // Sticking patterns: a fill typed as hands, kicks and rests (`RLRK`, `RL.L`), laid on a bar's grid.
 
 import type { Bar, Exercise, Hand, Row } from './model'
-import { BEATS_PER_BAR, ROWS, TICKS_PER_BEAT, itemTicks, restBar } from './model'
+import { BEATS_PER_BAR, ROWS, TICKS_PER_BEAT, itemTicks, newExercise, restBar } from './model'
 import { setBeat, slotTicks, toggleHit, toggleTie } from './speller'
 import { sticking } from './sticking'
 
@@ -67,6 +67,40 @@ export function withPattern(
   })
   bars = bars.map((b, i) => (i === bar ? { ...b, snare } : b))
   return { exercise: { ...filled, bars }, next: step % pattern.length }
+}
+
+/**
+ * A new exercise of `bars` bars filled with a typed pattern, carried on across them (each bar
+ * starts where the one before stopped) and named after it, upper case with its spaces tidied. It
+ * has natural sticking and the usual new-exercise defaults otherwise. The pattern must parse.
+ */
+export function exerciseFromPattern({
+  id,
+  now,
+  folderId,
+  pattern,
+  grid,
+  bars,
+}: {
+  id: string
+  now: number
+  folderId: string | null
+  pattern: string
+  grid: PatternGrid
+  bars: number
+}): Exercise {
+  const parsed = parsePattern(pattern)
+  if ('error' in parsed) throw new Error(parsed.error)
+  const name = pattern.trim().replace(/\s+/g, ' ').toUpperCase()
+  let exercise: Exercise = {
+    ...newExercise({ id, now, folderId }),
+    name,
+    sticking: 'natural',
+    bars: Array.from({ length: bars }, restBar),
+  }
+  let from = 0
+  for (let bar = 0; bar < bars; bar++) ({ exercise, next: from } = withPattern(exercise, bar, parsed.steps, grid, from))
+  return exercise
 }
 
 /** The row a step strikes: hands on the snare, K on the kick; a rest strikes neither. */

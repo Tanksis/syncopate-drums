@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { keepFocus } from '@/components/keepFocus'
 import { Menu } from '@/components/Menu'
+import { PatternDialog } from '@/components/PatternDialog'
 import { isExample } from '@/core'
-import { PatternDialog } from './PatternDialog'
 
 /**
  * Undo, redo and the bar menu, for editing without the keyboard. The menu's items are the bar keys'
@@ -55,8 +55,8 @@ export function BarActions({ large = false }: { large?: boolean }) {
           title={`Fill bar ${filling + 1} with a pattern`}
           submitLabel="Fill"
           onCancel={() => setFilling(null)}
-          onSubmit={(pattern, grid) => {
-            dispatch({ type: 'fillPattern', bar: filling, pattern, grid })
+          onSubmit={({ steps, grid }) => {
+            dispatch({ type: 'fillPattern', bar: filling, pattern: steps, grid })
             setFilling(null)
           }}
         />

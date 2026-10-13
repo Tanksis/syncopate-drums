@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { EditorState, PatternGrid, PatternStep, Row } from './index'
-import { applyEdit, editorBeatViews, newEditorState, newExercise, parsePattern, restBar, setBeat, sticking, toggleTie } from './index'
+import type { EditorState, Exercise, PatternGrid, PatternStep, Row } from './index'
+import { applyEdit, editorBeatViews, exerciseFromPattern, newEditorState, newExercise, parsePattern, restBar, setBeat, sticking, toggleTie } from './index'
 
 describe('parsing a sticking pattern', () => {
   it('reads R, L, K and . in any case, ignoring whitespace', () => {
@@ -130,5 +130,41 @@ describe("a fill's sticking", () => {
     state = fill(state, 'RL.LRLRK')
     expect(state.exercise.sticking).toBe('alternate')
     expect(line(state)).toBe('RLLRLRK'.repeat(2))
+  })
+})
+
+describe('a new exercise from a pattern', () => {
+  const made = (pattern: string, grid: PatternGrid = 'sixteenths', bars = 4) =>
+    exerciseFromPattern({ id: 'p1', now: 5, folderId: 'f1', pattern, grid, bars })
+  const barLine = (exercise: Exercise, bar: number) =>
+    sticking(exercise)
+      .filter((n) => n.bar === bar)
+      .map((n) => n.shown ?? '-')
+      .join('')
+
+  it('carries the pattern on across its bars: RLK over 2 bars starts bar 2 where bar 1 stopped', () => {
+    const exercise = made('RLK', 'sixteenths', 2)
+    expect(exercise.bars).toHaveLength(2)
+    expect(barLine(exercise, 0)).toBe('RLKRLKRLKRLKRLKR')
+    expect(barLine(exercise, 1)).toBe('LKRLKRLKRLKRLKRL')
+  })
+
+  it('lays it on triplets too', () => {
+    const exercise = made('RLKK', 'triplets', 2)
+    expect(barLine(exercise, 0)).toBe('RLKKRLKKRLKK')
+    expect(barLine(exercise, 1)).toBe('RLKKRLKKRLKK')
+    expect(editorBeatViews(newEditorState(exercise))[1].map((v) => v.triplet)).toEqual([true, true, true, true])
+  })
+
+  it('is named after the pattern as typed, with its spaces tidied', () => {
+    expect(made('  rlrk   rlkk ').name).toBe('RLRK RLKK')
+  })
+
+  it('uses natural sticking and the usual new-exercise defaults otherwise', () => {
+    const exercise = made('RLKK')
+    const blank = newExercise({ id: 'p1', now: 5, folderId: 'f1' })
+    expect(exercise.sticking).toBe('natural')
+    expect(exercise.bars).toHaveLength(4)
+    expect({ ...exercise, bars: blank.bars, name: blank.name, sticking: blank.sticking }).toEqual(blank)
   })
 })
