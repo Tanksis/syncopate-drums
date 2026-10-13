@@ -48,11 +48,11 @@ const TABS: { id: LibraryTab; label: string }[] = [
 
 /**
  * The sidebar's two tabs. Library: a toolbar (a + menu of New, New from pattern… and New folder;
- * Duplicate and Delete; a ⋯ menu of Import… and Export all), the filter, and the list: the folders (chevron to collapse, double-click to
- * rename, × to delete), each with its exercises, then the exercises in no folder (click to open,
- * double-click to rename, tick to select, drag onto a folder or "No folder" to move it there). The
- * selection stays through filtering and can be exported, deleted or moved to a folder together.
- * Examples: the built-in examples, to open, and Copy to Library for the open one.
+ * Duplicate and Delete; a ⋯ menu of Import… and Export all), the filter, and the list: the
+ * folders (chevron to collapse, double-click to rename, × to delete), each with its exercises,
+ * then the exercises in no folder (click to open, double-click to rename, tick to select, drag
+ * onto a folder or "No folder" to move it there). The selection stays through filtering and can
+ * be exported, deleted or moved to a folder together. Examples: the built-in examples, to open, and Copy to Library for the open one.
  */
 export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse: () => void; fullScreen?: boolean }) {
   const library = useAppStore((s) => s.library)
@@ -202,9 +202,10 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
       )}
       {tab === 'library' && (
         <>
-          <div role="toolbar" aria-label="Library actions" className="flex gap-1.5">
+          <div role="group" aria-label="Library actions" className="flex gap-1.5">
             <Menu
               label="New"
+              large={fullScreen}
               icon={<PlusIcon />}
               align="left"
               buttonClassName={toolClass(fullScreen)}
@@ -242,11 +243,13 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
             >
               <TrashIcon />
             </button>
+            {/* Pushes ⋯ to the right edge. */}
             <span className="flex-1" />
             <ImportFile onImported={setImported}>
               {(pick) => (
                 <Menu
                   label="More library actions"
+                  large={fullScreen}
                   icon={<MoreIcon />}
                   buttonClassName={toolClass(fullScreen)}
                   items={[

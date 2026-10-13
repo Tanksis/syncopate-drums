@@ -19,6 +19,7 @@ function Icon({ children }: { children: ReactNode }) {
   )
 }
 
+/** A plus sign. */
 export const PlusIcon = () => (
   <Icon>
     <path d="M8 3v10M3 8h10" />

@@ -14,10 +14,11 @@ export interface MenuItem {
 
 /**
  * A ⋯ button (or `icon`) that opens a small popover of items under it, or over it where there's no
- * room below; the popover lines up with the button's right edge, or its left with `align="left"`. It closes on a choice, `Esc`, a click or tap outside it, or a scroll. Neither the button
- * nor the items take focus, so the editor's keys work as before once it closes; `Esc` goes to the
- * menu only while it's open. A `large` button is big enough for a finger; `buttonClassName`
- * replaces the button's look.
+ * room below; the popover lines up with the button's right edge, or its left with `align="left"`.
+ * It closes on a choice, `Esc`, a click or tap outside it, or a scroll. Neither the button nor the
+ * items take focus, so the editor's keys work as before once it closes; `Esc` goes to the menu
+ * only while it's open. A `large` menu's button and items are big enough for a finger;
+ * `buttonClassName` replaces the button's look.
  */
 export function Menu({
   label,
@@ -119,7 +120,7 @@ export function Menu({
                 setAnchor(null)
                 item.onSelect()
               }}
-              className="flex cursor-pointer items-center gap-2 px-3 py-2 text-left whitespace-nowrap hover:bg-panel hover:text-accent disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-inherit"
+              className={`flex cursor-pointer items-center gap-2 px-3 text-left whitespace-nowrap ${large ? 'py-3 text-base' : 'py-2'} hover:bg-panel hover:text-accent disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-inherit`}
             >
               <span aria-hidden className="w-3 text-accent">
                 {item.checked ? '✓' : ''}
