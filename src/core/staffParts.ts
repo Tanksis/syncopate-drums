@@ -177,27 +177,30 @@ export function staffParts(
           if (!drum) return []
           const start = b * TICKS_PER_BAR + tick
           const end = start - (start % TICKS_PER_BEAT) + TICKS_PER_BEAT
+          // The flag is left off other sounds, so they stay as they were.
           return [{ drum, notation: hit.notation, start, end, heard: start, ...(ostinato ? { ostinato } : {}) }]
         }),
       ),
     )
   // The preset as it is with the setting off, and the setting's hits alone (the 'off' preset has none).
   const preset = grooveStruck(grooveHitsByTick(groove), false)
-  const setting = hihatFoot === 'off' ? [] : grooveStruck(grooveHitsByTick('off', hihatFoot), true)
-  const played = setting.length ? [...preset.filter((s) => s.drum !== 'hihatFoot'), ...setting] : preset
+  const settingHits = hihatFoot === 'off' ? [] : grooveStruck(grooveHitsByTick('off', hihatFoot), true)
+  /** The sounds with the hi-hat foot setting's hits, if any, in place of their own hi-hat foot. */
+  const replaceFoot = (sounds: Sound[], foot: Sound[]) => (foot.length ? [...sounds.filter((s) => s.drum !== 'hihatFoot'), ...foot] : sounds)
 
   const lines = [...snare.sounds, ...kick.sounds]
-  const swungBeat = swung ? swungBeats([...lines, ...played], triplet) : triplet.map(() => false)
+  const swungBeat = swung ? swungBeats([...lines, ...replaceFoot(preset, settingHits)], triplet) : triplet.map(() => false)
   const exercise = lines.map((s) => respell(s, swungBeat))
-  const grooveSounds = played.map((s) => respell(s, swungBeat))
+  const presetSounds = preset.map((s) => respell(s, swungBeat))
+  const grooveSounds = replaceFoot(presetSounds, settingHits.map((s) => respell(s, swungBeat)))
 
   const barOf = (s: Sound) => Math.floor(s.start / TICKS_PER_BAR)
   // Each bar's voicing, chosen as if the setting were off (ADR 0012), from every sound on the grid of
   // the hands part as it would be in a bar of one voice, which holds the exercise.
-  const all = [...exercise, ...preset.map((s) => onGrid(respell(s, swungBeat), triplet))]
+  const asIfOff = [...exercise, ...presetSounds.map((s) => onGrid(s, triplet))]
   const drawn = [...exercise, ...grooveSounds.map((s) => onGrid(s, triplet))]
   const voicing = bars.map((_, b) => {
-    const inBar = all.filter((s) => barOf(s) === b)
+    const inBar = asIfOff.filter((s) => barOf(s) === b)
     const handStarts = new Set(inBar.filter((s) => LIMB[s.drum] === 'hands').map((s) => s.start))
     const feet = inBar.filter((s) => LIMB[s.drum] === 'feet')
     // The feet only ever play with the hands, or never do: a linear fill.
@@ -205,7 +208,8 @@ export function staffParts(
     const oneVoice = feet.length > 0 && handStarts.size > 0 && (withHands === feet.length || withHands === 0)
     // The setting's hits join the hands' chords in a bar of one voice, or of hands alone, if every
     // one lands on a struck chord.
-    const ostinato = drawn.filter((s) => s.ostinato && barOf(s) === b)
+    // Off the triplet grid, as heard: a foot on the & of a triplet beat lands on no chord.
+    const ostinato = grooveSounds.filter((s) => s.ostinato && barOf(s) === b)
     const chords = new Set(drawn.filter((s) => barOf(s) === b && !s.ostinato && (oneVoice || LIMB[s.drum] === 'hands')).map((s) => s.start))
     const joins = ostinato.length > 0 && (oneVoice || feet.length === 0) && ostinato.every((s) => chords.has(s.start))
     return { oneVoice, joins, feetPart: !joins && (!oneVoice || ostinato.length > 0) }
