@@ -8,8 +8,8 @@ import { CountInToggle } from '@/features/playback/TransportControls'
 import { keepFocus } from '@/components/keepFocus'
 import { PercentField } from '@/features/settings/PercentField'
 import { useDoubleTap } from '@/features/settings/useDoubleTap'
-import type { ExerciseSettings, GroovePresetId, Theme, VolumeSetting } from '@/core'
-import { DEFAULT_DEVICE_SETTINGS, GROOVE_PRESETS, MAX_SWING, MAX_VOLUME, MIN_SWING, THEMES, TRIPLET_SWING, groovePreset, overrideCount } from '@/core'
+import type { ExerciseSettings, GroovePresetId, HihatFoot, Theme, VolumeSetting } from '@/core'
+import { DEFAULT_DEVICE_SETTINGS, GROOVE_PRESETS, HIHAT_FOOT_SETTINGS, MAX_SWING, MAX_VOLUME, MIN_SWING, THEMES, TRIPLET_SWING, groovePreset, overrideCount } from '@/core'
 
 /** `playbackGroup` adds the count-in and loop readout, for when the header has no room for them. */
 export function SettingsSidebar({
@@ -37,6 +37,7 @@ export function SettingsSidebar({
       )}
       <SettingGroup title="Groove">
         <GroovePicker />
+        <HihatFootChoice />
         <Swing />
       </SettingGroup>
       <SettingGroup title="Sticking">
@@ -93,6 +94,33 @@ function GroovePicker() {
         ))}
       </select>
     </label>
+  )
+}
+
+const HIHAT_FOOT_NAMES: Record<HihatFoot, string> = { off: 'Off', one: 'On 1', quarters: 'Quarters', twoAndFour: '2 & 4', ands: '&s' }
+
+/** The hi-hat foot played in every bar, with any groove or none, in place of the groove's own (ADR 0010). */
+function HihatFootChoice() {
+  const hihatFoot = useAppStore((s) => s.editor.exercise.practice.hihatFoot)
+  const setHihatFoot = useAppStore((s) => s.setHihatFoot)
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-mute">Hi-hat foot</span>
+      <div role="group" aria-label="Hi-hat foot" className="flex overflow-hidden rounded-md border border-edge">
+        {HIHAT_FOOT_SETTINGS.map((option) => (
+          <button
+            key={option}
+            type="button"
+            aria-pressed={option === hihatFoot}
+            onMouseDown={keepFocus}
+            onClick={() => setHihatFoot(option)}
+            className="flex-1 cursor-pointer border-l border-edge bg-card px-1 py-0.5 whitespace-nowrap first:border-l-0 hover:text-accent aria-pressed:bg-accent aria-pressed:text-on-accent aria-pressed:hover:text-on-accent"
+          >
+            {HIHAT_FOOT_NAMES[option]}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 

@@ -29,6 +29,12 @@ const steps: Record<number, (exercise: Stored) => Stored> = {
   },
   // Version 2 had no folders: every exercise starts outside one.
   2: (exercise) => ({ ...exercise, folderId: null, schemaVersion: 3 }),
+  // Version 3 had no hi-hat foot setting: it starts off. A missing practice is left for import to refuse.
+  3: ({ practice, ...exercise }) => ({
+    ...exercise,
+    practice: typeof practice === 'object' && practice !== null ? { ...practice, hihatFoot: 'off' } : practice,
+    schemaVersion: 4,
+  }),
 }
 
 /** The stored exercise in the current shape; throws for one from a newer version of the app. */

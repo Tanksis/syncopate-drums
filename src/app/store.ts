@@ -2,7 +2,7 @@
 // change, unless it is an example, which is never stored (ADR 0008).
 
 import { create } from 'zustand'
-import type { DeviceSettings, EditCommand, EditorState, Exercise, Folder, GroovePresetId, ImportChoice, PatternGrid, PlayPosition } from '@/core'
+import type { DeviceSettings, EditCommand, EditorState, Exercise, Folder, GroovePresetId, HihatFoot, ImportChoice, PatternGrid, PlayPosition } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
   addedOnTop,
@@ -31,6 +31,7 @@ import {
   updatedInPlace,
   withBpm,
   withGroove,
+  withHihatFoot,
   withLoopRange,
   withSwing,
 } from '@/core'
@@ -65,6 +66,8 @@ interface AppState {
   setSwing: (swing: number, options?: { dragging?: boolean }) => void
   /** The groove layer played and drawn with the exercise. */
   setGroove: (groove: GroovePresetId) => void
+  /** The hi-hat foot played and drawn in every bar, in place of the groove's own. */
+  setHihatFoot: (hihatFoot: HihatFoot) => void
   setPlaying: (playing: boolean) => void
   setPaused: (paused: PausedAt | undefined) => void
   /** Volumes, the exercise mute, the count-in and the sidebars, kept for this device; `dragging` as for `setBpm`. */
@@ -258,6 +261,11 @@ export const useAppStore = create<AppState>()((set, get) => {
     setGroove: (groove) => {
       const { editor } = get()
       const exercise = withGroove(editor.exercise, groove)
+      if (exercise !== editor.exercise) change(exercise, { ...editor, exercise })
+    },
+    setHihatFoot: (hihatFoot) => {
+      const { editor } = get()
+      const exercise = withHihatFoot(editor.exercise, hihatFoot)
       if (exercise !== editor.exercise) change(exercise, { ...editor, exercise })
     },
     setPlaying: (playing) => set({ playing }),

@@ -1,7 +1,7 @@
 // The groove presets: predefined groove layers played and drawn above the exercise, the same in
-// every bar.
+// every bar, and the hi-hat foot setting layered with them (ADR 0010).
 
-import type { GroovePresetId } from './model'
+import type { GroovePresetId, HihatFoot } from './model'
 import { TICKS_PER_BEAT } from './model'
 import type { Instrument } from './schedule'
 
@@ -73,9 +73,26 @@ export function groovePreset(id: GroovePresetId): GroovePreset {
   return GROOVE_PRESETS.find((p) => p.id === id) ?? GROOVE_PRESETS[0]
 }
 
-/** The preset's hits by the tick they are struck at, in tick order. */
-export function grooveHitsByTick(id: GroovePresetId): Map<number, GrooveHit[]> {
+/** The ticks each hi-hat foot setting plays on, in every bar. */
+const HIHAT_FOOT_TICKS: Record<HihatFoot, number[]> = {
+  off: [],
+  one: [at(0)],
+  quarters: [at(0), at(1), at(2), at(3)],
+  twoAndFour: [at(1), at(3)],
+  ands: [at(0, 1), at(1, 1), at(2, 1), at(3, 1)],
+}
+
+/**
+ * The groove layer's hits by the tick they are struck at, in tick order: the preset's, and with the
+ * hi-hat foot setting on, its hits in place of the preset's own hi-hat foot.
+ */
+export function grooveHitsByTick(id: GroovePresetId, hihatFoot: HihatFoot = 'off'): Map<number, GrooveHit[]> {
+  const preset = groovePreset(id).hits
+  const foot = HIHAT_FOOT_TICKS[hihatFoot].map(
+    (tick): GrooveHit => ({ tick, instrument: 'hihatPedal', velocity: 1, notation: HIHAT_FOOT }),
+  )
+  const hits = hihatFoot === 'off' ? preset : [...preset.filter((hit) => hit.instrument !== 'hihatPedal'), ...foot]
   const byTick = new Map<number, GrooveHit[]>()
-  for (const hit of groovePreset(id).hits) byTick.set(hit.tick, [...(byTick.get(hit.tick) ?? []), hit])
+  for (const hit of [...hits].sort((a, b) => a.tick - b.tick)) byTick.set(hit.tick, [...(byTick.get(hit.tick) ?? []), hit])
   return byTick
 }

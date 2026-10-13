@@ -4,10 +4,10 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Core: `hihatFoot` practice setting, `'off'` by default; the schema version goes up and stored and imported exercises migrate to `'off'`; export carries it (tested)
-- [ ] Core: with the setting on, the schedule and staff parts take the groove's hits without its hi-hat foot, plus the setting's hits (`hihatPedal`, groove volume) (tested, with and without the jazz groove)
-- [ ] It is written in the feet part by the ADR 0004 rules
-- [ ] The control in the Groove section, on desktop and in the phone's Settings; changeable on examples but not kept
-- [ ] Checked in the browser at 1280 px and 390 × 844; the by-ear check is left to the user
+- [x] Core: `hihatFoot` practice setting, `'off'` by default; the schema version goes up and stored and imported exercises migrate to `'off'`; export carries it (tested)
+- [x] Core: with the setting on, the schedule and staff parts take the groove's hits without its hi-hat foot, plus the setting's hits (`hihatPedal`, groove volume) (tested, with and without the jazz groove)
+- [x] It is written in the feet part by the ADR 0004 rules
+- [x] The control in the Groove section, on desktop and in the phone's Settings; changeable on examples but not kept
+- [x] Checked in the browser at 1280 px and 390 × 844; the by-ear check is left to the user
