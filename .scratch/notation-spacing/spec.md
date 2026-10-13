@@ -13,7 +13,7 @@ When I practise a one- or two-bar groove, the notation draws it at the width of 
 - **An exercise that fits on one line fills that line.** Its bars share the line's width, so one bar spans the whole line, two bars get half each, and so on.
 - **A bar is never wider than a cap** of about two and a half times the minimum bar width, so a sparse bar on a big screen isn't stretched thin. Past the cap, the line is left aligned with room to its right, as a short line is today. The auto-fit scale takes the rest.
 - **Exercises of more than one line are unchanged.** Every bar has the same width, so beat 1 lines up from line to line, and a short last line keeps that width rather than being stretched (engraving practice: a mostly empty final system isn't justified).
-- **Later (ticket 02, needs triage):** the minimum bar width grows with how busy the music is, so a dense groove drops to fewer bars a line sooner on a small screen.
+- **Ticket 02:** the minimum bar width grows with how busy the music is (190, 260 for triplets, 330 for sixteenths), so a dense groove drops to fewer bars a line sooner, and on a phone it is drawn below 1x (down to 0.8) so one bar fits.
 
 ## User Stories
 

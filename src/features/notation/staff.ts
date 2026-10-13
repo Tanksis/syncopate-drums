@@ -1,14 +1,15 @@
 // The notation renderer: draws an exercise straight from the model with VexFlow (no MusicXML in
-// between). We do the line wrapping ourselves: 4 bars per line, fewer on a narrow window, and a
-// short last line keeps the bar width and stays left aligned. An exercise on one line spreads its
-// bars across it, and a short exercise is drawn bigger, at the bar width and scale the core's
-// notationFit picks for the notation area. What to draw comes from the core's
-// staff parts: the hands part stems up, the feet part stems down, or one voice stems up (ADRs 0002, 0004).
+// between). We do the line wrapping ourselves: 4 bars per line, fewer on a narrow window or for busy
+// music, and a short last line keeps the bar width and stays left aligned. An exercise on one line
+// spreads its bars across it, a short exercise is drawn bigger and a busy one on a phone smaller,
+// at the bar width and scale the core's notationFit picks for the notation area. What to draw
+// comes from the core's staff parts: the hands part stems up, the feet part stems down, or one
+// voice stems up (ADRs 0002, 0004).
 
 import type { StemmableNote } from 'vexflow/bravura'
 import { Beam, Dot, Formatter, Fraction, GhostNote, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
 import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, NoteSticking, PlayPosition, StaffEvent } from '@/core'
-import { NOTATION_LAYOUT, TICKS_PER_BEAT, inLoopRange, notationFit, staffParts, sticking, swingOn } from '@/core'
+import { NOTATION_LAYOUT, TICKS_PER_BEAT, inLoopRange, minBarWidthFor, notationFit, staffParts, sticking, swingOn } from '@/core'
 
 /** A colour design token from styles/index.css, read when the notation draws so it follows the theme. */
 const token = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(`--color-${name}`).trim()
@@ -189,7 +190,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   /** The bar number's line above the stave, clear of the hands part's stems. */
   const barNumberLine = drawnLimbs.includes('hands') ? STEMS_UP_SPACE : 0
   const height = (spaceAbove + handRow + 1) * STAVE_LINE_GAP
-  const { scale, barsPerLine, barWidth } = notationFit({ bars: bars.length, ...area, lineHeight: height })
+  const { scale, barsPerLine, barWidth } = notationFit({ bars: bars.length, ...area, lineHeight: height, minBarWidth: minBarWidthFor(parts) })
   const lines = Math.ceil(bars.length / barsPerLine)
 
   const renderer = new Renderer(el as HTMLDivElement, Renderer.Backends.SVG)
