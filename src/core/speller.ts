@@ -450,37 +450,45 @@ export function setHold(bars: Bar[], from: GridPoint, to: GridPoint, tripletBeat
  * beat) where neither row strikes, and re-spells the bars. Each beat keeps the grid the editor
  * shows it on (`tripletBeats` as for `beatViews`); an empty beat is on the sixteenth grid.
  *
- * A note sounding over a gap, in either row, is cut short there, and each new kick holds until the
- * next kick or the end of its beat. Struck notes and their sticking overrides are untouched. With
- * no gap, the same bars are returned.
+ * A note sounding over a gap, in either row, is cut short there, to the end of that beat: where it
+ * held on past the beat, the rest of it is struck instead, so beats outside the given ones sound as
+ * they did. Each new kick holds until the next kick or the end of its beat. Struck notes and their
+ * sticking overrides are untouched. With no gap, the same bars are returned.
  */
 export function kicksInGaps(bars: Bar[], beats: readonly number[], tripletBeats: readonly number[] = []): Bar[] {
   const views = beatViews(bars, tripletBeats).flat()
   const [snare, kick] = ROWS.map((row) => toTimeline(rowOf(bars, row)))
-  const was = [snare, kick].map(({ cells }) => [...cells])
+  const timelines = [snare, kick]
+  const before = timelines.map(({ cells }) => [...cells])
   for (const index of beats) {
     const first = index * TICKS_PER_BEAT
+    const end = first + TICKS_PER_BEAT
     for (const offset of slotTicks(views[index].triplet)) {
       const tick = first + offset
       if (snare.cells[tick].state === 'hit' || kick.cells[tick].state === 'hit') continue
-      for (const { cells } of [snare, kick]) {
-        for (let t = tick; t < cells.length && cells[t].state === 'hold'; t++) cells[t] = { state: 'rest' }
+      for (const { cells } of timelines) {
+        for (let t = tick; t < end && cells[t].state === 'hold'; t++) cells[t] = { state: 'rest' }
       }
       kick.cells[tick] = { state: 'hit' }
-      for (let t = tick + 1; t < first + TICKS_PER_BEAT && kick.cells[t].state === 'rest'; t++) kick.cells[t] = { state: 'hold' }
+      for (let t = tick + 1; t < end && kick.cells[t].state === 'rest'; t++) kick.cells[t] = { state: 'hold' }
     }
   }
-  const changedBeats = [snare, kick].map(
-    ({ cells }, r) => new Set(cells.flatMap((cell, t) => (cell === was[r][t] ? [] : [Math.floor(t / TICKS_PER_BEAT)]))),
-  )
-  if (changedBeats.every((changed) => changed.size === 0)) return bars
+  if (beats.every((index) => timelines.every(({ cells }, i) => beatUnchanged(cells, before[i], index)))) return bars
   // A changed beat is a triplet group where it's on the triplet grid and doesn't read the same on either.
-  ;[snare, kick].forEach((timeline, r) =>
-    changedBeats[r].forEach((index) => {
-      timeline.triplet[index] = views[index].triplet && !readsOnEitherGrid(timeline, index)
-    }),
-  )
-  return withRow(withRow(bars, 'snare', fromTimeline(snare)), 'kick', fromTimeline(kick))
+  for (const [i, timeline] of timelines.entries()) {
+    for (const index of beats) {
+      if (!beatUnchanged(timeline.cells, before[i], index)) {
+        timeline.triplet[index] = views[index].triplet && !readsOnEitherGrid(timeline, index)
+      }
+    }
+  }
+  return ROWS.reduce((written, row, i) => withRow(written, row, fromTimeline(timelines[i])), bars)
+}
+
+/** Whether a beat's cells are the very ones they were. */
+function beatUnchanged(cells: readonly Cell[], before: readonly Cell[], index: number): boolean {
+  const first = index * TICKS_PER_BEAT
+  return cells.slice(first, first + TICKS_PER_BEAT).every((cell, t) => cell === before[first + t])
 }
 
 /**
