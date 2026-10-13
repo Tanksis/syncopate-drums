@@ -425,3 +425,48 @@ describe('the hi-hat foot setting', () => {
     expect(show(parts.feet)).toEqual(['0 q rest', '12 q hihatFoot', '24 q rest', '36 q hihatFoot'])
   })
 })
+
+describe('the hi-hat foot setting under a fill (ADR 0012)', () => {
+  const kicks = (bars: Bar[], ...hits: string[]) => hits.reduce((b, h, beat) => setBeat(b, 'kick', 0, beat, h), bars)
+  /** RLRK in every beat: snare on the first three sixteenths, kick on the a. */
+  const rlrk = kicks(bar('xxx.', 'xxx.', 'xxx.', 'xxx.'), '...x', '...x', '...x', '...x')
+
+  it.each([
+    ['quarters', [0, 12, 24, 36]],
+    ['one', [0]],
+    ['twoAndFour', [12, 36]],
+    ['ands', [6, 18, 30, 42]],
+  ] as const)('keeps RLRK in one voice with the foot on %s in the hands chords', (hihatFoot, ticks) => {
+    const parts = staffParts(rlrk, 'off', { hihatFoot })[0]
+    expect(parts.feet).toEqual([])
+    expect(parts.hands).toHaveLength(16)
+    expect(show(parts.hands).filter((e) => e.endsWith('hihatFoot')).map((e) => Number(e.split(' ')[0]))).toEqual(ticks)
+    expect(show(parts.hands).slice(0, 4)).toEqual(
+      hihatFoot === 'ands' ? ['0 s snare', '3 s snare', '6 s snare+hihatFoot', '9 s bass'] : [`0 s snare${hihatFoot === 'twoAndFour' ? '' : '+hihatFoot'}`, '3 s snare', '6 s snare', '9 s bass'],
+    )
+  })
+
+  it('writes a feet part of the foot alone under a one-voice fill that rests on beat 2', () => {
+    const fill = kicks(bar('xxx.', '....', 'xxx.', 'xxx.'), '...x', '....', '...x', '...x')
+    const plain = staffParts(fill, 'off')[0]
+    const parts = staffParts(fill, 'off', { hihatFoot: 'quarters' })[0]
+    expect(parts.hands).toEqual(plain.hands)
+    expect(show(parts.feet)).toEqual(['0 q hihatFoot', '12 q hihatFoot', '24 q hihatFoot', '36 q hihatFoot'])
+  })
+
+  it('writes the jazz groove with the setting on 2 & 4 as with the setting off', () => {
+    const lines = [bar('....', '..x.', '....', 'x...'), kicks(bar('x...', 'x...'), '...x', '..x.'), asKicks(bar('x...', '..x.'))]
+    for (const line of lines) {
+      for (const groove of ['jazz', 'jazzFeathered'] as const) {
+        expect(staffParts(line, groove, { hihatFoot: 'twoAndFour' })).toEqual(staffParts(line, groove))
+      }
+    }
+  })
+
+  it('puts the foot in the feet part of a two-voice bar', () => {
+    const line = kicks(bar('x...', 'x...', 'x...', 'x...'), 'x...', '..x.')
+    const parts = staffParts(line, 'off', { hihatFoot: 'twoAndFour' })[0]
+    expect(show(parts.feet)).toEqual(['0 q bass', '12 e hihatFoot', '18 e bass', '24 q rest', '36 q hihatFoot'])
+    expect(show(parts.hands)).toEqual(show(staffParts(line, 'off')[0].hands))
+  })
+})

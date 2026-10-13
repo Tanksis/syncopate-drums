@@ -6,7 +6,7 @@
 
 import type { Bar, Duration, GroovePresetId, HihatFoot, Limb, Row } from './model'
 import { ROWS, TICKS_PER_BAR, TICKS_PER_BEAT, itemTicks, noteId } from './model'
-import type { GrooveNotation } from './groove'
+import type { GrooveHit, GrooveNotation } from './groove'
 import { grooveHitsByTick } from './groove'
 import type { Instrument } from './schedule'
 import { placeItems, spellSpan } from './speller'
@@ -109,6 +109,8 @@ interface Sound {
   /** Where it is heard: differs from `start` only for a groove hit moved onto a triplet grid. */
   heard: number
   noteId?: string
+  /** One of the hi-hat foot setting's hits: written under the fill, not counted in the voicing (ADR 0012). */
+  ostinato?: boolean
 }
 
 /**
@@ -121,6 +123,10 @@ interface Sound {
  *   only ever play together with the hands or never do (a linear fill such as RLKK), is one voice:
  *   the feet's notes join the hands' chords and the feet part is empty. Otherwise the bar is two
  *   voices.
+ * - The hi-hat foot setting's hits don't count in that choice, which is made as with the setting off
+ *   (ADR 0012). In a bar of one voice, or of the hands alone, they join the hands' chords if every
+ *   one lands on a struck chord; otherwise they are a feet part of their own under the hands (the
+ *   rows staying as they were), or, in a bar of two voices, join the feet part.
  * - Hits at the same tick in a part share a chord. A chord holds until the part's next chord, or
  *   until all its notes' holds have ended if that is sooner. A groove note holds to the end of its
  *   beat.
@@ -163,42 +169,63 @@ export function staffParts(
   })
   const triplet = snare.triplet.map((t, beat) => t || kick.triplet[beat])
 
-  const grooveStruck: Sound[] = bars.flatMap((_, b) =>
-    [...grooveHitsByTick(groove, hihatFoot)].flatMap(([tick, hits]) =>
-      hits.flatMap((hit): Sound[] => {
-        const drum = DRUM_OF_INSTRUMENT[hit.instrument]
-        if (!drum) return []
-        const start = b * TICKS_PER_BAR + tick
-        const end = start - (start % TICKS_PER_BEAT) + TICKS_PER_BEAT
-        return [{ drum, notation: hit.notation, start, end, heard: start }]
-      }),
-    ),
-  )
+  const grooveStruck = (byTick: Map<number, GrooveHit[]>, ostinato: boolean): Sound[] =>
+    bars.flatMap((_, b) =>
+      [...byTick].flatMap(([tick, hits]) =>
+        hits.flatMap((hit): Sound[] => {
+          const drum = DRUM_OF_INSTRUMENT[hit.instrument]
+          if (!drum) return []
+          const start = b * TICKS_PER_BAR + tick
+          const end = start - (start % TICKS_PER_BEAT) + TICKS_PER_BEAT
+          return [{ drum, notation: hit.notation, start, end, heard: start, ...(ostinato ? { ostinato } : {}) }]
+        }),
+      ),
+    )
+  // The preset as it is with the setting off, and the setting's hits alone (the 'off' preset has none).
+  const preset = grooveStruck(grooveHitsByTick(groove), false)
+  const setting = hihatFoot === 'off' ? [] : grooveStruck(grooveHitsByTick('off', hihatFoot), true)
+  const played = setting.length ? [...preset.filter((s) => s.drum !== 'hihatFoot'), ...setting] : preset
 
   const lines = [...snare.sounds, ...kick.sounds]
-  const swungBeat = swung ? swungBeats([...lines, ...grooveStruck], triplet) : triplet.map(() => false)
+  const swungBeat = swung ? swungBeats([...lines, ...played], triplet) : triplet.map(() => false)
   const exercise = lines.map((s) => respell(s, swungBeat))
-  const grooveSounds = grooveStruck.map((s) => respell(s, swungBeat))
+  const grooveSounds = played.map((s) => respell(s, swungBeat))
 
   const barOf = (s: Sound) => Math.floor(s.start / TICKS_PER_BAR)
-  // Every sound on the grid of the hands part as it would be in a bar of one voice, which holds the exercise.
-  const all = [...exercise, ...grooveSounds.map((s) => onGrid(s, triplet))]
-  const oneVoice = bars.map((_, b) => {
+  // Each bar's voicing, chosen as if the setting were off (ADR 0012), from every sound on the grid of
+  // the hands part as it would be in a bar of one voice, which holds the exercise.
+  const all = [...exercise, ...preset.map((s) => onGrid(respell(s, swungBeat), triplet))]
+  const drawn = [...exercise, ...grooveSounds.map((s) => onGrid(s, triplet))]
+  const voicing = bars.map((_, b) => {
     const inBar = all.filter((s) => barOf(s) === b)
     const handStarts = new Set(inBar.filter((s) => LIMB[s.drum] === 'hands').map((s) => s.start))
     const feet = inBar.filter((s) => LIMB[s.drum] === 'feet')
-    if (feet.length === 0 || handStarts.size === 0) return false
     // The feet only ever play with the hands, or never do: a linear fill.
     const withHands = feet.filter((s) => handStarts.has(s.start)).length
-    return withHands === feet.length || withHands === 0
+    const oneVoice = feet.length > 0 && handStarts.size > 0 && (withHands === feet.length || withHands === 0)
+    // The setting's hits join the hands' chords in a bar of one voice, or of hands alone, if every
+    // one lands on a struck chord.
+    const ostinato = drawn.filter((s) => s.ostinato && barOf(s) === b)
+    const chords = new Set(drawn.filter((s) => barOf(s) === b && !s.ostinato && (oneVoice || LIMB[s.drum] === 'hands')).map((s) => s.start))
+    const joins = ostinato.length > 0 && (oneVoice || feet.length === 0) && ostinato.every((s) => chords.has(s.start))
+    return { oneVoice, joins, feetPart: !joins && (!oneVoice || ostinato.length > 0) }
   })
-  const limbOf = (s: Sound): Limb => (oneVoice[barOf(s)] ? 'hands' : LIMB[s.drum])
+  const limbOf = (s: Sound): Limb => {
+    const { oneVoice, joins } = voicing[barOf(s)]
+    if (s.ostinato) return joins ? 'hands' : 'feet'
+    return oneVoice ? 'hands' : LIMB[s.drum]
+  }
   const barOfBeat = (beat: number) => Math.floor((beat * TICKS_PER_BEAT) / TICKS_PER_BAR)
 
-  // Each part's sounds and triplet beats: in a bar of one voice the hands part holds both rows.
+  // Each part's sounds and triplet beats: in a bar of one voice the hands part holds both rows, and
+  // a feet part under it holds only the setting's hits, on the sixteenth grid.
   const [hands, feet] = (['hands', 'feet'] as const).map((limb) => {
     const own = limb === 'hands' ? snare : kick
-    const tripletBeats = triplet.map((t, beat) => (oneVoice[barOfBeat(beat)] ? limb === 'hands' && t : own.triplet[beat]))
+    const tripletBeats = triplet.map((t, beat) => {
+      const { oneVoice, feetPart } = voicing[barOfBeat(beat)]
+      if (limb === 'hands') return oneVoice || !feetPart ? t : own.triplet[beat]
+      return oneVoice ? false : own.triplet[beat]
+    })
     const struck = [
       ...exercise.filter((s) => limbOf(s) === limb),
       ...grooveSounds.filter((s) => limbOf(s) === limb).map((s) => onGrid(s, tripletBeats)),
@@ -225,7 +252,7 @@ export function staffParts(
       events
         .filter((e) => Math.floor(e.start / TICKS_PER_BAR) === b)
         .map((e) => ({ ...e, start: e.start - b * TICKS_PER_BAR }))
-    return { hands: inBar(parts[0]), feet: oneVoice[b] ? [] : inBar(parts[1]) }
+    return { hands: inBar(parts[0]), feet: voicing[b].feetPart ? inBar(parts[1]) : [] }
   })
 }
 
