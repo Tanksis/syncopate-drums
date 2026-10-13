@@ -27,6 +27,13 @@ describe('the migration chain', () => {
     expect(migrateExercise(v0)).toEqual(expected)
   })
 
+  it('gives an exercise stored at version 3 the hi-hat foot off', () => {
+    const { hihatFoot: _, ...practice } = newExercise({ id: 'e1', now: 5 }).practice
+    const v3 = { ...newExercise({ id: 'e1', now: 5 }), schemaVersion: 3, practice }
+    expect(migrateExercise(v3).practice.hihatFoot).toBe('off')
+    expect(migrateExercise(v3).schemaVersion).toBe(SCHEMA_VERSION)
+  })
+
   it('leaves a current exercise as it is', () => {
     const current = newExercise({ id: 'e1', now: 5 })
     expect(migrateExercise(current)).toEqual(current)
@@ -63,6 +70,6 @@ describe('version 2 to 3: folders', () => {
     const { folderId: _, ...v2 } = { ...newExercise({ id: 'e1', now: 5 }), schemaVersion: 2 }
     const migrated = migrateExercise(v2)
     expect(migrated.folderId).toBeNull()
-    expect(migrated.schemaVersion).toBe(3)
+    expect(migrated.schemaVersion).toBe(SCHEMA_VERSION)
   })
 })

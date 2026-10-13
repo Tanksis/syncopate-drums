@@ -179,7 +179,7 @@ export interface NotationArea {
 export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor | null, area: NotationArea): Drawing {
   el.replaceChildren()
   const { bars } = exercise
-  const parts = staffParts(bars, exercise.practice.groove, { swung: swingOn(exercise.practice) })
+  const parts = staffParts(bars, exercise.practice.groove, { swung: swingOn(exercise.practice), hihatFoot: exercise.practice.hihatFoot })
   /** A part is drawn when it has a note or a rest anywhere. */
   const drawnLimbs = (['hands', 'feet'] as const).filter((limb) =>
     parts.some((bar) => bar[limb].some((e) => e.kind !== 'space')),

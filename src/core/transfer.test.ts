@@ -11,7 +11,7 @@ const note = (duration: Item['duration'], { tied = false } = {}): Note => ({
 })
 const rest: Item = { kind: 'rest', duration: 'quarter', dotted: false, triplet: false }
 
-/** Two bars with a tie across the bar line and a kick row, practised in a loop with a groove and swing. */
+/** Two bars with a tie across the bar line and a kick row, practised in a loop with a groove, the hi-hat foot and swing. */
 const paradiddles: Exercise = {
   ...newExercise({ id: 'paradiddles', now: 300 }),
   name: 'Paradiddles',
@@ -27,8 +27,12 @@ const paradiddles: Exercise = {
   ],
   sticking: 'alternate',
   leadHand: 'L',
-  practice: { bpm: 140, loopRange: { first: 1, last: 1 }, groove: 'jazz', swing: 0.6 },
+  practice: { bpm: 140, loopRange: { first: 1, last: 1 }, groove: 'jazz', hihatFoot: 'quarters', swing: 0.6 },
 }
+/** Paradiddles as stored before version 4, which had no hi-hat foot setting, and as it reads back: with it off. */
+const { hihatFoot: _hihatFoot, ...practiceBefore4 } = paradiddles.practice
+const paradiddlesBefore4 = { ...paradiddles, practice: practiceBefore4 }
+const paradiddlesFootOff: Exercise = { ...paradiddles, practice: { ...paradiddles.practice, hihatFoot: 'off' } }
 const syncopation = { ...newExercise({ id: 'syncopation-p38', now: 900 }), name: 'Syncopation p.38' }
 
 /** The book page folder, and a warm-ups folder none of the exported exercises is in. */
@@ -93,11 +97,11 @@ describe('parsing an import', () => {
   })
 
   it('reads a version 2 export, from before folders, with every exercise in no folder', () => {
-    const { folderId: _, ...v2 } = { ...paradiddles, schemaVersion: 2 }
+    const { folderId: _, ...v2 } = { ...paradiddlesBefore4, schemaVersion: 2 }
     expect(parseImport(asJson({ format: 'drum-app-exercises', version: 2, exercises: [v2] }))).toEqual({
       ok: true,
       folders: [],
-      exercises: [paradiddles],
+      exercises: [paradiddlesFootOff],
     })
   })
 
@@ -116,14 +120,14 @@ describe('parsing an import', () => {
   })
 
   /** Paradiddles as version 1 stored it: one rhythm, its snare row, on one drum, its voice. */
-  const { schemaVersion: _, bars, ...settings } = paradiddles
+  const { schemaVersion: _, bars, ...settings } = paradiddlesBefore4
   const v1 = (voice: 'snare' | 'bass') => ({ ...settings, voice, bars: bars.map((bar) => ({ items: bar.snare })) })
 
   it('migrates a snare exercise from before exercises carried a schema version into the snare row', () => {
     expect(parseImport(asJson({ format: 'drum-app-exercises', version: 0, exercises: [v1('snare')] }))).toEqual({
       ok: true,
       folders: [],
-      exercises: [{ ...paradiddles, bars: bars.map((bar) => ({ snare: bar.snare, kick: restItems() })) }],
+      exercises: [{ ...paradiddlesFootOff, bars: bars.map((bar) => ({ snare: bar.snare, kick: restItems() })) }],
     })
   })
 
@@ -133,7 +137,7 @@ describe('parsing an import', () => {
     expect(parseImport(asJson(file))).toEqual({
       ok: true,
       folders: [],
-      exercises: [{ ...paradiddles, bars: [{ snare: restItems(), kick: bars[0].snare }, { snare: restItems(), kick }] }],
+      exercises: [{ ...paradiddlesFootOff, bars: [{ snare: restItems(), kick: bars[0].snare }, { snare: restItems(), kick }] }],
     })
   })
 
@@ -173,6 +177,7 @@ describe('parsing an import', () => {
     ['a BPM out of range', { ...paradiddles, practice: { ...paradiddles.practice, bpm: 900 } }],
     ['a swing out of range', { ...paradiddles, practice: { ...paradiddles.practice, swing: 0.9 } }],
     ['an unknown groove', { ...paradiddles, practice: { ...paradiddles.practice, groove: 'polka' } }],
+    ['an unknown hi-hat foot setting', { ...paradiddles, practice: { ...paradiddles.practice, hihatFoot: 'eighths' } }],
     ['a loop range past the last bar', { ...paradiddles, practice: { ...paradiddles.practice, loopRange: { first: 1, last: 2 } } }],
     ['a loop range ending before it starts', { ...paradiddles, practice: { ...paradiddles.practice, loopRange: { first: 1, last: 0 } } }],
     ['an exercise without a last-opened time', { ...paradiddles, lastOpened: 'yesterday' }],

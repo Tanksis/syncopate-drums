@@ -406,3 +406,22 @@ describe('swing written as triplets (ADR 0006)', () => {
     },
   )
 })
+
+describe('the hi-hat foot setting', () => {
+  it('replaces the jazz hi-hat foot on 2 and 4 with its own, on 1', () => {
+    const parts = staffParts(bar('....', '..x.', '....', 'x...'), 'jazz', { hihatFoot: 'one' })[0]
+    expect(show(parts.hands)).toEqual(['0 q ride+hihatFoot', '12 e ride', '18 e ride+snare', '24 q ride', '36 e ride+snare', '42 e ride'])
+    expect(parts.feet).toEqual([])
+  })
+
+  it('joins the hands in one voice when every foot hit lands with a hand hit, with no groove on', () => {
+    const parts = staffParts(bar('x...', 'x...', 'x...', 'x...'), 'off', { hihatFoot: 'quarters' })[0]
+    expect(show(parts.hands)).toEqual(['0 q snare+hihatFoot', '12 q snare+hihatFoot', '24 q snare+hihatFoot', '36 q snare+hihatFoot'])
+    expect(parts.feet).toEqual([])
+  })
+
+  it('writes a feet part of its own, with rests, when it plays between the hands', () => {
+    const parts = staffParts(bar('x...', '..x.', 'x...', 'x...'), 'off', { hihatFoot: 'twoAndFour' })[0]
+    expect(show(parts.feet)).toEqual(['0 q rest', '12 q hihatFoot', '24 q rest', '36 q hihatFoot'])
+  })
+})

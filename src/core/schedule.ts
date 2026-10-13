@@ -61,7 +61,7 @@ export function schedule(
   const secondsPerTick = 60 / practice.bpm / TICKS_PER_BEAT
   const swing = effectiveSwing(practice.swing, practice.bpm)
   const struck = ROWS.map((row) => ({ row, ticks: struckTicks(exercise, row) }))
-  const groove = grooveHitsByTick(practice.groove)
+  const groove = grooveHitsByTick(practice.groove, practice.hihatFoot)
   const loop = loopBars(practice.loopRange, exercise.bars.length)
   let position: PlayPosition
   if (from === 'start') position = device.countIn ? { bar: -1, tick: 0 } : { bar: loop.first, tick: 0 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { DeviceSettings, Exercise, GroovePresetId, PlayPosition, ScheduledEvent } from './index'
+import type { DeviceSettings, Exercise, GroovePresetId, HihatFoot, PlayPosition, ScheduledEvent } from './index'
 import { DEFAULT_DEVICE_SETTINGS, newExercise, schedule, setBeat, setHold, toggleTie } from './index'
 
 const device: DeviceSettings = DEFAULT_DEVICE_SETTINGS
@@ -356,5 +356,44 @@ describe('holds', () => {
     expect(held.bars).not.toEqual(ex.bars)
     const play = (e: Exercise) => show(schedule(e, e.practice, device, { bar: 0, tick: 0 }, 2).events)
     expect(play(held)).toEqual(play(ex))
+  })
+})
+
+describe('the hi-hat foot setting', () => {
+  /** A blank exercise at 60 BPM (a beat a second) with a hi-hat foot setting and a groove preset. */
+  const footed = (hihatFoot: HihatFoot, groove: GroovePresetId = 'off'): Exercise => {
+    const ex = blank(60)
+    return { ...ex, practice: { ...ex.practice, groove, hihatFoot } }
+  }
+  const pedalTimes = (ex: Exercise, window = 4) =>
+    schedule(ex, ex.practice, device, { bar: 0, tick: 0 }, window)
+      .events.filter((e) => e.instrument === 'hihatPedal')
+      .map((e) => `${e.time.toFixed(3)} ${e.kind} ${e.velocity}`)
+
+  it('with On 1 and the jazz groove, plays one hi-hat foot hit per bar, on 1', () => {
+    expect(pedalTimes(footed('one', 'jazz'), 8)).toEqual(['0.000 groove 1', '4.000 groove 1'])
+  })
+
+  it('keeps the rest of the jazz groove', () => {
+    const ex = footed('one', 'jazz')
+    const rides = schedule(ex, ex.practice, device, { bar: 0, tick: 0 }, 4).events.filter((e) => e.instrument === 'ride')
+    expect(rides).toHaveLength(6)
+  })
+
+  it.each([
+    ['quarters', ['0.000', '1.000', '2.000', '3.000']],
+    ['twoAndFour', ['1.000', '3.000']],
+    ['ands', ['0.500', '1.500', '2.500', '3.500']],
+  ] as const)('plays %s with no groove on', (setting, times) => {
+    expect(pedalTimes(footed(setting))).toEqual(times.map((t) => `${t} groove 1`))
+  })
+
+  it("leaves the jazz groove's own hi-hat foot on 2 and 4 when off", () => {
+    expect(pedalTimes(footed('off', 'jazz'))).toEqual(['1.000 groove 1', '3.000 groove 1'])
+  })
+
+  it('swings the &s with the exercise', () => {
+    const ex = footed('ands')
+    expect(pedalTimes({ ...ex, practice: { ...ex.practice, swing: 2 / 3 } })[0]).toBe('0.667 groove 1')
   })
 })

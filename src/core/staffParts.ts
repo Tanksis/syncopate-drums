@@ -4,7 +4,7 @@
 // feet only ever play with the hands in a bar, or never do (a linear fill, ADR 0011): then the bar
 // is one voice and the feet hang on the hands' stems. Hits at the same tick share a stem.
 
-import type { Bar, Duration, GroovePresetId, Limb, Row } from './model'
+import type { Bar, Duration, GroovePresetId, HihatFoot, Limb, Row } from './model'
 import { ROWS, TICKS_PER_BAR, TICKS_PER_BEAT, itemTicks, noteId } from './model'
 import type { GrooveNotation } from './groove'
 import { grooveHitsByTick } from './groove'
@@ -114,7 +114,8 @@ interface Sound {
 /**
  * The exercise and its groove preset as the notation writes them, bar by bar: a hands part (stems
  * up) and a feet part (stems down) of chords, rests and space. The snare row is in the hands part
- * and the kick row in the feet part.
+ * and the kick row in the feet part. A `hihatFoot` setting other than off is part of the groove, in
+ * place of the preset's own hi-hat foot (ADR 0010).
  *
  * - A bar where the hands and the feet (the kick row or the groove) both play, and the feet either
  *   only ever play together with the hands or never do (a linear fill such as RLKK), is one voice:
@@ -139,7 +140,11 @@ interface Sound {
  *   on the let, as Groove Scribe writes it (ride, rest, ride). Each part writes it as a triplet
  *   group only if it has a note there off the downbeat.
  */
-export function staffParts(bars: readonly Bar[], groove: GroovePresetId, { swung = false } = {}): StaffBar[] {
+export function staffParts(
+  bars: readonly Bar[],
+  groove: GroovePresetId,
+  { swung = false, hihatFoot = 'off' }: { swung?: boolean; hihatFoot?: HihatFoot } = {},
+): StaffBar[] {
   const total = bars.length * TICKS_PER_BAR
 
   // Each row's struck notes, each held through its tied continuations, and its triplet beats.
@@ -159,7 +164,7 @@ export function staffParts(bars: readonly Bar[], groove: GroovePresetId, { swung
   const triplet = snare.triplet.map((t, beat) => t || kick.triplet[beat])
 
   const grooveStruck: Sound[] = bars.flatMap((_, b) =>
-    [...grooveHitsByTick(groove)].flatMap(([tick, hits]) =>
+    [...grooveHitsByTick(groove, hihatFoot)].flatMap(([tick, hits]) =>
       hits.flatMap((hit): Sound[] => {
         const drum = DRUM_OF_INSTRUMENT[hit.instrument]
         if (!drum) return []

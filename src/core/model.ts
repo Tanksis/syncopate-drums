@@ -23,7 +23,7 @@ export const MAX_SWING = 0.75
 export const TRIPLET_SWING = 2 / 3
 
 /** Bumped whenever the stored shape changes; storage and import migrate through it. */
-export const SCHEMA_VERSION = 3
+export const SCHEMA_VERSION = 4
 
 export type Hand = 'R' | 'L'
 
@@ -47,6 +47,11 @@ export type Duration = 'quarter' | 'eighth' | 'sixteenth'
 
 /** The groove layer under the exercise, or none; the presets themselves are in `groove.ts`. */
 export type GroovePresetId = 'off' | 'jazz' | 'jazzFeathered' | 'hihatEighths'
+
+/** The hi-hat foot ostinato played in every bar, or none; with any but off, it replaces a groove's own hi-hat foot (ADR 0010). */
+export type HihatFoot = 'off' | 'one' | 'quarters' | 'twoAndFour' | 'ands'
+
+export const HIHAT_FOOT_SETTINGS: readonly HihatFoot[] = ['off', 'one', 'quarters', 'twoAndFour', 'ands']
 
 interface ItemBase {
   duration: Duration
@@ -89,6 +94,7 @@ export interface PracticeSettings {
   bpm: number
   loopRange: LoopRange | null
   groove: GroovePresetId
+  hihatFoot: HihatFoot
   /** The first eighth's share of the beat: 0.5 is straight, 2/3 is triplet swing. */
   swing: number
 }
@@ -203,7 +209,7 @@ export function newExercise({ id, now, folderId = null }: { id: string; now: num
     bars: [restBar()],
     sticking: 'off',
     leadHand: 'R',
-    practice: { bpm: 80, loopRange: null, groove: 'off', swing: MIN_SWING },
+    practice: { bpm: 80, loopRange: null, groove: 'off', hihatFoot: 'off', swing: MIN_SWING },
     lastOpened: now,
     folderId,
   }
@@ -249,6 +255,12 @@ export function withGroove(exercise: Exercise, groove: GroovePresetId): Exercise
   if (groove === practice.groove) return exercise
   const turnsSwingOn = JAZZ_GROOVES.includes(groove) && !JAZZ_GROOVES.includes(practice.groove) && !swingOn(practice)
   return { ...exercise, practice: { ...practice, groove, swing: turnsSwingOn ? TRIPLET_SWING : practice.swing } }
+}
+
+/** The exercise with a hi-hat foot setting, as it was if it already has that one. */
+export function withHihatFoot(exercise: Exercise, hihatFoot: HihatFoot): Exercise {
+  if (hihatFoot === exercise.practice.hihatFoot) return exercise
+  return { ...exercise, practice: { ...exercise.practice, hihatFoot } }
 }
 
 /** The exercise with a new loop range; `null` loops the whole exercise. */
