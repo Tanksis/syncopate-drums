@@ -63,10 +63,20 @@ export function inKnownFolder<E extends Pick<Exercise, 'folderId'>>(exercise: E,
 /** Folder names in order, ignoring case (and accents): equal when they're the same name. */
 const compareNames = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: 'base' })
 
-/** The folders by name, ignoring case, as the Library tab lists them. */
+/**
+ * Names in the Library tab's order: A–Z ignoring case, with numbers in order ("Syncopation 4"
+ * before "Syncopation 34"). Not for matching: "Page 01" and "Page 1" compare equal here.
+ */
+const naturalOrder = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true })
+
+/** The folders in natural A–Z order, as the Library tab lists them. */
 export function foldersByName(folders: readonly Folder[]): Folder[] {
-  return [...folders].sort((a, b) => compareNames(a.name, b.name))
+  return [...folders].sort((a, b) => naturalOrder(a.name, b.name))
 }
+
+/** The exercises in natural A–Z order, as the Library tab lists them. */
+const exercisesByName = <E extends Pick<Exercise, 'name'>>(exercises: E[]): E[] =>
+  [...exercises].sort((a, b) => naturalOrder(a.name, b.name))
 
 /**
  * Files imported exercises into this library's folders: each one in a folder of the file goes in
@@ -114,8 +124,8 @@ export interface LibraryView<E> {
 }
 
 /**
- * The Library tab as the sidebar shows it: the folders by name (ignoring case), each with its
- * exercises in list order and a count, then the exercises in no folder (or in one that's gone).
+ * The Library tab as the sidebar shows it: the folders, each with its exercises and a count, then
+ * the exercises in no folder (or in one that's gone), all in natural A–Z order.
  * A collapsed folder hides its exercises. With filter text only the matches are listed, a folder
  * without one is hidden, and a folder with one shows expanded, collapsed or not.
  */
@@ -132,14 +142,14 @@ export function libraryView<E extends Pick<Exercise, 'name' | 'folderId'>>({
 }): LibraryView<E> {
   const folderIds = new Set(folders.map((f) => f.id))
   const rows = foldersByName(folders).map((folder): FolderRow<E> => {
-      const inFolder = library.filter((e) => e.folderId === folder.id)
+      const inFolder = exercisesByName(library.filter((e) => e.folderId === folder.id))
       const expanded = filter !== '' || !collapsedIds.includes(folder.id)
       return { folder, count: inFolder.length, expanded, exercises: expanded ? filterByName(inFolder, filter) : [] }
     })
   return {
     folders: filter === '' ? rows : rows.filter((row) => row.exercises.length > 0),
     loose: filterByName(
-      library.filter((e) => !isFiled(e, folderIds)),
+      exercisesByName(library.filter((e) => !isFiled(e, folderIds))),
       filter,
     ),
   }

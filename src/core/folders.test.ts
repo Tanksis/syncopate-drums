@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deleteFolder, fileIntoFolders, inKnownFolder, libraryView, moveToFolder, newExercise, newFolder, renameFolder } from './index'
+import { deleteFolder, fileIntoFolders, foldersByName, inKnownFolder, libraryView, moveToFolder, newExercise, newFolder, renameFolder } from './index'
 
 const page38 = { id: 'f1', name: 'Syncopation p.38' }
 const warmUps = { id: 'f2', name: 'Warm-ups' }
@@ -62,14 +62,43 @@ describe('the library view', () => {
   const library = [line2, loose, singles, line1]
   const names = (exercises: { name: string }[]) => exercises.map((e) => e.name)
 
-  it('lists the folders by name, ignoring case, each with its exercises in list order and a count, then the loose ones', () => {
+  it('lists the folders by name, ignoring case, each with its exercises by name and a count, then the loose ones', () => {
     const view = libraryView({ library, folders, filter: '', collapsedIds: [] })
     expect(view.folders.map((f) => [f.folder.name, f.count, f.expanded, names(f.exercises)])).toEqual([
       ['blues', 0, true, []],
-      ['Syncopation p.38', 2, true, ['p.38 #2', 'p.38 #1']],
+      ['Syncopation p.38', 2, true, ['p.38 #1', 'p.38 #2']],
       ['Warm-ups', 1, true, ['Singles']],
     ])
     expect(names(view.loose)).toEqual(['Loose'])
+  })
+
+  it('lists folders with numbers in their names in number order', () => {
+    const pages = [
+      { id: 'p34', name: 'Syncopation 34' },
+      { id: 'p4', name: 'syncopation 4' },
+      { id: 'a', name: 'Alpha' },
+    ]
+    const view = libraryView({ library: [], folders: pages, filter: '', collapsedIds: [] })
+    expect(view.folders.map((f) => f.folder.name)).toEqual(['Alpha', 'syncopation 4', 'Syncopation 34'])
+    expect(foldersByName(pages).map((f) => f.name)).toEqual(['Alpha', 'syncopation 4', 'Syncopation 34'])
+  })
+
+  it('lists the exercises in a folder and those in none in number order, with or without filter text', () => {
+    const line = (id: string, name: string, folderId: string | null) => ({ ...newExercise({ id, now: 0 }), name, folderId })
+    const book = [
+      line('a', 'Line 10', 'f1'),
+      line('b', 'line 2', 'f1'),
+      line('c', 'Line 1', 'f1'),
+      line('d', 'Groove 12', null),
+      line('e', 'groove 3', null),
+      line('f', 'Accents', null),
+    ]
+    const all = libraryView({ library: book, folders: [page38], filter: '', collapsedIds: [] })
+    expect(names(all.folders[0].exercises)).toEqual(['Line 1', 'line 2', 'Line 10'])
+    expect(names(all.loose)).toEqual(['Accents', 'groove 3', 'Groove 12'])
+    const some = libraryView({ library: book, folders: [page38], filter: '1', collapsedIds: [] })
+    expect(names(some.folders[0].exercises)).toEqual(['Line 1', 'Line 10'])
+    expect(names(some.loose)).toEqual(['Groove 12'])
   })
 
   it('hides a collapsed folder’s exercises but keeps its count', () => {
@@ -87,7 +116,7 @@ describe('the library view', () => {
 
   it('lists an exercise whose folder is gone with the loose ones', () => {
     const stray = { ...loose, id: 'e5', name: 'Stray', folderId: 'gone' }
-    expect(names(libraryView({ library: [stray, loose], folders, filter: '', collapsedIds: [] }).loose)).toEqual(['Stray', 'Loose'])
+    expect(names(libraryView({ library: [stray, loose], folders, filter: '', collapsedIds: [] }).loose)).toEqual(['Loose', 'Stray'])
   })
 })
 
@@ -112,6 +141,16 @@ describe('filing an import into folders', () => {
     expect(fileIntoFolders([loose, filedLine1, filedLine2], [filePage38], [warmUps, mine], { newId })).toEqual({
       exercises: [loose, { ...line1, folderId: 'my-p38' }, { ...line2, folderId: 'my-p38' }],
       created: [],
+    })
+  })
+
+  it('keeps names that differ only in how a number is written as different folders', () => {
+    made = 0
+    const filePage01 = { id: 'file-01', name: 'Page 01' }
+    const created = { id: 'new-folder-1', name: 'Page 01' }
+    expect(fileIntoFolders([{ ...loose, folderId: filePage01.id }], [filePage01], [{ id: 'my-1', name: 'page 1' }], { newId })).toEqual({
+      exercises: [{ ...loose, folderId: created.id }],
+      created: [created],
     })
   })
 
