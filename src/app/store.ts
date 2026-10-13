@@ -2,7 +2,7 @@
 // change, unless it is an example, which is never stored (ADR 0008).
 
 import { create } from 'zustand'
-import type { DeviceSettings, EditCommand, EditorState, Exercise, Folder, GroovePresetId, ImportChoice, PlayPosition } from '@/core'
+import type { DeviceSettings, EditCommand, EditorState, Exercise, Folder, GroovePresetId, ImportChoice, PatternGrid, PlayPosition } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
   addedOnTop,
@@ -11,6 +11,7 @@ import {
   duplicateExercise,
   exampleAccepts,
   exampleExercises,
+  exerciseFromPattern,
   exerciseToOpenAfterDelete,
   exerciseToOpenAtLaunch,
   fileIntoFolders,
@@ -76,6 +77,11 @@ interface AppState {
   openExercise: (id: string) => void
   /** Opens a new Untitled exercise, on top of the list, in the open exercise's folder. */
   createExercise: () => void
+  /**
+   * Opens a new exercise of `bars` bars filled with a typed pattern (see `exerciseFromPattern`), on
+   * top of the list, in the open exercise's folder.
+   */
+  createFromPattern: (choice: { pattern: string; grid: PatternGrid; bars: number }) => void
   /** Makes an empty folder called "New folder" and returns its id. */
   createFolder: () => string
   /** Empty or blank names are ignored. */
@@ -199,6 +205,12 @@ export const useAppStore = create<AppState>()((set, get) => {
     saveDevice(deviceNow)
   }
 
+  /** Opens a new exercise on top of the list. A collapsed folder it is filed in opens, so it shows there. */
+  function openNew(created: Exercise) {
+    if (created.folderId !== null) get().setFolderCollapsed(created.folderId, false)
+    switchTo(created, addedOnTop)
+  }
+
   /**
    * Sets the library (and folders, if they changed) once exercises moved folder, and saves the
    * `moved` ones. The open exercise moves too (its list entry is kept in step with it), so its next
@@ -270,11 +282,10 @@ export const useAppStore = create<AppState>()((set, get) => {
       const target = [...get().library, ...exampleExercises()].find((e) => e.id === id)
       if (target && id !== get().editor.exercise.id) switchTo(target, updatedInPlace)
     },
-    createExercise: () => {
-      const created = newExerciseBeside(get().editor.exercise, { id: crypto.randomUUID(), now: Date.now() })
-      // A collapsed folder opens, so the new exercise shows in it.
-      if (created.folderId !== null) get().setFolderCollapsed(created.folderId, false)
-      switchTo(created, addedOnTop)
+    createExercise: () => openNew(newExerciseBeside(get().editor.exercise, { id: crypto.randomUUID(), now: Date.now() })),
+    createFromPattern: ({ pattern, grid, bars }) => {
+      const { folderId } = get().editor.exercise
+      openNew(exerciseFromPattern({ id: crypto.randomUUID(), now: Date.now(), folderId, pattern, grid, bars }))
     },
     createFolder: () => {
       const folder = newFolder({ id: crypto.randomUUID(), name: '' })

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { NameInput } from '@/components/NameInput'
+import { PatternDialog } from '@/components/PatternDialog'
 import { SidebarHeading } from '@/components/Sidebar'
 import { keepFocus } from '@/components/keepFocus'
 import type { Exercise, Folder, LibraryTab } from '@/core'
@@ -38,11 +39,11 @@ const TABS: { id: LibraryTab; label: string }[] = [
 ]
 
 /**
- * The sidebar's two tabs. Library: New, Duplicate, Delete, Import, Export all, the filter and New
- * folder, and the list: the folders (chevron to collapse, double-click to rename, × to delete),
- * each with its exercises, then the exercises in no folder (click to open, double-click to rename,
- * tick to select, drag onto a folder or "No folder" to move it there). The selection stays through
- * filtering and can be exported, deleted or moved to a folder together.
+ * The sidebar's two tabs. Library: New, New from pattern, Duplicate, Delete, Import, Export all,
+ * the filter and New folder, and the list: the folders (chevron to collapse, double-click to
+ * rename, × to delete), each with its exercises, then the exercises in no folder (click to open,
+ * double-click to rename, tick to select, drag onto a folder or "No folder" to move it there). The
+ * selection stays through filtering and can be exported, deleted or moved to a folder together.
  * Examples: the built-in examples, to open, and Copy to Library for the open one.
  */
 export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse: () => void; fullScreen?: boolean }) {
@@ -53,6 +54,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
   const exampleOpen = isExample(openId)
   const openExercise = useAppStore((s) => s.openExercise)
   const createExercise = useAppStore((s) => s.createExercise)
+  const createFromPattern = useAppStore((s) => s.createFromPattern)
   const duplicateOpenExercise = useAppStore((s) => s.duplicateOpenExercise)
   const renameExercise = useAppStore((s) => s.renameExercise)
   const deleteExercises = useAppStore((s) => s.deleteExercises)
@@ -69,6 +71,8 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set())
   /** The exercises waiting on the delete confirm, if it's showing. */
   const [toDelete, setToDelete] = useState<Exercise[] | null>(null)
+  /** Whether New from pattern's dialog is showing. */
+  const [newFromPatternOpen, setNewFromPatternOpen] = useState(false)
   /** The folder waiting on the delete confirm, if it's showing. */
   const [folderToDelete, setFolderToDelete] = useState<{ folder: Folder; count: number } | null>(null)
   /** How many exercises the last import stored, shown until the next library action. */
@@ -191,9 +195,20 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
       {tab === 'library' && (
         <>
           <div className="flex gap-1.5">
-            <button type="button" onMouseDown={keepFocus} onClick={createExercise} className={buttonClass}>
+            <button type="button" onMouseDown={keepFocus} onClick={createExercise} className={`${buttonClass} flex-none px-4`}>
               New
             </button>
+            <button
+              type="button"
+              title="New exercise from a sticking pattern, such as RLKK"
+              onMouseDown={keepFocus}
+              onClick={() => setNewFromPatternOpen(true)}
+              className={buttonClass}
+            >
+              New from pattern
+            </button>
+          </div>
+          <div className="flex gap-1.5">
             <button
               type="button"
               title={exampleOpen ? 'Copy the open example to the Library' : 'Copy the open exercise'}
@@ -410,6 +425,18 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
             ? 'It’s empty.'
             : `Its ${exerciseCount(folderToDelete.count)} ${folderToDelete.count === 1 ? 'is' : 'are'} kept, moved out of the folder.`}
         </ConfirmDialog>
+      )}
+      {newFromPatternOpen && (
+        <PatternDialog
+          title="New from pattern"
+          submitLabel="Create"
+          askBars
+          onCancel={() => setNewFromPatternOpen(false)}
+          onSubmit={({ text, grid, bars }) => {
+            setNewFromPatternOpen(false)
+            createFromPattern({ pattern: text, grid, bars })
+          }}
+        />
       )}
       {toDelete && (
         <ConfirmDialog
