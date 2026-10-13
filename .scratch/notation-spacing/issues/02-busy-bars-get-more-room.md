@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 (done)
 
-**Status:** ready-for-agent
+**Status:** done
 
 Closed as wontfix on 2026-10-08, after the user found ticket 01 good enough. Reopened on 2026-10-13: kick fills (`RLKK`, 16 sixteenths with a sticking letter each) overflow the barline in any bar that isn't first on its line. On the desktop, four bars of `RLKK` clip bars 2 and 4. On the phone, bar 1's last kick touches the barline.
 
@@ -16,5 +16,5 @@ Decided with the user on 2026-10-13:
 
 Criteria:
 
-- [ ] A pure core function gives an exercise's minimum bar width from its staff parts, and `notationFit` takes it in place of the fixed 190 (tested at the core seam: "four bars of sixteenths at 860 px get 2 bars a line", "quarters still get 4", "one sixteenth bar at 390 px is drawn below 1x").
-- [ ] Four bars of `RLKK` don't overflow at 1280 px or at 390 × 844, and a four-bar quarter-note exercise still gets four bars a line. Checked in the browser.
+- [x] A pure core function gives an exercise's minimum bar width from its staff parts, and `notationFit` takes it in place of the fixed 190 (tested at the core seam: "four bars of sixteenths at 860 px get 2 bars a line", "quarters still get 4", "one sixteenth bar at 390 px is drawn below 1x").
+- [x] Four bars of `RLKK` don't overflow at 1280 px or at 390 × 844, and a four-bar quarter-note exercise still gets four bars a line. Checked in the browser.
