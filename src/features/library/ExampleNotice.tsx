@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
-import { keepFocus } from '@/components/keepFocus'
+import { Button } from '@/components/Button'
 import { isExample } from '@/core'
 
 /** How long the notice stays highlighted after an example refuses an edit. */
@@ -36,15 +36,9 @@ export function ExampleNotice() {
       <p role="status" className="m-0 flex-1">
         <span className="font-semibold text-ink">Example: read-only.</span> Copy to Library to edit it.
       </p>
-      <button
-        type="button"
-        title="Make an editable copy of this example"
-        onMouseDown={keepFocus}
-        onClick={copyToLibrary}
-        className="cursor-pointer rounded-md border border-edge bg-card px-2 py-0.5 font-semibold text-ink hover:border-accent"
-      >
+      <Button title="Make an editable copy of this example" onClick={copyToLibrary}>
         Copy to Library
-      </button>
+      </Button>
     </div>
   )
 }

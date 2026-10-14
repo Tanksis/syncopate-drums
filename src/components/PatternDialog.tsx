@@ -1,7 +1,7 @@
 import type { KeyboardEvent } from 'react'
 import { useId, useState } from 'react'
 import { Dialog, DialogButton } from '@/components/Dialog'
-import { keepFocus } from '@/components/keepFocus'
+import { Segmented } from '@/components/Segmented'
 import type { PatternGrid, PatternStep } from '@/core'
 import { parsePattern } from '@/core'
 
@@ -95,23 +95,10 @@ export function PatternDialog({
             </span>
           )}
         </label>
-        <div role="group" aria-label="Grid" className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2">
           <span className="text-mute">Grid</span>
-          <div className="flex overflow-hidden rounded-md border border-edge">
-            {GRIDS.map((option) => (
-              <button
-                key={option.grid}
-                type="button"
-                aria-pressed={option.grid === grid}
-                // Keep focus in the pattern field, so Enter still fills.
-                onMouseDown={keepFocus}
-                onClick={() => setGrid(option.grid)}
-                className="cursor-pointer border-l border-edge bg-card px-2 py-0.5 first:border-l-0 hover:text-accent aria-pressed:bg-accent aria-pressed:text-on-accent aria-pressed:hover:text-on-accent"
-              >
-                {option.name}
-              </button>
-            ))}
-          </div>
+          {/* A click keeps focus in the pattern field, so Enter still fills. */}
+          <Segmented label="Grid" options={GRIDS.map((option) => ({ value: option.grid, label: option.name }))} value={grid} onChange={setGrid} />
         </div>
         {askBars && (
           <label className="flex items-center justify-between gap-2">

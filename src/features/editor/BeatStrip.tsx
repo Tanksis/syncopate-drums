@@ -2,8 +2,10 @@ import type { PointerEvent } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { keepFocus } from '@/components/keepFocus'
+import { Button } from '@/components/Button'
 import type { MenuItem } from '@/components/Menu'
 import { Menu } from '@/components/Menu'
+import { Segmented } from '@/components/Segmented'
 import type { BeatView, EditCommand, EditorState, GridPoint, Hand, PositionState, Row, RowView } from '@/core'
 import { ROWS, applyEdit, canTieOverBarline, editorBeatViews, inLoopRange, isExample, sticking, stickingNoteAt } from '@/core'
 
@@ -231,18 +233,16 @@ export function BeatStrip({ twoPerRow = false }: { twoPerRow?: boolean }) {
         {!twoPerRow && (
           <div className="flex items-center text-xs">
             <span className={`font-semibold ${looped ? 'text-loop-ink' : 'text-ink'}`}>Bar {b + 1}</span>
-            <button
-              type="button"
+            <Button
+              variant="ghost"
               title={`Delete bar ${b + 1} (Ctrl+Backspace)`}
               aria-label={`Delete bar ${b + 1}`}
               tabIndex={-1}
-              // Keep focus off the button, so Space and Enter go to the editor rather than clicking it.
-              onMouseDown={keepFocus}
               onClick={() => dispatch({ type: 'deleteBar', bar: b })}
-              className="ml-auto cursor-pointer rounded px-1.5 text-mute hover:bg-line hover:text-danger"
+              className="ml-auto enabled:hover:text-danger!"
             >
               ✕ delete
-            </button>
+            </Button>
           </div>
         )}
         <div className={`grid gap-2 ${twoPerRow ? 'grid-cols-2' : 'grid-cols-4'}`}>
@@ -309,34 +309,27 @@ function beatMenu(
   ]
 }
 
-/** A beat's 16ths | trip switch, its current grid lit. */
+/**
+ * A beat's 16ths | trip switch, its current grid lit. It's left out of the Tab order, which would
+ * otherwise stop at every beat twice; the beat's ⋯ menu switches the grid from the keyboard.
+ */
 function GridSwitch({ bar, beat, triplet, onSwitch }: { bar: number; beat: number; triplet: boolean; onSwitch: () => void }) {
-  const segment = (grid: 'sixteenth' | 'triplet', label: string) => {
-    const on = (grid === 'triplet') === triplet
-    return (
-      <button
-        type="button"
-        aria-label={`Bar ${bar + 1}, beat ${beat + 1}: ${grid} grid`}
-        aria-pressed={on}
-        title={on ? `On the ${grid} grid` : `Switch to the ${grid} grid`}
-        tabIndex={-1}
-        // Keep focus off the button, so Space and Enter go to the editor rather than clicking it.
-        onMouseDown={keepFocus}
-        onClick={(e) => {
-          e.stopPropagation()
-          if (!on) onSwitch()
-        }}
-        className={`cursor-pointer px-1.5 ${on ? 'bg-accent text-on-accent' : 'text-mute hover:text-accent'}`}
-      >
-        {label}
-      </button>
-    )
-  }
+  const option = (grid: 'sixteenth' | 'triplet', label: string) => ({
+    value: grid === 'triplet',
+    label,
+    ariaLabel: `Bar ${bar + 1}, beat ${beat + 1}: ${grid} grid`,
+    title: (grid === 'triplet') === triplet ? `On the ${grid} grid` : `Switch to the ${grid} grid`,
+  })
   return (
-    <span className="ml-auto inline-flex overflow-hidden rounded border border-edge bg-card text-[10px] leading-5">
-      {segment('sixteenth', '16ths')}
-      {segment('triplet', 'trip')}
-    </span>
+    <Segmented
+      label={`Bar ${bar + 1}, beat ${beat + 1} grid`}
+      small
+      tabbable={false}
+      options={[option('sixteenth', '16ths'), option('triplet', 'trip')]}
+      value={triplet}
+      onChange={onSwitch}
+      className="ml-auto"
+    />
   )
 }
 

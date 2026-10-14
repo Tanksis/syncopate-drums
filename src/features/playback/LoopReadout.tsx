@@ -1,5 +1,5 @@
 import { useAppStore } from '@/app/store'
-import { keepFocus } from '@/components/keepFocus'
+import { Button } from '@/components/Button'
 import { loopBars } from '@/core'
 
 /** The header's loop range: the bars that repeat, and "all" to loop the whole exercise again. */
@@ -14,16 +14,9 @@ export function LoopReadout() {
       <span className="text-mute">Loop</span>
       <span className={`tabular-nums ${loopRange ? 'font-semibold text-loop-ink' : ''}`}>{loopRange ? bars : 'all bars'}</span>
       {loopRange && (
-        <button
-          type="button"
-          title="Loop the whole exercise"
-          // Keep focus off the button, so Space and Enter go to the editor rather than clicking it.
-          onMouseDown={keepFocus}
-          onClick={loopAll}
-          className="cursor-pointer rounded-md border border-edge bg-panel px-2 py-0.5 hover:border-accent"
-        >
+        <Button title="Loop the whole exercise" onClick={loopAll}>
           all
-        </button>
+        </Button>
       )}
     </div>
   )

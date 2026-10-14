@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react'
-import { useRef } from 'react'
 import { useAppStore } from '@/app/store'
+import { Button } from '@/components/Button'
 import { PanelHeading } from '@/components/PanelHeading'
+import { Segmented } from '@/components/Segmented'
 import { SidebarHeading } from '@/components/Sidebar'
+import { Slider } from '@/components/Slider'
+import { Switch } from '@/components/Switch'
+import { ValueField } from '@/components/ValueField'
 import { LoopReadout } from '@/features/playback/LoopReadout'
 import { CountInToggle } from '@/features/playback/TransportControls'
-import { keepFocus } from '@/components/keepFocus'
-import { PercentField } from '@/features/settings/PercentField'
-import { useDoubleTap } from '@/features/settings/useDoubleTap'
 import type { ExerciseSettings, GroovePresetId, HihatFoot, Theme, VolumeSetting } from '@/core'
 import { DEFAULT_DEVICE_SETTINGS, GROOVE_PRESETS, HIHAT_FOOT_SETTINGS, MAX_SWING, MAX_VOLUME, MIN_SWING, THEMES, TRIPLET_SWING, groovePreset, overrideCount } from '@/core'
 
@@ -106,20 +107,13 @@ function HihatFootChoice() {
   return (
     <div className="flex flex-col gap-1">
       <span className="text-mute">Hi-hat foot</span>
-      <div role="group" aria-label="Hi-hat foot" className="flex overflow-hidden rounded-md border border-edge">
-        {HIHAT_FOOT_SETTINGS.map((option) => (
-          <button
-            key={option}
-            type="button"
-            aria-pressed={option === hihatFoot}
-            onMouseDown={keepFocus}
-            onClick={() => setHihatFoot(option)}
-            className="flex-1 cursor-pointer border-l border-edge bg-card px-1 py-0.5 whitespace-nowrap first:border-l-0 hover:text-accent aria-pressed:bg-accent aria-pressed:text-on-accent aria-pressed:hover:text-on-accent"
-          >
-            {HIHAT_FOOT_NAMES[option]}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        label="Hi-hat foot"
+        fill
+        options={HIHAT_FOOT_SETTINGS.map((option) => ({ value: option, label: HIHAT_FOOT_NAMES[option] }))}
+        value={hihatFoot}
+        onChange={setHihatFoot}
+      />
     </div>
   )
 }
@@ -140,36 +134,25 @@ const swingFromPercent = (percent: number) =>
 function Swing() {
   const swing = useAppStore((s) => s.editor.exercise.practice.swing)
   const setSwing = useAppStore((s) => s.setSwing)
-  // A pointer drag on the slider saves once it ends; arrow keys on it save at once.
-  const dragging = useRef(false)
-  const doubleTap = useDoubleTap()
+  const preset = SWING_PRESETS.find((p) => Math.abs(p.swing - swing) < 1e-6)
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-2">
-        <label className="flex min-w-0 flex-1 items-center gap-2">
-          <span className="text-mute">Swing</span>
-          <input
-            type="range"
-            aria-label="Swing"
-            min={MIN_SWING}
-            max={MAX_SWING}
-            step={0.005}
-            value={swing}
-            onChange={(e) => setSwing(Number(e.target.value), { dragging: dragging.current })}
-            onPointerDown={() => (dragging.current = true)}
-            // Once a drag ends, save the amount it settled on and hand the keyboard back to the editor.
-            // A double-click or double-tap puts it back to straight.
-            onPointerUp={(e) => {
-              dragging.current = false
-              setSwing(doubleTap(e) ? MIN_SWING : Number(e.currentTarget.value))
-              e.currentTarget.blur()
-            }}
-            className="min-w-0 flex-1 touch-manipulation accent-accent"
-          />
-        </label>
-        <PercentField
+        <span className="text-mute">Swing</span>
+        <Slider
+          label="Swing"
+          min={MIN_SWING}
+          max={MAX_SWING}
+          step={0.005}
+          value={swing}
+          reset={MIN_SWING}
+          onChange={setSwing}
+          className="flex-1"
+        />
+        <ValueField
           label="Swing %"
           value={swing * 100}
+          unit="%"
           min={MIN_SWING * 100}
           max={MAX_SWING * 100}
           decimals={1}
@@ -177,20 +160,13 @@ function Swing() {
           className="w-16 sm:w-14"
         />
       </div>
-      <div role="group" aria-label="Swing presets" className="flex overflow-hidden rounded-md border border-edge">
-        {SWING_PRESETS.map((preset) => (
-          <button
-            key={preset.name}
-            type="button"
-            aria-pressed={Math.abs(preset.swing - swing) < 1e-6}
-            onMouseDown={keepFocus}
-            onClick={() => setSwing(preset.swing)}
-            className="flex-1 cursor-pointer border-l border-edge bg-card px-1 py-0.5 first:border-l-0 hover:text-accent aria-pressed:bg-accent aria-pressed:text-on-accent aria-pressed:hover:text-on-accent"
-          >
-            {preset.name}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        label="Swing presets"
+        fill
+        options={SWING_PRESETS.map((p) => ({ value: p.swing, label: p.name }))}
+        value={preset?.swing ?? null}
+        onChange={(amount) => setSwing(amount)}
+      />
     </div>
   )
 }
@@ -201,35 +177,23 @@ function Volume({ label, setting, children }: { label: string; setting: VolumeSe
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   const setVolume = (value: number, dragging = false) =>
     setDeviceSettings({ [setting]: value }, { dragging })
-  // A pointer drag on the slider saves once it ends; arrow keys on it save at once.
-  const dragging = useRef(false)
-  const doubleTap = useDoubleTap()
   return (
     <div className="flex items-center gap-2">
-      <label className="flex min-w-0 flex-1 items-center gap-2">
-        <span className="w-14 text-mute">{label}</span>
-        <input
-          type="range"
-          aria-label={`${label} volume`}
-          min={0}
-          max={MAX_VOLUME}
-          step={0.01}
-          value={volume}
-          onChange={(e) => setVolume(Number(e.target.value), dragging.current)}
-          onPointerDown={() => (dragging.current = true)}
-          // Once a drag ends, save the volume it settled on and hand the keyboard back to the editor.
-          // A double-click or double-tap puts it back to 100%.
-          onPointerUp={(e) => {
-            dragging.current = false
-            setVolume(doubleTap(e) ? DEFAULT_DEVICE_SETTINGS[setting] : Number(e.currentTarget.value))
-            e.currentTarget.blur()
-          }}
-          className="min-w-0 flex-1 touch-manipulation accent-accent"
-        />
-      </label>
-      <PercentField
+      <span className="w-14 text-mute">{label}</span>
+      <Slider
+        label={`${label} volume`}
+        min={0}
+        max={MAX_VOLUME}
+        step={0.01}
+        value={volume}
+        reset={DEFAULT_DEVICE_SETTINGS[setting]}
+        onChange={(value, { dragging }) => setVolume(value, dragging)}
+        className="flex-1"
+      />
+      <ValueField
         label={`${label} volume %`}
         value={volume * 100}
+        unit="%"
         min={0}
         max={MAX_VOLUME * 100}
         decimals={0}
@@ -249,22 +213,14 @@ function ThemeChoice() {
   const theme = useAppStore((s) => s.device.theme)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   return (
-    <div role="group" aria-label="Theme" className="flex items-center justify-between gap-2">
+    <div className="flex items-center justify-between gap-2">
       <span className="text-mute">Theme</span>
-      <div className="flex overflow-hidden rounded-md border border-edge">
-        {THEMES.map((option) => (
-          <button
-            key={option}
-            type="button"
-            aria-pressed={option === theme}
-            onMouseDown={keepFocus}
-            onClick={() => setDeviceSettings({ theme: option })}
-            className="cursor-pointer border-l border-edge bg-card px-2 py-0.5 first:border-l-0 hover:text-accent aria-pressed:bg-accent aria-pressed:text-on-accent aria-pressed:hover:text-on-accent"
-          >
-            {THEME_NAMES[option]}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        label="Theme"
+        options={THEMES.map((option) => ({ value: option, label: THEME_NAMES[option] }))}
+        value={theme}
+        onChange={(option) => setDeviceSettings({ theme: option })}
+      />
     </div>
   )
 }
@@ -274,16 +230,13 @@ function MuteExercise() {
   const muted = useAppStore((s) => s.device.exerciseMuted)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   return (
-    <button
-      type="button"
-      aria-pressed={muted}
+    <Switch
+      label="Mute the exercise"
+      labelHidden
       title={muted ? 'Unmute the exercise' : 'Mute the exercise'}
-      onMouseDown={keepFocus}
-      onClick={() => setDeviceSettings({ exerciseMuted: !muted })}
-      className="cursor-pointer rounded-md border border-edge bg-card px-1.5 py-0.5 hover:text-accent aria-pressed:bg-accent aria-pressed:text-on-accent aria-pressed:hover:text-on-accent"
-    >
-      mute
-    </button>
+      checked={muted}
+      onChange={(exerciseMuted) => setDeviceSettings({ exerciseMuted })}
+    />
   )
 }
 
@@ -292,15 +245,9 @@ function ResetOverrides() {
   const count = useAppStore((s) => overrideCount(s.editor.exercise))
   const dispatch = useAppStore((s) => s.dispatch)
   return (
-    <button
-      type="button"
-      disabled={count === 0}
-      onMouseDown={keepFocus}
-      onClick={() => dispatch({ type: 'resetOverrides' })}
-      className="cursor-pointer self-end rounded-md border border-edge bg-card px-2 py-0.5 hover:text-accent disabled:cursor-default disabled:text-mute disabled:hover:text-mute"
-    >
+    <Button disabled={count === 0} onClick={() => dispatch({ type: 'resetOverrides' })} className="self-end">
       Reset overrides ({count})
-    </button>
+    </Button>
   )
 }
 
@@ -317,23 +264,14 @@ function Choice<K extends keyof ExerciseSettings>({
   const value = useAppStore((s) => s.editor.exercise[setting])
   const dispatch = useAppStore((s) => s.dispatch)
   return (
-    <div role="group" aria-label={label} className="flex items-center justify-between gap-2">
+    <div className="flex items-center justify-between gap-2">
       <span className="text-mute">{label}</span>
-      <div className="flex overflow-hidden rounded-md border border-edge">
-        {options.map((option) => (
-          <button
-            key={option}
-            type="button"
-            aria-pressed={option === value}
-            // Keep focus off the button, so the editor's keys still work after a click.
-            onMouseDown={keepFocus}
-            onClick={() => dispatch({ type: 'setExerciseSettings', settings: { [setting]: option } })}
-            className="cursor-pointer border-l border-edge bg-card px-2 py-0.5 first:border-l-0 hover:text-accent aria-pressed:bg-accent aria-pressed:text-on-accent aria-pressed:hover:text-on-accent"
-          >
-            {option}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        label={label}
+        options={options.map((option) => ({ value: option, label: String(option) }))}
+        value={value}
+        onChange={(option) => dispatch({ type: 'setExerciseSettings', settings: { [setting]: option } })}
+      />
     </div>
   )
 }

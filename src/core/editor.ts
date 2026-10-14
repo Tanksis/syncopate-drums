@@ -575,12 +575,14 @@ const CTRL_KEYS: Record<string, EditCommand> = {
 
 /**
  * The command a key press gives, or null if it gives none: the arrows, Home/End, Tab, Backspace,
- * Delete, Shift+←/→ and the Ctrl shortcuts. Notes are entered on the grid only (ADR 0009).
+ * Delete, Shift+←/→ and the Ctrl shortcuts. Notes are entered on the grid only (ADR 0009). Shift+Tab
+ * gives none, so it moves the focus into the app's controls.
  */
 export function commandForKey(press: KeyPress): EditCommand | null {
   if (press.altKey || press.metaKey) return null
   if (press.ctrlKey && press.shiftKey) return press.key.toLowerCase() === 'z' ? { type: 'redo' } : null
   if (press.ctrlKey) return CTRL_KEYS[press.key.length === 1 ? press.key.toLowerCase() : press.key] ?? null
   if (press.shiftKey && SHIFT_KEYS[press.key]) return SHIFT_KEYS[press.key]
+  if (press.shiftKey && press.key === 'Tab') return null
   return PLAIN_KEYS[press.key] ?? null
 }

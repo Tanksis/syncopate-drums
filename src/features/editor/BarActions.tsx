@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAppStore } from '@/app/store'
-import { keepFocus } from '@/components/keepFocus'
+import { Button } from '@/components/Button'
 import { Menu } from '@/components/Menu'
 import { PatternDialog } from '@/components/PatternDialog'
 import { isExample } from '@/core'
@@ -85,20 +85,17 @@ function HistoryButton({
   children: string
 }) {
   return (
-    <button
-      type="button"
+    <Button
+      variant={large ? 'secondary' : 'ghost'}
+      size={large ? 'lg' : 'sm'}
+      icon
       aria-label={label}
       title={label}
       disabled={disabled}
       tabIndex={-1}
-      // Keep focus off the button, so the editor's keys still work after a click.
-      onMouseDown={keepFocus}
       onClick={onClick}
-      className={`cursor-pointer text-mute hover:bg-line hover:text-accent disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-mute ${
-        large ? 'size-9 rounded-lg border border-edge bg-card text-lg/none' : 'rounded px-1 text-base/none'
-      }`}
     >
       {children}
-    </button>
+    </Button>
   )
 }

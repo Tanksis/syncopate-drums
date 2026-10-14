@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useAppStore } from '@/app/store'
+import { Button } from '@/components/Button'
 import { keepFocus } from '@/components/keepFocus'
 import { BpmInput } from './TransportControls'
 import { togglePause } from './transport'
@@ -60,13 +61,7 @@ export function TransportBar({ onEdit, onCopy }: { onEdit?: () => void; onCopy?:
 /** The button at the right of the bar: Edit, or Copy on an example. */
 function SlotButton(props: { 'aria-label'?: string; onClick: () => void; children: string }) {
   return (
-    <button
-      type="button"
-      {...props}
-      // Keep focus off the button, so Space pauses rather than clicking it.
-      onMouseDown={keepFocus}
-      className="ml-auto h-11 shrink-0 cursor-pointer rounded-lg border border-edge bg-card px-3.5 text-sm font-semibold touch-manipulation active:border-accent active:text-accent"
-    />
+    <Button size="lg" {...props} className="ml-auto active:border-accent active:text-accent" />
   )
 }
 
