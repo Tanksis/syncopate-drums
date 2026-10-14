@@ -6,6 +6,8 @@ import { keepFocus } from './keepFocus'
 /** One choice in a menu. */
 export interface MenuItem {
   label: string
+  /** A few words after the label, saying what the item means. */
+  hint?: string
   /** A toggle's state, shown as a tick; leave undefined for a plain action. */
   checked?: boolean
   /** Shown greyed out, and does nothing when chosen. */
@@ -181,6 +183,7 @@ export function Menu({
                 {item.checked ? '✓' : ''}
               </span>
               {item.label}
+              {item.hint && <span className="ml-auto pl-3 text-mute">{item.hint}</span>}
             </button>
           ))}
         </div>

@@ -15,12 +15,12 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Core: `clickMuted` and `grooveMuted` device settings (default off), honoured by playback like `exerciseMuted`, with tests
-- [ ] Hi-hat foot menu: Off, On 1, Quarters, 2 & 4, Off-beats, each with a short hint
-- [ ] Preset as a `Menu`
-- [ ] Swing chips renamed; the value field and slider kept
-- [ ] "Reset N changed hands" hidden at 0
-- [ ] Sections named Groove, Sticking, Mix, Appearance; `CONTEXT.md` updated where it names them
-- [ ] Checked in the browser at 1280 px and in the phone sheet at 390 × 844
+- [x] Core: `clickMuted` and `grooveMuted` device settings (default off), honoured by playback like `exerciseMuted`, with tests
+- [x] Hi-hat foot menu: Off, On 1, Quarters, 2 & 4, Off-beats, each with a short hint
+- [x] Preset as a `Menu`
+- [x] Swing chips renamed; the value field and slider kept
+- [x] "Reset N changed hands" hidden at 0
+- [x] Sections named Groove, Sticking, Mix, Appearance; `CONTEXT.md` updated where it names them
+- [x] Checked in the browser at 1280 px and in the phone sheet at 390 × 844
