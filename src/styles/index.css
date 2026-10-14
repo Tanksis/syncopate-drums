@@ -94,10 +94,10 @@
   --shadow-popover: var(--popover-shadow);
 
   /* Ornaments, the fixed hooks a look may set; `0 0 #0000` is no shadow. A box-shadow under the
-     header (Catalogue's stripes) and its height, which the header keeps as room below it, a hard offset shadow behind the card (Bold, Riso), and the
-     wordmark's font, style, case, shadow, colour (Catalogue's orange) and the colour of its "!"
-     (Score's red pencil), and the
-     section headings' case and caps (Score sets them in small caps rather than capitals). */
+     header (Catalogue's stripes) and its height, which the header keeps as room below it; a hard
+     offset shadow behind the card (Bold, Riso); the wordmark's font, style, case, shadow and colour
+     (Catalogue's orange), and the colour of its "!" (Score's red pencil); and the section headings'
+     case and caps (Score sets them in small caps rather than capitals). */
   --header-ornament: 0 0 #0000;
   --header-ornament-height: 0px;
   --card-offset: 0 0 #0000;
@@ -473,6 +473,7 @@
   --color-hover: #ebd5a6;
   --color-play-button: #b5461a;
   --color-on-play-button: #fff5de;
+  /* The canvas's 3 px edge is drawn at the controls' 2 px, as a look keeps Studio's sizes. */
   --color-play-button-edge: var(--color-ink);
   --color-notation-accent: var(--color-accent);
 
@@ -491,13 +492,14 @@
   --popover-shadow: 0 10px 15px -3px color-mix(in srgb, var(--color-shade) 14%, transparent), 0 4px 6px -4px color-mix(in srgb, var(--color-shade) 12%, transparent);
 
   --header-ornament: 0 6px 0 #b5461a, 0 12px 0 #e9a23b, 0 18px 0 #6b3a1e;
+  /* The last stripe's offset, so the stripes sit in the room the header keeps for them. */
   --header-ornament-height: 18px;
   --card-offset: 0 0 #0000;
   --wordmark-font: 'Shrikhand', Georgia, serif;
   --wordmark-style: normal;
   --wordmark-case: none;
   --wordmark-shadow: none;
-  --wordmark-color: var(--color-play-button);
+  --wordmark-color: #b5461a;
   --wordmark-bang: #9a6200;
   --heading-case: none;
   --heading-caps: normal;
