@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_DEVICE_SETTINGS, TICKS_PER_BAR, TICKS_PER_BEAT, clampBpm, deviceSettingsFrom, hasHits, newExercise, setBeat } from './index'
+import { DEFAULT_DEVICE_SETTINGS, TICKS_PER_BAR, TICKS_PER_BEAT, clampBpm, deviceSettingsFrom, hasHits, loopLabel, newExercise, setBeat } from './index'
 
 describe('ticks', () => {
   it('fit both a sixteenth and an eighth-note triplet in one beat', () => {
@@ -89,5 +89,23 @@ describe('stored device settings', () => {
 
   it('drop a stored theme the app does not have', () => {
     expect(deviceSettingsFrom({ theme: 'sepia', countIn: false })).toEqual({ ...DEFAULT_DEVICE_SETTINGS, countIn: false })
+  })
+})
+
+describe('loopLabel', () => {
+  it('reads all bars with no loop', () => {
+    expect(loopLabel(null, 4)).toBe('All bars')
+  })
+
+  it('names one looped bar, counting from 1', () => {
+    expect(loopLabel({ first: 1, last: 1 }, 4)).toBe('Bar 2')
+  })
+
+  it('names a looped range of bars', () => {
+    expect(loopLabel({ first: 1, last: 2 }, 4)).toBe('Bars 2–3')
+  })
+
+  it('names only the bars the exercise still has', () => {
+    expect(loopLabel({ first: 2, last: 5 }, 4)).toBe('Bars 3–4')
   })
 })

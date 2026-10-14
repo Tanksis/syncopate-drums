@@ -27,7 +27,7 @@ export function PlaybackPosition() {
   }, [playing, paused])
 
   return (
-    <span className="inline-block w-24 tabular-nums" aria-label="Playback position" aria-live="off">
+    <span className="inline-block w-21 tabular-nums" aria-label="Playback position" aria-live="off">
       {label}
     </span>
   )

@@ -56,3 +56,26 @@ export const ChevronIcon = () => (
     <path d="M4 6l4 4 4-4" />
   </Icon>
 )
+
+/** A minus sign. */
+export const MinusIcon = () => (
+  <Icon>
+    <path d="M3 8h10" />
+  </Icon>
+)
+
+/** Two arrows chasing each other round: a loop. */
+export const LoopIcon = () => (
+  <Icon>
+    <path d="M3 9V7a3 3 0 0 1 3-3h7M11 2l2 2-2 2M13 7v2a3 3 0 0 1-3 3H3M5 14l-2-2 2-2" />
+  </Icon>
+)
+
+/** Two sliders: settings. */
+export const SettingsIcon = () => (
+  <Icon>
+    <path d="M2 5h12M2 11h12" />
+    <circle cx="6" cy="5" r="1.8" fill="currentColor" />
+    <circle cx="10.5" cy="11" r="1.8" fill="currentColor" />
+  </Icon>
+)

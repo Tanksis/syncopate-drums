@@ -7,12 +7,12 @@ import { SidebarHeading } from '@/components/Sidebar'
 import { Slider } from '@/components/Slider'
 import { Switch } from '@/components/Switch'
 import { ValueField } from '@/components/ValueField'
-import { LoopReadout } from '@/features/playback/LoopReadout'
+import { LoopChip } from '@/features/playback/LoopChip'
 import { CountInToggle } from '@/features/playback/TransportControls'
 import type { ExerciseSettings, GroovePresetId, HihatFoot, Theme, VolumeSetting } from '@/core'
 import { DEFAULT_DEVICE_SETTINGS, GROOVE_PRESETS, HIHAT_FOOT_SETTINGS, MAX_SWING, MAX_VOLUME, MIN_SWING, THEMES, TRIPLET_SWING, groovePreset, overrideCount } from '@/core'
 
-/** `playbackGroup` adds the count-in and loop readout, for when the header has no room for them. */
+/** `playbackGroup` adds the count-in and loop chip, for when the header has no room for them. */
 export function SettingsSidebar({
   onCollapse,
   fullScreen = false,
@@ -31,7 +31,7 @@ export function SettingsSidebar({
       {playbackGroup && (
         <SettingGroup title="Playback">
           <div className="flex items-center justify-between gap-2">
-            <LoopReadout />
+            <LoopChip />
             <CountInToggle />
           </div>
         </SettingGroup>

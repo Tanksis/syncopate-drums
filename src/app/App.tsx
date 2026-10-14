@@ -21,6 +21,7 @@ import type { Side } from '@/components/Sidebar'
 import { SidebarFullScreen, SidebarOverlay, SidebarRail } from '@/components/Sidebar'
 import { Button } from '@/components/Button'
 import { keepFocus } from '@/components/keepFocus'
+import { SettingsIcon } from '@/components/icons'
 import { isExample } from '@/core'
 
 export function App() {
@@ -43,6 +44,7 @@ export function App() {
           </div>
           <NotSaving />
           <TransportControls room={room} />
+          <SettingsToggle {...sidebars.settings} />
         </header>
         <ExampleNotice />
         {/* The music on a card, which takes the height the editor leaves, all of it when that's collapsed. */}
@@ -132,12 +134,29 @@ function PhoneHeaderButton({
   )
 }
 
+/** The header's button that shows the Settings sidebar or hides it, lit while it shows. */
+function SettingsToggle({ state, onOpen, onCollapse }: SidebarControl) {
+  const shown = state !== 'rail'
+  return (
+    <Button
+      size="md"
+      icon
+      aria-label="Settings"
+      aria-expanded={shown}
+      title={shown ? 'Hide settings' : 'Show settings'}
+      onClick={state === 'open' ? onCollapse : onOpen}
+    >
+      <SettingsIcon />
+    </Button>
+  )
+}
+
 /**
  * The header widths, in px, below which its controls don't all fit while leaving the exercise name
  * its 12 characters or so: under `full` the BPM slider goes, and under `withoutSlider` the count-in
- * and loop readout move to the Settings sidebar too.
+ * and loop chip move to the Settings sidebar too.
  */
-const HEADER_WIDTH = { full: 770, withoutSlider: 660 }
+const HEADER_WIDTH = { full: 920, withoutSlider: 795 }
 
 /**
  * A ref for the desktop header, and how much of the transport fits in it. That depends on the

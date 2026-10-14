@@ -90,6 +90,13 @@ export function loopBars(range: LoopRange | null, barCount: number): LoopRange {
   return { first: Math.min(range.first, last), last }
 }
 
+/** The loop range as the header's chip reads it: "All bars", "Bar 2" or "Bars 2–3". */
+export function loopLabel(range: LoopRange | null, barCount: number): string {
+  if (!range) return 'All bars'
+  const { first, last } = loopBars(range, barCount)
+  return first === last ? `Bar ${first + 1}` : `Bars ${first + 1}–${last + 1}`
+}
+
 export interface PracticeSettings {
   bpm: number
   loopRange: LoopRange | null

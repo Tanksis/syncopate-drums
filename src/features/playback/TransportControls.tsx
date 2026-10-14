@@ -2,53 +2,68 @@ import { useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { Slider } from '@/components/Slider'
 import { Switch } from '@/components/Switch'
-import { fieldClass } from '@/components/ValueField'
+import { MinusIcon, PlusIcon } from '@/components/icons'
 import { MAX_BPM, MIN_BPM } from '@/core'
-import { LoopReadout } from './LoopReadout'
+import { BpmStep } from './BpmStep'
+import { LoopChip } from './LoopChip'
 import { PlaybackPosition } from './PlaybackPosition'
 import { usePlaybackKeys } from './usePlaybackKeys'
 
 /**
  * How much of the transport the header has room for: all of it, all but the BPM slider, or only
- * the position and the BPM box, with the count-in and loop readout in the Settings sidebar.
+ * the position and the tempo, with the count-in and loop chip in the Settings sidebar.
  */
 export type HeaderRoom = 'full' | 'withoutSlider' | 'compact'
 
 /**
- * The header's playback position, tempo controls and loop range. Play is on the staff
+ * The header's playback position, tempo, count-in and loop chip. Play is on the staff
  * (`StaffPlayButton`); Ctrl+Space and Space work from here.
  */
 export function TransportControls({ room }: { room: HeaderRoom }) {
   usePlaybackKeys()
   return (
-    <div className="flex shrink-0 items-center gap-2.5 whitespace-nowrap">
+    <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
       <PlaybackPosition />
-      <BpmControl slider={room === 'full'} />
+      <Tempo slider={room === 'full'} />
       {room !== 'compact' && (
         <>
+          <span aria-hidden className="h-6 w-px bg-line" />
           <CountInToggle />
-          <LoopReadout />
+          <LoopChip />
         </>
       )}
     </div>
   )
 }
 
-function BpmControl({ slider }: { slider: boolean }) {
+/** The header's − and + around the BPM. */
+const stepClass = 'size-8 rounded-md border-edge bg-card text-ink hover:border-accent hover:text-accent active:border-accent active:text-accent'
+
+/** − [80 BPM] +, then a slider given room: − and + step the tempo and repeat while held. */
+function Tempo({ slider }: { slider: boolean }) {
   const bpm = useAppStore((s) => s.editor.exercise.practice.bpm)
   const setBpm = useAppStore((s) => s.setBpm)
   return (
-    <label className="flex items-center gap-2">
-      <BpmInput className="w-16 px-1.5 py-0.5 text-right" />
-      <span className="text-mute">BPM</span>
+    <div className="flex items-center gap-1.5">
+      <BpmStep step={-1} className={stepClass}>
+        <MinusIcon />
+      </BpmStep>
+      {/* The BPM box: the number to type into and its unit, ringed as one field. */}
+      <label className="flex h-8 cursor-text items-center gap-1 rounded-md border border-edge bg-bg px-2 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
+        <BpmInput className="w-9 [appearance:textfield] border-0 bg-transparent p-0 text-right font-mono text-base font-semibold tabular-nums outline-none [&::-webkit-inner-spin-button]:appearance-none" />
+        <span className="text-[11px] font-semibold tracking-wide text-mute">BPM</span>
+      </label>
+      <BpmStep step={1} className={stepClass}>
+        <PlusIcon />
+      </BpmStep>
       {slider && (
-        <Slider label="BPM slider" min={MIN_BPM} max={MAX_BPM} value={bpm} onChange={setBpm} className="w-24" />
+        <Slider label="BPM slider" min={MIN_BPM} max={MAX_BPM} value={bpm} onChange={setBpm} className="ml-1.5 w-28" />
       )}
-    </label>
+    </div>
   )
 }
 
-/** The tempo as a number box to type into. */
+/** The tempo as a number box to type into; `className` gives it its look. */
 export function BpmInput({ className }: { className: string }) {
   const bpm = useAppStore((s) => s.editor.exercise.practice.bpm)
   const setBpm = useAppStore((s) => s.setBpm)
@@ -78,7 +93,7 @@ export function BpmInput({ className }: { className: string }) {
       onChange={(e) => type(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-      className={`${fieldClass} ${className}`}
+      className={className}
     />
   )
 }
