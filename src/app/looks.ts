@@ -29,6 +29,17 @@ export const LOOK_STYLES: readonly { look: Look; loadFonts: () => Promise<unknow
         import('@fontsource/geist-mono/700.css'),
       ]),
   },
+  {
+    look: 'warm',
+    loadFonts: () =>
+      Promise.all([
+        import('@fontsource/dm-sans/400.css'),
+        import('@fontsource/dm-sans/600.css'),
+        import('@fontsource/dm-sans/700.css'),
+        import('@fontsource/fraunces/600.css'),
+        import('@fontsource/fraunces/700.css'),
+      ]),
+  },
 ]
 
 /** Imports a look's fonts. Until they load, or if they fail to, its text falls back to the system's. */

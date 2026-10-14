@@ -12,11 +12,11 @@
 
 **Blocked by:** 02, 03, 04, 05
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Every token set under `:root[data-look='warm']`, with its dark values
-- [ ] DM Sans and Fraunces load only while it is the look
-- [ ] Listed in the Look menu
-- [ ] AA for text and 3:1 for control edges and states, in light and dark
-- [ ] Layout, sizes and spacing identical to Studio (screenshots side by side)
-- [ ] Checked in the browser at 1280 px and 390 × 844, light and dark
+- [x] Every token set under `:root[data-look='warm']`, with its dark values
+- [x] DM Sans and Fraunces load only while it is the look
+- [x] Listed in the Look menu
+- [x] AA for text and 3:1 for control edges and states, in light and dark
+- [x] Layout, sizes and spacing identical to Studio (screenshots side by side)
+- [x] Checked in the browser at 1280 px and 390 × 844, light and dark
