@@ -17,12 +17,17 @@ import { useEditorKeys } from './useEditorKeys'
  * notation, and its chevron collapses it to its header row.
  */
 export function GridEditor({ onDone }: { onDone?: () => void }) {
+  const [collapsed, toggleCollapsed] = useEditorCollapsed()
   const [helpOpen, setHelpOpen] = useState(false)
-  const toggleHelp = useCallback(() => setHelpOpen((open) => !open), [])
+  // A collapsed editor has no room for the cheat sheet, so ? leaves it be.
+  const helpHidden = collapsed && !onDone
+  const toggleHelp = useCallback(() => {
+    if (!helpHidden) setHelpOpen((open) => !open)
+  }, [helpHidden])
   useEditorKeys(toggleHelp)
   // A touch screen shows no keyboard hints.
   const touch = useCoarsePointer()
-  const [collapsed, toggleCollapsed] = useCollapsed()
+  const chevronLabel = collapsed ? 'Expand the editor' : 'Collapse the editor'
   if (onDone)
     return (
       <section
@@ -61,10 +66,9 @@ export function GridEditor({ onDone }: { onDone?: () => void }) {
             variant="ghost"
             size="md"
             icon
-            aria-label={collapsed ? 'Expand the editor' : 'Collapse the editor'}
-            title={collapsed ? 'Expand the editor' : 'Collapse the editor'}
+            aria-label={chevronLabel}
+            title={chevronLabel}
             aria-expanded={!collapsed}
-            aria-controls="grid-editor-body"
             onClick={toggleCollapsed}
             // An open editor is the usual state, so the chevron stays quiet rather than looking pressed.
             className="aria-expanded:not-hover:bg-transparent! aria-expanded:not-hover:text-mute!"
@@ -76,10 +80,10 @@ export function GridEditor({ onDone }: { onDone?: () => void }) {
         </div>
       </div>
       {!collapsed && (
-        <div id="grid-editor-body" className="contents">
+        <>
           {helpOpen && !touch && <CheatSheet onClose={toggleHelp} />}
           <BeatStrip />
-        </div>
+        </>
       )}
     </section>
   )
@@ -90,16 +94,22 @@ export function GridEditor({ onDone }: { onDone?: () => void }) {
  * example opens collapsed, so the music shows first; expanding it there isn't saved, and lasts
  * until another exercise is opened.
  */
-function useCollapsed(): [boolean, () => void] {
+function useEditorCollapsed(): [boolean, () => void] {
   const id = useAppStore((s) => s.editor.exercise.id)
-  const saved = useAppStore((s) => s.device.editorCollapsed)
+  const savedCollapsed = useAppStore((s) => s.device.editorCollapsed)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
-  /** The example expanded since it was opened, if any. */
-  const [expandedExample, setExpandedExample] = useState<string | null>(null)
+  /** The open example has been expanded since it was opened. */
+  const [exampleExpanded, setExampleExpanded] = useState(false)
+  // Opening another exercise forgets it, during the render, so a reopened example never shows expanded for a frame.
+  const [openedId, setOpenedId] = useState(id)
+  if (openedId !== id) {
+    setOpenedId(id)
+    setExampleExpanded(false)
+  }
   const example = isExample(id)
-  const collapsed = example ? expandedExample !== id : saved
+  const collapsed = example ? !exampleExpanded || openedId !== id : savedCollapsed
   const toggle = () => {
-    if (example) setExpandedExample(collapsed ? id : null)
+    if (example) setExampleExpanded(collapsed)
     else setDeviceSettings({ editorCollapsed: !collapsed })
   }
   return [collapsed, toggle]
