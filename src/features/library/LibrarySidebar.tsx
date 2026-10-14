@@ -25,7 +25,7 @@ const toolClass = (large: boolean) => buttonClass({ size: toolSize(large), icon:
 /** An exercise's button in a list, marked when it's the open one. */
 const listButtonClass = (open: boolean) =>
   `min-w-0 flex-1 cursor-pointer truncate rounded-md border-0 px-2 py-1 text-left ${
-    open ? 'bg-accent/10 font-semibold text-accent' : 'bg-transparent hover:bg-line'
+    open ? 'bg-accent/10 font-semibold text-accent' : 'bg-transparent hover:bg-hover'
   }`
 
 /** The Move to… menu's value for no folder, beside the folder ids (which are UUIDs). */

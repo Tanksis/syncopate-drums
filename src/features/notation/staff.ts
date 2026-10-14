@@ -202,7 +202,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   ctx.scale(scale, scale)
   const colour = {
     ink: token('color-ink'),
-    accent: token('color-accent'),
+    notationAccent: token('color-notation-accent'),
     currentBar: token('color-accent-tint'),
     loopInk: token('color-loop-ink'),
     loop: token('color-loop'),
@@ -254,7 +254,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
     for (const { drawn } of drawings) {
       if (b !== cursor?.bar) continue
       for (const { event, note } of drawn) {
-        if (Math.floor(event.start / TICKS_PER_BEAT) === cursor.beat) note.setStyle({ fillStyle: colour.accent, strokeStyle: colour.accent })
+        if (Math.floor(event.start / TICKS_PER_BEAT) === cursor.beat) note.setStyle({ fillStyle: colour.notationAccent, strokeStyle: colour.notationAccent })
       }
     }
     drawParts(stave, drawings, 4, Math.max(30, x + w - stave.getNoteStartX() - 18))
@@ -276,7 +276,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
           if (n.tied && previous) ties.push(...tie(previous, { note, index, line }))
           lastOf.set(n.drum, { note, index, line })
           const noteSticking = n.noteId && !n.tied ? stickings.get(n.noteId) : undefined
-          if (noteSticking) drawSticking(stave, note, noteSticking, handRow, colour.accent, font)
+          if (noteSticking) drawSticking(stave, note, noteSticking, handRow, colour.notationAccent, font)
         }
       }
     }
@@ -341,7 +341,7 @@ function drawBarNumber(stave: Stave, bar: number, loopRange: LoopRange | null, l
 
 /**
  * Prints the shown R, L or K centred under a note, on the given stave line. A hand's group is tagged
- * with the note's id so a click can flip it, and an override is printed in the accent colour, with
+ * with the note's id so a click can flip it, and an override is printed in the notation's accent colour, with
  * a hover hint. A kick's K has nothing to flip.
  */
 function drawSticking(

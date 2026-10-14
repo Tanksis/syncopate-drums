@@ -9,13 +9,15 @@
 - **Modes:** light and dark.
 - See [spec](../spec.md) and [ADR 0013](../../../docs/adr/0013-looks-are-skins.md).
 
+**As built:** in light the accent is the ink, so the notation's cursor and changed hands are olive (`#5A6B00`) to stand out.
+
 **Blocked by:** 02, 03, 04, 05
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Every token set under `:root[data-look='bold']`, with its dark values
-- [ ] Manrope and Space Grotesk load only while it is the look
-- [ ] Listed in the Look menu
-- [ ] AA for text and 3:1 for control edges and states, in light and dark
-- [ ] Layout, sizes and spacing identical to Studio (screenshots side by side)
-- [ ] Checked in the browser at 1280 px and 390 × 844, light and dark
+- [x] Every token set under `:root[data-look='bold']`, with its dark values
+- [x] Manrope and Space Grotesk load only while it is the look
+- [x] Listed in the Look menu
+- [x] AA for text and 3:1 for control edges and states, in light and dark
+- [x] Layout, sizes and spacing identical to Studio (screenshots side by side)
+- [x] Checked in the browser at 1280 px and 390 × 844, light and dark

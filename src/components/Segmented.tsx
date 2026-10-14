@@ -77,7 +77,8 @@ export function Segmented<T extends string | number | boolean>({
       aria-disabled={disabled || undefined}
       aria-describedby={describedBy}
       onKeyDown={onKeyDown}
-      className={`flex rounded-chip border border-edge bg-bg aria-disabled:opacity-40 ${small ? 'gap-px p-px text-[10px]/5' : 'gap-0.5 p-0.5'} ${className}`}
+      // A filled row has no gaps, so its labels have the room a wider look's font or border takes.
+      className={`flex rounded-chip border border-edge bg-bg aria-disabled:opacity-40 ${small ? 'gap-px p-px text-[10px]/5' : fill ? 'p-0.5' : 'gap-0.5 p-0.5'} ${className}`}
     >
       {options.map((option, i) => {
         const on = i === chosen

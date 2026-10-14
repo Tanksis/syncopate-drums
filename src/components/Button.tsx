@@ -13,7 +13,7 @@ export type ButtonSize = 'sm' | 'md' | 'lg'
 const VARIANT: Record<ButtonVariant, string> = {
   primary: 'border-accent bg-accent text-on-accent enabled:hover:opacity-90',
   secondary: 'border-edge bg-card text-ink enabled:hover:border-accent enabled:hover:text-accent aria-expanded:border-accent aria-expanded:text-accent',
-  ghost: 'border-transparent bg-transparent text-mute enabled:hover:bg-line enabled:hover:text-ink aria-expanded:bg-line aria-expanded:text-ink',
+  ghost: 'border-transparent bg-transparent text-mute enabled:hover:bg-hover enabled:hover:text-ink aria-expanded:bg-hover aria-expanded:text-ink',
   danger: 'border-danger bg-danger text-on-accent enabled:hover:opacity-90',
 }
 

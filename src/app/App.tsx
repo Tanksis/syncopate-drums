@@ -39,7 +39,7 @@ export function App() {
         {/* Positioned, so the look's ornament under it draws over the area below. */}
         <header ref={headerRef} className="relative flex items-center gap-3 border-b border-line bg-card px-4 py-2 shadow-(--header-ornament)">
           <h1 className="m-0 shrink-0 font-(family-name:--wordmark-font) text-base font-bold whitespace-nowrap [font-style:var(--wordmark-style)] [text-shadow:var(--wordmark-shadow)] [text-transform:var(--wordmark-case)]">
-            Syncopate!
+            Syncopate<span className="text-(--wordmark-bang)">!</span>
           </h1>
           {/* The name takes the room the controls leave, and always shows about 12 letters (10 of the wide digit `ch` measures). */}
           <div className="flex min-w-[10ch] flex-1">
@@ -131,7 +131,7 @@ function PhoneHeaderButton({
   children: ReactNode
 }) {
   return (
-    <Button variant="ghost" size="lg" icon aria-label={label} aria-expanded={expanded} onClick={onClick} className="active:bg-line">
+    <Button variant="ghost" size="lg" icon aria-label={label} aria-expanded={expanded} onClick={onClick} className="active:bg-hover">
       <span aria-hidden>{children}</span>
     </Button>
   )
@@ -156,10 +156,10 @@ function SettingsToggle({ state, onOpen, onCollapse }: SidebarControl) {
 
 /**
  * The header widths, in px, below which its controls don't all fit while leaving the exercise name
- * its 12 letters or so, measured in Studio's fonts: under `full` the BPM slider goes, and under `withoutSlider` the count-in
- * and loop chip move to the Settings sidebar too.
+ * its 12 letters or so, measured in each look's fonts (Warm's need the most): under `full` the BPM
+ * slider goes, and under `withoutSlider` the count-in and loop chip move to the Settings sidebar too.
  */
-const HEADER_WIDTH = { full: 920, withoutSlider: 795 }
+const HEADER_WIDTH = { full: 924, withoutSlider: 799 }
 
 /**
  * A ref for the desktop header, and how much of the transport fits in it. That depends on the

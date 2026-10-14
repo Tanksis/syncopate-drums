@@ -9,13 +9,15 @@
 - **Modes:** light only.
 - See [spec](../spec.md) and [ADR 0013](../../../docs/adr/0013-looks-are-skins.md).
 
+**As built:** the red pencil also marks the notation's cursor and changed hands (`--color-notation-accent`), as on the canvas, since the accent there is the ink and they would otherwise not stand out.
+
 **Blocked by:** 02, 03, 04, 05
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Every token set under `:root[data-look='score']`
-- [ ] EB Garamond and Instrument Serif load only while it is the look
-- [ ] Listed in the Look menu and in `LIGHT_ONLY_LOOKS`
-- [ ] AA for text and 3:1 for control edges and states
-- [ ] Layout, sizes and spacing identical to Studio (screenshots side by side)
-- [ ] Checked in the browser at 1280 px and 390 × 844, with the device in dark mode too
+- [x] Every token set under `:root[data-look='score']`
+- [x] EB Garamond and Instrument Serif load only while it is the look
+- [x] Listed in the Look menu and in `LIGHT_ONLY_LOOKS`
+- [x] AA for text and 3:1 for control edges and states
+- [x] Layout, sizes and spacing identical to Studio (screenshots side by side)
+- [x] Checked in the browser at 1280 px and 390 × 844, with the device in dark mode too
