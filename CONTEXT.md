@@ -39,6 +39,10 @@ How an exercise is practiced rather than what it contains: BPM, loop range, groo
 **Device settings**:
 How the app is set up on this computer rather than how an exercise is practiced: volumes and mutes (the Mix), the count-in toggle, the look and mode, which exercise was last open, which sidebar tab is showing, which folders are collapsed, and whether the grid editor is collapsed. Kept per device and never exported.
 
+**Mix**:
+How loud each playback layer (click, exercise, groove) plays on this device, and which are muted, set in the Mix section of Settings. A muted layer plays nothing, so the drummer can practise against any combination.
+_Avoid_: Volume (for the section)
+
 **Look**:
 The app's visual style, chosen in Appearance: Studio (the default), Warm, Bold, Score, Riso or Catalogue. A look changes colours, fonts, corners, borders, shadows and a few ornaments, never the layout (ADR 0013). Score, Riso and Catalogue are light only.
 _Avoid_: Skin, theme (for the look itself)

@@ -79,3 +79,17 @@ export const SettingsIcon = () => (
     <circle cx="10.5" cy="11" r="1.8" fill="currentColor" />
   </Icon>
 )
+
+/** A speaker sounding: a layer that plays. */
+export const SpeakerIcon = () => (
+  <Icon>
+    <path d="M2.5 6h2.5l3.5-3v10L5 10H2.5zM11 5.5a3.5 3.5 0 0 1 0 5M12.8 3.5a6 6 0 0 1 0 9" />
+  </Icon>
+)
+
+/** A speaker crossed out: a muted layer. */
+export const SpeakerMutedIcon = () => (
+  <Icon>
+    <path d="M2.5 6h2.5l3.5-3v10L5 10H2.5zM11 6l3.5 4M14.5 6L11 10" />
+  </Icon>
+)

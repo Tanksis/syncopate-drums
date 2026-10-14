@@ -223,9 +223,9 @@ function useSidebars(): Record<SidebarId, SidebarControl> {
     if (!overlay) return
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
-      // A text field or a dialog in the sidebar has its own Escape.
+      // A text field, a dialog or an open menu in the sidebar has its own Escape.
       if (e.target instanceof HTMLElement && e.target.closest('input, textarea, select, [contenteditable]')) return
-      if (document.querySelector('dialog[open]')) return
+      if (document.querySelector('dialog[open], [role=menu]')) return
       // Ahead of the editor's keys, which then don't see it.
       e.preventDefault()
       e.stopPropagation()

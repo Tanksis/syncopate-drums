@@ -87,6 +87,15 @@ describe('stored device settings', () => {
     expect(deviceSettingsFrom({ editorCollapsed: true }).editorCollapsed).toBe(true)
   })
 
+  it('load settings stored before the click and groove could mute with both unmuted', () => {
+    const device = deviceSettingsFrom({ exerciseMuted: true, clickVolume: 0.5 })
+    expect(device).toMatchObject({ exerciseMuted: true, clickMuted: false, grooveMuted: false })
+  })
+
+  it('keep a stored muted click and groove', () => {
+    expect(deviceSettingsFrom({ clickMuted: true, grooveMuted: true })).toMatchObject({ clickMuted: true, grooveMuted: true })
+  })
+
   it('drop a stored theme the app does not have', () => {
     expect(deviceSettingsFrom({ theme: 'sepia', countIn: false })).toEqual({ ...DEFAULT_DEVICE_SETTINGS, countIn: false })
   })

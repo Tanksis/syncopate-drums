@@ -3,13 +3,14 @@ import { useAppStore } from '@/app/store'
 import { Button } from '@/components/Button'
 import { PanelHeading } from '@/components/PanelHeading'
 import { Segmented } from '@/components/Segmented'
+import { SelectMenu } from '@/components/SelectMenu'
 import { SidebarHeading } from '@/components/Sidebar'
 import { Slider } from '@/components/Slider'
-import { Switch } from '@/components/Switch'
+import { SpeakerIcon, SpeakerMutedIcon } from '@/components/icons'
 import { ValueField } from '@/components/ValueField'
 import { LoopChip } from '@/features/playback/LoopChip'
 import { CountInToggle } from '@/features/playback/TransportControls'
-import type { ExerciseSettings, GroovePresetId, HihatFoot, Theme, VolumeSetting } from '@/core'
+import type { DeviceSettings, ExerciseSettings, HihatFoot, Theme, VolumeSetting } from '@/core'
 import { DEFAULT_DEVICE_SETTINGS, GROOVE_PRESETS, HIHAT_FOOT_SETTINGS, MAX_SWING, MAX_VOLUME, MIN_SWING, THEMES, TRIPLET_SWING, groovePreset, overrideCount } from '@/core'
 
 /** `playbackGroup` adds the count-in and loop chip, for when the header has no room for them. */
@@ -37,8 +38,8 @@ export function SettingsSidebar({
         </SettingGroup>
       )}
       <SettingGroup title="Groove">
-        <GroovePicker />
-        <HihatFootChoice />
+        <GroovePicker large={fullScreen} />
+        <HihatFootChoice large={fullScreen} />
         <Swing />
       </SettingGroup>
       <SettingGroup title="Sticking">
@@ -46,14 +47,12 @@ export function SettingsSidebar({
         <Choice label="Lead hand" setting="leadHand" options={['R', 'L']} />
         <ResetOverrides />
       </SettingGroup>
-      <SettingGroup title="Volume">
-        <Volume label="Click" setting="clickVolume" />
-        <Volume label="Exercise" setting="exerciseVolume">
-          <MuteExercise />
-        </Volume>
-        <Volume label="Groove" setting="grooveVolume" />
+      <SettingGroup title="Mix">
+        <Layer label="Click" setting="clickVolume" mute="clickMuted" />
+        <Layer label="Exercise" setting="exerciseVolume" mute="exerciseMuted" />
+        <Layer label="Groove" setting="grooveVolume" mute="grooveMuted" />
       </SettingGroup>
-      <SettingGroup title="Display">
+      <SettingGroup title="Appearance">
         <ThemeChoice />
       </SettingGroup>
     </aside>
@@ -70,47 +69,42 @@ function SettingGroup({ title, children }: { title: string; children?: ReactNode
 }
 
 /** The groove layer played and drawn with the exercise, or none. */
-function GroovePicker() {
+function GroovePicker({ large }: { large: boolean }) {
   const groove = useAppStore((s) => s.editor.exercise.practice.groove)
   const setGroove = useAppStore((s) => s.setGroove)
   return (
-    <label className="flex items-center justify-between gap-2">
-      <span className="text-mute">Preset</span>
-      <select
-        aria-label="Groove preset"
-        value={groove}
-        // The sidebar is narrow, so the longer names are cut short; the full name shows on hover.
-        title={groovePreset(groove).name}
-        // Once a preset is picked, hand the keyboard back to the editor.
-        onChange={(e) => {
-          setGroove(e.target.value as GroovePresetId)
-          e.currentTarget.blur()
-        }}
-        className="min-w-0 flex-1 cursor-pointer rounded-md border border-edge bg-card px-1 py-0.5"
-      >
-        {GROOVE_PRESETS.map((preset) => (
-          <option key={preset.id} value={preset.id}>
-            {preset.name}
-          </option>
-        ))}
-      </select>
-    </label>
+    <div className="flex items-center gap-2">
+      <span className="w-20 shrink-0 text-mute">Preset</span>
+      <SelectMenu
+        label="Groove preset"
+        large={large}
+        options={GROOVE_PRESETS.map((preset) => ({ value: preset.id, label: preset.name }))}
+        value={groovePreset(groove).id}
+        onChange={setGroove}
+      />
+    </div>
   )
 }
 
-const HIHAT_FOOT_NAMES: Record<HihatFoot, string> = { off: 'Off', one: 'On 1', quarters: 'Quarters', twoAndFour: '2 & 4', ands: '&s' }
+const HIHAT_FOOT_OPTIONS: Record<HihatFoot, { label: string; hint?: string }> = {
+  off: { label: 'Off' },
+  one: { label: 'On 1', hint: 'beat 1' },
+  quarters: { label: 'Quarters', hint: 'every beat' },
+  twoAndFour: { label: '2 & 4', hint: 'backbeat' },
+  ands: { label: 'Off-beats', hint: 'the &s' },
+}
 
 /** The hi-hat foot played in every bar, with any groove or none, in place of the groove's own (ADR 0010). */
-function HihatFootChoice() {
+function HihatFootChoice({ large }: { large: boolean }) {
   const hihatFoot = useAppStore((s) => s.editor.exercise.practice.hihatFoot)
   const setHihatFoot = useAppStore((s) => s.setHihatFoot)
   return (
-    <div className="flex flex-col gap-1">
-      <span className="text-mute">Hi-hat foot</span>
-      <Segmented
+    <div className="flex items-center gap-2">
+      <span className="w-20 shrink-0 text-mute">Hi-hat foot</span>
+      <SelectMenu
         label="Hi-hat foot"
-        fill
-        options={HIHAT_FOOT_SETTINGS.map((option) => ({ value: option, label: HIHAT_FOOT_NAMES[option] }))}
+        large={large}
+        options={HIHAT_FOOT_SETTINGS.map((option) => ({ value: option, ...HIHAT_FOOT_OPTIONS[option] }))}
         value={hihatFoot}
         onChange={setHihatFoot}
       />
@@ -119,18 +113,18 @@ function HihatFootChoice() {
 }
 
 const SWING_PRESETS = [
-  { name: 'off', swing: MIN_SWING },
-  { name: 'light', swing: 0.58 },
-  { name: 'medium', swing: 0.62 },
-  { name: 'triplet', swing: TRIPLET_SWING },
-  { name: 'dotted', swing: 0.75 },
+  { name: 'Straight', swing: MIN_SWING },
+  { name: 'Light', swing: 0.58 },
+  { name: 'Medium', swing: 0.62 },
+  { name: 'Triplet', swing: TRIPLET_SWING },
+  { name: 'Dotted', swing: 0.75 },
 ]
 
 /** A typed swing, as an amount; one that shows as a preset (66.7% is triplet) is that preset. */
 const swingFromPercent = (percent: number) =>
   SWING_PRESETS.find((preset) => Math.abs(preset.swing * 100 - percent) < 0.05)?.swing ?? percent / 100
 
-/** The swing amount: a slider from straight to dotted, and buttons for off (straight) and the common feels. */
+/** The swing amount: a slider from straight to dotted, and chips for straight and the common feels. */
 function Swing() {
   const swing = useAppStore((s) => s.editor.exercise.practice.swing)
   const setSwing = useAppStore((s) => s.setSwing)
@@ -163,6 +157,8 @@ function Swing() {
       <Segmented
         label="Swing presets"
         fill
+        // Smaller than the panel's text, so the five names fit the desktop sidebar's width.
+        className="text-xs"
         options={SWING_PRESETS.map((p) => ({ value: p.swing, label: p.name }))}
         value={preset?.swing ?? null}
         onChange={(amount) => setSwing(amount)}
@@ -171,12 +167,20 @@ function Swing() {
   )
 }
 
-/** A layer's volume on this device, 100% being its usual level; it applies while playing. */
-function Volume({ label, setting, children }: { label: string; setting: VolumeSetting; children?: ReactNode }) {
+/** The device settings that mute a playback layer. */
+type MuteSetting = keyof Pick<DeviceSettings, 'clickMuted' | 'exerciseMuted' | 'grooveMuted'>
+
+/**
+ * A playback layer in the mix: its volume on this device, 100% being its usual level, and a button
+ * that mutes it, so the drummer can practise against any combination; both apply while playing.
+ */
+function Layer({ label, setting, mute }: { label: string; setting: VolumeSetting; mute: MuteSetting }) {
   const volume = useAppStore((s) => s.device[setting])
+  const muted = useAppStore((s) => s.device[mute])
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   const setVolume = (value: number, dragging = false) =>
     setDeviceSettings({ [setting]: value }, { dragging })
+  const name = label.toLowerCase()
   return (
     <div className="flex items-center gap-2">
       <span className="w-14 text-mute">{label}</span>
@@ -188,7 +192,7 @@ function Volume({ label, setting, children }: { label: string; setting: VolumeSe
         value={volume}
         reset={DEFAULT_DEVICE_SETTINGS[setting]}
         onChange={(value, { dragging }) => setVolume(value, dragging)}
-        className="flex-1"
+        className={`flex-1 ${muted ? 'opacity-40' : ''}`}
       />
       <ValueField
         label={`${label} volume %`}
@@ -200,23 +204,33 @@ function Volume({ label, setting, children }: { label: string; setting: VolumeSe
         onChange={(percent) => setVolume(percent / 100)}
         className="w-14 sm:w-12"
       />
-      {/* The same width on every row, so the sliders line up. */}
-      <div className="flex w-11 justify-end">{children}</div>
+      <Button
+        variant="ghost"
+        icon
+        size="md"
+        aria-label={`Mute the ${name}`}
+        aria-pressed={muted}
+        title={muted ? `Unmute the ${name}` : `Mute the ${name}`}
+        onClick={() => setDeviceSettings({ [mute]: !muted })}
+        className="-mr-1 aria-pressed:text-danger!"
+      >
+        {muted ? <SpeakerMutedIcon /> : <SpeakerIcon />}
+      </Button>
     </div>
   )
 }
 
 const THEME_NAMES: Record<Theme, string> = { auto: 'Auto', light: 'Light', dark: 'Dark' }
 
-/** Light or dark on this device, or Auto to follow the device's own setting. */
+/** The mode, light or dark on this device, or Auto to follow the device's own setting. */
 function ThemeChoice() {
   const theme = useAppStore((s) => s.device.theme)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="text-mute">Theme</span>
+      <span className="text-mute">Mode</span>
       <Segmented
-        label="Theme"
+        label="Mode"
         options={THEMES.map((option) => ({ value: option, label: THEME_NAMES[option] }))}
         value={theme}
         onChange={(option) => setDeviceSettings({ theme: option })}
@@ -225,28 +239,14 @@ function ThemeChoice() {
   )
 }
 
-/** Silences the exercise, so the drummer can play the line over the click and the groove. */
-function MuteExercise() {
-  const muted = useAppStore((s) => s.device.exerciseMuted)
-  const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
-  return (
-    <Switch
-      label="Mute the exercise"
-      labelHidden
-      title={muted ? 'Unmute the exercise' : 'Mute the exercise'}
-      checked={muted}
-      onChange={(exerciseMuted) => setDeviceSettings({ exerciseMuted })}
-    />
-  )
-}
-
-/** Clears every sticking override in one undoable step; disabled when there are none. */
+/** Clears every sticking override in one undoable step; shown only when there are some. */
 function ResetOverrides() {
   const count = useAppStore((s) => overrideCount(s.editor.exercise))
   const dispatch = useAppStore((s) => s.dispatch)
+  if (count === 0) return null
   return (
-    <Button disabled={count === 0} onClick={() => dispatch({ type: 'resetOverrides' })} className="self-end">
-      Reset overrides ({count})
+    <Button onClick={() => dispatch({ type: 'resetOverrides' })} className="self-end">
+      Reset {count} changed {count === 1 ? 'hand' : 'hands'}
     </Button>
   )
 }

@@ -143,6 +143,10 @@ export interface DeviceSettings {
   grooveVolume: number
   /** Silences the exercise, so the drummer can play the line over the click and the groove. */
   exerciseMuted: boolean
+  /** Silences the click, so the drummer can keep time against the exercise or the groove alone. */
+  clickMuted: boolean
+  /** Silences the groove layer, as for the click. */
+  grooveMuted: boolean
   /** The exercise open when the app was last used, reopened at launch. */
   lastOpenedId: string | null
   /** The library sidebar's tab: the drummer's own exercises, or the built-in examples. */
@@ -184,6 +188,8 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   exerciseVolume: 1,
   grooveVolume: 1,
   exerciseMuted: false,
+  clickMuted: false,
+  grooveMuted: false,
   lastOpenedId: null,
   libraryTab: 'library',
   collapsedFolderIds: [],
