@@ -79,6 +79,14 @@ describe('stored device settings', () => {
     expect(deviceSettingsFrom({ theme: 'light' }).theme).toBe('light')
   })
 
+  it('load settings stored before the editor could collapse with the editor open', () => {
+    expect(deviceSettingsFrom({ countIn: false, theme: 'dark' }).editorCollapsed).toBe(false)
+  })
+
+  it('keep a stored collapsed editor', () => {
+    expect(deviceSettingsFrom({ editorCollapsed: true }).editorCollapsed).toBe(true)
+  })
+
   it('drop a stored theme the app does not have', () => {
     expect(deviceSettingsFrom({ theme: 'sepia', countIn: false })).toEqual({ ...DEFAULT_DEVICE_SETTINGS, countIn: false })
   })

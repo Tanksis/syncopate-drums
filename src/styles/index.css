@@ -43,6 +43,11 @@
   --color-shade: #1c1917;
 
   --font-sans: system-ui, sans-serif;
+
+  /* The notation's card: its corners (rounded-card), shadow (shadow-card) and border width. A look restyles these. */
+  --radius-card: 0.75rem;
+  --shadow-card: 0 1px 2px color-mix(in srgb, var(--color-shade) 6%, transparent), 0 4px 16px color-mix(in srgb, var(--color-shade) 7%, transparent);
+  --card-border: 1px;
 }
 
 /*

@@ -49,3 +49,10 @@ export const MoreIcon = () => (
     <circle cx="12.5" cy="8" r="0.9" fill="currentColor" />
   </Icon>
 )
+
+/** A chevron pointing down; rotate it for the other ways. */
+export const ChevronIcon = () => (
+  <Icon>
+    <path d="M4 6l4 4 4-4" />
+  </Icon>
+)
