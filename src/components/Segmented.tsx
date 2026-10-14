@@ -77,10 +77,11 @@ export function Segmented<T extends string | number | boolean>({
       aria-disabled={disabled || undefined}
       aria-describedby={describedBy}
       onKeyDown={onKeyDown}
-      className={`flex rounded-pill border border-edge bg-bg aria-disabled:opacity-40 ${small ? 'gap-px p-px text-[10px]/5' : 'gap-0.5 p-0.5'} ${className}`}
+      className={`flex rounded-chip border border-edge bg-bg aria-disabled:opacity-40 ${small ? 'gap-px p-px text-[10px]/5' : 'gap-0.5 p-0.5'} ${className}`}
     >
       {options.map((option, i) => {
         const on = i === chosen
+        // An option's corner is the chip's less the room around it, so it nests inside the group's.
         return (
           <button
             key={String(option.value)}
@@ -97,7 +98,7 @@ export function Segmented<T extends string | number | boolean>({
               e.stopPropagation()
               if (!on) onChange(option.value)
             }}
-            className={`cursor-pointer whitespace-nowrap disabled:cursor-default ${small ? 'rounded-[3px] px-1.5' : `rounded-[calc(var(--radius-pill)-2px)] py-px ${fill ? 'flex-auto px-0.5' : 'px-2'}`} ${
+            className={`cursor-pointer whitespace-nowrap disabled:cursor-default ${small ? 'rounded-[calc(var(--radius-chip)-3px)] px-1.5' : `rounded-[calc(var(--radius-chip)-2px)] py-px ${fill ? 'flex-auto px-0.5' : 'px-2'}`} ${
               on ? 'bg-accent font-semibold text-on-accent' : 'text-mute enabled:hover:bg-card enabled:hover:text-ink'
             }`}
           >

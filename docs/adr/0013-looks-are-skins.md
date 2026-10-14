@@ -10,7 +10,7 @@ The user wants the app's visual style to be a choice. Six of the mocked-up direc
 
 A look is a set of design-token values plus a fixed set of ornaments:
 
-- **May change:** colours, fonts (body, display, numbers), corner radius, border width, and shadows.
+- **May change:** colours, fonts (body, display, numbers), corner radius (small, large, and a chip's: a segmented control and its options, which Warm makes round pills), border width, and shadows.
 - **Ornaments:** fixed hooks, set by tokens:
   - a box-shadow under the header (Catalogue's stripes);
   - an offset shadow on cards (Bold, Riso);
