@@ -9,6 +9,8 @@
 - **Modes:** light and dark.
 - See [spec](../spec.md) and [ADR 0013](../../../docs/adr/0013-looks-are-skins.md).
 
+**As built:** in light the accent is the ink, so the notation's cursor and changed hands are olive (`#5A6B00`) to stand out.
+
 **Blocked by:** 02, 03, 04, 05
 
 **Status:** done

@@ -76,7 +76,7 @@ export function SidebarRail({ name, side, expanded, onOpen }: { name: string; si
         <span aria-hidden className="text-base/none">
           {CHEVRON[side].open}
         </span>
-        <span className="text-[11px] font-bold uppercase tracking-wider [writing-mode:vertical-rl]">{name}</span>
+        <span className="text-[11px] font-bold tracking-wider [font-variant-caps:var(--heading-caps)] [text-transform:var(--heading-case)] [writing-mode:vertical-rl]">{name}</span>
       </button>
     </div>
   )

@@ -95,7 +95,8 @@
 
   /* Ornaments, the fixed hooks a look may set; `0 0 #0000` is no shadow. A box-shadow under the
      header (Catalogue's stripes), a hard offset shadow behind the card (Bold, Riso), and the
-     wordmark's font, style, case, shadow and the colour of its "!" (Score's red pencil). */
+     wordmark's font, style, case, shadow and the colour of its "!" (Score's red pencil), and the
+     section headings' case and caps (Score sets them in small caps rather than capitals). */
   --header-ornament: 0 0 #0000;
   --card-offset: 0 0 #0000;
   --wordmark-font: var(--font-display);
@@ -103,6 +104,8 @@
   --wordmark-case: none;
   --wordmark-shadow: none;
   --wordmark-bang: currentColor;
+  --heading-case: uppercase;
+  --heading-caps: normal;
 }
 
 /*
@@ -187,6 +190,8 @@
   --wordmark-case: none;
   --wordmark-shadow: none;
   --wordmark-bang: currentColor;
+  --heading-case: uppercase;
+  --heading-caps: normal;
 }
 
 :root[data-look='warm'][data-theme='dark'] {
@@ -270,6 +275,8 @@
   --wordmark-case: none;
   --wordmark-shadow: none;
   --wordmark-bang: currentColor;
+  --heading-case: uppercase;
+  --heading-caps: normal;
 }
 
 :root[data-look='bold'][data-theme='dark'] {
@@ -306,10 +313,10 @@
 
 /*
  * Score (ADR 0013), engraved sheet music, light only: paper, black ink, black controls and 1 px
- * black rules, square corners, EB Garamond with small-caps headings and an italic Instrument Serif
- * wordmark. Red pencil marks only what the drummer acts on or wrote: Play, the playhead, the
- * wordmark's "!", and the notation's accent: the cursor and a changed hand. A ghost control's hover
- * is a paper grey, as the rules are ink.
+ * black rules, square corners, EB Garamond with small-caps section headings, and an
+ * italic Instrument Serif wordmark. Red pencil marks only what the drummer acts on or wrote: Play,
+ * the playhead, the wordmark's "!", and the notation's accent: the cursor and a changed hand. A
+ * ghost control's hover is a paper grey, as the rules are ink.
  */
 :root[data-look='score'] {
   --color-accent: #111;
@@ -333,10 +340,10 @@
   --color-loop-ink: #a14a08;
   --color-shade: #111;
   --color-hover: #e9e5da;
-  --color-play-button: #c8102e;
+  --color-play-button: var(--color-play);
   --color-on-play-button: #fff;
-  --color-play-button-edge: #c8102e;
-  --color-notation-accent: #c8102e;
+  --color-play-button-edge: var(--color-play);
+  --color-notation-accent: var(--color-play);
 
   --font-sans: 'EB Garamond', Georgia, serif;
   --font-display: 'EB Garamond', Georgia, serif;
@@ -358,7 +365,9 @@
   --wordmark-style: italic;
   --wordmark-case: none;
   --wordmark-shadow: none;
-  --wordmark-bang: #c8102e;
+  --wordmark-bang: var(--color-play);
+  --heading-case: none;
+  --heading-caps: small-caps;
 }
 
 /*
@@ -406,15 +415,17 @@
   --border-card: 2px;
 
   --card-shadow: 0 0 #0000;
-  --popover-shadow: 4px 4px 0 #ff4fa8;
+  --popover-shadow: 4px 4px 0 var(--color-play-button);
 
   --header-ornament: 0 0 #0000;
-  --card-offset: 6px 6px 0 #ff4fa8;
+  --card-offset: 6px 6px 0 var(--color-play-button);
   --wordmark-font: var(--font-display);
   --wordmark-style: normal;
   --wordmark-case: none;
-  --wordmark-shadow: 2px 2px 0 #ff4fa8;
+  --wordmark-shadow: 2px 2px 0 var(--color-play-button);
   --wordmark-bang: currentColor;
+  --heading-case: uppercase;
+  --heading-caps: normal;
 }
 
 @layer base {

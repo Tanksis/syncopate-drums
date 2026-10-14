@@ -123,7 +123,8 @@ Source: a design session with the user on 2026-10-14. Their choices are given be
 - **Ornaments:** a fixed set of token-driven hooks, not free-form CSS per look:
   - `--header-ornament`: a box-shadow under the header, used for Catalogue's stripes;
   - `--card-offset`: an offset shadow, used for Bold's and Riso's hard shadows;
-  - `--wordmark-*`: the wordmark's font, style, case and shadow.
+  - `--wordmark-*`: the wordmark's font, style, case and shadow, and the colour of its "!";
+  - `--heading-*`: the section headings' case and caps (Score's small caps).
 - **Applying a look:**
   - `followTheme` (`src/app/theme.ts`) also sets `data-look` on `<html>`, and uses `drawnMode` for `data-theme`.
   - The inline script in `index.html` reads a mirrored `syncopate-look` key beside `syncopate-theme`, so the first paint is right.

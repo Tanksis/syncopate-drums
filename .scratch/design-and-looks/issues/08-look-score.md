@@ -9,6 +9,8 @@
 - **Modes:** light only.
 - See [spec](../spec.md) and [ADR 0013](../../../docs/adr/0013-looks-are-skins.md).
 
+**As built:** the red pencil also marks the notation's cursor and changed hands (`--color-notation-accent`), as on the canvas, since the accent there is the ink and they would otherwise not stand out.
+
 **Blocked by:** 02, 03, 04, 05
 
 **Status:** done

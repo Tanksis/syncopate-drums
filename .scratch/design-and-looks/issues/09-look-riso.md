@@ -9,6 +9,8 @@
 - **Modes:** light only.
 - See [spec](../spec.md) and [ADR 0013](../../../docs/adr/0013-looks-are-skins.md).
 
+**As built:** `#FF4FA8` is under 3:1 on the paper, so it can't be text, an edge or the focus ring. It fills Play (navy `#141B6B` on it, 5:1) and the card's and menus' offset shadows, and the accent is a deeper riso pink, `#C4117A`. The playhead is riso teal (`#00838A`), apart from that accent and the yellow loop.
+
 **Blocked by:** 02, 03, 04, 05
 
 **Status:** done
