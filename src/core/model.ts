@@ -159,8 +159,10 @@ export interface DeviceSettings {
   settingsSidebarOpen: boolean
   /** The grid editor is collapsed to its header, giving the notation the room. */
   editorCollapsed: boolean
-  /** Light or dark, or `auto` to follow the device's own setting. */
+  /** Light or dark, or `auto` to follow the device's own setting: the mode (ADR 0013). */
   theme: Theme
+  /** How the app looks: a skin of colours, fonts and ornaments over the one layout (ADR 0013). */
+  look: Look
 }
 
 /** The colour themes: `auto` follows the device's light or dark setting. */
@@ -168,13 +170,35 @@ export type Theme = 'auto' | 'light' | 'dark'
 
 export const THEMES: readonly Theme[] = ['auto', 'light', 'dark']
 
+/** The looks, in the order the Look menu lists them; Studio is the default. */
+export type Look = 'studio' | 'warm' | 'bold' | 'score' | 'riso' | 'catalogue'
+
+export const LOOKS: readonly Look[] = ['studio', 'warm', 'bold', 'score', 'riso', 'catalogue']
+
+/** The looks drawn on paper only, with no dark version: they draw light whatever the mode. */
+export const LIGHT_ONLY_LOOKS: readonly Look[] = ['score', 'riso', 'catalogue']
+
+/** Chooses a look. A light-only look sets the mode to `auto`, which leaving it keeps. */
+export function withLook(settings: DeviceSettings, look: Look): DeviceSettings {
+  return LIGHT_ONLY_LOOKS.includes(look) ? { ...settings, look, theme: 'auto' } : { ...settings, look }
+}
+
+/** The mode a look is drawn in: light for a light-only look, else the mode with `auto` resolved by the device. */
+export function drawnMode(look: Look, theme: Theme, systemDark: boolean): 'light' | 'dark' {
+  if (LIGHT_ONLY_LOOKS.includes(look)) return 'light'
+  return theme === 'auto' ? (systemDark ? 'dark' : 'light') : theme
+}
+
 /**
  * Device settings as stored, over the defaults for any added since. A stored setting the app no
- * longer has (such as `vimKeys`, ADR 0009), or a theme it doesn't have, is dropped.
+ * longer has (such as `vimKeys`, ADR 0009), or a theme or look it doesn't have, is dropped.
  */
 export function deviceSettingsFrom(stored: Record<string, unknown> | undefined): DeviceSettings {
   const known = Object.entries(stored ?? {}).filter(
-    ([key, value]) => key in DEFAULT_DEVICE_SETTINGS && (key !== 'theme' || THEMES.includes(value as Theme)),
+    ([key, value]) =>
+      key in DEFAULT_DEVICE_SETTINGS &&
+      (key !== 'theme' || THEMES.includes(value as Theme)) &&
+      (key !== 'look' || LOOKS.includes(value as Look)),
   )
   return { ...DEFAULT_DEVICE_SETTINGS, ...Object.fromEntries(known) }
 }
@@ -197,6 +221,7 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   settingsSidebarOpen: true,
   editorCollapsed: false,
   theme: 'auto',
+  look: 'studio',
 }
 
 /** The device settings that are a playback layer's volume. */

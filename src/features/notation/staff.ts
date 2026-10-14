@@ -11,14 +11,17 @@ import { Beam, Dot, Formatter, Fraction, GhostNote, Renderer, Stave, StaveNote, 
 import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, NoteSticking, PlayPosition, StaffEvent } from '@/core'
 import { NOTATION_LAYOUT, TICKS_PER_BEAT, inLoopRange, minBarWidthFor, notationFit, staffParts, sticking, swingOn } from '@/core'
 
-/** A colour design token from styles/index.css, read when the notation draws so it follows the theme. */
-const token = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(`--color-${name}`).trim()
+/** A design token from styles/index.css, read when the notation draws so it follows the look and mode. */
+const token = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(`--${name}`).trim()
 /** Height of the loop band drawn behind the bar numbers of the looped bars. */
 const LOOP_BAND_HEIGHT = 12
 
 const { clefWidth: CLEF_WIDTH, margin: MARGIN, staveTop: STAVE_TOP } = NOTATION_LAYOUT
 
-/** The SVG is drawn in Bravura and Academico, which VexFlow loads as web fonts. */
+/**
+ * The SVG is drawn in Bravura and Academico, which VexFlow loads as web fonts. The sticking letters
+ * and bar numbers are printed in the look's numbers font, read from its token.
+ */
 export const notationFontsReady: Promise<unknown> = Promise.all([
   document.fonts.load('30px Bravura'),
   document.fonts.load('12px Academico'),
@@ -197,7 +200,14 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   renderer.resize(area.width, Math.ceil((lines * height + STAVE_TOP) * scale))
   const ctx = renderer.getContext()
   ctx.scale(scale, scale)
-  const colour = { ink: token('ink'), accent: token('accent'), currentBar: token('accent-tint'), loopInk: token('loop-ink'), loop: token('loop') }
+  const colour = {
+    ink: token('color-ink'),
+    accent: token('color-accent'),
+    currentBar: token('color-accent-tint'),
+    loopInk: token('color-loop-ink'),
+    loop: token('color-loop'),
+  }
+  const font = token('font-numbers')
   const stickings = new Map(sticking(exercise).map((n) => [n.noteId, n]))
   /** The last drawn note of each drum, with its line, to tie the next one to. */
   const lastOf = new Map<string, TieEnd>()
@@ -235,7 +245,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
       const top = stave.getYForLine(0)
       Object.assign(firstStaff, { left: MARGIN * scale, top: top * scale, width: (x + w - MARGIN) * scale, height: (stave.getYForLine(4) - top) * scale })
     }
-    drawBarNumber(stave, b, exercise.practice.loopRange, barNumberLine, colour.loopInk)
+    drawBarNumber(stave, b, exercise.practice.loopRange, barNumberLine, colour.loopInk, font)
 
     const drawings = drawnLimbs
       .filter((limb) => parts[b][limb].length)
@@ -266,7 +276,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
           if (n.tied && previous) ties.push(...tie(previous, { note, index, line }))
           lastOf.set(n.drum, { note, index, line })
           const noteSticking = n.noteId && !n.tied ? stickings.get(n.noteId) : undefined
-          if (noteSticking) drawSticking(stave, note, noteSticking, handRow, colour.accent)
+          if (noteSticking) drawSticking(stave, note, noteSticking, handRow, colour.accent, font)
         }
       }
     }
@@ -305,7 +315,7 @@ function tie(from: TieEnd, to: TieEnd): StaveTie[] {
  * click can loop it, on the given text line above the stave. Bars in a set loop range are numbered
  * in bold, in the loop colour.
  */
-function drawBarNumber(stave: Stave, bar: number, loopRange: LoopRange | null, line: number, loopInk: string) {
+function drawBarNumber(stave: Stave, bar: number, loopRange: LoopRange | null, line: number, loopInk: string, font: string) {
   const ctx = stave.checkContext()
   const looped = inLoopRange(loopRange, bar)
   const group: SVGGElement = ctx.openGroup('bar-number')
@@ -315,7 +325,7 @@ function drawBarNumber(stave: Stave, bar: number, loopRange: LoopRange | null, l
   title.textContent = `Loop bar ${bar + 1} (Shift+click to extend the loop)`
   group.append(title)
   ctx.save()
-  ctx.setFont({ ...stave.fontInfo, weight: looped ? 'bold' : stave.fontInfo.weight })
+  ctx.setFont({ ...stave.fontInfo, family: font, weight: looped ? 'bold' : stave.fontInfo.weight })
   if (looped) ctx.setFillStyle(loopInk)
   const text = String(bar + 1)
   const width = ctx.measureText(text).width
@@ -334,7 +344,14 @@ function drawBarNumber(stave: Stave, bar: number, loopRange: LoopRange | null, l
  * with the note's id so a click can flip it, and an override is printed in the accent colour, with
  * a hover hint. A kick's K has nothing to flip.
  */
-function drawSticking(stave: Stave, note: StaveNote, { noteId, shown: label, override, row }: NoteSticking, line: number, accent: string) {
+function drawSticking(
+  stave: Stave,
+  note: StaveNote,
+  { noteId, shown: label, override, row }: NoteSticking,
+  line: number,
+  accent: string,
+  font: string,
+) {
   if (!label) return
   const ctx = stave.checkContext()
   const flippable = row === 'snare'
@@ -349,7 +366,7 @@ function drawSticking(stave: Stave, note: StaveNote, { noteId, shown: label, ove
     group.append(title)
   }
   ctx.save()
-  ctx.setFont('Academico', 12, 'bold')
+  ctx.setFont(font, 12, 'bold')
   if (override) ctx.setFillStyle(accent)
   const width = ctx.measureText(label).width
   const x = noteCentre(note) - width / 2

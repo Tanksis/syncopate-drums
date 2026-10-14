@@ -36,8 +36,10 @@ export function App() {
       </SidebarSlot>
 
       <main className="flex min-h-0 min-w-0 flex-col">
-        <header ref={headerRef} className="flex items-center gap-3 border-b border-line bg-card px-4 py-2">
-          <h1 className="m-0 shrink-0 text-base font-bold whitespace-nowrap">Syncopate!</h1>
+        <header ref={headerRef} className="relative flex items-center gap-3 border-b border-line bg-card px-4 py-2 shadow-(--header-ornament)">
+          <h1 className="m-0 shrink-0 font-(family-name:--wordmark-font) text-base font-bold whitespace-nowrap [font-style:var(--wordmark-style)] [text-shadow:var(--wordmark-shadow)] [text-transform:var(--wordmark-case)]">
+            Syncopate!
+          </h1>
           {/* The name takes the room the controls leave, and always shows about 12 characters. */}
           <div className="flex min-w-[12ch] flex-1">
             <ExerciseName />
@@ -49,7 +51,7 @@ export function App() {
         <ExampleNotice />
         {/* The music on a card, which takes the height the editor leaves, all of it when that's collapsed. */}
         <div className="flex min-h-0 flex-1 flex-col p-3">
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-card border-(length:--card-border) border-line bg-paper shadow-card">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-card border-(length:--border-card) border-line bg-paper shadow-card">
             <NotationView corner={<StaffPlayButton />} />
           </div>
         </div>
@@ -82,7 +84,7 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
   const editing = editOpen && !example
   return (
     <div className="flex h-dvh flex-col">
-      <header className="flex shrink-0 items-center gap-1 border-b border-line bg-card px-1 pt-[env(safe-area-inset-top)]">
+      <header className="relative flex shrink-0 items-center gap-1 border-b border-line bg-card px-1 pt-[env(safe-area-inset-top)] shadow-(--header-ornament)">
         <PhoneHeaderButton label="Open exercises" expanded={library.state === 'overlay'} onClick={library.onOpen}>
           ☰
         </PhoneHeaderButton>
