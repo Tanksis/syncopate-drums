@@ -6,14 +6,20 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Syncopate!</title>
     <script>
-      // Applies the theme before the first paint, so a dark launch shows no light frame. The app
-      // mirrors its theme setting to this key (src/app/theme.ts); without it, follow the device.
+      // Applies the look and mode before the first paint, so a launch shows no frame of the wrong
+      // look, or a light frame in dark. The app mirrors its look and mode settings to these keys
+      // (src/app/theme.ts); without them, Studio, following the device. A light-only look draws light
+      // whatever the mode (drawnMode in src/core/model.ts; keep the lists in step with LOOKS there).
       ;(function () {
-        var theme
+        var look, theme
         try {
+          look = localStorage.getItem('syncopate-look')
           theme = localStorage.getItem('syncopate-theme')
         } catch (e) {}
+        if (['studio', 'warm', 'bold', 'score', 'riso', 'catalogue'].indexOf(look) < 0) look = 'studio'
+        if (['score', 'riso', 'catalogue'].indexOf(look) >= 0) theme = 'light'
         if (theme !== 'light' && theme !== 'dark') theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        document.documentElement.dataset.look = look
         document.documentElement.dataset.theme = theme
         document.documentElement.style.colorScheme = theme
       })()

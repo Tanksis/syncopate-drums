@@ -26,7 +26,8 @@ const STEP: Record<string, (i: number, n: number) => number> = {
  * and the arrow keys, Home and End move the choice, as they do in a radio group. A mouse click keeps
  * focus where it was (`keepFocus`). `fill` stretches the options across the width; a `small` one sits
  * in a beat card; `tabbable={false}` leaves the group out of the Tab order where the editor's keys
- * already reach it.
+ * already reach it. A `disabled` group shows its choice dimmed and takes no focus; `describedBy` names
+ * the element that says why.
  */
 export function Segmented<T extends string | number | boolean>({
   label,
@@ -36,6 +37,8 @@ export function Segmented<T extends string | number | boolean>({
   fill = false,
   small = false,
   tabbable = true,
+  disabled = false,
+  describedBy,
   className = '',
 }: {
   label: string
@@ -45,6 +48,8 @@ export function Segmented<T extends string | number | boolean>({
   fill?: boolean
   small?: boolean
   tabbable?: boolean
+  disabled?: boolean
+  describedBy?: string
   className?: string
 }) {
   const group = useRef<HTMLDivElement>(null)
@@ -69,8 +74,10 @@ export function Segmented<T extends string | number | boolean>({
       ref={group}
       role="radiogroup"
       aria-label={label}
+      aria-disabled={disabled || undefined}
+      aria-describedby={describedBy}
       onKeyDown={onKeyDown}
-      className={`flex rounded-md border border-edge bg-bg ${small ? 'gap-px p-px text-[10px]/5' : 'gap-0.5 p-0.5'} ${className}`}
+      className={`flex rounded-md border border-edge bg-bg aria-disabled:opacity-40 ${small ? 'gap-px p-px text-[10px]/5' : 'gap-0.5 p-0.5'} ${className}`}
     >
       {options.map((option, i) => {
         const on = i === chosen
@@ -82,6 +89,7 @@ export function Segmented<T extends string | number | boolean>({
             aria-checked={on}
             aria-label={option.ariaLabel}
             title={option.title}
+            disabled={disabled}
             tabIndex={tabbable && i === stop ? 0 : -1}
             onMouseDown={keepFocus}
             onClick={(e) => {
@@ -89,8 +97,8 @@ export function Segmented<T extends string | number | boolean>({
               e.stopPropagation()
               if (!on) onChange(option.value)
             }}
-            className={`cursor-pointer whitespace-nowrap ${small ? 'rounded-[3px] px-1.5' : `rounded py-px ${fill ? 'flex-auto px-0.5' : 'px-2'}`} ${
-              on ? 'bg-accent font-semibold text-on-accent' : 'text-mute hover:bg-card hover:text-ink'
+            className={`cursor-pointer whitespace-nowrap disabled:cursor-default ${small ? 'rounded-[3px] px-1.5' : `rounded py-px ${fill ? 'flex-auto px-0.5' : 'px-2'}`} ${
+              on ? 'bg-accent font-semibold text-on-accent' : 'text-mute enabled:hover:bg-card enabled:hover:text-ink'
             }`}
           >
             {option.label}

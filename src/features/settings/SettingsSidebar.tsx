@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react'
+import { useId } from 'react'
+import { LOOK_STYLES, lookName } from '@/app/looks'
 import { useAppStore } from '@/app/store'
 import { Button } from '@/components/Button'
 import { PanelHeading } from '@/components/PanelHeading'
@@ -11,7 +13,20 @@ import { ValueField } from '@/components/ValueField'
 import { LoopChip } from '@/features/playback/LoopChip'
 import { CountInToggle } from '@/features/playback/TransportControls'
 import type { ExerciseSettings, HihatFoot, Layer, Theme, VolumeSetting } from '@/core'
-import { DEFAULT_DEVICE_SETTINGS, GROOVE_PRESETS, HIHAT_FOOT_SETTINGS, MAX_SWING, MAX_VOLUME, MIN_SWING, THEMES, TRIPLET_SWING, groovePreset, overrideCount } from '@/core'
+import {
+  DEFAULT_DEVICE_SETTINGS,
+  GROOVE_PRESETS,
+  HIHAT_FOOT_SETTINGS,
+  LIGHT_ONLY_LOOKS,
+  MAX_SWING,
+  MAX_VOLUME,
+  MIN_SWING,
+  THEMES,
+  TRIPLET_SWING,
+  groovePreset,
+  overrideCount,
+  withLook,
+} from '@/core'
 
 /** `playbackGroup` adds the count-in and loop chip, for when the header has no room for them. */
 export function SettingsSidebar({
@@ -53,6 +68,7 @@ export function SettingsSidebar({
         <MixRow layer="groove" large={fullScreen} />
       </SettingGroup>
       <SettingGroup title="Appearance">
+        <LookChoice large={fullScreen} />
         <ModeChoice />
       </SettingGroup>
     </aside>
@@ -219,21 +235,54 @@ function MixRow({ layer, large }: { layer: Layer; large: boolean }) {
   )
 }
 
-const MODE_NAMES: Record<Theme, string> = { auto: 'Auto', light: 'Light', dark: 'Dark' }
-
-/** The mode, light or dark on this device, or Auto to follow the device's own setting. */
-function ModeChoice() {
-  const theme = useAppStore((s) => s.device.theme)
+/** How the app looks on this device (ADR 0013); a light-only look sets the mode to Auto. */
+function LookChoice({ large }: { large: boolean }) {
+  const device = useAppStore((s) => s.device)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   return (
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-mute">Mode</span>
-      <Segmented
-        label="Mode"
-        options={THEMES.map((option) => ({ value: option, label: MODE_NAMES[option] }))}
-        value={theme}
-        onChange={(option) => setDeviceSettings({ theme: option })}
+    <div className="flex items-center gap-2">
+      <span className="w-20 shrink-0 text-mute">Look</span>
+      <SelectMenu
+        label="Look"
+        large={large}
+        options={LOOK_STYLES.map((style) => ({ value: style.look, label: lookName(style.look) }))}
+        value={device.look}
+        onChange={(look) => setDeviceSettings(withLook(device, look))}
       />
+    </div>
+  )
+}
+
+const MODE_NAMES: Record<Theme, string> = { auto: 'Auto', light: 'Light', dark: 'Dark' }
+
+/**
+ * The mode, light or dark on this device, or Auto to follow the device's own setting. A light-only
+ * look draws light whatever it is, so the mode is disabled while one is chosen, saying why.
+ */
+function ModeChoice() {
+  const theme = useAppStore((s) => s.device.theme)
+  const look = useAppStore((s) => s.device.look)
+  const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
+  const lightOnly = LIGHT_ONLY_LOOKS.includes(look)
+  const hint = useId()
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-mute">Mode</span>
+        <Segmented
+          label="Mode"
+          options={THEMES.map((option) => ({ value: option, label: MODE_NAMES[option] }))}
+          value={theme}
+          onChange={(option) => setDeviceSettings({ theme: option })}
+          disabled={lightOnly}
+          describedBy={lightOnly ? hint : undefined}
+        />
+      </div>
+      {lightOnly && (
+        <p id={hint} className="m-0 self-end text-xs text-mute">
+          {lookName(look)} is light only
+        </p>
+      )}
     </div>
   )
 }

@@ -162,7 +162,7 @@ export function Menu({
           aria-label={label}
           onKeyDown={onMenuKeyDown}
           style={align === 'left' ? { left: anchor.left } : { right: anchor.right }}
-          className="fixed z-30 flex min-w-44 flex-col rounded-lg border border-line bg-card p-1 text-sm shadow-lg shadow-shade/10"
+          className="fixed z-30 flex min-w-44 flex-col rounded-lg border border-line bg-card p-1 text-sm shadow-popover"
         >
           {items.map((item) => (
             <button

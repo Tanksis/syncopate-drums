@@ -18,13 +18,16 @@ export function NotationView({ corner }: { corner?: ReactNode }) {
   const dispatch = useAppStore((s) => s.dispatch)
   const loopBar = useAppStore((s) => s.loopBar)
   const playing = useAppStore((s) => s.playing)
-  // The notation reads the colour tokens as it draws, so it redraws when the theme changes.
+  // The notation reads the look's tokens as it draws, so it redraws when the look or mode changes.
   const theme = useResolvedTheme()
+  const look = useAppStore((s) => s.device.look)
   const scrollerRef = useRef<HTMLElement>(null)
   const staffRef = useRef<HTMLDivElement>(null)
   /** The staff's width and the notation view's height inside its padding. */
   const [area, setArea] = useState<NotationArea>({ width: 0, height: 0 })
   const [fontsReady, setFontsReady] = useState(false)
+  /** Counts the web fonts loaded, so the notation is measured again in a look's font once it arrives. */
+  const [fontsLoaded, setFontsLoaded] = useState(0)
   const drawingRef = useRef<Drawing>(undefined)
   /** Where the empty-exercise hint goes: over the first line's staff, once it's drawn. */
   const [hintBox, setHintBox] = useState<Drawing['firstStaff']>()
@@ -32,8 +35,11 @@ export function NotationView({ corner }: { corner?: ReactNode }) {
   useEffect(() => {
     let live = true
     notationFontsReady.then(() => live && setFontsReady(true))
+    const loaded = () => setFontsLoaded((n) => n + 1)
+    document.fonts.addEventListener('loadingdone', loaded)
     return () => {
       live = false
+      document.fonts.removeEventListener('loadingdone', loaded)
     }
   }, [])
 
@@ -64,7 +70,7 @@ export function NotationView({ corner }: { corner?: ReactNode }) {
     )
     // Keep the cursor's line in view as typing runs past the bottom.
     if (!playing) scrollLineIntoView(scrollerRef.current!, staffRef.current!, drawing.line(cursor.bar))
-  }, [exercise, cursor, area, fontsReady, playing, theme])
+  }, [exercise, cursor, area, fontsReady, fontsLoaded, playing, theme, look])
 
   useEffect(() => {
     if (playing) return followPlayback(scrollerRef.current!, staffRef.current!, () => drawingRef.current)

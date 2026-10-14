@@ -42,16 +42,56 @@
   /* Shadows and a dialog's backdrop: dark in both themes. */
   --color-shade: #1c1917;
 
-  --font-sans: system-ui, sans-serif;
+  /*
+   * The rest of a look (ADR 0013): its fonts, corners, border weights, shadows and ornaments. These
+   * are Studio's values, the defaults; a look sets every one of them under :root[data-look='…'],
+   * and its dark values under :root[data-look='…'][data-theme='dark']. A look never changes the
+   * layout, sizes or spacing. Each font falls back to the system's until the look's has loaded.
+   */
+  /* The body text (font-sans), headings and the wordmark (font-display), and numbers: the BPM, the
+     beat counts, and the notation's sticking letters and bar numbers (font-numbers, also font-mono). */
+  --font-sans: 'Geist', system-ui, sans-serif;
+  --font-display: 'Geist', system-ui, sans-serif;
+  --font-numbers: 'Geist Mono', ui-monospace, monospace;
+  --font-mono: var(--font-numbers);
 
-  /* The notation's card: its corners (rounded-card), shadow (shadow-card) and border width. A look restyles these. */
-  --radius-card: 0.75rem;
-  --shadow-card: 0 1px 2px color-mix(in srgb, var(--color-shade) 6%, transparent), 0 4px 16px color-mix(in srgb, var(--color-shade) 7%, transparent);
-  --card-border: 1px;
+  /* Corners: small for controls, large for cards, popovers and dialogs. Tailwind's scale reads them,
+     so rounded-md is small and rounded-lg, -xl and -2xl are large; rounded-full stays a pill. */
+  --radius-small: 0.375rem;
+  --radius-large: 0.75rem;
+  --radius-sm: min(var(--radius-small), 0.25rem);
+  --radius-md: var(--radius-small);
+  --radius-lg: var(--radius-large);
+  --radius-xl: var(--radius-large);
+  --radius-2xl: var(--radius-large);
+  --radius-card: var(--radius-large);
+
+  /* Border weights: every plain `border` (a control's or a divider) and the notation's card. */
+  --border-control: 1px;
+  --border-card: 1px;
+  --default-border-width: var(--border-control);
+
+  /* Shadows: the notation's card (shadow-card, under its offset ornament) and menus and dialogs
+     (shadow-popover). Tailwind copies a shadow-* value into its utility, so a look sets these two
+     and the utilities refer to them. */
+  --card-shadow: 0 1px 2px color-mix(in srgb, var(--color-shade) 6%, transparent), 0 4px 16px color-mix(in srgb, var(--color-shade) 7%, transparent);
+  --popover-shadow: 0 10px 15px -3px color-mix(in srgb, var(--color-shade) 10%, transparent), 0 4px 6px -4px color-mix(in srgb, var(--color-shade) 10%, transparent);
+  --shadow-card: var(--card-offset), var(--card-shadow);
+  --shadow-popover: var(--popover-shadow);
+
+  /* Ornaments, the fixed hooks a look may set; `0 0 #0000` is no shadow. A box-shadow under the
+     header (Catalogue's stripes), a hard offset shadow behind the card (Bold, Riso), and the
+     wordmark's font, style, case and shadow. */
+  --header-ornament: 0 0 #0000;
+  --card-offset: 0 0 #0000;
+  --wordmark-font: var(--font-display);
+  --wordmark-style: normal;
+  --wordmark-case: none;
+  --wordmark-shadow: none;
 }
 
 /*
- * The dark theme: neutral greys from charcoal to near-black on the notation's paper, with a blue
+ * Studio's dark mode: neutral greys from charcoal to near-black on the notation's paper, with a blue
  * accent, so a chosen option and Play keep their colour beside the playhead, kick and loop. <html data-theme="dark"> turns it
  * on; the inline script in index.html sets it before the first paint, and followTheme
  * (src/app/theme.ts) keeps it in step.
