@@ -10,7 +10,7 @@ import { SpeakerIcon, SpeakerMutedIcon } from '@/components/icons'
 import { ValueField } from '@/components/ValueField'
 import { LoopChip } from '@/features/playback/LoopChip'
 import { CountInToggle } from '@/features/playback/TransportControls'
-import type { DeviceSettings, ExerciseSettings, HihatFoot, Theme, VolumeSetting } from '@/core'
+import type { ExerciseSettings, HihatFoot, Layer, Theme, VolumeSetting } from '@/core'
 import { DEFAULT_DEVICE_SETTINGS, GROOVE_PRESETS, HIHAT_FOOT_SETTINGS, MAX_SWING, MAX_VOLUME, MIN_SWING, THEMES, TRIPLET_SWING, groovePreset, overrideCount } from '@/core'
 
 /** `playbackGroup` adds the count-in and loop chip, for when the header has no room for them. */
@@ -48,12 +48,12 @@ export function SettingsSidebar({
         <ResetOverrides />
       </SettingGroup>
       <SettingGroup title="Mix">
-        <Layer label="Click" setting="clickVolume" mute="clickMuted" />
-        <Layer label="Exercise" setting="exerciseVolume" mute="exerciseMuted" />
-        <Layer label="Groove" setting="grooveVolume" mute="grooveMuted" />
+        <MixRow layer="click" large={fullScreen} />
+        <MixRow layer="exercise" large={fullScreen} />
+        <MixRow layer="groove" large={fullScreen} />
       </SettingGroup>
       <SettingGroup title="Appearance">
-        <ThemeChoice />
+        <ModeChoice />
       </SettingGroup>
     </aside>
   )
@@ -167,20 +167,19 @@ function Swing() {
   )
 }
 
-/** The device settings that mute a playback layer. */
-type MuteSetting = keyof Pick<DeviceSettings, 'clickMuted' | 'exerciseMuted' | 'grooveMuted'>
-
 /**
  * A playback layer in the mix: its volume on this device, 100% being its usual level, and a button
  * that mutes it, so the drummer can practise against any combination; both apply while playing.
  */
-function Layer({ label, setting, mute }: { label: string; setting: VolumeSetting; mute: MuteSetting }) {
+function MixRow({ layer, large }: { layer: Layer; large: boolean }) {
+  const setting: VolumeSetting = `${layer}Volume`
+  const mute = `${layer}Muted` as const
+  const label = layer[0].toUpperCase() + layer.slice(1)
   const volume = useAppStore((s) => s.device[setting])
   const muted = useAppStore((s) => s.device[mute])
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   const setVolume = (value: number, dragging = false) =>
     setDeviceSettings({ [setting]: value }, { dragging })
-  const name = label.toLowerCase()
   return (
     <div className="flex items-center gap-2">
       <span className="w-14 text-mute">{label}</span>
@@ -207,10 +206,10 @@ function Layer({ label, setting, mute }: { label: string; setting: VolumeSetting
       <Button
         variant="ghost"
         icon
-        size="md"
-        aria-label={`Mute the ${name}`}
+        size={large ? 'lg' : 'md'}
+        aria-label={`Mute the ${layer}`}
         aria-pressed={muted}
-        title={muted ? `Unmute the ${name}` : `Mute the ${name}`}
+        title={muted ? `Unmute the ${layer}` : `Mute the ${layer}`}
         onClick={() => setDeviceSettings({ [mute]: !muted })}
         className="-mr-1 aria-pressed:text-danger!"
       >
@@ -220,10 +219,10 @@ function Layer({ label, setting, mute }: { label: string; setting: VolumeSetting
   )
 }
 
-const THEME_NAMES: Record<Theme, string> = { auto: 'Auto', light: 'Light', dark: 'Dark' }
+const MODE_NAMES: Record<Theme, string> = { auto: 'Auto', light: 'Light', dark: 'Dark' }
 
 /** The mode, light or dark on this device, or Auto to follow the device's own setting. */
-function ThemeChoice() {
+function ModeChoice() {
   const theme = useAppStore((s) => s.device.theme)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   return (
@@ -231,7 +230,7 @@ function ThemeChoice() {
       <span className="text-mute">Mode</span>
       <Segmented
         label="Mode"
-        options={THEMES.map((option) => ({ value: option, label: THEME_NAMES[option] }))}
+        options={THEMES.map((option) => ({ value: option, label: MODE_NAMES[option] }))}
         value={theme}
         onChange={(option) => setDeviceSettings({ theme: option })}
       />

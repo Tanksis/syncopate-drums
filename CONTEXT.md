@@ -137,7 +137,7 @@ _Avoid_: Overlay, accompaniment, backing
 A named, predefined groove layer the user picks from (e.g. "Jazz ride + hi-hat 2 & 4").
 
 **Hi-hat foot**:
-A practice setting that plays the hi-hat pedal as an ostinato in every bar (on 1, quarters, 2 & 4 or the &s), alongside any groove preset and replacing the preset's own hi-hat foot (ADR 0010).
+A practice setting that plays the hi-hat pedal as an ostinato in every bar (on 1, quarters, 2 & 4 or off-beats, the &s), alongside any groove preset and replacing the preset's own hi-hat foot (ADR 0010).
 _Avoid_: Hi-hat row, chick
 
 **Swing feel**:
