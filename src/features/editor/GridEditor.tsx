@@ -1,6 +1,9 @@
 import { useCallback, useState } from 'react'
+import { useAppStore } from '@/app/store'
 import { useCoarsePointer } from '@/app/useMediaQuery'
 import { Button } from '@/components/Button'
+import { ChevronIcon } from '@/components/icons'
+import { isExample } from '@/core'
 import { BarActions } from './BarActions'
 import { BarTabs } from './BarTabs'
 import { BeatStrip } from './BeatStrip'
@@ -10,14 +13,21 @@ import { useEditorKeys } from './useEditorKeys'
 /**
  * The grid editor: the bar tabs, undo, redo and the bar menu over the cursor bar's beat cards. Given
  * `onDone`, it's the phone layout's sheet: the lower part of the screen, with Done in its header,
- * which stays put while the beat cards, two to a row, scroll under it.
+ * which stays put while the beat cards, two to a row, scroll under it. Otherwise it's docked under the
+ * notation, and its chevron collapses it to its header row.
  */
 export function GridEditor({ onDone }: { onDone?: () => void }) {
+  const [collapsed, toggleCollapsed] = useEditorCollapsed()
   const [helpOpen, setHelpOpen] = useState(false)
-  const toggleHelp = useCallback(() => setHelpOpen((open) => !open), [])
+  // A collapsed editor has no room for the cheat sheet, so ? leaves it be.
+  const helpHidden = collapsed && !onDone
+  const toggleHelp = useCallback(() => {
+    if (!helpHidden) setHelpOpen((open) => !open)
+  }, [helpHidden])
   useEditorKeys(toggleHelp)
   // A touch screen shows no keyboard hints.
   const touch = useCoarsePointer()
+  const chevronLabel = collapsed ? 'Expand the editor' : 'Collapse the editor'
   if (onDone)
     return (
       <section
@@ -41,19 +51,66 @@ export function GridEditor({ onDone }: { onDone?: () => void }) {
   return (
     <section
       aria-label="Grid editor"
-      className="flex max-h-[52dvh] min-h-[30dvh] flex-col gap-3 overflow-auto border-t border-line bg-panel px-4 py-2"
+      className={`flex flex-col gap-3 border-t border-line bg-panel px-4 py-2 ${collapsed ? 'shrink-0' : 'max-h-[52dvh] min-h-[30dvh] overflow-auto'}`}
     >
       <div className="flex flex-wrap items-center gap-3">
         <BarTabs />
         <BarActions />
-        {!touch && (
-          <Button aria-pressed={helpOpen} title="Keys (?)" onClick={toggleHelp} className="ml-auto text-xs aria-pressed:border-accent aria-pressed:text-accent">
-            ? keys
+        <div className="ml-auto flex items-center gap-2">
+          {!touch && !collapsed && (
+            <Button aria-pressed={helpOpen} title="Keys (?)" onClick={toggleHelp} className="text-xs aria-pressed:border-accent aria-pressed:text-accent">
+              ? keys
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="md"
+            icon
+            aria-label={chevronLabel}
+            title={chevronLabel}
+            aria-expanded={!collapsed}
+            onClick={toggleCollapsed}
+            // An open editor is the usual state, so the chevron stays quiet rather than looking pressed.
+            className="aria-expanded:not-hover:bg-transparent! aria-expanded:not-hover:text-mute!"
+          >
+            <span className={`flex transition-transform ${collapsed ? 'rotate-180' : ''}`}>
+              <ChevronIcon />
+            </span>
           </Button>
-        )}
+        </div>
       </div>
-      {helpOpen && !touch && <CheatSheet onClose={toggleHelp} />}
-      <BeatStrip />
+      {!collapsed && (
+        <>
+          {helpOpen && !touch && <CheatSheet onClose={toggleHelp} />}
+          <BeatStrip />
+        </>
+      )}
     </section>
   )
+}
+
+/**
+ * Whether the docked editor is collapsed, and its toggle. That's the device setting, except that an
+ * example opens collapsed, so the music shows first; expanding it there isn't saved, and lasts
+ * until another exercise is opened.
+ */
+function useEditorCollapsed(): [boolean, () => void] {
+  const id = useAppStore((s) => s.editor.exercise.id)
+  const savedCollapsed = useAppStore((s) => s.device.editorCollapsed)
+  const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
+  /** The open example has been expanded since it was opened. */
+  const [exampleExpanded, setExampleExpanded] = useState(false)
+  // Opening another exercise forgets it, during the render, so a reopened example never shows expanded for a frame.
+  const [openedId, setOpenedId] = useState(id)
+  if (openedId !== id) {
+    setOpenedId(id)
+    setExampleExpanded(false)
+  }
+  const example = isExample(id)
+  const collapsed = example ? !exampleExpanded || openedId !== id : savedCollapsed
+  const toggle = () => {
+    if (example) setExampleExpanded(collapsed)
+    else setDeviceSettings({ editorCollapsed: !collapsed })
+  }
+  return [collapsed, toggle]
 }

@@ -8,12 +8,12 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Core: `editorCollapsed` device setting (default off), with a test that old settings load with it off
-- [ ] The card uses tokens for border, radius and shadow, so looks restyle it later
-- [ ] The notation's fit (`notationFit`) measures the card's inner width
-- [ ] Collapsing gives the notation the freed height
-- [ ] Opening an example shows the editor collapsed without changing the saved setting
-- [ ] Phone layout unchanged
-- [ ] Checked in the browser at 1280 px and 760 px, light and dark
+- [x] Core: `editorCollapsed` device setting (default off), with a test that old settings load with it off
+- [x] The card uses tokens for border, radius and shadow, so looks restyle it later
+- [x] The notation's fit (`notationFit`) measures the card's inner width
+- [x] Collapsing gives the notation the freed height
+- [x] Opening an example shows the editor collapsed without changing the saved setting
+- [x] Phone layout unchanged
+- [x] Checked in the browser at 1280 px and 760 px, light and dark

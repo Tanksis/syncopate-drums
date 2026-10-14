@@ -1,4 +1,4 @@
-// Layout A, "Workstation": library sidebar | header, notation view, editor panel | settings sidebar.
+// Layout A, "Workstation": library sidebar | header, notation card, editor panel | settings sidebar.
 // Either sidebar collapses to a rail; below 1000 px both are rails that open over the notation.
 // Below 640 px, the phone layout: a column of header, notation, the editor sheet when it's open,
 // and transport bar, with the sidebars opening over the whole screen.
@@ -45,7 +45,12 @@ export function App() {
           <TransportControls room={room} />
         </header>
         <ExampleNotice />
-        <NotationView corner={<StaffPlayButton />} />
+        {/* The music on a card, which takes the height the editor leaves, all of it when that's collapsed. */}
+        <div className="flex min-h-0 flex-1 flex-col p-3">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-card border-(length:--card-border) border-line bg-paper shadow-card">
+            <NotationView corner={<StaffPlayButton />} />
+          </div>
+        </div>
         <GridEditor />
       </main>
 
