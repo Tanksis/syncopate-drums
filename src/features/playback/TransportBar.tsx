@@ -7,7 +7,7 @@ import { BpmInput } from './TransportControls'
 import { togglePause } from './transport'
 import { usePlaybackKeys } from './usePlaybackKeys'
 
-/** A round button, big enough for a thumb, that a long press doesn't select or call out. */
+/** Play: a round button, big enough for a thumb, that a long press doesn't select or call out. */
 const roundButtonClass =
   'flex shrink-0 cursor-pointer touch-manipulation select-none items-center justify-center rounded-full border font-semibold [-webkit-touch-callout:none]'
 

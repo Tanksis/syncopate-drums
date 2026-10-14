@@ -3,7 +3,7 @@ import { useAppStore } from '@/app/store'
 import { Button } from '@/components/Button'
 import { Menu } from '@/components/Menu'
 import { PatternDialog } from '@/components/PatternDialog'
-import { isExample } from '@/core'
+import { barRange, isExample } from '@/core'
 
 /**
  * Undo, redo and the bar menu, for editing without the keyboard. The menu's items are the bar keys'
@@ -66,9 +66,6 @@ export function BarActions({ large = false }: { large?: boolean }) {
     </div>
   )
 }
-
-/** "bar 2", or "bars 2–4". */
-const barRange = (first: number, last: number) => (first === last ? `bar ${first + 1}` : `bars ${first + 1}–${last + 1}`)
 
 /** ↶ or ↷, greyed out when there's nothing to take back or redo. */
 function HistoryButton({

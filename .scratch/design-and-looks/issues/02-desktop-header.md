@@ -11,11 +11,11 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] − and + step the BPM as the phone's do (hold to repeat), and the slider and the field stay in step
-- [ ] The loop chip reads "Loop · All bars" or "Loop · Bars 2–3", and clicking it clears the loop
-- [ ] The Settings button shows whether the settings sidebar is open, and opens or closes it
-- [ ] `useHeaderRoom` and `HEADER_WIDTH` re-measured, so narrow windows still drop the slider first
-- [ ] The phone's `TransportBar` is unchanged apart from the kit's controls
-- [ ] Checked in the browser at 1440, 1280, 900 and 760 px
+- [x] − and + step the BPM as the phone's do (hold to repeat), and the slider and the field stay in step
+- [x] The loop chip reads "Loop · All bars" or "Loop · Bars 2–3", and clicking it clears the loop
+- [x] The Settings button shows whether the settings sidebar is open, and opens or closes it
+- [x] `useHeaderRoom` and `HEADER_WIDTH` re-measured, so narrow windows still drop the slider first
+- [x] The phone's `TransportBar` is unchanged apart from the kit's controls
+- [x] Checked in the browser at 1440, 1280, 900 and 760 px
