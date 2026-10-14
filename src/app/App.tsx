@@ -19,6 +19,7 @@ import { useNarrowWindow, usePhoneWindow } from '@/app/useMediaQuery'
 import { NameInput } from '@/components/NameInput'
 import type { Side } from '@/components/Sidebar'
 import { SidebarFullScreen, SidebarOverlay, SidebarRail } from '@/components/Sidebar'
+import { Button } from '@/components/Button'
 import { keepFocus } from '@/components/keepFocus'
 import { isExample } from '@/core'
 
@@ -120,17 +121,9 @@ function PhoneHeaderButton({
   children: ReactNode
 }) {
   return (
-    <button
-      type="button"
-      aria-label={label}
-      aria-expanded={expanded}
-      // Keep focus off the button, so Space still pauses in a narrow desktop window.
-      onMouseDown={keepFocus}
-      onClick={onClick}
-      className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent text-xl/none text-mute active:bg-line"
-    >
+    <Button variant="ghost" size="lg" icon aria-label={label} aria-expanded={expanded} onClick={onClick} className="active:bg-line">
       <span aria-hidden>{children}</span>
-    </button>
+    </Button>
   )
 }
 

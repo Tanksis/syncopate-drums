@@ -1,13 +1,18 @@
 import { useRef, useState } from 'react'
 import { parsePercent } from '@/core'
 
+/** A text field's look: the value field's, and the BPM box's. */
+export const fieldClass = 'rounded-md border border-edge bg-card tabular-nums'
+
 /**
- * A slider's `%` readout as a small field to type into. Enter or leaving it applies the typed value
- * (clamped; nonsense keeps the old one), Escape puts it back, and ↑/↓ step by 1 (Shift by 10) at once.
+ * A slider's readout as a small field to type into, its `unit` after the number (`%`). Enter or
+ * leaving it applies the typed value (clamped; nonsense keeps the old one), Escape puts it back, and
+ * ↑/↓ step by 1 (Shift by 10) at once.
  */
-export function PercentField({
+export function ValueField({
   label,
   value,
+  unit,
   min,
   max,
   decimals,
@@ -15,21 +20,22 @@ export function PercentField({
   className,
 }: {
   label: string
-  /** In percent. */
+  /** In `unit`s. */
   value: number
+  unit: string
   min: number
   max: number
   /** How many decimals the field shows; typed values are rounded to it. */
   decimals: number
-  onChange: (percent: number) => void
+  onChange: (value: number) => void
   className: string
 }) {
   const [draft, setDraft] = useState<string | null>(null)
   // Escape leaves the field without applying what was typed.
   const reverting = useRef(false)
-  const round = (percent: number) => Number(percent.toFixed(decimals))
+  const round = (n: number) => Number(n.toFixed(decimals))
   const read = (text: string) => round(parsePercent(text, { min, max, previous: value }))
-  const shown = `${value.toFixed(decimals)}%`
+  const shown = `${value.toFixed(decimals)}${unit}`
 
   const commit = () => {
     if (draft !== null && !reverting.current) onChange(read(draft))
@@ -62,7 +68,7 @@ export function PercentField({
         }
       }}
       // 16 px on a phone, or iOS zooms in when the field takes focus.
-      className={`rounded-md border border-edge bg-card px-1 text-right text-base tabular-nums sm:text-sm ${className}`}
+      className={`${fieldClass} px-1 text-right text-base sm:text-sm ${className}`}
     />
   )
 }

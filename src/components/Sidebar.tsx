@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Button } from './Button'
 import { PanelHeading } from './PanelHeading'
 import { keepFocus } from './keepFocus'
 
@@ -33,14 +34,9 @@ export function SidebarHeading({
     return (
       <div className="flex items-center justify-between gap-2">
         <PanelHeading>{name}</PanelHeading>
-        <button
-          type="button"
-          aria-label={`Close ${name.toLowerCase()}`}
-          onClick={onCollapse}
-          className="-my-1 cursor-pointer rounded-md border border-edge bg-card px-3 py-1.5 font-semibold"
-        >
+        <Button size="md" aria-label={`Close ${name.toLowerCase()}`} onClick={onCollapse} className="-my-1">
           Close
-        </button>
+        </Button>
       </div>
     )
   return (

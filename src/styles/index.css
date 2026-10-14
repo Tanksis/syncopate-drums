@@ -46,16 +46,16 @@
 }
 
 /*
- * The dark theme: monochrome, neutral greys from charcoal to near-black on the notation's paper, with
- * a grey accent, so only the playhead, kick and loop carry colour. <html data-theme="dark"> turns it
+ * The dark theme: neutral greys from charcoal to near-black on the notation's paper, with Studio's
+ * blue accent, so a chosen option and Play keep their colour; the playhead, kick and loop keep theirs. <html data-theme="dark"> turns it
  * on; the inline script in index.html sets it before the first paint, and followTheme
  * (src/app/theme.ts) keeps it in step.
  */
 :root[data-theme='dark'] {
-  --color-accent: #888888;
-  --color-on-accent: #0a0a0a;
-  --color-accent-tint: #191919;
-  --color-select: #2a2a2a;
+  --color-accent: #7b97ff;
+  --color-on-accent: #0b0d10;
+  --color-accent-tint: #161c2c;
+  --color-select: #1c2647;
   --color-bg: #121212;
   --color-card: #1e1e1e;
   --color-paper: #0a0a0a;
@@ -82,6 +82,11 @@
 
   body {
     @apply overflow-hidden bg-bg font-sans text-sm/[1.4] text-ink;
+  }
+
+  /* A focus ring for the keyboard, in the accent, 3:1 against every surface in both themes. */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent;
   }
 
   /* Tailwind's default placeholder is the text at half strength, short of 4.5:1. */

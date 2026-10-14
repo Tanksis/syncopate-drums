@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAppStore } from '@/app/store'
+import { Button, buttonClass } from '@/components/Button'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { DuplicateIcon, MoreIcon, PlusIcon, TrashIcon } from '@/components/icons'
 import { Menu } from '@/components/Menu'
@@ -17,17 +18,8 @@ import { useExerciseDrop } from './useExerciseDrop'
 /** The built-in examples, the same every time; never stored (ADR 0008). */
 const EXAMPLES = exampleExercises()
 
-const buttonClass =
-  'flex-1 cursor-pointer rounded-md border border-edge bg-card px-2 py-1 font-semibold hover:border-accent'
-
-/** A sidebar button that's disabled for an example, or with no example open. */
-const disablableButtonClass = `${buttonClass} disabled:cursor-default disabled:text-mute disabled:hover:border-edge`
-
 /** A toolbar icon button or menu button; `large` is big enough for a finger. */
-const toolClass = (large: boolean) =>
-  `flex shrink-0 cursor-pointer items-center justify-center rounded-md border border-edge bg-card hover:border-accent hover:text-accent aria-expanded:border-accent aria-expanded:text-accent disabled:cursor-default disabled:text-mute disabled:opacity-50 disabled:hover:border-edge ${
-    large ? 'size-11' : 'size-8'
-  }`
+const toolClass = (large: boolean) => buttonClass({ size: large ? 'lg' : 'md', icon: true })
 
 /** An exercise's button in a list, marked when it's the open one. */
 const listButtonClass = (open: boolean) =>
@@ -172,16 +164,13 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
       </div>
       {tab === 'examples' && (
         <>
-          <button
-            type="button"
+          <Button
             title={exampleOpen ? 'Make an editable copy of the open example' : 'Open an example to copy it'}
             disabled={!exampleOpen}
-            onMouseDown={keepFocus}
             onClick={duplicateOpenExercise}
-            className={`${disablableButtonClass} flex-none`}
           >
             Copy to Library
-          </button>
+          </Button>
           <ul role="tabpanel" aria-label="Examples" className="m-0 flex min-h-0 list-none flex-col overflow-auto p-0">
             {EXAMPLES.map((example) => (
               <li key={example.id} className="flex">
@@ -222,27 +211,25 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
                 },
               ]}
             />
-            <button
-              type="button"
+            <Button
+              size={fullScreen ? 'lg' : 'md'}
+              icon
               aria-label="Duplicate"
               title={exampleOpen ? 'Copy the open example to the Library' : 'Duplicate the open exercise'}
-              onMouseDown={keepFocus}
               onClick={duplicateOpenExercise}
-              className={toolClass(fullScreen)}
             >
               <DuplicateIcon />
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              size={fullScreen ? 'lg' : 'md'}
+              icon
               aria-label="Delete"
               title={exampleOpen ? 'An example can’t be deleted' : 'Delete the open exercise'}
               disabled={exampleOpen}
-              onMouseDown={keepFocus}
               onClick={() => setToDelete(library.filter((e) => e.id === openId))}
-              className={toolClass(fullScreen)}
             >
               <TrashIcon />
-            </button>
+            </Button>
             {/* Pushes ⋯ to the right edge. */}
             <span className="flex-1" />
             <ImportFile onImported={setImported}>
@@ -263,15 +250,9 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
           {imported !== null && (
             <p role="status" className="m-0 flex items-center gap-1.5 text-xs text-mute">
               <span className="flex-1">{imported === 0 ? 'Nothing new imported.' : `Imported ${exerciseCount(imported)}.`}</span>
-              <button
-                type="button"
-                aria-label="Dismiss"
-                onMouseDown={keepFocus}
-                onClick={() => setImported(null)}
-                className="cursor-pointer border-0 bg-transparent px-1 text-mute hover:text-accent"
-              >
+              <Button variant="ghost" icon aria-label="Dismiss" onClick={() => setImported(null)}>
                 ×
-              </button>
+              </Button>
             </p>
           )}
           <input
@@ -287,14 +268,9 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
             <div className="flex flex-col gap-1.5 text-xs whitespace-nowrap">
               <div className="flex items-center gap-1.5">
                 <span className="flex-1 text-mute">{selected.length} selected</span>
-                <button
-                  type="button"
-                  onMouseDown={keepFocus}
-                  onClick={() => setSelectedIds(new Set())}
-                  className="cursor-pointer rounded-md border border-edge bg-card px-1.5 py-1 hover:border-accent"
-                >
+                <Button onClick={() => setSelectedIds(new Set())}>
                   Clear
-                </button>
+                </Button>
               </div>
               <select
                 aria-label="Move the selected exercises to a folder"
@@ -320,23 +296,12 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
                 ))}
               </select>
               <div className="flex gap-1.5">
-                <button
-                  type="button"
-                  title="Download the selected exercises as one file"
-                  onMouseDown={keepFocus}
-                  onClick={() => downloadExport(selected, folders)}
-                  className="flex-1 cursor-pointer rounded-md border border-edge bg-card px-1.5 py-1 font-semibold hover:border-accent"
-                >
+                <Button title="Download the selected exercises as one file" onClick={() => downloadExport(selected, folders)} className="flex-1">
                   Export selected
-                </button>
-                <button
-                  type="button"
-                  onMouseDown={keepFocus}
-                  onClick={() => setToDelete(selected)}
-                  className="flex-1 cursor-pointer rounded-md border border-edge bg-card px-1.5 py-1 font-semibold text-danger hover:border-danger"
-                >
+                </Button>
+                <Button onClick={() => setToDelete(selected)} className="flex-1 text-danger! enabled:hover:border-danger!">
                   Delete selected
-                </button>
+                </Button>
               </div>
             </div>
           )}

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { useEffect, useRef } from 'react'
+import { Button } from './Button'
 
 /**
  * A dialog button; `danger` marks the one that changes something for good, `primary` the one that
@@ -21,21 +22,16 @@ export function DialogButton({
   /** Takes the focus when the dialog opens, so Enter presses it. */
   autoFocus?: boolean
 }) {
-  const look = danger
-    ? 'border-danger bg-danger text-on-accent hover:opacity-90'
-    : primary
-      ? 'border-accent bg-accent text-on-accent hover:opacity-90'
-      : 'border-edge bg-card hover:border-accent'
   return (
-    <button
-      type="button"
+    <Button
+      variant={danger ? 'danger' : primary ? 'primary' : 'secondary'}
+      size="md"
       data-autofocus={autoFocus || undefined}
       disabled={disabled}
       onClick={onClick}
-      className={`cursor-pointer rounded-md border px-3 py-1 font-semibold disabled:cursor-default disabled:opacity-40 ${look}`}
     >
       {children}
-    </button>
+    </Button>
   )
 }
 

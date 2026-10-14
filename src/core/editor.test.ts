@@ -951,6 +951,10 @@ describe("the cursor's row", () => {
     expect(keys(tabbed, press('Tab')).cursor.row).toBe('snare')
   })
 
+  it('leaves Shift+Tab to move the focus into the controls', () => {
+    expect(commandForKey(shift('Tab'))).toBeNull()
+  })
+
   it('undo takes the cursor back to the row of the change, and redo to where undo left it', () => {
     const state = keys(click(fresh(), 0, 1, 0, 'kick'), press('Tab'), press('ArrowRight'))
     const undone = keys(state, ctrl('z'))

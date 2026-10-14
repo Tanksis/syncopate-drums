@@ -1,16 +1,18 @@
 import { useEffect } from 'react'
+import { usesSpace } from '@/components/focus'
 import { togglePause, togglePlayback } from './transport'
 
 /**
  * Ctrl+Space plays from the count-in or stops, from anywhere, even inside a text field. Space
- * pauses and resumes, outside text fields and buttons and while no dialog is open.
+ * pauses and resumes while no dialog is open, unless the focused control takes Space itself (a
+ * button, a switch, a field); on a slider it still pauses.
  */
 export function usePlaybackKeys() {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.altKey || e.metaKey || e.shiftKey || e.code !== 'Space') return
       if (!e.ctrlKey) {
-        if (e.target instanceof HTMLElement && e.target.closest('input, textarea, select, button, [contenteditable]')) return
+        if (usesSpace(e.target)) return
         if (document.querySelector('dialog[open]')) return
       }
       e.preventDefault()

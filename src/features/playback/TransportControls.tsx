@@ -1,6 +1,8 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useAppStore } from '@/app/store'
-import { keepFocus } from '@/components/keepFocus'
+import { Slider } from '@/components/Slider'
+import { Switch } from '@/components/Switch'
+import { fieldClass } from '@/components/ValueField'
 import { MAX_BPM, MIN_BPM } from '@/core'
 import { LoopReadout } from './LoopReadout'
 import { PlaybackPosition } from './PlaybackPosition'
@@ -35,30 +37,12 @@ export function TransportControls({ room }: { room: HeaderRoom }) {
 function BpmControl({ slider }: { slider: boolean }) {
   const bpm = useAppStore((s) => s.editor.exercise.practice.bpm)
   const setBpm = useAppStore((s) => s.setBpm)
-  // A pointer drag on the slider saves once it ends; arrow keys on it save at once.
-  const dragging = useRef(false)
-
   return (
     <label className="flex items-center gap-2">
       <BpmInput className="w-16 px-1.5 py-0.5 text-right" />
       <span className="text-mute">BPM</span>
       {slider && (
-        <input
-          type="range"
-          aria-label="BPM slider"
-          min={MIN_BPM}
-          max={MAX_BPM}
-          value={bpm}
-          onChange={(e) => setBpm(Number(e.target.value), { dragging: dragging.current })}
-          onPointerDown={() => (dragging.current = true)}
-          // Once a drag ends, save the tempo it settled on and hand the keyboard back to the editor.
-          onPointerUp={(e) => {
-            dragging.current = false
-            setBpm(Number(e.currentTarget.value))
-            e.currentTarget.blur()
-          }}
-          className="w-24 accent-accent"
-        />
+        <Slider label="BPM slider" min={MIN_BPM} max={MAX_BPM} value={bpm} onChange={(value, { dragging }) => setBpm(value, { dragging })} className="w-24" />
       )}
     </label>
   )
@@ -94,7 +78,7 @@ export function BpmInput({ className }: { className: string }) {
       onChange={(e) => type(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-      className={`rounded-md border border-edge bg-card tabular-nums ${className}`}
+      className={`${fieldClass} ${className}`}
     />
   )
 }
@@ -104,16 +88,11 @@ export function CountInToggle() {
   const countIn = useAppStore((s) => s.device.countIn)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   return (
-    <button
-      type="button"
-      aria-pressed={countIn}
+    <Switch
+      label="Count-in"
       title="Play a one-bar count-in before the exercise"
-      // Keep focus off the button, so the editor's keys still work after a click.
-      onMouseDown={keepFocus}
-      onClick={() => setDeviceSettings({ countIn: !countIn })}
-      className="cursor-pointer rounded-md border border-edge bg-panel px-2 py-0.5 hover:border-accent aria-pressed:bg-accent aria-pressed:text-on-accent"
-    >
-      count-in
-    </button>
+      checked={countIn}
+      onChange={(on) => setDeviceSettings({ countIn: on })}
+    />
   )
 }
