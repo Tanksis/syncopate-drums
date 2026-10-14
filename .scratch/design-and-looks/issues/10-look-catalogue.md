@@ -10,13 +10,15 @@
 - **Modes:** light only.
 - See [spec](../spec.md) and [ADR 0013](../../../docs/adr/0013-looks-are-skins.md).
 
+**As built:** the canvas's burnt orange (`#B5461A`) is a shade under 4.5:1 on the mustard and the selected fills, so it fills Play (with a brown edge), draws the wordmark (a new `--wordmark-color` hook) and the top stripe, and the accent is a deeper `#A33D14`. The mustard "!" is darkened to `#9A6200` for 4.5:1, and the controls' tan edge to `#8F6A3A` for 3:1. The headings are in Righteous without capitals, as on the canvas. The playhead is a deep green and the kick plum. The stripes drew over the top of the area below, so the header keeps 18 px of room for them (`--header-ornament-height`, 0 in every other look).
+
 **Blocked by:** 02, 03, 04, 05
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Every token set under `:root[data-look='catalogue']`
-- [ ] Nunito, Righteous and Shrikhand load only while it is the look
-- [ ] Listed in the Look menu and in `LIGHT_ONLY_LOOKS`
-- [ ] AA for text and 3:1 for control edges and states
-- [ ] Layout, sizes and spacing identical to Studio, apart from the stripes (screenshots side by side)
-- [ ] Checked in the browser at 1280 px and 390 × 844, with the device in dark mode too
+- [x] Every token set under `:root[data-look='catalogue']`
+- [x] Nunito, Righteous and Shrikhand load only while it is the look
+- [x] Listed in the Look menu and in `LIGHT_ONLY_LOOKS`
+- [x] AA for text and 3:1 for control edges and states
+- [x] Layout, sizes and spacing identical to Studio, apart from the stripes (screenshots side by side)
+- [x] Checked in the browser at 1280 px and 390 × 844, with the device in dark mode too

@@ -74,6 +74,17 @@ export const LOOK_STYLES: readonly { look: Look; loadFonts: () => Promise<unknow
         import('@fontsource/space-mono/700.css'),
       ]),
   },
+  {
+    look: 'catalogue',
+    loadFonts: () =>
+      Promise.all([
+        import('@fontsource/nunito/400.css'),
+        import('@fontsource/nunito/600.css'),
+        import('@fontsource/nunito/700.css'),
+        import('@fontsource/righteous/400.css'),
+        import('@fontsource/shrikhand/400.css'),
+      ]),
+  },
 ]
 
 /** Imports a look's fonts. Until they load, or if they fail to, its text falls back to the system's. */
