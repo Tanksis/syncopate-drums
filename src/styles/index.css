@@ -41,6 +41,17 @@
   --color-loop-ink: #a14a08;
   /* Shadows and a dialog's backdrop: dark in both themes. */
   --color-shade: #1c1917;
+  /*
+   * Colours most looks take from the ones above, and a look whose dividers or accent are its ink
+   * sets apart: the fill a ghost control shows on hover or press (bg-hover), the Play button's fill,
+   * icon and border, and the accent in the notation, where it marks notes and letters among the ink:
+   * the cursor's notes and a changed hand's sticking letter.
+   */
+  --color-hover: var(--color-line);
+  --color-play-button: var(--color-accent);
+  --color-on-play-button: var(--color-on-accent);
+  --color-play-button-edge: var(--color-play-button);
+  --color-notation-accent: var(--color-accent);
 
   /*
    * The rest of a look (ADR 0013): its fonts, corners, border weights, shadows and ornaments. These
@@ -84,13 +95,14 @@
 
   /* Ornaments, the fixed hooks a look may set; `0 0 #0000` is no shadow. A box-shadow under the
      header (Catalogue's stripes), a hard offset shadow behind the card (Bold, Riso), and the
-     wordmark's font, style, case and shadow. */
+     wordmark's font, style, case, shadow and the colour of its "!" (Score's red pencil). */
   --header-ornament: 0 0 #0000;
   --card-offset: 0 0 #0000;
   --wordmark-font: var(--font-display);
   --wordmark-style: normal;
   --wordmark-case: none;
   --wordmark-shadow: none;
+  --wordmark-bang: currentColor;
 }
 
 /*
@@ -148,6 +160,11 @@
   --color-loop-line: #b45f06;
   --color-loop-ink: #a14a08;
   --color-shade: #2a211c;
+  --color-hover: var(--color-line);
+  --color-play-button: var(--color-accent);
+  --color-on-play-button: var(--color-on-accent);
+  --color-play-button-edge: var(--color-play-button);
+  --color-notation-accent: var(--color-accent);
 
   --font-sans: 'DM Sans', system-ui, sans-serif;
   --font-display: 'Fraunces', Georgia, serif;
@@ -169,6 +186,7 @@
   --wordmark-style: normal;
   --wordmark-case: none;
   --wordmark-shadow: none;
+  --wordmark-bang: currentColor;
 }
 
 :root[data-look='warm'][data-theme='dark'] {
@@ -197,6 +215,208 @@
   --popover-shadow: 0 10px 15px -3px color-mix(in srgb, var(--color-shade) 40%, transparent), 0 4px 6px -4px color-mix(in srgb, var(--color-shade) 40%, transparent);
 }
 
+/*
+ * Bold (ADR 0013): black and lime, 2 px borders, Manrope with Space Grotesk headings and numbers,
+ * small corners and pill chips. In light the controls are black ink on white with lime on black
+ * when chosen, the card has a hard black offset shadow, and the lime Play a black border; the
+ * dividers are black too, so a ghost control's hover is a pale grey of its own. The notation's
+ * accent (the cursor and a changed hand) is olive, as the accent is the ink. Its dark mode is
+ * near-black with a lime accent and no offset.
+ */
+:root[data-look='bold'] {
+  --color-accent: #0b0b0c;
+  --color-on-accent: #d9ff45;
+  --color-accent-tint: #f0ffb8;
+  --color-select: #e4ff8a;
+  --color-bg: #fff;
+  --color-card: #f4f4ef;
+  --color-paper: #fff;
+  --color-ink: #0b0b0c;
+  --color-mute: #54544e;
+  --color-line: #0b0b0c;
+  --color-edge: #0b0b0c;
+  --color-panel: #fafaf7;
+  --color-danger: #b91c1c;
+  --color-play: #047857;
+  --color-kick: #c2410c;
+  --color-loop: #fde68a;
+  --color-loop-line: #b45f06;
+  --color-loop-ink: #a14a08;
+  --color-shade: #0b0b0c;
+  --color-hover: #e2e2da;
+  --color-play-button: #d9ff45;
+  --color-on-play-button: #0b0b0c;
+  --color-play-button-edge: #0b0b0c;
+  --color-notation-accent: #5a6b00;
+
+  --font-sans: 'Manrope', system-ui, sans-serif;
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-numbers: 'Space Grotesk', system-ui, sans-serif;
+
+  --radius-small: 0.25rem;
+  --radius-large: 0.375rem;
+  --radius-chip: 999px;
+
+  --border-control: 2px;
+  --border-card: 2px;
+
+  --card-shadow: 0 0 #0000;
+  --popover-shadow: 4px 4px 0 var(--color-shade);
+
+  --header-ornament: 0 0 #0000;
+  --card-offset: 4px 4px 0 var(--color-shade);
+  --wordmark-font: var(--font-display);
+  --wordmark-style: normal;
+  --wordmark-case: none;
+  --wordmark-shadow: none;
+  --wordmark-bang: currentColor;
+}
+
+:root[data-look='bold'][data-theme='dark'] {
+  --color-accent: #d9ff45;
+  --color-on-accent: #0a0a0b;
+  --color-accent-tint: #1a1f0a;
+  --color-select: #2a3410;
+  --color-bg: #0a0a0b;
+  --color-card: #141416;
+  --color-paper: #050506;
+  --color-ink: #f5f5f0;
+  --color-mute: #a5a59e;
+  --color-line: #2e2e33;
+  /* Light enough for 3:1 against the selected and looped bars' fills too. */
+  --color-edge: #8a8a92;
+  --color-panel: #101012;
+  --color-danger: #f68080;
+  --color-play: #34d399;
+  --color-kick: #ff8a5c;
+  --color-loop: #43371d;
+  --color-loop-line: #d99a1a;
+  --color-loop-ink: #fcc94a;
+  --color-shade: #000;
+  --color-hover: var(--color-line);
+  --color-play-button: var(--color-accent);
+  --color-on-play-button: var(--color-on-accent);
+  --color-play-button-edge: var(--color-play-button);
+  --color-notation-accent: var(--color-accent);
+
+  --popover-shadow: 0 10px 15px -3px color-mix(in srgb, var(--color-shade) 40%, transparent), 0 4px 6px -4px color-mix(in srgb, var(--color-shade) 40%, transparent);
+  --card-offset: 0 0 #0000;
+  --wordmark-bang: var(--color-accent);
+}
+
+/*
+ * Score (ADR 0013), engraved sheet music, light only: paper, black ink, black controls and 1 px
+ * black rules, square corners, EB Garamond with small-caps headings and an italic Instrument Serif
+ * wordmark. Red pencil marks only what the drummer acts on or wrote: Play, the playhead, the
+ * wordmark's "!", and the notation's accent: the cursor and a changed hand. A ghost control's hover
+ * is a paper grey, as the rules are ink.
+ */
+:root[data-look='score'] {
+  --color-accent: #111;
+  --color-on-accent: #fff;
+  --color-accent-tint: #efebe0;
+  --color-select: #e8e3d6;
+  --color-bg: #f7f5ef;
+  --color-card: #fbfaf6;
+  --color-paper: #fffefa;
+  --color-ink: #111;
+  --color-mute: #5e5a52;
+  --color-line: #111;
+  --color-edge: #111;
+  --color-panel: #f7f5ef;
+  --color-danger: #9f1a1a;
+  --color-play: #c8102e;
+  /* Sepia, apart from the ink in lightness as well as hue. */
+  --color-kick: #8a4b12;
+  --color-loop: #fde68a;
+  --color-loop-line: #b45f06;
+  --color-loop-ink: #a14a08;
+  --color-shade: #111;
+  --color-hover: #e9e5da;
+  --color-play-button: #c8102e;
+  --color-on-play-button: #fff;
+  --color-play-button-edge: #c8102e;
+  --color-notation-accent: #c8102e;
+
+  --font-sans: 'EB Garamond', Georgia, serif;
+  --font-display: 'EB Garamond', Georgia, serif;
+  --font-numbers: 'EB Garamond', Georgia, serif;
+
+  --radius-small: 0;
+  --radius-large: 0;
+  --radius-chip: 0;
+
+  --border-control: 1px;
+  --border-card: 1px;
+
+  --card-shadow: 0 0 #0000;
+  --popover-shadow: 0 6px 16px -4px color-mix(in srgb, var(--color-shade) 18%, transparent);
+
+  --header-ornament: 0 0 #0000;
+  --card-offset: 0 0 #0000;
+  --wordmark-font: 'Instrument Serif', Georgia, serif;
+  --wordmark-style: italic;
+  --wordmark-case: none;
+  --wordmark-shadow: none;
+  --wordmark-bang: #c8102e;
+}
+
+/*
+ * Riso (ADR 0013), a risograph zine, light only: riso blue ink and 2 px blue borders on paper,
+ * Familjen Grotesk with Space Mono numbers, and Bagel Fat One headings and wordmark, the wordmark
+ * with a fluorescent-pink shadow. The fluorescent pink is too light for text or a focus ring on
+ * paper, so it fills Play (with navy on it) and the card's offset shadow, and the accent is a
+ * deeper riso pink. The playhead is riso teal, apart from that accent and the yellow loop.
+ */
+:root[data-look='riso'] {
+  --color-accent: #c4117a;
+  --color-on-accent: #fff;
+  --color-accent-tint: #ffe3f0;
+  --color-select: #ffd0e6;
+  --color-bg: #f1ece1;
+  --color-card: #f8f4ea;
+  --color-paper: #f8f4ea;
+  --color-ink: #1e2c9e;
+  --color-mute: #4b57a8;
+  --color-line: #2a3fcb;
+  --color-edge: #2a3fcb;
+  --color-panel: #f5f0e5;
+  --color-danger: #a3201b;
+  --color-play: #00838a;
+  --color-kick: #a63a00;
+  --color-loop: #fde68a;
+  --color-loop-line: #b45f06;
+  --color-loop-ink: #a14a08;
+  --color-shade: #1e2c9e;
+  --color-hover: #dfdcef;
+  --color-play-button: #ff4fa8;
+  --color-on-play-button: #141b6b;
+  --color-play-button-edge: #2a3fcb;
+  --color-notation-accent: var(--color-accent);
+
+  --font-sans: 'Familjen Grotesk', system-ui, sans-serif;
+  --font-display: 'Bagel Fat One', system-ui, sans-serif;
+  --font-numbers: 'Space Mono', ui-monospace, monospace;
+
+  --radius-small: 0.875rem;
+  --radius-large: 1.375rem;
+  --radius-chip: 999px;
+
+  --border-control: 2px;
+  --border-card: 2px;
+
+  --card-shadow: 0 0 #0000;
+  --popover-shadow: 4px 4px 0 #ff4fa8;
+
+  --header-ornament: 0 0 #0000;
+  --card-offset: 6px 6px 0 #ff4fa8;
+  --wordmark-font: var(--font-display);
+  --wordmark-style: normal;
+  --wordmark-case: none;
+  --wordmark-shadow: 2px 2px 0 #ff4fa8;
+  --wordmark-bang: currentColor;
+}
+
 @layer base {
   html,
   body,
@@ -206,6 +426,9 @@
 
   body {
     @apply overflow-hidden bg-bg font-sans text-sm/[1.4] text-ink;
+    /* A look's display font may come in one weight (Bagel Fat One, Instrument Serif): draw that
+       weight rather than smear a fake bold. Every other font a look loads has its bold. */
+    font-synthesis-weight: none;
   }
 
   /* A focus ring for the keyboard, in the accent, 3:1 against every surface in both themes. */

@@ -13,7 +13,7 @@ const CHEVRON: Record<Side, { collapse: string; open: string }> = {
 }
 
 const chevronButtonClass =
-  'flex size-5 shrink-0 cursor-pointer items-center justify-center rounded border-0 bg-transparent text-base/none text-mute hover:bg-line hover:text-ink'
+  'flex size-5 shrink-0 cursor-pointer items-center justify-center rounded border-0 bg-transparent text-base/none text-mute hover:bg-hover hover:text-ink'
 
 /**
  * A sidebar's heading, with the chevron that collapses the sidebar to its rail, or, shown
@@ -71,7 +71,7 @@ export function SidebarRail({ name, side, expanded, onOpen }: { name: string; si
         title={`Open ${name.toLowerCase()}`}
         onMouseDown={keepFocus}
         onClick={onOpen}
-        className="flex cursor-pointer flex-col items-center gap-2 rounded border-0 bg-transparent px-1 py-1 text-mute hover:bg-line hover:text-ink"
+        className="flex cursor-pointer flex-col items-center gap-2 rounded border-0 bg-transparent px-1 py-1 text-mute hover:bg-hover hover:text-ink"
       >
         <span aria-hidden className="text-base/none">
           {CHEVRON[side].open}

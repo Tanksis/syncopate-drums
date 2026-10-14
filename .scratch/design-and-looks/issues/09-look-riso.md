@@ -11,11 +11,11 @@
 
 **Blocked by:** 02, 03, 04, 05
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Every token set under `:root[data-look='riso']`
-- [ ] Familjen Grotesk, Bagel Fat One and Space Mono load only while it is the look
-- [ ] Listed in the Look menu and in `LIGHT_ONLY_LOOKS`
-- [ ] AA for text and 3:1 for control edges and states, including text on the pink fill
-- [ ] Layout, sizes and spacing identical to Studio (screenshots side by side)
-- [ ] Checked in the browser at 1280 px and 390 × 844, with the device in dark mode too
+- [x] Every token set under `:root[data-look='riso']`
+- [x] Familjen Grotesk, Bagel Fat One and Space Mono load only while it is the look
+- [x] Listed in the Look menu and in `LIGHT_ONLY_LOOKS`
+- [x] AA for text and 3:1 for control edges and states, including text on the pink fill
+- [x] Layout, sizes and spacing identical to Studio (screenshots side by side)
+- [x] Checked in the browser at 1280 px and 390 × 844, with the device in dark mode too

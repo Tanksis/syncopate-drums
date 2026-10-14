@@ -34,7 +34,7 @@ export function TransportBar({ onEdit, onCopy }: { onEdit?: () => void; onCopy?:
         // Keep focus off the buttons, so Space pauses rather than clicking them.
         onMouseDown={keepFocus}
         onClick={togglePause}
-        className={`${roundButtonClass} size-12 border-accent bg-accent text-lg/none text-on-accent active:opacity-80`}
+        className={`${roundButtonClass} size-12 border-play-button-edge bg-play-button text-lg/none text-on-play-button active:opacity-80`}
       >
         <span aria-hidden>{playing ? '❚❚' : '▶'}</span>
       </button>

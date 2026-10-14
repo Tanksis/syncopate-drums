@@ -10,11 +10,11 @@ The user wants the app's visual style to be a choice. Six of the mocked-up direc
 
 A look is a set of design-token values plus a fixed set of ornaments:
 
-- **May change:** colours, fonts (body, display, numbers), corner radius (small, large, and a chip's: a segmented control and its options, which Warm makes round pills), border width, and shadows.
+- **May change:** colours (including the few that most looks derive from the accent or the dividers: the Play button's fill and edge, a ghost control's hover and the notation's accent), fonts (body, display, numbers), corner radius (small, large, and a chip's: a segmented control and its options, which Warm makes round pills), border width, and shadows.
 - **Ornaments:** fixed hooks, set by tokens:
   - a box-shadow under the header (Catalogue's stripes);
   - an offset shadow on cards (Bold, Riso);
-  - the wordmark's font, style, case and shadow.
+  - the wordmark's font, style, case and shadow, and the colour of its "!".
 - **Never changes:** layout, sizes or spacing. Every look lays out exactly like Studio, so behaviour, hit targets and the notation's fit are the same whichever is chosen, and are tested once.
 - **The notation:** a look's colours and its sticking-and-bar-number font apply. Noteheads, rests and beams keep the standard engraving font.
 

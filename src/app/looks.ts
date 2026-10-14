@@ -40,6 +40,40 @@ export const LOOK_STYLES: readonly { look: Look; loadFonts: () => Promise<unknow
         import('@fontsource/fraunces/700.css'),
       ]),
   },
+  {
+    look: 'bold',
+    loadFonts: () =>
+      Promise.all([
+        import('@fontsource/manrope/400.css'),
+        import('@fontsource/manrope/600.css'),
+        import('@fontsource/manrope/700.css'),
+        import('@fontsource/space-grotesk/400.css'),
+        import('@fontsource/space-grotesk/600.css'),
+        import('@fontsource/space-grotesk/700.css'),
+      ]),
+  },
+  {
+    look: 'score',
+    loadFonts: () =>
+      Promise.all([
+        import('@fontsource/eb-garamond/400.css'),
+        import('@fontsource/eb-garamond/600.css'),
+        import('@fontsource/eb-garamond/700.css'),
+        import('@fontsource/instrument-serif/400-italic.css'),
+      ]),
+  },
+  {
+    look: 'riso',
+    loadFonts: () =>
+      Promise.all([
+        import('@fontsource/familjen-grotesk/400.css'),
+        import('@fontsource/familjen-grotesk/600.css'),
+        import('@fontsource/familjen-grotesk/700.css'),
+        import('@fontsource/bagel-fat-one/400.css'),
+        import('@fontsource/space-mono/400.css'),
+        import('@fontsource/space-mono/700.css'),
+      ]),
+  },
 ]
 
 /** Imports a look's fonts. Until they load, or if they fail to, its text falls back to the system's. */
