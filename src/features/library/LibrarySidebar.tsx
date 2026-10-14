@@ -19,7 +19,8 @@ import { useExerciseDrop } from './useExerciseDrop'
 const EXAMPLES = exampleExercises()
 
 /** A toolbar icon button or menu button; `large` is big enough for a finger. */
-const toolClass = (large: boolean) => buttonClass({ size: large ? 'lg' : 'md', icon: true })
+const toolSize = (large: boolean) => (large ? 'lg' : 'md')
+const toolClass = (large: boolean) => buttonClass({ size: toolSize(large), icon: true })
 
 /** An exercise's button in a list, marked when it's the open one. */
 const listButtonClass = (open: boolean) =>
@@ -212,7 +213,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
               ]}
             />
             <Button
-              size={fullScreen ? 'lg' : 'md'}
+              size={toolSize(fullScreen)}
               icon
               aria-label="Duplicate"
               title={exampleOpen ? 'Copy the open example to the Library' : 'Duplicate the open exercise'}
@@ -221,7 +222,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
               <DuplicateIcon />
             </Button>
             <Button
-              size={fullScreen ? 'lg' : 'md'}
+              size={toolSize(fullScreen)}
               icon
               aria-label="Delete"
               title={exampleOpen ? 'An example can’t be deleted' : 'Delete the open exercise'}

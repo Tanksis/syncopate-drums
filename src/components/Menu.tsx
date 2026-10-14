@@ -14,7 +14,7 @@ export interface MenuItem {
 }
 
 /** Where the popover hangs from: the button's box, and whether the keyboard opened it. */
-interface Open {
+interface Anchor {
   top: number
   bottom: number
   left: number
@@ -48,19 +48,19 @@ export function Menu({
   align?: 'left' | 'right'
   buttonClassName?: string
 }) {
-  const [open, setOpen] = useState<Open | null>(null)
+  const [anchor, setAnchor] = useState<Anchor | null>(null)
   const root = useRef<HTMLDivElement>(null)
   const button = useRef<HTMLButtonElement>(null)
   const popover = useRef<HTMLDivElement>(null)
 
   const show = (byKeyboard: boolean) => {
     const box = button.current!.getBoundingClientRect()
-    setOpen({ top: box.top, bottom: box.bottom, left: box.left, right: window.innerWidth - box.right, byKeyboard })
+    setAnchor({ top: box.top, bottom: box.bottom, left: box.left, right: window.innerWidth - box.right, byKeyboard })
   }
   /** Closes the menu; if the focus was in it, it goes back to the button. */
   const close = () => {
     if (popover.current?.contains(document.activeElement)) button.current?.focus()
-    setOpen(null)
+    setAnchor(null)
   }
   const enabledItems = () => [...(popover.current?.querySelectorAll<HTMLElement>('[role^=menuitem]:not(:disabled)') ?? [])]
 
@@ -68,18 +68,19 @@ export function Menu({
   // keyboard, the focus goes to the ticked item, or the first.
   useLayoutEffect(() => {
     const menu = popover.current
-    if (!open || !menu) return
+    if (!anchor || !menu) return
     const { height } = menu.getBoundingClientRect()
-    const below = open.bottom + 4
-    menu.style.top = `${below + height > window.innerHeight ? Math.max(4, open.top - 4 - height) : below}px`
-    if (!open.byKeyboard) return
+    const below = anchor.bottom + 4
+    menu.style.top = `${below + height > window.innerHeight ? Math.max(4, anchor.top - 4 - height) : below}px`
+    if (!anchor.byKeyboard) return
     const enabled = enabledItems()
     ;(enabled.find((item) => item.getAttribute('aria-checked') === 'true') ?? enabled[0])?.focus({ preventScroll: true })
-  }, [open])
+  }, [anchor])
 
   useEffect(() => {
-    if (!open) return
-    const dismiss = () => setOpen(null)
+    if (!anchor) return
+    // A click outside, a scroll or a resize leaves the focus where it lands.
+    const dismiss = () => setAnchor(null)
     const onPointerDown = (e: PointerEvent) => {
       if (!(e.target instanceof Node && root.current?.contains(e.target))) dismiss()
     }
@@ -88,8 +89,7 @@ export function Menu({
       // Ahead of the sidebars' and the editor's keys, which then don't see it.
       e.preventDefault()
       e.stopPropagation()
-      if (popover.current?.contains(document.activeElement)) button.current?.focus()
-      dismiss()
+      close()
     }
     window.addEventListener('pointerdown', onPointerDown, { capture: true })
     window.addEventListener('keydown', onKeyDown, { capture: true })
@@ -101,7 +101,7 @@ export function Menu({
       window.removeEventListener('scroll', dismiss, { capture: true })
       window.removeEventListener('resize', dismiss)
     }
-  }, [open])
+  }, [anchor])
 
   const onButtonKeyDown = (e: KeyboardEvent) => {
     if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'ArrowDown') return
@@ -143,23 +143,23 @@ export function Menu({
         type="button"
         aria-label={label}
         aria-haspopup="menu"
-        aria-expanded={open !== null}
+        aria-expanded={anchor !== null}
         title={label}
         onMouseDown={keepFocus}
         onKeyDown={onButtonKeyDown}
-        onClick={() => (open ? setOpen(null) : show(false))}
+        onClick={() => (anchor ? setAnchor(null) : show(false))}
         className={buttonClassName ?? buttonClass({ variant: large ? 'secondary' : 'ghost', size: large ? 'lg' : 'sm', icon: true })}
       >
         {icon}
       </button>
-      {open && (
+      {anchor && (
         // Fixed, so a scrolling panel around the button doesn't clip it.
         <div
           ref={popover}
           role="menu"
           aria-label={label}
           onKeyDown={onMenuKeyDown}
-          style={align === 'left' ? { left: open.left } : { right: open.right }}
+          style={align === 'left' ? { left: anchor.left } : { right: anchor.right }}
           className="fixed z-30 flex min-w-44 flex-col rounded-lg border border-line bg-card p-1 text-sm shadow-lg shadow-shade/10"
         >
           {items.map((item) => (

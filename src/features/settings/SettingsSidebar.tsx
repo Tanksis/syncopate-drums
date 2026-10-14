@@ -146,7 +146,7 @@ function Swing() {
           step={0.005}
           value={swing}
           reset={MIN_SWING}
-          onChange={(amount, { dragging }) => setSwing(amount, { dragging })}
+          onChange={setSwing}
           className="flex-1"
         />
         <ValueField

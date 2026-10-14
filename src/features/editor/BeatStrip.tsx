@@ -309,7 +309,10 @@ function beatMenu(
   ]
 }
 
-/** A beat's 16ths | trip switch, its current grid lit; the grid keys and the beat menu reach it too. */
+/**
+ * A beat's 16ths | trip switch, its current grid lit. It's left out of the Tab order, which would
+ * otherwise stop at every beat twice; the beat's ⋯ menu switches the grid from the keyboard.
+ */
 function GridSwitch({ bar, beat, triplet, onSwitch }: { bar: number; beat: number; triplet: boolean; onSwitch: () => void }) {
   const option = (grid: 'sixteenth' | 'triplet', label: string) => ({
     value: grid === 'triplet',

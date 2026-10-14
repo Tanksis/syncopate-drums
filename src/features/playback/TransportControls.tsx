@@ -42,7 +42,7 @@ function BpmControl({ slider }: { slider: boolean }) {
       <BpmInput className="w-16 px-1.5 py-0.5 text-right" />
       <span className="text-mute">BPM</span>
       {slider && (
-        <Slider label="BPM slider" min={MIN_BPM} max={MAX_BPM} value={bpm} onChange={(value, { dragging }) => setBpm(value, { dragging })} className="w-24" />
+        <Slider label="BPM slider" min={MIN_BPM} max={MAX_BPM} value={bpm} onChange={setBpm} className="w-24" />
       )}
     </label>
   )

@@ -58,7 +58,8 @@ export function Segmented<T extends string | number | boolean>({
     // Ahead of the editor's keys, which would move the cursor too.
     e.preventDefault()
     e.stopPropagation()
-    const next = step(stop, options.length)
+    // With none chosen yet, ← and ↑ start from the last option, the other keys from the first.
+    const next = chosen !== -1 ? step(chosen, options.length) : ['ArrowLeft', 'ArrowUp', 'End'].includes(e.key) ? options.length - 1 : 0
     group.current?.querySelectorAll<HTMLElement>('[role=radio]')[next]?.focus()
     if (next !== chosen) onChange(options[next].value)
   }
