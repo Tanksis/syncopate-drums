@@ -36,9 +36,9 @@ export function App() {
       </SidebarSlot>
 
       <main className="flex min-h-0 min-w-0 flex-col">
-        {/* Positioned, so the look's ornament under it draws over the area below. */}
-        <header ref={headerRef} className="relative flex items-center gap-3 border-b border-line bg-card px-4 py-2 shadow-(--header-ornament)">
-          <h1 className="m-0 shrink-0 font-(family-name:--wordmark-font) text-base font-bold whitespace-nowrap [font-style:var(--wordmark-style)] [text-shadow:var(--wordmark-shadow)] [text-transform:var(--wordmark-case)]">
+        {/* The look's ornament under it draws in the room its margin keeps. */}
+        <header ref={headerRef} className="mb-(--header-ornament-height) flex items-center gap-3 border-b border-line bg-card px-4 py-2 shadow-(--header-ornament)">
+          <h1 className="m-0 shrink-0 font-(family-name:--wordmark-font) text-base font-bold whitespace-nowrap text-(--wordmark-color) [font-style:var(--wordmark-style)] [text-shadow:var(--wordmark-shadow)] [text-transform:var(--wordmark-case)]">
             Syncopate<span className="text-(--wordmark-bang)">!</span>
           </h1>
           {/* The name takes the room the controls leave, and always shows about 12 letters (10 of the wide digit `ch` measures). */}
@@ -85,7 +85,7 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
   const editing = editOpen && !example
   return (
     <div className="flex h-dvh flex-col">
-      <header className="relative flex shrink-0 items-center gap-1 border-b border-line bg-card px-1 pt-[env(safe-area-inset-top)] shadow-(--header-ornament)">
+      <header className="mb-(--header-ornament-height) flex shrink-0 items-center gap-1 border-b border-line bg-card px-1 pt-[env(safe-area-inset-top)] shadow-(--header-ornament)">
         <PhoneHeaderButton label="Open exercises" expanded={library.state === 'overlay'} onClick={library.onOpen}>
           ☰
         </PhoneHeaderButton>

@@ -94,15 +94,18 @@
   --shadow-popover: var(--popover-shadow);
 
   /* Ornaments, the fixed hooks a look may set; `0 0 #0000` is no shadow. A box-shadow under the
-     header (Catalogue's stripes), a hard offset shadow behind the card (Bold, Riso), and the
-     wordmark's font, style, case, shadow and the colour of its "!" (Score's red pencil), and the
-     section headings' case and caps (Score sets them in small caps rather than capitals). */
+     header (Catalogue's stripes) and its height, which the header keeps as room below it; a hard
+     offset shadow behind the card (Bold, Riso); the wordmark's font, style, case, shadow and colour
+     (Catalogue's orange), and the colour of its "!" (Score's red pencil); and the section headings'
+     case and caps (Score sets them in small caps rather than capitals). */
   --header-ornament: 0 0 #0000;
+  --header-ornament-height: 0px;
   --card-offset: 0 0 #0000;
   --wordmark-font: var(--font-display);
   --wordmark-style: normal;
   --wordmark-case: none;
   --wordmark-shadow: none;
+  --wordmark-color: currentColor;
   --wordmark-bang: currentColor;
   --heading-case: uppercase;
   --heading-caps: normal;
@@ -184,11 +187,13 @@
   --popover-shadow: 0 10px 15px -3px color-mix(in srgb, var(--color-shade) 12%, transparent), 0 4px 6px -4px color-mix(in srgb, var(--color-shade) 10%, transparent);
 
   --header-ornament: 0 0 #0000;
+  --header-ornament-height: 0px;
   --card-offset: 0 0 #0000;
   --wordmark-font: var(--font-display);
   --wordmark-style: normal;
   --wordmark-case: none;
   --wordmark-shadow: none;
+  --wordmark-color: currentColor;
   --wordmark-bang: currentColor;
   --heading-case: uppercase;
   --heading-caps: normal;
@@ -269,11 +274,13 @@
   --popover-shadow: 4px 4px 0 var(--color-shade);
 
   --header-ornament: 0 0 #0000;
+  --header-ornament-height: 0px;
   --card-offset: 4px 4px 0 var(--color-shade);
   --wordmark-font: var(--font-display);
   --wordmark-style: normal;
   --wordmark-case: none;
   --wordmark-shadow: none;
+  --wordmark-color: currentColor;
   --wordmark-bang: currentColor;
   --heading-case: uppercase;
   --heading-caps: normal;
@@ -360,11 +367,13 @@
   --popover-shadow: 0 6px 16px -4px color-mix(in srgb, var(--color-shade) 18%, transparent);
 
   --header-ornament: 0 0 #0000;
+  --header-ornament-height: 0px;
   --card-offset: 0 0 #0000;
   --wordmark-font: 'Instrument Serif', Georgia, serif;
   --wordmark-style: italic;
   --wordmark-case: none;
   --wordmark-shadow: none;
+  --wordmark-color: currentColor;
   --wordmark-bang: var(--color-play);
   --heading-case: none;
   --heading-caps: small-caps;
@@ -418,13 +427,81 @@
   --popover-shadow: 4px 4px 0 var(--color-play-button);
 
   --header-ornament: 0 0 #0000;
+  --header-ornament-height: 0px;
   --card-offset: 6px 6px 0 var(--color-play-button);
   --wordmark-font: var(--font-display);
   --wordmark-style: normal;
   --wordmark-case: none;
   --wordmark-shadow: 2px 2px 0 var(--color-play-button);
+  --wordmark-color: currentColor;
   --wordmark-bang: currentColor;
   --heading-case: uppercase;
+  --heading-caps: normal;
+}
+
+/*
+ * Catalogue (ADR 0013), a '70s drum catalogue, light only: brown ink on mustard and cream, 2 px
+ * borders, round corners and pill chips, Nunito with Righteous headings and numbers, and a Shrikhand
+ * wordmark in burnt orange with a mustard "!". Three stripes under the header: burnt orange,
+ * mustard and brown. The canvas's burnt orange (#B5461A) is a shade short of 4.5:1 on the mustard
+ * and the selected fills, so it fills Play and draws the wordmark and stripe, and the accent is a
+ * deeper one. The "!" is a darker mustard for the same reason. The playhead is a deep green.
+ */
+:root[data-look='catalogue'] {
+  --color-accent: #a33d14;
+  --color-on-accent: #fff5de;
+  --color-accent-tint: #fae6cc;
+  --color-select: #f9d9b5;
+  --color-bg: #f4e4c1;
+  --color-card: #fff5de;
+  --color-paper: #fff5de;
+  --color-ink: #3a2213;
+  --color-mute: #6e4f33;
+  --color-line: #e0c48e;
+  /* Darker than the canvas's tan, for 3:1 against the mustard and the selected and looped fills. */
+  --color-edge: #8f6a3a;
+  --color-panel: #f7e9c9;
+  --color-danger: #a3201b;
+  --color-play: #1f6e5a;
+  /* Plum, as the accent is already the orange Studio's kick is. */
+  --color-kick: #7a3e7a;
+  --color-loop: #fde68a;
+  --color-loop-line: #b45f06;
+  --color-loop-ink: #a14a08;
+  --color-shade: #3a2213;
+  /* Paler than the dividers, so the muted text on it keeps 4.5:1. */
+  --color-hover: #ebd5a6;
+  --color-play-button: #b5461a;
+  --color-on-play-button: #fff5de;
+  /* The canvas's 3 px edge is drawn at the controls' 2 px, as a look keeps Studio's sizes. */
+  --color-play-button-edge: var(--color-ink);
+  --color-notation-accent: var(--color-accent);
+
+  --font-sans: 'Nunito', system-ui, sans-serif;
+  --font-display: 'Righteous', system-ui, sans-serif;
+  --font-numbers: 'Righteous', system-ui, sans-serif;
+
+  --radius-small: 0.75rem;
+  --radius-large: 1.25rem;
+  --radius-chip: 999px;
+
+  --border-control: 2px;
+  --border-card: 2px;
+
+  --card-shadow: 0 0 #0000;
+  --popover-shadow: 0 10px 15px -3px color-mix(in srgb, var(--color-shade) 14%, transparent), 0 4px 6px -4px color-mix(in srgb, var(--color-shade) 12%, transparent);
+
+  --header-ornament: 0 6px 0 #b5461a, 0 12px 0 #e9a23b, 0 18px 0 #6b3a1e;
+  /* The last stripe's offset, so the stripes sit in the room the header keeps for them. */
+  --header-ornament-height: 18px;
+  --card-offset: 0 0 #0000;
+  --wordmark-font: 'Shrikhand', Georgia, serif;
+  --wordmark-style: normal;
+  --wordmark-case: none;
+  --wordmark-shadow: none;
+  --wordmark-color: #b5461a;
+  --wordmark-bang: #9a6200;
+  --heading-case: none;
   --heading-caps: normal;
 }
 
