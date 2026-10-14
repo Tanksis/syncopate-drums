@@ -37,7 +37,15 @@ The span of bars within an exercise that repeats during practice; the whole exer
 How an exercise is practiced rather than what it contains: BPM, loop range, groove preset, swing amount and hi-hat foot. Remembered per exercise.
 
 **Device settings**:
-How the app is set up on this computer rather than how an exercise is practiced: volumes, the exercise mute, the count-in toggle, which exercise was last open, which sidebar tab is showing, and which folders are collapsed. Kept per device and never exported.
+How the app is set up on this computer rather than how an exercise is practiced: volumes and mutes (the Mix), the count-in toggle, the look and mode, which exercise was last open, which sidebar tab is showing, which folders are collapsed, and whether the grid editor is collapsed. Kept per device and never exported.
+
+**Look**:
+The app's visual style, chosen in Appearance: Studio (the default), Warm, Bold, Score, Riso or Catalogue. A look changes colours, fonts, corners, borders, shadows and a few ornaments, never the layout (ADR 0013). Score, Riso and Catalogue are light only.
+_Avoid_: Skin, theme (for the look itself)
+
+**Mode**:
+Whether the app draws light or dark: Auto (follows the device), Light or Dark. A light-only look always draws light.
+_Avoid_: Theme
 
 **Snare row**:
 One of an exercise's two rhythms over the same bars: the notes played on the snare with the hands, written in the hands part. Sticking gives this row's notes their hands; a kick row note gets K only where no hand plays with it.
