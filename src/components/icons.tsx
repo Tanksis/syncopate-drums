@@ -136,3 +136,10 @@ export const MetronomeIcon = () => (
     <path d="M5.5 1.5h5l3 13h-11zM8 11.5l3-7" />
   </Icon>
 )
+
+/** The metronome crossed out: the click off. */
+export const MetronomeOffIcon = () => (
+  <Icon>
+    <path d="M5.5 1.5h5l3 13h-11zM8 11.5l3-7M1.5 1.5l13 13" />
+  </Icon>
+)
