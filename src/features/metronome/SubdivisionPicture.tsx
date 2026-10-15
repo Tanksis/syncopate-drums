@@ -1,10 +1,8 @@
 import { useLayoutEffect, useRef } from 'react'
 import { Beam, Dot, Formatter, Fraction, Renderer, Stave, StaveNote, Tuplet, Voice } from 'vexflow/bravura'
-import type { Duration, SubdivisionId } from '@/core'
-import { SUBDIVISIONS, subdivisionNotation } from '@/core'
-import { notationFontsReady } from '@/features/notation/staff'
-
-const VEX_DURATION: Record<Duration, string> = { quarter: 'q', eighth: '8', sixteenth: '16' }
+import type { SubdivisionId } from '@/core'
+import { subdivisionNotation, subdivisionOf } from '@/core'
+import { VEX_DURATION, notationFontsReady, recolour } from '@/features/notation/staff'
 
 /** The picture's size in px, and how much smaller than the staff it draws. */
 const WIDTH = 64
@@ -50,16 +48,13 @@ function drawPicture(el: HTMLDivElement, id: SubdivisionId) {
   svg.setAttribute('viewBox', `${box.x + box.width / 2 - w / 2} ${MIDDLE_Y - h / 2} ${w} ${h}`)
   svg.setAttribute('width', String(WIDTH))
   svg.setAttribute('height', String(HEIGHT))
-  // VexFlow draws in black; the picture takes its button's text colour.
-  for (const attr of ['fill', 'stroke']) {
-    for (const node of el.querySelectorAll(`[${attr}="black"], [${attr}="#000000"]`)) node.setAttribute(attr, 'currentColor')
-  }
+  // The picture takes its button's text colour.
+  recolour(el, 'currentColor')
 }
 
 /**
  * A subdivision drawn as one beat of notation with VexFlow, so its glyphs match the staff's, but
- * with no staff lines. It is named by the subdivision's name. The Rhythm sheet and the desktop
- * panel share it.
+ * with no staff lines. It is named by the subdivision's name.
  */
 export function SubdivisionPicture({ id }: { id: SubdivisionId }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -74,7 +69,7 @@ export function SubdivisionPicture({ id }: { id: SubdivisionId }) {
     <div
       ref={ref}
       role="img"
-      aria-label={SUBDIVISIONS.find((s) => s.id === id)!.name}
+      aria-label={subdivisionOf(id).name}
       className="pointer-events-none flex items-center justify-center"
       style={{ width: WIDTH, height: HEIGHT }}
     />

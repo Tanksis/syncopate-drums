@@ -3,7 +3,7 @@ import { useAppStore } from '@/app/store'
 import { Button } from '@/components/Button'
 import { Sheet } from '@/components/Sheet'
 import { keepFocus } from '@/components/keepFocus'
-import { MAX_BEATS, NOTE_VALUES, SUBDIVISIONS, withTimeSignature } from '@/core'
+import { MAX_BEATS, NOTE_VALUES, SUBDIVISIONS, subdivisionOf, withTimeSignature } from '@/core'
 import { MetronomeVolume } from './MetronomeVolume'
 import { SubdivisionPicture } from './SubdivisionPicture'
 
@@ -22,11 +22,11 @@ export function RhythmSheet({ onDone }: { onDone: () => void }) {
 }
 
 /** The time signature, with the beats' stepper on its left and the note value's on its right. */
-export function TimeSignature() {
+function TimeSignature() {
   const metronome = useAppStore((s) => s.device.metronome)
   const setMetronome = useAppStore((s) => s.setMetronome)
   const { beats, noteValue } = metronome
-  const note = NOTE_VALUES.indexOf(noteValue)
+  const noteIndex = NOTE_VALUES.indexOf(noteValue)
   const change = (nextBeats: number, nextNoteValue = noteValue) => setMetronome(withTimeSignature(metronome, nextBeats, nextNoteValue))
   return (
     <div className="flex flex-col gap-2">
@@ -47,8 +47,8 @@ export function TimeSignature() {
         </div>
         <Stepper
           label="Note"
-          more={{ name: 'Shorter note value', disabled: note === NOTE_VALUES.length - 1, onClick: () => change(beats, NOTE_VALUES[note + 1]) }}
-          fewer={{ name: 'Longer note value', disabled: note === 0, onClick: () => change(beats, NOTE_VALUES[note - 1]) }}
+          more={{ name: 'Shorter note value', disabled: noteIndex === NOTE_VALUES.length - 1, onClick: () => change(beats, NOTE_VALUES[noteIndex + 1]) }}
+          fewer={{ name: 'Longer note value', disabled: noteIndex === 0, onClick: () => change(beats, NOTE_VALUES[noteIndex - 1]) }}
         />
       </div>
     </div>
@@ -78,14 +78,14 @@ function Stepper({ label, more, fewer }: { label: string; more: Step; fewer: Ste
 }
 
 /** The 12 subdivisions' pictures, the chosen one marked and named above them. */
-export function SubdivisionGrid() {
+function SubdivisionGrid() {
   const subdivision = useAppStore((s) => s.device.metronome.subdivision)
   const setMetronome = useAppStore((s) => s.setMetronome)
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between gap-2">
         <span className="font-semibold">Subdivision</span>
-        <span className="text-[13px] text-mute">{SUBDIVISIONS.find((s) => s.id === subdivision)?.name}</span>
+        <span className="text-[13px] text-mute">{subdivisionOf(subdivision).name}</span>
       </div>
       <div className="grid grid-cols-4 gap-1.5">
         {SUBDIVISIONS.map(({ id }) => (

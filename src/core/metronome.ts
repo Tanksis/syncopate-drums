@@ -2,7 +2,7 @@
 
 import { MAX_VOLUME, TICKS_PER_BEAT, clampBpm } from './units'
 import type { PlayPosition, ScheduledEvent, ScheduleResult } from './schedule'
-import type { Duration } from './model'
+import type { Duration, Item } from './model'
 
 /** The metronome goes slower than an exercise; both top out at MAX_BPM. */
 export const MIN_METRONOME_BPM = 20
@@ -72,12 +72,13 @@ export const SUBDIVISIONS: readonly Subdivision[] = [
   { id: 'sixteenthEighthSixteenth', name: 'Sixteenth, eighth, sixteenth', onsets: [0, 1 / 4, 3 / 4] },
 ]
 
-/** One note or rest of a subdivision's picture. */
-export interface PictureNote {
-  duration: Duration
-  dotted: boolean
-  rest: boolean
+/** A subdivision by its id. */
+export function subdivisionOf(id: SubdivisionId): Subdivision {
+  return SUBDIVISIONS.find((s) => s.id === id)!
 }
+
+/** One note or rest of a subdivision's picture. */
+export type PictureNote = Pick<Item, 'duration' | 'dotted'> & { rest: boolean }
 
 /** What a subdivision's picture draws for one beat: its notes and rests, and whether they are a triplet. */
 export interface SubdivisionNotation {
@@ -104,7 +105,7 @@ function straightNote(length: number, rest: boolean): PictureNote {
  * played or rested; otherwise each note lasts until the next onset, and a gap before the first is a rest.
  */
 export function subdivisionNotation(id: SubdivisionId): SubdivisionNotation {
-  const onsets = SUBDIVISIONS.find((s) => s.id === id)!.onsets
+  const onsets = subdivisionOf(id).onsets
   const onThird = (onset: number, third: number) => Math.abs(onset * 3 - third) < 1e-9
   if (onsets.some((onset) => onThird(onset, 1) || onThird(onset, 2))) {
     // Each third of the beat is an eighth, played or rested.
@@ -225,7 +226,7 @@ export function metronomeBeat({ bar, tick }: PlayPosition): { bar: number; beat:
 
 /** The ticks within a beat where a subdivision clicks, leaving out the beat itself. */
 function subdivisionBeatTicks(id: SubdivisionId): Set<number> {
-  const onsets = SUBDIVISIONS.find((s) => s.id === id)?.onsets ?? []
+  const onsets = subdivisionOf(id).onsets
   return new Set(onsets.map((onset) => Math.round(onset * TICKS_PER_BEAT)).filter((tick) => tick > 0))
 }
 

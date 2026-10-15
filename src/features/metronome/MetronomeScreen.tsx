@@ -3,7 +3,7 @@ import { useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { Button } from '@/components/Button'
 import { keepFocus } from '@/components/keepFocus'
-import { SUBDIVISIONS, tapTempo } from '@/core'
+import { subdivisionOf, tapTempo } from '@/core'
 import { BpmStep } from '@/features/playback/BpmStep'
 import { toggleMetronome } from '@/features/playback/transport'
 import { BeatBlocks } from './BeatBlocks'
@@ -59,7 +59,7 @@ export function MetronomeScreen() {
 /** The time signature and subdivision, each a small labelled button showing its value; either opens the Rhythm sheet. */
 function RhythmButtons({ onOpen }: { onOpen: () => void }) {
   const { beats, noteValue, subdivision } = useAppStore((s) => s.device.metronome)
-  const name = SUBDIVISIONS.find((s) => s.id === subdivision)?.name
+  const { name } = subdivisionOf(subdivision)
   return (
     <div className="grid grid-cols-2 gap-2 px-4 pt-2.5">
       <RhythmButton label="Time signature" onClick={onOpen}>

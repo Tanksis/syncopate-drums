@@ -27,7 +27,14 @@ export const notationFontsReady: Promise<unknown> = Promise.all([
   document.fonts.load('12px Academico'),
 ])
 
-const VEX_DURATION: Record<Duration, string> = { quarter: 'q', eighth: '8', sixteenth: '16' }
+export const VEX_DURATION: Record<Duration, string> = { quarter: 'q', eighth: '8', sixteenth: '16' }
+
+/** VexFlow draws in black, some of it (stems) from its own defaults, so its black becomes `colour`. */
+export function recolour(el: Element, colour: string) {
+  for (const attr of ['fill', 'stroke']) {
+    for (const node of el.querySelectorAll(`[${attr}="black"], [${attr}="#000000"]`)) node.setAttribute(attr, colour)
+  }
+}
 
 /** Stave lines a stave leaves above its top line, for the bar number. */
 const SPACE_ABOVE_STAVE = 4
@@ -282,10 +289,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
     }
   })
   ties.forEach((t) => t.setContext(ctx).draw())
-  // VexFlow draws in black, some of it (stems) from its own defaults, so its black becomes the ink.
-  for (const attr of ['fill', 'stroke']) {
-    for (const node of el.querySelectorAll(`[${attr}="black"], [${attr}="#000000"]`)) node.setAttribute(attr, colour.ink)
-  }
+  recolour(el, colour.ink)
 
   // In the page's pixels, so scaled.
   const line = (bar: number) => {
