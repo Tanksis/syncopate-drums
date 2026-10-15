@@ -18,9 +18,8 @@ A **Metronome** screen beside **Practice**, switched in the header on both phone
 - **Time signature and Subdivision:** two small labelled buttons at the top (phone) open the **Rhythm sheet**:
   - The time signature defaults to 4/4. A beats stepper sits on its left (1–16) and a note-value stepper on its right (2, 4, 8, 16).
   - Subdivision is a grid of 12 notation pictures: quarter, eighths, off-beat eighth (rest then eighth), dotted eighth and sixteenth, triplet, triplet with the first, middle or last rested, sixteenths, eighth and two sixteenths, two sixteenths and eighth, sixteenth-eighth-sixteenth.
-  - A subdivision volume slider.
-- **Sound:** Beep, Wood block, Cowbell (generated), Hi-hat and Ride bell (the kit's samples), plus a beats volume.
-- **Desktop (D1):** the switch sits in the header's centre. The page shows the blocks over the dial and its controls, and a right panel holds the time signature steppers, the subdivision grid, the sound and the volumes.
+- **Sound:** Beep, Wood block, Cowbell (generated), Hi-hat and Ride bell (the kit's samples), plus one volume for every click (ticket 07).
+- **Desktop (D1):** the switch sits in the header's centre. The page shows the blocks over the dial and its controls, and a right panel holds the time signature steppers, the subdivision grid, the sound and the volume.
 
 The metronome keeps its own BPM, and every setting is remembered on the device. Starting the metronome stops an exercise, and the other way round.
 
@@ -37,7 +36,7 @@ The metronome keeps its own BPM, and every setting is remembered on the device. 
 
 5. As a drummer, I press Play and hear one click per beat at the BPM, in the time signature.
 6. As a drummer, beat 1 starts accented and the other beats normal; I tap a block to cycle it through Accent, Normal, Soft and Off, and hear the change on the next pass.
-7. As a drummer, I pick a subdivision and hear it between the beats, quieter than the beats, with its own volume.
+7. As a drummer, I pick a subdivision and hear it between the beats, the same low click as a Soft beat (ticket 07; it had its own volume before).
 8. As a drummer, in 6/8 the BPM counts eighth notes and there are six blocks.
 9. As a drummer, changing the time signature resets the blocks to beat 1 Accent and the rest Normal.
 10. As a drummer, I change the BPM with − and +, by dragging around the dial, or by tapping Tap tempo; the change applies at once, while playing too.
@@ -60,8 +59,8 @@ The metronome keeps its own BPM, and every setting is remembered on the device. 
 ### Exercise core (the test seam)
 
 - `src/core/metronome.ts`:
-  - `MetronomeSettings`: `bpm` (20–300), `beats` (1–16), `noteValue` (2 | 4 | 8 | 16), `levels` (one `BeatLevel` per beat: `'accent' | 'normal' | 'soft' | 'off'`), `subdivision` (one of 12 ids), `sound`, `beatVolume`, `subdivisionVolume`.
-  - Defaults: 92 BPM, 4/4, Accent-Normal-Normal-Normal, quarters, Wood block, volumes at their usual level.
+  - `MetronomeSettings`: `bpm` (20–300), `beats` (1–16), `noteValue` (2 | 4 | 8 | 16), `levels` (one `BeatLevel` per beat: `'accent' | 'normal' | 'soft' | 'off'`), `subdivision` (one of 12 ids), `sound`, `volume` (one for every click since ticket 07; it replaced `beatVolume` and `subdivisionVolume`).
+  - Defaults: 92 BPM, 4/4, Accent-Soft-Soft-Soft (Accent-Normal-Normal-Normal before ticket 07), quarters, Wood block, the volume at its usual level.
   - `withTimeSignature(settings, beats, noteValue)` resets the levels (story 9).
   - `cycleLevel(level)`: Accent → Normal → Soft → Off → Accent.
   - The subdivision patterns as data: each id is a list of onsets within one beat as fractions (eighths `[0, 1/2]`, off-beat eighth `[1/2]`, dotted `[0, 3/4]`, triplet `[0, 1/3, 2/3]`, triplet first rested `[1/3, 2/3]` …). Onset 0 is the beat itself; the other onsets are subdivision clicks. A pattern whose first onset is rested still plays the beat (the beat block decides that).
@@ -73,7 +72,7 @@ The metronome keeps its own BPM, and every setting is remembered on the device. 
 ### App
 
 - The engine plays whichever schedule it is given: `startPlayback` takes the source to schedule from (the exercise or the metronome), and the playhead reports the metronome's beat for the visuals. One engine, so starting one stops the other.
-- Click voices: Beep (the existing synth), Wood block and Cowbell (synthesized), Hi-hat and Ride bell (existing samples). Accent is louder (and higher for the synthesized ones), Soft quieter, Off silent; subdivision clicks play lower and at the subdivision volume. They go through the click layer.
+- Click voices: Beep (the existing synth), Wood block and Cowbell (synthesized), Hi-hat and Ride bell (existing samples). Accent is the loudest and high; Normal is the same high click, quieter; Soft is exactly a subdivision click, lower and quieter; Off is silent (ticket 07). They go through the click layer.
 - Phone (`usePhoneWindow`): the header's centre is the Practice / Metronome switch on the Metronome screen. On Practice, the header stays as it is plus the switch; how they share the row is the builder's call within the header's existing space, checked at 390 px.
 - Desktop: the switch in the header's centre. The Metronome page replaces the notation, editor and both sidebars while shown.
 - Subdivision pictures are drawn with VexFlow, like the staff, without staff lines, so the glyphs match the notation.

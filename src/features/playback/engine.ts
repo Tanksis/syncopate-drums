@@ -304,13 +304,16 @@ function startSounds(audio: Audio, when: number, event: ScheduledEvent, playing:
   return CLICK_SOUNDS[playing.metronome.sound](audio, when, CLICK_PITCH[level], gain)
 }
 
-/** A click's pitch: Accent highest (on the synthesized sounds), subdivision clicks lowest. */
+/**
+ * A click's pitch (on the synthesized sounds): Accent and Normal high, as accented hits; Soft low,
+ * the same click as a subdivision's.
+ */
 type Pitch = 'high' | 'mid' | 'low'
 
 const CLICK_PITCH: Record<BeatLevel | 'subdivision', Pitch> = {
   accent: 'high',
-  normal: 'mid',
-  soft: 'mid',
+  normal: 'high',
+  soft: 'low',
   off: 'mid',
   subdivision: 'low',
 }

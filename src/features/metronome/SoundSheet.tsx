@@ -25,7 +25,7 @@ export function pickSound(sound: MetronomeSound): void {
   previewMetronomeSound(useAppStore.getState().device.metronome).catch((error: unknown) => console.error(error))
 }
 
-/** The phone's Sound sheet: the click's sound, heard at once when picked, and the beats' volume. */
+/** The phone's Sound sheet: the click's sound, heard at once when picked, and the volume. */
 export function SoundSheet({ onDone }: { onDone: () => void }) {
   const sound = useAppStore((s) => s.device.metronome.sound)
   return (
@@ -40,7 +40,7 @@ export function SoundSheet({ onDone }: { onDone: () => void }) {
           className="flex-col rounded-2xl! [&>button]:h-11 [&>button]:text-base"
         />
       </div>
-      <MetronomeVolume setting="beatVolume" label="Beats volume" />
+      <MetronomeVolume />
     </Sheet>
   )
 }

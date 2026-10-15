@@ -59,8 +59,7 @@ export function MetronomePage() {
         <TimeSignature compact />
         <SubdivisionGrid compact />
         <Sound />
-        <MetronomeVolume setting="beatVolume" label="Beats volume" />
-        <MetronomeVolume setting="subdivisionVolume" label="Subdivision volume" />
+        <MetronomeVolume />
       </aside>
     </div>
   )

@@ -2,18 +2,18 @@ import { describe, expect, it } from 'vitest'
 import type { MetronomeSettings, ScheduledEvent } from './index'
 import { DEFAULT_DEVICE_SETTINGS, DEFAULT_METRONOME_SETTINGS, SUBDIVISIONS, deviceSettingsFrom, cycleLevel, dialBpm, dialTurn, metronomeBeat, metronomeClickGain, metronomeSchedule, tapTempo, tempoName, wheelSteps, playheadAt, recordEvents, subdivisionNotation, withTimeSignature } from './index'
 
-const at120: MetronomeSettings = { ...DEFAULT_METRONOME_SETTINGS, bpm: 120 }
+const at120: MetronomeSettings = { ...DEFAULT_METRONOME_SETTINGS, bpm: 120, levels: ['accent', 'normal', 'normal', 'normal'] }
 
 /** Each event as its time, level and bar:tick, for comparing against a worked example. */
 const heard = (events: ScheduledEvent[]) => events.map((e) => [e.time, e.level, `${e.position.bar}:${e.position.tick}`])
 
 describe('metronome defaults', () => {
-  it('are 92 BPM in 4/4, beat 1 accented, quarters, on the wood block', () => {
+  it('are 92 BPM in 4/4, beat 1 accented and the rest soft, quarters, on the wood block', () => {
     expect(DEFAULT_METRONOME_SETTINGS).toMatchObject({
       bpm: 92,
       beats: 4,
       noteValue: 4,
-      levels: ['accent', 'normal', 'normal', 'normal'],
+      levels: ['accent', 'soft', 'soft', 'soft'],
       subdivision: 'quarter',
       sound: 'woodBlock',
     })
@@ -30,17 +30,17 @@ describe('cycleLevel', () => {
 })
 
 describe('withTimeSignature', () => {
-  it('resets the blocks to beat 1 accented and the rest normal', () => {
-    const edited = { ...DEFAULT_METRONOME_SETTINGS, levels: ['off', 'accent', 'soft', 'soft'] as const }
+  it('resets the blocks to beat 1 accented and the rest soft', () => {
+    const edited = { ...DEFAULT_METRONOME_SETTINGS, levels: ['off', 'accent', 'normal', 'normal'] as const }
     const six = withTimeSignature({ ...edited, levels: [...edited.levels] }, 6, 8)
     expect(six.beats).toBe(6)
     expect(six.noteValue).toBe(8)
-    expect(six.levels).toEqual(['accent', 'normal', 'normal', 'normal', 'normal', 'normal'])
+    expect(six.levels).toEqual(['accent', 'soft', 'soft', 'soft', 'soft', 'soft'])
   })
 
   it('keeps the other settings', () => {
     const fast = { ...DEFAULT_METRONOME_SETTINGS, bpm: 160, subdivision: 'triplet' as const }
-    expect(withTimeSignature(fast, 3, 4)).toMatchObject({ bpm: 160, subdivision: 'triplet', levels: ['accent', 'normal', 'normal'] })
+    expect(withTimeSignature(fast, 3, 4)).toMatchObject({ bpm: 160, subdivision: 'triplet', levels: ['accent', 'soft', 'soft'] })
   })
 })
 
@@ -269,8 +269,7 @@ describe('stored device settings', () => {
       levels: ['accent', 'normal', 'soft', 'off', 'accent', 'normal', 'normal'],
       subdivision: 'tripletMiddleRest',
       sound: 'rideBell',
-      beatVolume: 0.8,
-      subdivisionVolume: 0.4,
+      volume: 0.8,
     }
     expect(deviceSettingsFrom({ metronome }).metronome).toEqual(metronome)
   })
@@ -284,37 +283,44 @@ describe('stored device settings', () => {
     expect(metronome).toMatchObject({ sound: 'woodBlock', subdivision: 'quarter' })
   })
 
-  it('pad the levels with Normal, or cut them, to the beats', () => {
-    expect(deviceSettingsFrom({ metronome: { beats: 5, levels: ['soft', 'off'] } }).metronome.levels).toEqual([
-      'soft',
+  it('pad the levels with Soft, or cut them, to the beats', () => {
+    expect(deviceSettingsFrom({ metronome: { beats: 5, levels: ['normal', 'off'] } }).metronome.levels).toEqual([
+      'normal',
       'off',
-      'normal',
-      'normal',
-      'normal',
+      'soft',
+      'soft',
+      'soft',
     ])
     expect(deviceSettingsFrom({ metronome: { beats: 2, levels: ['soft', 'off', 'accent'] } }).metronome.levels).toEqual(['soft', 'off'])
   })
 
   it('reset the levels for the beats when they are not a list of levels', () => {
-    expect(deviceSettingsFrom({ metronome: { beats: 3, levels: 'loud' } }).metronome.levels).toEqual(['accent', 'normal', 'normal'])
-    expect(deviceSettingsFrom({ metronome: { levels: ['accent', 'loud', 'off', 'soft'] } }).metronome.levels).toEqual([
+    expect(deviceSettingsFrom({ metronome: { beats: 3, levels: 'loud' } }).metronome.levels).toEqual(['accent', 'soft', 'soft'])
+    expect(deviceSettingsFrom({ metronome: { levels: ['accent', 'loud', 'off', 'normal'] } }).metronome.levels).toEqual([
       'accent',
-      'normal',
-      'off',
       'soft',
+      'off',
+      'normal',
     ])
   })
 
-  it('keep the BPM, beats, note value and volumes in range', () => {
-    const stored = { bpm: 500, beats: 40, noteValue: 3, beatVolume: 9, subdivisionVolume: -1 }
-    expect(deviceSettingsFrom({ metronome: stored }).metronome).toMatchObject({
-      bpm: 300,
-      beats: 4,
-      noteValue: 4,
-      beatVolume: 1.5,
-      subdivisionVolume: 0,
-    })
+  it('keep the old levels of a metronome stored before the defaults changed', () => {
+    const levels = ['accent', 'normal', 'normal', 'normal']
+    expect(deviceSettingsFrom({ metronome: { levels } }).metronome.levels).toEqual(levels)
+  })
+
+  it('keep the BPM, beats, note value and volume in range', () => {
+    const stored = { bpm: 500, beats: 40, noteValue: 3, volume: 9 }
+    expect(deviceSettingsFrom({ metronome: stored }).metronome).toMatchObject({ bpm: 300, beats: 4, noteValue: 4, volume: 1.5 })
+    expect(deviceSettingsFrom({ metronome: { volume: -1 } }).metronome.volume).toBe(0)
     expect(deviceSettingsFrom({ metronome: { bpm: 'fast', beats: 2.5 } }).metronome).toMatchObject({ bpm: 92, beats: 4 })
+  })
+
+  it('take the beats volume of a metronome stored with two volumes', () => {
+    const { metronome } = deviceSettingsFrom({ metronome: { beatVolume: 0.7, subdivisionVolume: 0.2 } })
+    expect(metronome.volume).toBe(0.7)
+    expect(metronome).not.toHaveProperty('beatVolume')
+    expect(metronome).not.toHaveProperty('subdivisionVolume')
   })
 
   it('use the default metronome when the stored one is not an object', () => {
@@ -334,21 +340,19 @@ describe('metronomeClickGain', () => {
     expect(gain('off')).toBe(0)
   })
 
-  it('plays Soft at most a quarter as loud as Normal (12 dB under), so the two are told apart', () => {
-    expect(gain('soft')).toBeLessThanOrEqual(gain('normal') / 4)
+  it('plays Normal as a quieter accent, at 0.6 of it', () => {
+    expect(gain('normal')).toBeCloseTo(0.6)
   })
 
-  it('plays subdivision clicks quieter than a normal beat', () => {
-    expect(gain('subdivision')).toBeGreaterThan(0)
-    expect(gain('subdivision')).toBeLessThan(gain('normal'))
+  it('plays Soft exactly as loud as a subdivision click', () => {
+    expect(gain('soft')).toBe(gain('subdivision'))
+    expect(gain('soft', { volume: 1.3 })).toBe(gain('subdivision', { volume: 1.3 }))
   })
 
-  it('scales the beats by the beats volume and the subdivision clicks by theirs', () => {
-    expect(gain('accent', { beatVolume: 0.5 })).toBe(0.5)
-    expect(gain('normal', { beatVolume: 0 })).toBe(0)
-    expect(gain('subdivision', { beatVolume: 0 })).toBe(gain('subdivision'))
-    expect(gain('subdivision', { subdivisionVolume: 1.5 })).toBeCloseTo(gain('subdivision') * 1.5)
-    expect(gain('accent', { subdivisionVolume: 0 })).toBe(1)
+  it('scales every click by the one volume', () => {
+    expect(gain('accent', { volume: 0.5 })).toBe(0.5)
+    expect(gain('normal', { volume: 0 })).toBe(0)
+    expect(gain('subdivision', { volume: 1.5 })).toBeCloseTo(gain('subdivision') * 1.5)
   })
 })
 

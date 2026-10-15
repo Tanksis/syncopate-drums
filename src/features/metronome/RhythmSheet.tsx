@@ -4,19 +4,17 @@ import { Button } from '@/components/Button'
 import { Sheet } from '@/components/Sheet'
 import { keepFocus } from '@/components/keepFocus'
 import { MAX_BEATS, NOTE_VALUES, SUBDIVISIONS, subdivisionOf, withTimeSignature } from '@/core'
-import { MetronomeVolume } from './MetronomeVolume'
 import { SubdivisionPicture } from './SubdivisionPicture'
 
 /**
  * The phone's Rhythm sheet: the time signature between its beats and note-value steppers (a change
- * resets the blocks), the subdivision's pictures, and the subdivision volume.
+ * resets the blocks) and the subdivision's pictures.
  */
 export function RhythmSheet({ onDone }: { onDone: () => void }) {
   return (
     <Sheet title="Rhythm" onDone={onDone}>
       <TimeSignature />
       <SubdivisionGrid />
-      <MetronomeVolume setting="subdivisionVolume" label="Subdivision volume" />
     </Sheet>
   )
 }
