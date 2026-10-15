@@ -1,5 +1,4 @@
-import type { PointerEvent } from 'react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { useCoarsePointer } from '@/app/useMediaQuery'
 import { Button } from '@/components/Button'
@@ -19,18 +18,17 @@ import { useEditorKeys } from './useEditorKeys'
  * The grid editor: the bar tabs, undo, redo and the bar menu over the cursor bar's beat cards. Given
  * `onDone`, it's the phone layout's sheet over the lower part of the screen, its transport and tab
  * bars too: a grab handle, the beat cards two to a row (on most phones they fit; else they scroll),
- * and a row at its foot, in the thumb's reach, of undo, redo, the bar dots and +, the bin, the bar
- * menu and the tick. The cards swipe sideways between bars, like pages; the tick, or a drag down on
- * the handle or the cards, closes the sheet (`onDone`). It is drawn in place while `open`, and below
- * the screen, to slide in and out, while not. Otherwise it's docked under the notation, and its
- * chevron collapses it to its header row.
+ * with a small ‹ and › either side, and a row at its foot, in the thumb's reach, of undo, redo, the
+ * bar dots and +, the bin, the bar menu and the tick. Going to another bar slides its cards in; the
+ * tick, or a drag down on the handle or the cards, closes the sheet (`onDone`). It is drawn in place
+ * while `open`, and below the screen, to slide in and out, while not. Otherwise it's docked under
+ * the notation, and its chevron collapses it to its header row.
  */
 /** How tall the phone's editor sheet is, from the bottom of the screen. */
 export const EDITOR_SHEET_HEIGHT = '62dvh'
 
-/** The gap, in px, between a bar's cards and the next bar's, and how much of the next bar peeks in. */
-const PAGE_GAP = 10
-const PEEK = 16
+/** The gap, in px, between one bar's cards and the next's as they slide past each other. */
+const SLIDE_GAP = 32
 
 /**
  * The phone's editor sheet: see `GridEditor`. Fixed to the screen's foot, as the full-screen panels
@@ -43,7 +41,7 @@ function EditorSheet({ open, pull, onDone }: { open: boolean; pull: number; onDo
   const cards = useRef<HTMLDivElement>(null)
   const cardsPull = usePullDown(cards, onDone)
   const drag = swipe.offset.y || cardsPull
-  const pages = useBarPages()
+  const slide = useBarSlide()
   // Made once, so following a finger moves the sheet without drawing its contents again.
   const strip = useMemo(() => <BeatStrip twoPerRow />, [])
   const row = useMemo(
@@ -67,108 +65,95 @@ function EditorSheet({ open, pull, onDone }: { open: boolean; pull: number; onDo
       <div {...swipe.props} className="flex h-[18px] shrink-0 touch-pan-x items-center justify-center select-none">
         <span aria-hidden className="h-1 w-10 rounded-full bg-edge/60" />
       </div>
-      {/* The beat cards, with the next bar's edge peeking in at the right. A sideways swipe that
-          starts anywhere but on a cell (where a press is a hit or a hold) turns the page. */}
-      <div ref={cards} {...pages.props} className="min-h-0 flex-1 touch-pan-y overflow-x-hidden overflow-y-auto overscroll-contain pb-2 pl-3">
-        <div
-          ref={pages.track}
-          className={`relative ${pages.moving ? '' : slideTransition}`}
-          style={{ width: `calc(100% - ${PAGE_GAP + PEEK}px)`, transform: `translateX(${pages.offset}px)` }}
-        >
-          {pages.previous && <PageEdge side="left" />}
-          {strip}
-          {pages.next && <PageEdge side="right" onClick={pages.goNext} />}
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        {/* The beat cards, centred between the ‹ and ›. While going to another bar, the bar left
+            behind is drawn beside them, and the two slide across together. */}
+        <div ref={cards} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-6 pb-2">
+          <div
+            className={`flex items-start ${slide && slide.running ? slideTransition : ''} ${slide?.forward ? 'flex-row-reverse' : ''}`}
+            style={{ gap: SLIDE_GAP, transform: slide ? `translateX(${slide.offset})` : undefined }}
+          >
+            <div className="w-full shrink-0">{strip}</div>
+            {slide && (
+              <div aria-hidden className="pointer-events-none w-full shrink-0">
+                <BeatStrip twoPerRow bar={slide.from} />
+              </div>
+            )}
+          </div>
         </div>
+        <BarStep side="left" />
+        <BarStep side="right" />
       </div>
       {row}
     </section>
   )
 }
 
-/**
- * The next or previous bar's cards, drawn as outlines beside the cursor bar's: the next one peeks
- * in, and a tap on it goes to that bar; the previous one shows only while a swipe pulls it in.
- */
-function PageEdge({ side, onClick }: { side: 'left' | 'right'; onClick?: () => void }) {
-  const place = side === 'left' ? { right: `calc(100% + ${PAGE_GAP}px)` } : { left: `calc(100% + ${PAGE_GAP}px)` }
-  const outlines = (
-    <span aria-hidden className="grid h-full grid-cols-2 grid-rows-2 gap-2">
-      {[0, 1, 2, 3].map((i) => (
-        <span key={i} className="rounded-xl border border-line bg-card" />
-      ))}
-    </span>
-  )
-  if (!onClick) {
-    return (
-      <span aria-hidden className="absolute inset-y-0 w-full" style={place}>
-        {outlines}
-      </span>
-    )
-  }
+/** The phone's small ‹ or ›, beside the beat cards, which goes to the bar before or after. */
+function BarStep({ side }: { side: 'left' | 'right' }) {
+  const barCount = useAppStore((s) => s.editor.exercise.bars.length)
+  const current = useAppStore((s) => s.editor.cursor.bar)
+  const dispatch = useAppStore((s) => s.dispatch)
+  const to = side === 'left' ? current - 1 : current + 1
+  const label = side === 'left' ? 'Previous bar' : 'Next bar'
   return (
-    <button type="button" aria-label="Next bar" tabIndex={-1} onMouseDown={keepFocus} onClick={onClick} className="absolute inset-y-0 w-full cursor-pointer" style={place}>
-      {outlines}
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      disabled={to < 0 || to >= barCount}
+      tabIndex={-1}
+      onMouseDown={keepFocus}
+      onClick={() => dispatch({ type: 'moveTo', bar: to, beat: 0 })}
+      className={`absolute top-1/2 flex h-14 w-6 -translate-y-1/2 cursor-pointer touch-manipulation items-center justify-center text-xl/none text-mute hover:text-accent disabled:cursor-default disabled:opacity-25 disabled:hover:text-mute ${
+        side === 'left' ? 'left-0' : 'right-0'
+      }`}
+    >
+      <span aria-hidden>{side === 'left' ? '‹' : '›'}</span>
     </button>
   )
 }
 
 /**
- * The phone's beat cards as pages, a bar to each: a swipe left goes to the next bar and right to the
- * one before, the cards following the finger (giving only a little past the first and last bars),
- * and the new bar's cards slide in from where the swipe let go. A swipe that starts on a cell is
- * the cell's, a hit or a hold. `track` is what moves, and `offset` (px) where to draw it.
+ * When the cursor goes to another bar (by the ‹ ›, a dot or the + on the phone), the bar it left
+ * slides out and the new one in, from the side they lie on, `SLIDE_GAP` apart. `from` is the bar
+ * left behind, `forward` whether it lies before the new one, and `offset` where to draw the pair:
+ * first with the old bar in view, then, `running`, sliding to the new one.
  */
-function useBarPages() {
-  const barCount = useAppStore((s) => s.editor.exercise.bars.length)
+function useBarSlide() {
   const current = useAppStore((s) => s.editor.cursor.bar)
-  const dispatch = useAppStore((s) => s.dispatch)
-  const track = useRef<HTMLDivElement>(null)
-  // Where the new bar's cards are first drawn, before they slide to rest; null once they're sliding.
-  const [entering, setEntering] = useState<number | null>(null)
-  const [settling, setSettling] = useState(false)
-  const lastOffset = useRef(0)
-  const previous = current > 0
-  const next = current < barCount - 1
-  const turn = (by: 1 | -1) => {
-    if (!(by === 1 ? next : previous)) return
-    const stride = (track.current?.offsetWidth ?? 0) + PAGE_GAP
-    dispatch({ type: 'moveTo', bar: current + by, beat: 0 })
-    setEntering(lastOffset.current + by * stride)
-  }
-  const swipe = useSwipe({ left: () => turn(1), right: () => turn(-1) })
+  const barCount = useAppStore((s) => s.editor.exercise.bars.length)
+  const exerciseId = useAppStore((s) => s.editor.exercise.id)
+  const [slide, setSlide] = useState<{ from: number; forward: boolean; running: boolean } | null>(null)
+  const last = useRef({ bar: current, exerciseId })
+  // Before the screen is drawn, so the new bar never shows in place before it slides in.
+  useLayoutEffect(() => {
+    const was = last.current
+    last.current = { bar: current, exerciseId }
+    // Only a move between two bars that are both still there: not a bar deleted, nor another exercise.
+    if (was.bar === current || was.exerciseId !== exerciseId || was.bar >= barCount) return
+    setSlide({ from: was.bar, forward: was.bar < current, running: false })
+  }, [current, exerciseId, barCount])
+  const started = slide !== null && !slide.running
   useEffect(() => {
-    if (entering === null) return
-    // A frame drawn where the swipe let go, then the slide to rest.
-    const frame = requestAnimationFrame(() => {
-      setEntering(null)
-      setSettling(true)
+    if (!started) return
+    // Two frames: one drawing the old bar in place, then the slide.
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => setSlide((s) => s && { ...s, running: true }))
     })
     return () => cancelAnimationFrame(frame)
-  }, [entering])
+  }, [started])
+  const running = slide?.running ?? false
   useEffect(() => {
-    if (!settling) return
-    const timer = window.setTimeout(() => setSettling(false), SLIDE_MS)
+    if (!running) return
+    const timer = window.setTimeout(() => setSlide(null), SLIDE_MS)
     return () => window.clearTimeout(timer)
-  }, [settling])
-  const dx = swipe.offset.x
-  const held = (dx > 0 && !previous) || (dx < 0 && !next) ? dx / 4 : dx
-  lastOffset.current = held
-  const props = {
-    ...swipe.props,
-    onPointerDown: (e: PointerEvent<HTMLElement>) => {
-      if (e.target instanceof Element && e.target.closest('[data-position]')) return
-      swipe.props.onPointerDown(e)
-    },
-  }
-  return {
-    props,
-    track,
-    offset: entering ?? held,
-    moving: entering !== null || swipe.swiping,
-    previous: previous && (swipe.swiping || entering !== null || settling),
-    next,
-    goNext: () => turn(1),
-  }
+  }, [running])
+  if (!slide) return null
+  // The new bar is laid out in view, the old one beside it on its side (before it, going forward: reversed),
+  // so the pair starts a bar and the gap over, showing the old one, and slides to rest.
+  const over = slide.forward ? `calc(100% + ${SLIDE_GAP}px)` : `calc(-100% - ${SLIDE_GAP}px)`
+  return { ...slide, offset: slide.running ? '0px' : over }
 }
 
 export function GridEditor({ onDone, open = true, pull = 0 }: { onDone?: () => void; open?: boolean; pull?: number }) {
