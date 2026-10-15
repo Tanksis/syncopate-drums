@@ -1,5 +1,6 @@
 import { useAppStore } from '@/app/store'
 import { Button } from '@/components/Button'
+import { CheckIcon } from '@/components/icons'
 import { keepFocus } from '@/components/keepFocus'
 import { fieldClass } from '@/components/ValueField'
 import { BpmStep } from './BpmStep'
@@ -15,18 +16,19 @@ const roundButtonClass =
 const stepClass = 'size-11 rounded-full border-edge bg-panel text-xl/none font-semibold active:border-accent active:text-accent'
 
 /**
- * The phone layout's transport, fixed at the bottom within reach of a thumb: play/pause, the tempo
+ * The phone layout's transport, over the tab bar within reach of a thumb: play/pause, the tempo
  * with − and + buttons that repeat while held, and Edit, given `onEdit`, to open the editor sheet.
- * On an example, given `onCopy`, Copy takes Edit's place to make an editable copy.
+ * While the sheet is open, given `onDone`, a tick takes Edit's place to close it. On an example,
+ * given `onCopy`, Copy takes Edit's place to make an editable copy.
  */
-export function TransportBar({ onEdit, onCopy }: { onEdit?: () => void; onCopy?: () => void }) {
+export function TransportBar({ onEdit, onDone, onCopy }: { onEdit?: () => void; onDone?: () => void; onCopy?: () => void }) {
   usePlaybackKeys()
   const playing = useAppStore((s) => s.playing)
   return (
     <div
       aria-label="Transport"
       role="toolbar"
-      className="flex shrink-0 items-center gap-3 border-t border-line bg-card px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]"
+      className="flex shrink-0 items-center gap-3 border-t border-line bg-card px-3 py-2"
     >
       <button
         type="button"
@@ -55,6 +57,12 @@ export function TransportBar({ onEdit, onCopy }: { onEdit?: () => void; onCopy?:
         <SlotButton aria-label="Copy to Library" onClick={onCopy}>
           Copy
         </SlotButton>
+      ) : onDone ? (
+        <Button variant="primary" size="lg" icon aria-label="Done editing" title="Done editing" onClick={onDone} className="ml-auto">
+          <span aria-hidden className="flex [&>svg]:size-5.5">
+            <CheckIcon />
+          </span>
+        </Button>
       ) : (
         onEdit && <SlotButton onClick={onEdit}>Edit</SlotButton>
       )}
@@ -62,7 +70,7 @@ export function TransportBar({ onEdit, onCopy }: { onEdit?: () => void; onCopy?:
   )
 }
 
-/** The button at the right of the bar: Edit, or Copy on an example. */
+/** The button at the right of the bar: Edit, or Copy on an example. (Done is a tick.) */
 function SlotButton(props: { 'aria-label'?: string; onClick: () => void; children: string }) {
   return (
     <Button size="lg" {...props} className="ml-auto active:border-accent active:text-accent" />
