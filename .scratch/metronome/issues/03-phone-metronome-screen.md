@@ -4,11 +4,11 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done (merged in PR #99, 2026-10-15)
 
-- [ ] The header switch, on both screens, fitting 390 px
-- [ ] Beat blocks cycle their level on tap; the current beat lights up while playing
-- [ ] The dial: a dot per beat, BPM in the sans-serif font with the tempo name, drag around the ring to change the BPM
-- [ ] − Play +, Tap tempo, and the Sound sheet
-- [ ] The Time signature and Subdivision buttons show the current values (they open the Rhythm sheet in 04)
-- [ ] Checked in the browser at 390 × 844, light and dark
+- [x] The header switch, on both screens, fitting 390 px
+- [x] Beat blocks cycle their level on tap; the current beat lights up while playing
+- [x] The dial: a dot per beat, BPM in the sans-serif font with the tempo name, drag around the ring to change the BPM
+- [x] − Play +, Tap tempo, and the Sound sheet
+- [x] The Time signature and Subdivision buttons show the current values (they open the Rhythm sheet in 04)
+- [x] Checked in the browser at 390 × 844, light and dark

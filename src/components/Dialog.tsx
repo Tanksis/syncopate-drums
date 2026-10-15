@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import { useEffect, useRef } from 'react'
 import { Button } from './Button'
+import { useModalDialog } from './useModalDialog'
 
 /**
  * A dialog button; `danger` marks the one that changes something for good, `primary` the one that
@@ -50,25 +50,11 @@ export function Dialog({
   buttons: ReactNode
   onCancel: () => void
 }) {
-  const dialog = useRef<HTMLDialogElement>(null)
-  useEffect(() => {
-    const shown = dialog.current
-    shown?.showModal()
-    shown?.querySelector<HTMLElement>('[data-autofocus]')?.focus()
-    return () => shown?.close()
-  }, [])
-
+  const modal = useModalDialog(onCancel)
   return (
     <dialog
-      ref={dialog}
+      {...modal}
       aria-label={title}
-      onCancel={(e) => {
-        e.preventDefault()
-        onCancel()
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onCancel()
-      }}
       className="m-auto w-96 max-w-[calc(100vw-2rem)] rounded-lg border border-line bg-card p-0 text-ink shadow-popover backdrop:bg-shade/30"
     >
       <div className="flex flex-col gap-3 p-4">

@@ -9,16 +9,28 @@ const REPEAT_EVERY = 70
 
 /**
  * A button that changes the tempo by `step`, again and again while it's held, and saves once it's
- * let go: the phone's transport bar and the desktop header each give it their own look.
+ * let go: the phone's transport bar and the desktop header each give it their own look. It moves
+ * the open exercise's tempo, or the metronome's own.
  */
-export function BpmStep({ step, className, children }: { step: 1 | -1; className: string; children: ReactNode }) {
+export function BpmStep({
+  step,
+  tempo = 'exercise',
+  className,
+  children,
+}: {
+  step: 1 | -1
+  tempo?: 'exercise' | 'metronome'
+  className: string
+  children: ReactNode
+}) {
   const timer = useRef<number | undefined>(undefined)
   const held = useRef(false)
 
   /** Moves the tempo by `by`; while `dragging`, it isn't saved yet. */
   const change = (by: number, dragging: boolean) => {
-    const { editor, setBpm } = useAppStore.getState()
-    setBpm(editor.exercise.practice.bpm + by, { dragging })
+    const { editor, device, setBpm, setMetronome } = useAppStore.getState()
+    if (tempo === 'metronome') setMetronome({ bpm: device.metronome.bpm + by }, { dragging })
+    else setBpm(editor.exercise.practice.bpm + by, { dragging })
   }
   const release = () => {
     window.clearTimeout(timer.current)

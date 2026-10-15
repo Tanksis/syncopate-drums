@@ -97,12 +97,7 @@ const gainTargets: Record<Layer, number> = { ...LAYER_GAIN }
 export async function startPlayback(input: () => PlaybackSource, from: PlayPosition | 'start' = 'start'): Promise<void> {
   stopPlayback()
   const mine = generation
-  const { ctx } = (audio ??= createAudio())
-  loading ??= loadSamples(audio).catch((error) => {
-    loading = undefined // let the next start try again
-    throw error
-  })
-  await Promise.all([ctx.resume(), loading])
+  const { ctx } = await readyAudio()
   if (mine !== generation) return
   read = input
   cursor = { position: from, time: ctx.currentTime + START_DELAY }
@@ -123,6 +118,18 @@ export function stopPlayback(): void {
     source.disconnect()
   }
   sources.clear()
+}
+
+/**
+ * Plays one accented click of the metronome's sound, so a sound picked while nothing plays is
+ * heard at once. While anything plays it does nothing: the metronome's next click is the sound. Call it
+ * from a user gesture.
+ */
+export async function previewMetronomeSound(metronome: MetronomeSettings): Promise<void> {
+  const current = await readyAudio()
+  if (cursor) return
+  setLevels(current, METRONOME_LAYERS)
+  CLICK_SOUNDS[metronome.sound](current, current.ctx.currentTime + START_DELAY, 'high', metronomeClickGain('accent', metronome))
 }
 
 /**
@@ -153,6 +160,17 @@ function heardTime(ctx: AudioContext): number {
     ? contextTime + (performance.now() - performanceTime) / 1000
     : ctx.currentTime - (ctx.baseLatency || 0) - (ctx.outputLatency || 0)
   return output - HIGHLIGHT_LATENCY
+}
+
+/** The audio context, running, with the samples loaded: made on first use. */
+async function readyAudio(): Promise<Audio> {
+  const ready = (audio ??= createAudio())
+  loading ??= loadSamples(ready).catch((error) => {
+    loading = undefined // let the next start try again
+    throw error
+  })
+  await Promise.all([ready.ctx.resume(), loading])
+  return ready
 }
 
 function createAudio(): Audio {

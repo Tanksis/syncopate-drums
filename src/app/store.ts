@@ -2,10 +2,11 @@
 // change, unless it is an example, which is never stored (ADR 0008).
 
 import { create } from 'zustand'
-import type { DeviceSettings, EditCommand, EditorState, Exercise, Folder, GroovePresetId, HihatFoot, ImportChoice, PatternGrid, PlayPosition } from '@/core'
+import type { DeviceSettings, EditCommand, MetronomeSettings, EditorState, Exercise, Folder, GroovePresetId, HihatFoot, ImportChoice, PatternGrid, PlayPosition } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
   addedOnTop,
+  clampMetronomeBpm,
   applyEdit,
   deleteFolder,
   duplicateExercise,
@@ -75,6 +76,11 @@ interface AppState {
   setPaused: (paused: PausedAt | undefined) => void
   /** Volumes, the exercise mute, the count-in and the sidebars, kept for this device; `dragging` as for `setBpm`. */
   setDeviceSettings: (settings: Partial<DeviceSettings>, options?: { dragging?: boolean }) => void
+  /**
+   * The metronome's settings, kept for this device and played at once, its BPM kept in range;
+   * `dragging` as for `setBpm`.
+   */
+  setMetronome: (settings: Partial<MetronomeSettings>, options?: { dragging?: boolean }) => void
   /** Loops just that bar, or with `extend` grows the loop range to take it in. */
   loopBar: (bar: number, options?: { extend?: boolean }) => void
   /** Loops the whole exercise again. */
@@ -279,6 +285,10 @@ export const useAppStore = create<AppState>()((set, get) => {
       const device = { ...get().device, ...settings }
       set({ device })
       saveDevice(device, { debounced: dragging })
+    },
+    setMetronome: (settings, options) => {
+      const metronome = { ...get().device.metronome, ...settings }
+      get().setDeviceSettings({ metronome: { ...metronome, bpm: clampMetronomeBpm(metronome.bpm) } }, options)
     },
     loopBar: (bar, options) => {
       const { editor } = get()
