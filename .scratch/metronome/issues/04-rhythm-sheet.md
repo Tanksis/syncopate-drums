@@ -4,11 +4,11 @@
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Opens from the Time signature and Subdivision buttons; Done closes it
-- [ ] Steppers: beats 1–16, note value 2 / 4 / 8 / 16; changing either resets the blocks
-- [ ] `SubdivisionPicture` draws each pattern with VexFlow, no staff lines, with an accessible name
-- [ ] The selected subdivision is marked and named above the grid
-- [ ] The subdivision volume slider
-- [ ] Checked in the browser at 390 × 844, light and dark
+- [x] Opens from the Time signature and Subdivision buttons; Done closes it
+- [x] Steppers: beats 1–16, note value 2 / 4 / 8 / 16; changing either resets the blocks
+- [x] `SubdivisionPicture` draws each pattern with VexFlow, no staff lines, with an accessible name
+- [x] The selected subdivision is marked and named above the grid
+- [x] The subdivision volume slider
+- [x] Checked in the browser at 390 × 844, light and dark
