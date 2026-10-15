@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { Button } from '@/components/Button'
 import { keepFocus } from '@/components/keepFocus'
@@ -7,21 +7,22 @@ import { tapTempo } from '@/core'
 import { BpmStep } from '@/features/playback/BpmStep'
 import { toggleMetronome } from '@/features/playback/transport'
 import { BeatBlocks } from './BeatBlocks'
-import { Dial } from './Dial'
+import { DIAL_SIZE, Dial } from './Dial'
 import { RhythmSheet } from './RhythmSheet'
 import { SoundSheet } from './SoundSheet'
 import { SubdivisionPicture } from './SubdivisionPicture'
 import { useMetronomeBeat } from './useMetronomeBeat'
 
 /** The − and + beside Play. */
-const stepClass = 'size-13 rounded-full border-edge bg-card text-2xl/none active:border-accent active:text-accent'
+const stepClass = 'size-13 short:size-11 rounded-full border-edge bg-card text-2xl/none active:border-accent active:text-accent'
 
 /** Tap tempo and Sound: round, finger-sized buttons. */
 const pillClass = 'rounded-full! px-5.5!'
 
 /**
  * The phone's Metronome screen: the time signature and subdivision at the top, a block per beat,
- * the dial, − Play +, then Tap tempo and the Sound sheet.
+ * the dial, − Play +, then Tap tempo and the Sound sheet. It fits the screen without scrolling: the
+ * dial takes the room the rest leaves, and on a short screen the rest is drawn smaller.
  */
 export function MetronomeScreen() {
   const beat = useMetronomeBeat()
@@ -30,13 +31,11 @@ export function MetronomeScreen() {
   return (
     <main aria-label="Metronome" className="flex min-h-0 flex-1 flex-col overflow-auto bg-bg">
       <RhythmButtons onOpen={() => setRhythmOpen(true)} />
-      <div className="px-4 pt-3">
+      <div className="px-4 pt-3 short:pt-2">
         <BeatBlocks beat={beat} />
       </div>
-      <div className="flex flex-1 items-center justify-center py-3">
-        <Dial beat={beat} />
-      </div>
-      <div className="flex items-center justify-center gap-5.5 px-4 pb-3.5">
+      <FitDial beat={beat} />
+      <div className="flex items-center justify-center gap-5.5 px-4 pb-3.5 short:pb-2.5">
         <BpmStep step={-1} tempo="metronome" className={stepClass}>
           <span aria-hidden>−</span>
         </BpmStep>
@@ -45,7 +44,7 @@ export function MetronomeScreen() {
           <span aria-hidden>+</span>
         </BpmStep>
       </div>
-      <div className="flex justify-center gap-3 px-4 pb-5">
+      <div className="flex justify-center gap-3 px-4 pb-5 short:pb-3">
         <TapTempo />
         <Button size="lg" onClick={() => setSoundOpen(true)} aria-haspopup="dialog" className={pillClass}>
           Sound
@@ -90,6 +89,31 @@ function RhythmButton({ label, onClick, children }: { label: string; onClick: ()
   )
 }
 
+/** The smallest the dial is drawn, in px, however short the screen; below it the screen scrolls. */
+const MIN_DIAL = 140
+
+/** The dial, as large as the room between the blocks and Play allows, up to its full size. */
+function FitDial({ beat }: { beat: number | undefined }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [size, setSize] = useState(DIAL_SIZE)
+  useLayoutEffect(() => {
+    const el = ref.current!
+    const observer = new ResizeObserver(() => {
+      const { paddingTop, paddingBottom } = getComputedStyle(el)
+      const room = Math.min(el.clientWidth - 32, el.clientHeight - parseFloat(paddingTop) - parseFloat(paddingBottom))
+      setSize(Math.floor(Math.max(MIN_DIAL, Math.min(DIAL_SIZE, room))))
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+  return (
+    // Its height is the room left, not the dial's, so the dial never pushes the rest down.
+    <div ref={ref} className="flex min-h-0 flex-[1_1_0] items-center justify-center py-3 short:py-2">
+      <Dial beat={beat} size={size} />
+    </div>
+  )
+}
+
 /** Plays the metronome from beat 1, stopping an exercise that's playing, or stops it. */
 function PlayButton() {
   const playing = useAppStore((s) => s.metronomePlaying)
@@ -99,7 +123,7 @@ function PlayButton() {
       aria-label={playing ? 'Stop' : 'Play'}
       onMouseDown={keepFocus}
       onClick={toggleMetronome}
-      className="flex size-19 shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-full border border-play-button-edge bg-play-button text-2xl/none text-on-play-button shadow-card select-none active:opacity-80"
+      className="flex size-19 short:size-16 shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-full border border-play-button-edge bg-play-button text-2xl/none text-on-play-button shadow-card select-none active:opacity-80"
     >
       <span aria-hidden>{playing ? '■' : '▶'}</span>
     </button>

@@ -32,13 +32,8 @@ export function SidebarHeading({
   fullScreen?: boolean
   onCollapse: () => void
 }) {
-  if (fullScreen)
-    return (
-      <div className="flex items-center justify-between gap-2">
-        <PanelHeading>{name}</PanelHeading>
-        <DoneButton label={`Close ${name.toLowerCase()}`} onClick={onCollapse} className="-my-1" />
-      </div>
-    )
+  // Its panel's padding is 10 px across and 12 down, so this lines the title up with Settings'.
+  if (fullScreen) return <FullScreenHeading name={name} onClose={onCollapse} className="px-1.5 pt-0.5 pb-0.5" />
   return (
     <div className="flex items-start justify-between gap-2">
       <PanelHeading>{name}</PanelHeading>
@@ -53,6 +48,16 @@ export function SidebarHeading({
       >
         <span aria-hidden>{CHEVRON[side].collapse}</span>
       </button>
+    </div>
+  )
+}
+
+/** A phone's full-screen panel's title, as large as a sheet's, and the tick that closes the panel. */
+export function FullScreenHeading({ name, onClose, className = '' }: { name: string; onClose: () => void; className?: string }) {
+  return (
+    <div className={`flex items-center justify-between gap-2 ${className}`}>
+      <h2 className="m-0 font-display text-2xl font-semibold">{name}</h2>
+      <DoneButton label={`Close ${name.toLowerCase()}`} onClick={onClose} />
     </div>
   )
 }

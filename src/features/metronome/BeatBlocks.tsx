@@ -34,7 +34,7 @@ export function BeatBlocks({ beat }: { beat: number | undefined }) {
           aria-label={`Beat ${i + 1}: ${LEVEL_NAMES[level]}. Tap to change`}
           onMouseDown={keepFocus}
           onClick={() => setMetronome({ levels: levels.map((l, j) => (j === i ? cycleLevel(l) : l)) })}
-          className={`flex cursor-pointer touch-manipulation items-end rounded-xl p-1 ${levels.length > 8 ? 'h-16' : 'h-26'} ${
+          className={`flex cursor-pointer touch-manipulation items-end rounded-xl p-1 ${levels.length > 8 ? 'h-16 short:h-12' : 'h-26 short:h-16'} ${
             beat === i ? 'border-2 border-ink bg-accent-tint' : `bg-card ${level === 'off' ? 'border border-dashed border-edge' : 'border border-line'}`
           }`}
         >

@@ -3,6 +3,9 @@
 /* `dark:` styles apply in the dark theme, which <html data-theme="dark"> turns on. */
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
+/* `short:` styles apply on a short screen, such as a small phone with its browser's bars showing. */
+@custom-variant short (@media (max-height: 620px));
+
 /*
  * Design tokens: use them as Tailwind utilities, e.g. bg-panel, text-mute, border-line for a divider
  * and border-edge for a control's border (a button, field or cell). Every colour
