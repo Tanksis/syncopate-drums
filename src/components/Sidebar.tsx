@@ -14,20 +14,24 @@ const CHEVRON: Record<Side, { collapse: string; open: string }> = {
   right: { collapse: '›', open: '‹' },
 }
 
-const chevronButtonClass =
+/** A sidebar's or a section's small chevron button. */
+export const chevronButtonClass =
   'flex size-5 shrink-0 cursor-pointer items-center justify-center rounded border-0 bg-transparent text-base/none text-mute hover:bg-hover hover:text-ink'
 
 /**
  * A sidebar's heading, with the chevron that collapses the sidebar to its rail, or, shown
- * `fullScreen` on a phone, the tick that closes it.
+ * `fullScreen` on a phone, the tick that closes it. `sidebarName` names the sidebar in the
+ * chevron's label where the heading names only what's under it.
  */
 export function SidebarHeading({
   name,
+  sidebarName = name,
   side,
   fullScreen = false,
   onCollapse,
 }: {
   name: string
+  sidebarName?: string
   side: Side
   fullScreen?: boolean
   onCollapse: () => void
@@ -39,8 +43,8 @@ export function SidebarHeading({
       <PanelHeading>{name}</PanelHeading>
       <button
         type="button"
-        aria-label={`Collapse ${name.toLowerCase()}`}
-        title={`Collapse ${name.toLowerCase()}`}
+        aria-label={`Collapse ${sidebarName.toLowerCase()}`}
+        title={`Collapse ${sidebarName.toLowerCase()}`}
         // Keep focus off the button, so Space still pauses.
         onMouseDown={keepFocus}
         onClick={onCollapse}
@@ -87,9 +91,9 @@ export function SidebarRail({ name, side, expanded, onOpen }: { name: string; si
   )
 }
 
-/** A sidebar shown over the notation from its rail in a narrow window, with a shadow. */
+/** A sidebar shown over the notation from its rail in a narrow window, with a shadow, under the header (its container is `relative`). */
 export function SidebarOverlay({ side, children }: { side: Side; children: ReactNode }) {
-  return <div className={`fixed inset-y-0 z-30 flex shadow-xl shadow-shade/10 ${side === 'left' ? 'left-8' : 'right-8'}`}>{children}</div>
+  return <div className={`absolute inset-y-0 z-30 flex shadow-xl shadow-shade/10 ${side === 'left' ? 'left-8' : 'right-8'}`}>{children}</div>
 }
 
 /**

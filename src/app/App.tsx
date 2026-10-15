@@ -1,6 +1,7 @@
-// Layout A, "Workstation": library sidebar | header, notation card, editor panel | settings sidebar.
-// Either sidebar collapses to a rail; below 1000 px both are rails that open over the notation.
-// The header's switch shows the Metronome page instead, under the header, in place of the rest.
+// Layout A, "Workstation": one header across the window, and under it library sidebar | the
+// exercise's bar, notation card, editor panel | settings sidebar. Either sidebar collapses to a rail;
+// below 1000 px both are rails that open over the notation. The header's switch shows the Metronome
+// page between the sidebars instead, and swaps the top of the settings sidebar for its own settings.
 // Below 640 px, the phone layout: a column of header, notation, transport bar and tab bar, with the
 // editor sheet sliding up over the foot of it, and the sidebars sliding in over the whole screen.
 // Turned sideways, the header and tab bar give way to a rail of icons down the left.
@@ -16,9 +17,10 @@ import { ScreenTabs } from '@/features/metronome/ScreenTabs'
 import { NotationView } from '@/features/notation/NotationView'
 import { StaffPlayButton } from '@/features/playback/StaffPlayButton'
 import { TransportBar } from '@/features/playback/TransportBar'
-import type { HeaderRoom } from '@/features/playback/TransportControls'
+import type { TransportRoom } from '@/features/playback/TransportControls'
 import { TransportControls } from '@/features/playback/TransportControls'
-import { SettingsSidebar } from '@/features/settings/SettingsSidebar'
+import { PhoneSettings } from '@/features/settings/SettingsSidebar'
+import { SettingsSidebar } from '@/app/SettingsSidebar'
 import { useAppStore } from '@/app/store'
 import { useNarrowWindow, usePhoneOrientation, usePhoneWindow } from '@/app/useMediaQuery'
 import { NameInput } from '@/components/NameInput'
@@ -34,55 +36,53 @@ import { isExample } from '@/core'
 export function App() {
   const sidebars = useSidebars()
   const phone = usePhoneWindow()
-  const [headerRef, room] = useHeaderRoom()
+  const [barRef, room] = useExerciseBarRoom()
   const onMetronome = useAppStore((s) => s.device.screen === 'metronome')
   if (phone) return <PhoneLayout sidebars={sidebars} />
-  if (onMetronome)
-    return (
-      <div className="flex h-dvh flex-col">
-        {/* The switch in the middle, where it sits beside the exercise's controls on Practice. */}
-        <header className={`${headerClass} grid grid-cols-[1fr_auto_1fr]`}>
-          <Wordmark />
-          <ScreenTabs place="header" />
-          <NotSaving className="justify-self-end" />
-        </header>
-        <MetronomePage />
-      </div>
-    )
   return (
-    <div className="grid h-dvh grid-cols-[auto_1fr_auto]">
-      <SidebarSlot name="Exercises" side="left" {...sidebars.library}>
-        <LibrarySidebar onCollapse={sidebars.library.onCollapse} />
-      </SidebarSlot>
-
-      <main className="flex min-h-0 min-w-0 flex-col">
-        <header ref={headerRef} className={`${headerClass} flex`}>
-          <Wordmark />
-          {/*
-            The name takes the room the controls leave, and always shows about 12 letters (10 of the
-            wide digit `ch` measures), or 8 in the least room, where the screen switch needs it too.
-          */}
-          <div className={`flex flex-1 ${room === 'compact' ? 'min-w-[7ch]' : 'min-w-[10ch]'}`}>
-            <ExerciseName />
-          </div>
-          <ScreenTabs place="header" iconsOnly={room === 'compact'} />
+    <div className="flex h-dvh flex-col">
+      {/* The same header on both screens, the switch in its middle, so nothing in it moves when the screen does. */}
+      <header className={`${headerClass} grid grid-cols-[1fr_auto_1fr]`}>
+        <Wordmark />
+        <ScreenTabs place="header" />
+        <div className="flex items-center justify-end gap-3">
           <NotSaving />
-          <TransportControls room={room} />
           <SettingsToggle {...sidebars.settings} />
-        </header>
-        <ExampleNotice />
-        {/* The music on a card, which takes the height the editor leaves, all of it when that's collapsed. */}
-        <div className="flex min-h-0 flex-1 flex-col p-3">
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-card border-(length:--border-card) border-line bg-paper shadow-card">
-            <NotationView corner={<StaffPlayButton />} />
-          </div>
         </div>
-        <GridEditor />
-      </main>
+      </header>
 
-      <SidebarSlot name="Settings" side="right" {...sidebars.settings}>
-        <SettingsSidebar playbackGroup={room === 'compact'} onCollapse={sidebars.settings.onCollapse} />
-      </SidebarSlot>
+      {/* The sidebars stay put under it on both screens; an overlay opens over this, below the header. */}
+      <div className="relative grid min-h-0 flex-1 grid-cols-[auto_1fr_auto] grid-rows-[minmax(0,1fr)]">
+        <SidebarSlot name="Exercises" side="left" {...sidebars.library}>
+          <LibrarySidebar onCollapse={sidebars.library.onCollapse} />
+        </SidebarSlot>
+
+        {onMetronome ? (
+          <MetronomePage />
+        ) : (
+          <main className="flex min-h-0 min-w-0 flex-col">
+            {/* The exercise's bar: its name, which takes the room the transport leaves and always shows about 12 letters. */}
+            <div ref={barRef} className="flex items-center gap-3 border-b border-line px-4 py-2">
+              <div className="flex min-w-[10ch] flex-1">
+                <ExerciseName />
+              </div>
+              <TransportControls room={room} />
+            </div>
+            <ExampleNotice />
+            {/* The music on a card, which takes the height the editor leaves, all of it when that's collapsed. */}
+            <div className="flex min-h-0 flex-1 flex-col p-3">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-card border-(length:--border-card) border-line bg-paper shadow-card">
+                <NotationView corner={<StaffPlayButton />} />
+              </div>
+            </div>
+            <GridEditor />
+          </main>
+        )}
+
+        <SidebarSlot name="Settings" side="right" {...sidebars.settings}>
+          <SettingsSidebar playbackGroup={room === 'compact'} onCollapse={sidebars.settings.onCollapse} />
+        </SidebarSlot>
+      </div>
     </div>
   )
 }
@@ -200,7 +200,7 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
         <LibrarySidebar fullScreen onCollapse={library.onCollapse} />
       </SidebarFullScreen>
       <SidebarFullScreen side="right" open={settings.state === 'overlay'} pull={Math.min(0, screenSwipe.offset.x)} onClose={settings.onCollapse}>
-        <SettingsSidebar fullScreen playbackGroup onCollapse={settings.onCollapse} />
+        <PhoneSettings onDone={settings.onCollapse} />
       </SidebarFullScreen>
     </div>
   )
@@ -254,7 +254,7 @@ function PhoneHeaderButton({
   )
 }
 
-/** The header's button that shows the Settings sidebar or hides it, lit while it shows. */
+/** The header's button that shows the settings sidebar or hides it, on either screen, lit while it shows. */
 function SettingsToggle({ state, onOpen, onCollapse }: SidebarControl) {
   const shown = state !== 'rail'
   return (
@@ -272,33 +272,34 @@ function SettingsToggle({ state, onOpen, onCollapse }: SidebarControl) {
 }
 
 /**
- * The header widths, in px, below which its controls don't all fit while leaving the exercise name
- * its 12 letters or so, measured in each look's fonts (Warm's need the most): under `full` the BPM
- * slider goes, and under `withoutSlider` the count-in and loop chip move to the Settings sidebar too,
- * and the screen switch shows only its icons.
+ * The exercise bar's widths, in px, below which its controls don't all fit while leaving the
+ * exercise name its 12 letters or so, measured in each look's fonts (Warm's need the most): under
+ * `full` the BPM slider goes, and under `withoutSlider` the count-in and loop chip move to the
+ * settings sidebar too.
  */
-const HEADER_WIDTH = { full: 1148, withoutSlider: 1023 }
+const EXERCISE_BAR_WIDTH = { full: 780, withoutSlider: 662 }
 
 /**
- * A ref for the desktop header, and how much of the transport fits in it. That depends on the
- * header's own width, which the window and the open sidebars both take from.
+ * A ref for the exercise's bar over the notation, and how much of the transport fits in it. That
+ * depends on the bar's own width, which the window and the open sidebars both take from. While the
+ * Metronome shows there's no bar, and the room stays as it was.
  */
-function useHeaderRoom(): [(header: HTMLElement | null) => void, HeaderRoom] {
-  const [header, setHeader] = useState<HTMLElement | null>(null)
-  const [room, setRoom] = useState<HeaderRoom>('compact')
+function useExerciseBarRoom(): [(bar: HTMLElement | null) => void, TransportRoom] {
+  const [bar, setBar] = useState<HTMLElement | null>(null)
+  const [room, setRoom] = useState<TransportRoom>('compact')
   useLayoutEffect(() => {
-    if (!header) return
+    if (!bar) return
     // Kept as the step, not the width, so a resize re-renders only when the step changes.
     const observer = new ResizeObserver(() => {
-      const width = header.getBoundingClientRect().width
-      if (width >= HEADER_WIDTH.full) setRoom('full')
-      else if (width >= HEADER_WIDTH.withoutSlider) setRoom('withoutSlider')
+      const width = bar.getBoundingClientRect().width
+      if (width >= EXERCISE_BAR_WIDTH.full) setRoom('full')
+      else if (width >= EXERCISE_BAR_WIDTH.withoutSlider) setRoom('withoutSlider')
       else setRoom('compact')
     })
-    observer.observe(header)
+    observer.observe(bar)
     return () => observer.disconnect()
-  }, [header])
-  return [setHeader, room]
+  }, [bar])
+  return [setBar, room]
 }
 
 /** The warning shown when storage failed, so changes won't survive a reload. */
@@ -382,7 +383,7 @@ function SidebarSlot({ name, side, state, onOpen, onCollapse, children }: Sideba
           {/* A click outside the overlay closes it; the rails stay uncovered, so the other one opens at once. */}
           <div
             aria-hidden
-            className="fixed inset-y-0 right-8 left-8 z-20"
+            className="absolute inset-y-0 right-8 left-8 z-20"
             onMouseDown={(e) => {
               e.preventDefault()
               onCollapse()

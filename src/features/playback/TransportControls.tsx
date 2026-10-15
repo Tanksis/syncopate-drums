@@ -10,16 +10,16 @@ import { PlaybackPosition } from './PlaybackPosition'
 import { usePlaybackKeys } from './usePlaybackKeys'
 
 /**
- * How much of the transport the header has room for: all of it, all but the BPM slider, or only
+ * How much of the transport the exercise's bar, over the notation, has room for: all of it, all but the BPM slider, or only
  * the position and the tempo, with the count-in and loop chip in the Settings sidebar.
  */
-export type HeaderRoom = 'full' | 'withoutSlider' | 'compact'
+export type TransportRoom = 'full' | 'withoutSlider' | 'compact'
 
 /**
- * The header's playback position, tempo, count-in and loop chip. Play is on the staff
+ * The exercise bar's playback position, tempo, count-in and loop chip. Play is on the staff
  * (`StaffPlayButton`); Ctrl+Space and Space work from here.
  */
-export function TransportControls({ room }: { room: HeaderRoom }) {
+export function TransportControls({ room }: { room: TransportRoom }) {
   usePlaybackKeys()
   return (
     <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
@@ -36,7 +36,7 @@ export function TransportControls({ room }: { room: HeaderRoom }) {
   )
 }
 
-/** The header's − and + around the BPM. */
+/** The exercise bar's − and + around the BPM. */
 const stepClass = 'size-8 rounded-md border-edge bg-card text-ink hover:border-accent hover:text-accent active:border-accent active:text-accent'
 
 /** − [80 BPM] +, then a slider given room: − and + step the tempo and repeat while held. */

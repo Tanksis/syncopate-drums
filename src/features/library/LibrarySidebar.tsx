@@ -53,7 +53,12 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
   const tab = useAppStore((s) => s.device.libraryTab)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   const exampleOpen = isExample(openId)
-  const openExercise = useAppStore((s) => s.openExercise)
+  const openInStore = useAppStore((s) => s.openExercise)
+  // An exercise opened from the Metronome screen shows on Practice, where it can be seen.
+  const openExercise = (id: string) => {
+    openInStore(id)
+    setDeviceSettings({ screen: 'practice' })
+  }
   const createExercise = useAppStore((s) => s.createExercise)
   const createFromPattern = useAppStore((s) => s.createFromPattern)
   const duplicateOpenExercise = useAppStore((s) => s.duplicateOpenExercise)

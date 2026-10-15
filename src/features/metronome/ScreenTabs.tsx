@@ -24,10 +24,9 @@ type ScreenTabsPlace = 'foot' | 'rail' | 'header'
  * Practice stops the exercise. The arrow keys, Home and End move between them, as in any tab list.
  * At the phone's foot they're a bar of icons over names. On the `rail`, with the phone turned
  * sideways, they're icons only, one over the other; the current one is lit in the accent on a
- * tinted square. In the desktop `header` they're a switch of two names, the current one filled;
- * `iconsOnly` where the header has little room.
+ * tinted square. In the desktop `header` they're a switch of two names, the current one filled.
  */
-export function ScreenTabs({ place = 'foot', iconsOnly = false }: { place?: ScreenTabsPlace; iconsOnly?: boolean }) {
+export function ScreenTabs({ place = 'foot' }: { place?: ScreenTabsPlace }) {
   const rail = place === 'rail'
   const screen = useAppStore((s) => s.device.screen)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
@@ -66,20 +65,18 @@ export function ScreenTabs({ place = 'foot', iconsOnly = false }: { place?: Scre
             type="button"
             role="tab"
             aria-selected={s === screen}
-            aria-label={iconsOnly ? SCREEN_TABS[s].name : undefined}
-            title={iconsOnly ? SCREEN_TABS[s].name : undefined}
             tabIndex={s === screen ? 0 : -1}
             onMouseDown={keepFocus}
             onClick={() => choose(s)}
-            className={`flex h-7 cursor-pointer items-center justify-center rounded-[calc(var(--radius-chip)-2px)] border-0 bg-transparent text-sm whitespace-nowrap text-mute not-aria-selected:hover:bg-card not-aria-selected:hover:text-ink aria-selected:bg-accent aria-selected:font-semibold aria-selected:text-on-accent ${iconsOnly ? 'px-2' : 'px-3.5'}`}
+            className="flex h-7 cursor-pointer items-center justify-center rounded-[calc(var(--radius-chip)-2px)] border-0 bg-transparent text-sm whitespace-nowrap text-mute not-aria-selected:hover:bg-card not-aria-selected:hover:text-ink aria-selected:bg-accent aria-selected:font-semibold aria-selected:text-on-accent px-3.5"
           >
-            {iconsOnly ? (
-              <span aria-hidden className="flex [&>svg]:size-4">
-                {SCREEN_TABS[s].icon}
+            {/* Each as wide as its name in bold, so the switch keeps its size and place whichever is chosen. */}
+            <span className="grid">
+              <span aria-hidden className="invisible col-start-1 row-start-1 font-semibold">
+                {SCREEN_TABS[s].name}
               </span>
-            ) : (
-              SCREEN_TABS[s].name
-            )}
+              <span className="col-start-1 row-start-1">{SCREEN_TABS[s].name}</span>
+            </span>
           </button>
         ))}
       </div>
