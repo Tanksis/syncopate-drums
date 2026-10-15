@@ -273,11 +273,10 @@ function SettingsToggle({ state, onOpen, onCollapse }: SidebarControl) {
 
 /**
  * The exercise bar's widths, in px, below which its controls don't all fit while leaving the
- * exercise name its 12 letters or so, measured in each look's fonts (Warm's need the most): under
- * `full` the BPM slider goes, and under `withoutSlider` the click mute, count-in and loop chip move to the
- * settings sidebar too.
+ * exercise name its 12 letters or so, measured in each look's fonts with the click off (Warm's need
+ * the most): under `full` the Click and Count-in chips and the loop chip move to the settings sidebar.
  */
-const EXERCISE_BAR_WIDTH = { full: 788, withoutSlider: 702 }
+const EXERCISE_BAR_WIDTH = { full: 778 }
 
 /**
  * A ref for the exercise's bar over the notation, and how much of the transport fits in it. That
@@ -292,9 +291,7 @@ function useExerciseBarRoom(): [(bar: HTMLElement | null) => void, TransportRoom
     // Kept as the step, not the width, so a resize re-renders only when the step changes.
     const observer = new ResizeObserver(() => {
       const width = bar.getBoundingClientRect().width
-      if (width >= EXERCISE_BAR_WIDTH.full) setRoom('full')
-      else if (width >= EXERCISE_BAR_WIDTH.withoutSlider) setRoom('withoutSlider')
-      else setRoom('compact')
+      setRoom(width >= EXERCISE_BAR_WIDTH.full ? 'full' : 'compact')
     })
     observer.observe(bar)
     return () => observer.disconnect()

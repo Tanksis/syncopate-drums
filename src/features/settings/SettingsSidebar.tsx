@@ -14,7 +14,7 @@ import { keepFocus } from '@/components/keepFocus'
 import { MetronomeVolume } from '@/features/metronome/MetronomeVolume'
 import { SOUND_OPTIONS, pickSound } from '@/features/metronome/SoundSheet'
 import { LoopChip } from '@/features/playback/LoopChip'
-import { ClickMute, CountInToggle } from '@/features/playback/TransportControls'
+import { ClickToggle, CountInToggle } from '@/features/playback/TransportControls'
 import type { ExerciseSettings, HihatFoot, Layer, Theme, VolumeSetting } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
@@ -31,7 +31,7 @@ import {
 
 /**
  * The Practice screen's own settings, at the top of the desktop's settings sidebar: the groove and
- * the sticking. `playbackGroup` adds the click mute, count-in and loop chip, for when the exercise's bar has no
+ * the sticking. `playbackGroup` adds the Click and Count-in chips and the loop chip, for when the exercise's bar has no
  * room for them.
  */
 export function PracticeSettings({ playbackGroup = false }: { playbackGroup?: boolean }) {
@@ -43,7 +43,7 @@ export function PracticeSettings({ playbackGroup = false }: { playbackGroup?: bo
           <div className="flex flex-wrap items-center justify-between gap-2">
             <LoopChip />
             <div className="flex items-center gap-2">
-              <ClickMute />
+              <ClickToggle />
               <CountInToggle />
             </div>
           </div>
