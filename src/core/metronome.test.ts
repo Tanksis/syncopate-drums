@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { MetronomeSettings, ScheduledEvent } from './index'
-import { DEFAULT_DEVICE_SETTINGS, DEFAULT_METRONOME_SETTINGS, SUBDIVISIONS, deviceSettingsFrom, cycleLevel, metronomeSchedule, tapTempo, tempoName, withTimeSignature } from './index'
+import { DEFAULT_DEVICE_SETTINGS, DEFAULT_METRONOME_SETTINGS, SUBDIVISIONS, deviceSettingsFrom, cycleLevel, metronomeBeat, metronomeClickGain, metronomeSchedule, tapTempo, tempoName, playheadAt, recordEvents, withTimeSignature } from './index'
 
 const at120: MetronomeSettings = { ...DEFAULT_METRONOME_SETTINGS, bpm: 120 }
 
@@ -296,5 +296,50 @@ describe('stored device settings', () => {
 
   it('use the default metronome when the stored one is not an object', () => {
     expect(deviceSettingsFrom({ metronome: 'loud' }).metronome).toEqual(DEFAULT_DEVICE_SETTINGS.metronome)
+  })
+})
+
+describe('metronomeClickGain', () => {
+  const gain = (level: Parameters<typeof metronomeClickGain>[0], settings: Partial<MetronomeSettings> = {}) =>
+    metronomeClickGain(level, { ...DEFAULT_METRONOME_SETTINGS, ...settings })
+
+  it('plays Accent loudest, then Normal, then Soft, and Off silent', () => {
+    expect(gain('accent')).toBe(1)
+    expect(gain('normal')).toBeLessThan(gain('accent'))
+    expect(gain('soft')).toBeLessThan(gain('normal'))
+    expect(gain('soft')).toBeGreaterThan(0)
+    expect(gain('off')).toBe(0)
+  })
+
+  it('plays subdivision clicks quieter than a normal beat', () => {
+    expect(gain('subdivision')).toBeGreaterThan(0)
+    expect(gain('subdivision')).toBeLessThan(gain('normal'))
+  })
+
+  it('scales the beats by the beats volume and the subdivision clicks by theirs', () => {
+    expect(gain('accent', { beatVolume: 0.5 })).toBe(0.5)
+    expect(gain('normal', { beatVolume: 0 })).toBe(0)
+    expect(gain('subdivision', { beatVolume: 0 })).toBe(gain('subdivision'))
+    expect(gain('subdivision', { subdivisionVolume: 1.5 })).toBeCloseTo(gain('subdivision') * 1.5)
+    expect(gain('accent', { subdivisionVolume: 0 })).toBe(1)
+  })
+})
+
+describe('metronomeBeat', () => {
+  // Eighths at 120 BPM in 4/4: a beat every 0.5 s, an & 0.25 s after each, scheduled from time 10.
+  const eighths: MetronomeSettings = { ...at120, subdivision: 'eighths' }
+  const timeline = recordEvents([], metronomeSchedule(eighths, 'start', 4).events, 10)
+  const beatHeardAt = (time: number) => metronomeBeat(playheadAt(timeline, time)!.position)
+
+  it('is the beat heard, counted from 0, held through its subdivision clicks', () => {
+    expect(beatHeardAt(10)).toEqual({ bar: 0, beat: 0 })
+    expect(beatHeardAt(10.3)).toEqual({ bar: 0, beat: 0 })
+    expect(beatHeardAt(10.5)).toEqual({ bar: 0, beat: 1 })
+    expect(beatHeardAt(11.9)).toEqual({ bar: 0, beat: 3 })
+  })
+
+  it('carries on into the next bar', () => {
+    expect(beatHeardAt(12)).toEqual({ bar: 1, beat: 0 })
+    expect(beatHeardAt(13.6)).toEqual({ bar: 1, beat: 3 })
   })
 })

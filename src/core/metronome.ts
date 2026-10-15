@@ -171,10 +171,23 @@ export function metronomeSchedule(settings: MetronomeSettings, from: PlayPositio
   return { events, next: position, nextTime: secondsAfter(elapsed) }
 }
 
+/** The bar and beat (both counted from 0) a metronome position falls in: what its block and dial dot light. */
+export function metronomeBeat({ bar, tick }: PlayPosition): { bar: number; beat: number } {
+  return { bar, beat: Math.floor(tick / TICKS_PER_BEAT) }
+}
+
 /** The ticks within a beat where a subdivision clicks, leaving out the beat itself. */
 function subdivisionBeatTicks(id: SubdivisionId): Set<number> {
   const onsets = SUBDIVISIONS.find((s) => s.id === id)?.onsets ?? []
   return new Set(onsets.map((onset) => Math.round(onset * TICKS_PER_BEAT)).filter((tick) => tick > 0))
+}
+
+/** How loud each kind of click plays at its volume's usual level, relative to an accent. */
+const CLICK_GAIN: Record<BeatLevel | 'subdivision', number> = { accent: 1, normal: 0.6, soft: 0.3, off: 0, subdivision: 0.4 }
+
+/** How loud a click plays, 0–MAX_VOLUME: its level's gain at the beats' or the subdivision's volume. */
+export function metronomeClickGain(level: BeatLevel | 'subdivision', settings: MetronomeSettings): number {
+  return CLICK_GAIN[level] * (level === 'subdivision' ? settings.subdivisionVolume : settings.beatVolume)
 }
 
 /** Taps further apart than this start a new tempo. */

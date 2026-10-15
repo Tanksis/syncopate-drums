@@ -1,9 +1,23 @@
-// The playback engine: a thin Web Audio layer over the core's `schedule`. A Worker tick every
-// 25 ms asks the core for the next 100 ms of events and starts each sound on the audio clock,
-// so timing is sample-accurate however late the tick itself runs.
+// The playback engine: a thin Web Audio layer over the core's `schedule` and `metronomeSchedule`.
+// A Worker tick every 25 ms asks the core for the next 100 ms of events and starts each sound on
+// the audio clock, so timing is sample-accurate however late the tick itself runs. It plays one
+// source at a time, the exercise or the metronome: starting one stops the other.
 
-import type { DeviceSettings, Exercise, Instrument, Layer, PlayPosition, Playhead, ScheduledEvent, TimelineEntry } from '@/core'
-import { layerLevels, playheadAt, recordEvents, resumePosition, schedule, trimTimeline } from '@/core'
+import type {
+  BeatLevel,
+  DeviceSettings,
+  Exercise,
+  Instrument,
+  Layer,
+  MetronomeSettings,
+  MetronomeSound,
+  PlayPosition,
+  Playhead,
+  ScheduleResult,
+  ScheduledEvent,
+  TimelineEntry,
+} from '@/core'
+import { layerLevels, metronomeClickGain, metronomeSchedule, playheadAt, recordEvents, resumePosition, schedule, trimTimeline } from '@/core'
 
 const LOOKAHEAD = 0.1
 /** Head start for the first event, so it isn't late before the first tick has run. */
@@ -42,11 +56,16 @@ const SAMPLES: Record<Exclude<Instrument, 'click'>, { files: string[]; velocity:
   hihatPedal: { files: ['oh_hh_pedal_vl2_rr1', 'oh_hh_pedal_vl2_rr2'], velocity: 0.9 },
 }
 
-/** What the engine reads on every tick, so edits and tempo changes apply while playing. */
-export interface PlaybackInput {
-  exercise: Exercise
-  device: DeviceSettings
-}
+/**
+ * What the engine plays, read on every tick so edits, tempo and settings changes apply while
+ * playing: the open exercise with the device's mix, or the metronome with its own settings.
+ */
+export type PlaybackSource =
+  | { kind: 'exercise'; exercise: Exercise; device: DeviceSettings }
+  | { kind: 'metronome'; metronome: MetronomeSettings }
+
+/** The metronome plays on the click layer alone, at its usual level: its own volumes set how loud. */
+const METRONOME_LAYERS: Record<Layer, number> = { click: 1, exercise: 0, groove: 0 }
 
 interface Audio {
   ctx: AudioContext
@@ -61,7 +80,7 @@ let worker: Worker | undefined
 let generation = 0
 /** The first position not yet scheduled, and the audio-clock time it falls at. */
 let cursor: { position: PlayPosition | 'start'; time: number } | undefined
-let read: (() => PlaybackInput) | undefined
+let read: (() => PlaybackSource) | undefined
 const sources = new Set<AudioScheduledSourceNode>()
 /** Every event scheduled and not yet long past, on the audio clock, for the playhead. */
 let timeline: TimelineEntry[] = []
@@ -70,11 +89,12 @@ const roundRobin = new Map<Instrument, number>()
 const gainTargets: Record<Layer, number> = { ...LAYER_GAIN }
 
 /**
- * Starts playback from the count-in, or from `from` to resume after a pause. Call it from a user
- * gesture (a click or key press), so the browser lets audio start. Resolves once the first sounds
- * are scheduled.
+ * Starts playing a source, stopping whatever was playing: an exercise from the count-in, or from
+ * `from` to resume after a pause; the metronome from its first beat. Call it from a user gesture
+ * (a click or key press), so the browser lets audio start. Resolves once the first sounds are
+ * scheduled.
  */
-export async function startPlayback(input: () => PlaybackInput, from: PlayPosition | 'start' = 'start'): Promise<void> {
+export async function startPlayback(input: () => PlaybackSource, from: PlayPosition | 'start' = 'start'): Promise<void> {
   stopPlayback()
   const mine = generation
   const { ctx } = (audio ??= createAudio())
@@ -117,7 +137,8 @@ export function pausePlayback(): PlayPosition | undefined {
 
 /**
  * Where playback is now, by what the drummer hears rather than what is scheduled: the position
- * and the latest hit on the staff. Undefined when stopped, and during the head start before the first sound.
+ * and the latest hit on the staff. For the metronome, `metronomeBeat` of the position is the beat
+ * to light. Undefined when stopped, and during the head start before the first sound.
  */
 export function playhead(): Playhead | undefined {
   if (!audio || !cursor) return undefined
@@ -194,23 +215,28 @@ function createTicker(): Worker {
 /** Schedules everything between the cursor and the lookahead horizon. */
 function tick(): void {
   if (!audio || !cursor || !read) return
-  const { exercise, device } = read()
+  const source = read()
   const now = audio.ctx.currentTime
-  setLevels(audio, device)
+  setLevels(audio, source.kind === 'exercise' ? layerLevels(source.device) : METRONOME_LAYERS)
   // After a stall longer than the lookahead, carry on from now rather than play the missed
   // events all at once: the music pauses for the stall but stays in time afterwards.
   if (cursor.time < now) cursor = { ...cursor, time: now + START_DELAY }
   const horizon = now + LOOKAHEAD
-  const result = schedule(exercise, exercise.practice, device, cursor.position, horizon - cursor.time)
+  const result = scheduleSource(source, cursor.position, horizon - cursor.time)
   timeline = trimTimeline(timeline, heardTime(audio.ctx))
-  for (const event of result.events) play(audio, cursor.time + event.time, event)
+  for (const event of result.events) play(audio, cursor.time + event.time, event, source)
   timeline = recordEvents(timeline, result.events, cursor.time)
   cursor = { position: result.next, time: cursor.time + result.nextTime }
 }
 
-/** Sets each layer's gain from the device volumes, so slider moves apply while playing. */
-function setLevels({ ctx, layers }: Audio, device: DeviceSettings): void {
-  const levels = layerLevels(device)
+/** The source's events for one window: the exercise's schedule or the metronome's. */
+function scheduleSource(source: PlaybackSource, from: PlayPosition | 'start', window: number): ScheduleResult {
+  if (source.kind === 'metronome') return metronomeSchedule(source.metronome, from, window)
+  return schedule(source.exercise, source.exercise.practice, source.device, from, window)
+}
+
+/** Sets each layer's gain to its level, so slider moves apply while playing. */
+function setLevels({ ctx, layers }: Audio, levels: Record<Layer, number>): void {
   for (const layer of Object.keys(layers) as Layer[]) {
     const target = LAYER_GAIN[layer] * levels[layer]
     if (gainTargets[layer] === target) continue
@@ -219,42 +245,146 @@ function setLevels({ ctx, layers }: Audio, device: DeviceSettings): void {
   }
 }
 
-function play(audio: Audio, when: number, event: ScheduledEvent): void {
-  const source = event.instrument === 'click' ? click(audio, when, event.accent) : sample(audio, when, event)
-  sources.add(source)
-  source.onended = () => {
-    sources.delete(source)
-    source.disconnect()
+function play(audio: Audio, when: number, event: ScheduledEvent, playing: PlaybackSource): void {
+  for (const node of startSounds(audio, when, event, playing)) {
+    sources.add(node)
+    node.onended = () => {
+      sources.delete(node)
+      node.disconnect()
+    }
   }
+}
+
+/** Starts an event's sounds, returning their nodes: none for an Off beat. */
+function startSounds(audio: Audio, when: number, event: ScheduledEvent, playing: PlaybackSource): AudioScheduledSourceNode[] {
+  if (event.instrument !== 'click') {
+    const { velocity } = SAMPLES[event.instrument]
+    return [sample(audio, when, event.instrument, velocity * (event.velocity ?? 1), audio.layers[event.kind])]
+  }
+  if (playing.kind === 'exercise') return beep(audio, when, event.accent ? 'high' : 'mid', event.accent ? 0.9 : 0.55)
+  const level = event.level ?? 'normal'
+  const gain = metronomeClickGain(level, playing.metronome)
+  if (gain <= 0) return []
+  return CLICK_SOUNDS[playing.metronome.sound](audio, when, CLICK_PITCH[level], gain)
+}
+
+/** A click's pitch: Accent highest (on the synthesized sounds), subdivision clicks lowest. */
+type Pitch = 'high' | 'mid' | 'low'
+
+const CLICK_PITCH: Record<BeatLevel | 'subdivision', Pitch> = {
+  accent: 'high',
+  normal: 'mid',
+  soft: 'mid',
+  off: 'mid',
+  subdivision: 'low',
+}
+
+/**
+ * One of the metronome's sounds: plays a click at a pitch and a gain (1 is an accent at the beats'
+ * usual volume) into the click layer.
+ */
+type ClickSound = (audio: Audio, when: number, pitch: Pitch, gain: number) => AudioScheduledSourceNode[]
+
+/**
+ * The kit's samples sit level with the snare once the groove layer raises them over the
+ * exercise's; on the click layer they are raised the same, so an accent sits with the beep's.
+ */
+const SAMPLE_CLICK_GAIN = LAYER_GAIN.groove / LAYER_GAIN.exercise
+
+const CLICK_SOUNDS: Record<MetronomeSound, ClickSound> = {
+  beep: (audio, when, pitch, gain) => beep(audio, when, pitch, 0.9 * gain),
+  woodBlock,
+  cowbell,
+  hihat: (audio, when, pitch, gain) => [sampleClick(audio, when, 'hihatClosed', pitch, gain)],
+  rideBell: (audio, when, pitch, gain) => [sampleClick(audio, when, 'rideBell', pitch, gain)],
+}
+
+/** How fast a sampled click plays: subdivision clicks a little slower, so lower; the beats as recorded. */
+const SAMPLE_RATE: Record<Pitch, number> = { high: 1, mid: 1, low: 0.85 }
+
+/** A metronome click on one of the kit's samples, into the click layer. */
+function sampleClick(
+  audio: Audio,
+  when: number,
+  instrument: 'hihatClosed' | 'rideBell',
+  pitch: Pitch,
+  gain: number,
+): AudioScheduledSourceNode {
+  const level = SAMPLES[instrument].velocity * SAMPLE_CLICK_GAIN * gain
+  return sample(audio, when, instrument, level, audio.layers.click, SAMPLE_RATE[pitch])
 }
 
 /** Seconds a held sample takes to fade by about 9 dB (one time constant), and when it is cut off. */
 const FADE = 0.04
 const FADE_END = 0.25
 
-/** A short synthesized beep: higher and louder on beat 1. */
-function click({ ctx, layers }: Audio, when: number, accent: boolean): AudioScheduledSourceNode {
+/** A short synthesized beep: the exercise's click, and the metronome's Beep. */
+function beep({ ctx, layers }: Audio, when: number, pitch: Pitch, peak: number): AudioScheduledSourceNode[] {
   const osc = ctx.createOscillator()
-  const envelope = ctx.createGain()
-  osc.frequency.value = accent ? 1800 : 1200
-  envelope.gain.setValueAtTime(0.0001, when)
-  envelope.gain.exponentialRampToValueAtTime(accent ? 0.9 : 0.55, when + 0.001)
-  envelope.gain.exponentialRampToValueAtTime(0.0001, when + 0.04)
-  osc.connect(envelope).connect(layers.click)
+  osc.frequency.value = { high: 1800, mid: 1200, low: 900 }[pitch]
+  osc.connect(strike(ctx, when, peak, 0.04)).connect(layers.click)
   osc.start(when)
   osc.stop(when + 0.05)
-  return osc
+  return [osc]
 }
 
-function sample({ ctx, layers, buffers }: Audio, when: number, event: ScheduledEvent): AudioScheduledSourceNode {
-  const { files, velocity, hold } = SAMPLES[event.instrument as Exclude<Instrument, 'click'>]
-  const turn = ((roundRobin.get(event.instrument) ?? -1) + 1) % files.length
-  roundRobin.set(event.instrument, turn)
+/** A wood block: a sine that drops a little in pitch as it starts, with a short hollow decay. */
+function woodBlock({ ctx, layers }: Audio, when: number, pitch: Pitch, gain: number): AudioScheduledSourceNode[] {
+  const frequency = { high: 1250, mid: 950, low: 760 }[pitch]
+  const osc = ctx.createOscillator()
+  osc.frequency.setValueAtTime(frequency * 1.06, when)
+  osc.frequency.exponentialRampToValueAtTime(frequency, when + 0.015)
+  osc.connect(strike(ctx, when, 0.9 * gain, 0.07)).connect(layers.click)
+  osc.start(when)
+  osc.stop(when + 0.08)
+  return [osc]
+}
+
+/** A cowbell, after the TR-808's: two detuned square waves through a band-pass, ringing a little longer. */
+function cowbell({ ctx, layers }: Audio, when: number, pitch: Pitch, gain: number): AudioScheduledSourceNode[] {
+  const scale = { high: 1.12, mid: 1, low: 0.84 }[pitch]
+  const band = ctx.createBiquadFilter()
+  band.type = 'bandpass'
+  band.frequency.value = 2640 * scale
+  band.Q.value = 1
+  band.connect(strike(ctx, when, 0.9 * gain, 0.25)).connect(layers.click)
+  return [540, 800].map((frequency) => {
+    const osc = ctx.createOscillator()
+    osc.type = 'square'
+    osc.frequency.value = frequency * scale
+    osc.connect(band)
+    osc.start(when)
+    osc.stop(when + 0.27)
+    return osc
+  })
+}
+
+/** A struck envelope: up to `peak` in a millisecond, then an exponential fall to silence by `decay` seconds. */
+function strike(ctx: AudioContext, when: number, peak: number, decay: number): GainNode {
+  const envelope = ctx.createGain()
+  envelope.gain.setValueAtTime(0.0001, when)
+  envelope.gain.exponentialRampToValueAtTime(peak, when + 0.001)
+  envelope.gain.exponentialRampToValueAtTime(0.0001, when + decay)
+  return envelope
+}
+
+function sample(
+  { ctx, buffers }: Audio,
+  when: number,
+  instrument: Exclude<Instrument, 'click'>,
+  level: number,
+  layer: GainNode,
+  playbackRate = 1,
+): AudioScheduledSourceNode {
+  const { files, hold } = SAMPLES[instrument]
+  const turn = ((roundRobin.get(instrument) ?? -1) + 1) % files.length
+  roundRobin.set(instrument, turn)
   const source = ctx.createBufferSource()
   source.buffer = buffers.get(files[turn])!
+  source.playbackRate.value = playbackRate
   const gain = ctx.createGain()
-  gain.gain.value = velocity * (event.velocity ?? 1)
-  source.connect(gain).connect(layers[event.kind])
+  gain.gain.value = level
+  source.connect(gain).connect(layer)
   source.start(when)
   if (hold !== undefined) {
     gain.gain.setTargetAtTime(0, when + hold, FADE)
