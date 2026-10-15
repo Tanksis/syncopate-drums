@@ -12,7 +12,6 @@ import {
   loopLabel,
   newExercise,
   setBeat,
-  withLook,
 } from './index'
 
 describe('ticks', () => {
@@ -118,38 +117,22 @@ describe('looks', () => {
     expect(DEFAULT_DEVICE_SETTINGS.look).toBe('warm')
   })
 
-  it('set the mode to auto when choosing a light-only look', () => {
-    const settings = { ...DEFAULT_DEVICE_SETTINGS, theme: 'dark' as const }
-    expect(withLook(settings, 'score')).toEqual({ ...settings, look: 'score', theme: 'auto' })
+  it('draw the mode set', () => {
+    expect(drawnMode('dark', false)).toBe('dark')
+    expect(drawnMode('light', true)).toBe('light')
   })
 
-  it('leave the mode alone when choosing a look with a dark version', () => {
-    const settings = { ...DEFAULT_DEVICE_SETTINGS, theme: 'dark' as const }
-    expect(withLook(settings, 'bold')).toEqual({ ...settings, look: 'bold' })
-  })
-
-  it('keep the mode at auto when leaving a light-only look', () => {
-    const onScore = withLook({ ...DEFAULT_DEVICE_SETTINGS, theme: 'dark' }, 'score')
-    expect(withLook(onScore, 'studio').theme).toBe('auto')
-  })
-
-  it('draw a light-only look light even with dark set and a dark device', () => {
-    expect(drawnMode('riso', 'dark', true)).toBe('light')
-    expect(drawnMode('catalogue', 'auto', true)).toBe('light')
-  })
-
-  it('draw a look with a dark version in the mode set', () => {
-    expect(drawnMode('studio', 'dark', false)).toBe('dark')
-    expect(drawnMode('warm', 'light', true)).toBe('light')
-  })
-
-  it('follow the device in auto for a look with a dark version', () => {
-    expect(drawnMode('bold', 'auto', true)).toBe('dark')
-    expect(drawnMode('bold', 'auto', false)).toBe('light')
+  it('follow the device in auto', () => {
+    expect(drawnMode('auto', true)).toBe('dark')
+    expect(drawnMode('auto', false)).toBe('light')
   })
 
   it('keep a stored look', () => {
-    expect(deviceSettingsFrom({ look: 'riso' }).look).toBe('riso')
+    expect(deviceSettingsFrom({ look: 'studio' }).look).toBe('studio')
+  })
+
+  it('load a look since removed (Bold, Score, Riso, Catalogue) as Warm', () => {
+    expect(deviceSettingsFrom({ look: 'riso', theme: 'dark' })).toMatchObject({ look: 'warm', theme: 'dark' })
   })
 
   it('drop a stored look the app does not have', () => {

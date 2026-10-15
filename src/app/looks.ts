@@ -1,13 +1,9 @@
 import type { Look } from '@/core'
 
-/** Each look's name, as the Theme menu and the light-only hint show it. */
+/** Each look's name, as the Theme menu shows it. */
 const LOOK_NAMES: Record<Look, string> = {
-  studio: 'Studio',
   warm: 'Warm',
-  bold: 'Bold',
-  score: 'Score',
-  riso: 'Riso',
-  catalogue: 'Catalogue',
+  studio: 'Studio',
 }
 
 export const lookName = (look: Look) => LOOK_NAMES[look]
@@ -17,18 +13,6 @@ export const lookName = (look: Look) => LOOK_NAMES[look]
  * self-hosted fonts, imported only while it's chosen. A look's tokens are in styles/index.css.
  */
 export const LOOK_STYLES: readonly { look: Look; loadFonts: () => Promise<unknown> }[] = [
-  {
-    look: 'studio',
-    loadFonts: () =>
-      Promise.all([
-        import('@fontsource/geist/400.css'),
-        import('@fontsource/geist/600.css'),
-        import('@fontsource/geist/700.css'),
-        import('@fontsource/geist-mono/400.css'),
-        import('@fontsource/geist-mono/600.css'),
-        import('@fontsource/geist-mono/700.css'),
-      ]),
-  },
   {
     look: 'warm',
     loadFonts: () =>
@@ -41,48 +25,15 @@ export const LOOK_STYLES: readonly { look: Look; loadFonts: () => Promise<unknow
       ]),
   },
   {
-    look: 'bold',
+    look: 'studio',
     loadFonts: () =>
       Promise.all([
-        import('@fontsource/manrope/400.css'),
-        import('@fontsource/manrope/600.css'),
-        import('@fontsource/manrope/700.css'),
-        import('@fontsource/space-grotesk/400.css'),
-        import('@fontsource/space-grotesk/600.css'),
-        import('@fontsource/space-grotesk/700.css'),
-      ]),
-  },
-  {
-    look: 'score',
-    loadFonts: () =>
-      Promise.all([
-        import('@fontsource/eb-garamond/400.css'),
-        import('@fontsource/eb-garamond/600.css'),
-        import('@fontsource/eb-garamond/700.css'),
-        import('@fontsource/instrument-serif/400-italic.css'),
-      ]),
-  },
-  {
-    look: 'riso',
-    loadFonts: () =>
-      Promise.all([
-        import('@fontsource/familjen-grotesk/400.css'),
-        import('@fontsource/familjen-grotesk/600.css'),
-        import('@fontsource/familjen-grotesk/700.css'),
-        import('@fontsource/bagel-fat-one/400.css'),
-        import('@fontsource/space-mono/400.css'),
-        import('@fontsource/space-mono/700.css'),
-      ]),
-  },
-  {
-    look: 'catalogue',
-    loadFonts: () =>
-      Promise.all([
-        import('@fontsource/nunito/400.css'),
-        import('@fontsource/nunito/600.css'),
-        import('@fontsource/nunito/700.css'),
-        import('@fontsource/righteous/400.css'),
-        import('@fontsource/shrikhand/400.css'),
+        import('@fontsource/geist/400.css'),
+        import('@fontsource/geist/600.css'),
+        import('@fontsource/geist/700.css'),
+        import('@fontsource/geist-mono/400.css'),
+        import('@fontsource/geist-mono/600.css'),
+        import('@fontsource/geist-mono/700.css'),
       ]),
   },
 ]

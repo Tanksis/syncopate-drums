@@ -44,11 +44,11 @@ How loud each playback layer (click, exercise, groove) plays on this device, and
 _Avoid_: Volume (for the section)
 
 **Theme**:
-The app's visual style, chosen in Appearance: Studio, Warm (the default), Bold, Score, Riso or Catalogue. A theme changes colours, fonts, corners, borders, shadows and a few ornaments, never the layout (ADR 0013). Score, Riso and Catalogue are light only. In code it is the `look` (ADR 0013's word), and the code's `theme` is the mode.
+The app's visual style, chosen in Appearance: Warm (the default) or Studio. A theme changes colours, fonts, corners, borders, shadows and a few ornaments, never the layout (ADR 0013). Both come in light and dark. In code it is the `look` (ADR 0013's word), and the code's `theme` is the mode.
 _Avoid_: Look (in the app's text), skin
 
 **Mode**:
-Whether the app draws light or dark: Auto (follows the device), Light or Dark. A light-only theme always draws light. In code it is the `theme` device setting.
+Whether the app draws light or dark: Auto (follows the device), Light or Dark. In code it is the `theme` device setting.
 _Avoid_: Theme (for the mode)
 
 **Snare row**:

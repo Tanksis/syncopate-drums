@@ -18,7 +18,6 @@ import {
   DEFAULT_DEVICE_SETTINGS,
   GROOVE_PRESETS,
   HIHAT_FOOT_SETTINGS,
-  LIGHT_ONLY_LOOKS,
   MAX_SWING,
   MAX_VOLUME,
   MIN_SWING,
@@ -26,7 +25,6 @@ import {
   TRIPLET_SWING,
   groovePreset,
   overrideCount,
-  withLook,
 } from '@/core'
 
 /**
@@ -380,9 +378,9 @@ function MixRow({ layer, large = false }: { layer: Layer; large?: boolean }) {
   )
 }
 
-/** The theme: how the app looks on this device, its look in code (ADR 0013); a light-only one sets the mode to Auto. */
+/** The theme: how the app looks on this device, its look in code (ADR 0013). */
 function LookChoice({ large = false }: { large?: boolean }) {
-  const device = useAppStore((s) => s.device)
+  const look = useAppStore((s) => s.device.look)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   return (
     <Labelled label="Theme" stacked={large}>
@@ -390,8 +388,8 @@ function LookChoice({ large = false }: { large?: boolean }) {
         label="Theme"
         large={large}
         options={LOOK_STYLES.map((style) => ({ value: style.look, label: lookName(style.look) }))}
-        value={device.look}
-        onChange={(look) => setDeviceSettings(withLook(device, look))}
+        value={look}
+        onChange={(option) => setDeviceSettings({ look: option })}
       />
     </Labelled>
   )
@@ -399,35 +397,20 @@ function LookChoice({ large = false }: { large?: boolean }) {
 
 const MODE_NAMES: Record<Theme, string> = { auto: 'Auto', light: 'Light', dark: 'Dark' }
 
-/**
- * The mode, light or dark on this device, or Auto to follow the device's own setting. A light-only
- * look draws light whatever it is, so the mode is disabled while one is chosen, saying why.
- */
+/** The mode, light or dark on this device, or Auto to follow the device's own setting. */
 function ModeChoice({ stacked = false }: { stacked?: boolean }) {
   const theme = useAppStore((s) => s.device.theme)
-  const look = useAppStore((s) => s.device.look)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
-  const lightOnly = LIGHT_ONLY_LOOKS.includes(look)
-  const hint = useId()
   return (
-    <div className="flex flex-col gap-1">
-      <div className={stacked ? 'flex flex-col gap-2' : 'flex items-center justify-between gap-2'}>
-        <span className={stacked ? 'font-semibold' : 'text-mute'}>Mode</span>
-        <Segmented
-          label="Mode"
-          fill={stacked}
-          options={THEMES.map((option) => ({ value: option, label: MODE_NAMES[option] }))}
-          value={theme}
-          onChange={(option) => setDeviceSettings({ theme: option })}
-          disabled={lightOnly}
-          describedBy={lightOnly ? hint : undefined}
-        />
-      </div>
-      {lightOnly && (
-        <p id={hint} className={`m-0 text-xs text-mute ${stacked ? '' : 'self-end'}`}>
-          {lookName(look)} is light only
-        </p>
-      )}
+    <div className={stacked ? 'flex flex-col gap-2' : 'flex items-center justify-between gap-2'}>
+      <span className={stacked ? 'font-semibold' : 'text-mute'}>Mode</span>
+      <Segmented
+        label="Mode"
+        fill={stacked}
+        options={THEMES.map((option) => ({ value: option, label: MODE_NAMES[option] }))}
+        value={theme}
+        onChange={(option) => setDeviceSettings({ theme: option })}
+      />
     </div>
   )
 }
