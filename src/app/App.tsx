@@ -4,7 +4,7 @@
 // editor sheet sliding up over the foot of it, and the sidebars sliding in over the whole screen.
 
 import type { ReactNode, RefObject } from 'react'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { EDITOR_SHEET_HEIGHT, GridEditor } from '@/features/editor/GridEditor'
 import { ExampleNotice } from '@/features/library/ExampleNotice'
 import { LibrarySidebar } from '@/features/library/LibrarySidebar'
@@ -91,7 +91,12 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
     if (example) setEditOpen(false)
   }, [example])
   const editing = editOpen && !example && !onMetronome
-  const sheet = useSlide(editing)
+  const openEditor = useCallback(() => setEditOpen(true), [])
+  const closeEditor = useCallback(() => setEditOpen(false), [])
+  // A swipe up on the transport or tab bar pulls the sheet up, as Edit opens it.
+  const footerSwipe = useSwipe({ up: example || onMetronome ? undefined : openEditor })
+  const pull = Math.min(0, footerSwipe.offset.y)
+  const sheet = useSlide(editing, pull !== 0)
   const [footer, footerHeight] = useHeight()
   const screenSwipe = useSwipe({ left: settings.onOpen, right: library.onOpen })
   // The sheet floats over the screen and moves nothing under it; the notation only gains room at its
@@ -120,11 +125,11 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
         {onMetronome ? <MetronomeScreen /> : <NotationView coveredBottom={editing ? underSheet : undefined} />}
       </div>
       {/* Under the sheet while it is up, so out of reach. */}
-      <div ref={footer} inert={editing} className="flex shrink-0 flex-col">
-        {!onMetronome && <TransportBar onEdit={example ? undefined : () => setEditOpen(true)} onCopy={example ? copyToLibrary : undefined} />}
+      <div ref={footer} {...footerSwipe.props} inert={editing} className="flex shrink-0 touch-pan-x flex-col">
+        {!onMetronome && <TransportBar onEdit={example ? undefined : openEditor} onCopy={example ? copyToLibrary : undefined} />}
         <ScreenTabs />
       </div>
-      {sheet.present && <GridEditor open={sheet.atOpen} onDone={() => setEditOpen(false)} />}
+      {sheet.present && <GridEditor open={sheet.atOpen} pull={pull} onDone={closeEditor} />}
 
       {/* A swipe on the screen pulls in the exercises from the left, or the settings from the right. */}
       <SidebarFullScreen side="left" open={library.state === 'overlay'} pull={Math.max(0, screenSwipe.offset.x)} onClose={library.onCollapse}>

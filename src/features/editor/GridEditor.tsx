@@ -1,9 +1,10 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { useCoarsePointer } from '@/app/useMediaQuery'
 import { Button } from '@/components/Button'
 import { DoneButton } from '@/components/DoneButton'
 import { ChevronIcon } from '@/components/icons'
+import { usePullDown } from '@/components/usePullDown'
 import { slideTransition } from '@/components/useSlide'
 import { useSwipe } from '@/components/useSwipe'
 import { BarActions } from './BarActions'
@@ -24,16 +25,21 @@ import { useEditorKeys } from './useEditorKeys'
 /** How tall the phone's editor sheet is, from the bottom of the screen. */
 export const EDITOR_SHEET_HEIGHT = '55dvh'
 
-/** The phone's editor sheet: see `GridEditor`. It follows a drag down on its header, and closes past a little way or on a flick. */
-function EditorSheet({ open, onDone }: { open: boolean; onDone: () => void }) {
+/**
+ * The phone's editor sheet: see `GridEditor`. Fixed to the screen's foot, as the full-screen panels
+ * are. It follows a drag down on its header, or on the beat cards while they're scrolled to the top,
+ * and closes past a little way or on a flick. While closed, `pull` (px, up is negative) is a finger
+ * pulling it up from below.
+ */
+function EditorSheet({ open, pull, onDone }: { open: boolean; pull: number; onDone: () => void }) {
   const swipe = useSwipe({ down: onDone })
-  return (
-    <section
-      aria-label="Grid editor"
-      className={`absolute inset-x-0 bottom-0 z-20 flex flex-col rounded-t-2xl border-t border-line bg-panel shadow-[0_-6px_18px_color-mix(in_srgb,var(--color-shade)_8%,transparent)] ${swipe.swiping ? '' : slideTransition}`}
-      style={{ height: EDITOR_SHEET_HEIGHT, transform: open ? `translateY(${swipe.offset.y}px)` : 'translateY(100%)' }}
-    >
-      <div {...swipe.props} className="flex shrink-0 touch-pan-x flex-col px-2 pt-1.5 select-none">
+  const cards = useRef<HTMLDivElement>(null)
+  const cardsPull = usePullDown(cards, onDone)
+  const drag = swipe.offset.y || cardsPull
+  // Made once, so following a finger moves the sheet without drawing its contents again.
+  const header = useMemo(
+    () => (
+      <>
         <span aria-hidden className="mx-auto mb-1.5 h-1 w-10 rounded-full bg-edge/60" />
         <BarTabs large />
         <div className="flex items-center gap-1 pr-1 pb-1">
@@ -41,16 +47,31 @@ function EditorSheet({ open, onDone }: { open: boolean; onDone: () => void }) {
           <CursorBar />
           <DoneButton quiet label="Done editing" onClick={onDone} />
         </div>
+      </>
+    ),
+    [onDone],
+  )
+  const strip = useMemo(() => <BeatStrip twoPerRow />, [])
+  const transform = open ? `translateY(${drag}px)` : `translateY(max(0px, calc(100% + ${Math.min(0, pull)}px)))`
+  return (
+    <section
+      aria-label="Grid editor"
+      aria-hidden={!open || undefined}
+      className={`fixed inset-x-0 bottom-0 z-20 flex flex-col rounded-t-2xl border-t border-line bg-panel shadow-[0_-6px_18px_color-mix(in_srgb,var(--color-shade)_8%,transparent)] ${drag || pull ? '' : slideTransition}`}
+      style={{ height: EDITOR_SHEET_HEIGHT, transform }}
+    >
+      <div {...swipe.props} className="flex shrink-0 touch-pan-x flex-col px-2 pt-1.5 select-none">
+        {header}
       </div>
       {/* The beat cards scroll to the sheet's foot, with the home indicator's room at the end of them. */}
-      <div className="min-h-0 flex-1 overflow-auto px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
-        <BeatStrip twoPerRow />
+      <div ref={cards} className="min-h-0 flex-1 overflow-auto overscroll-contain px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+        {strip}
       </div>
     </section>
   )
 }
 
-export function GridEditor({ onDone, open = true }: { onDone?: () => void; open?: boolean }) {
+export function GridEditor({ onDone, open = true, pull = 0 }: { onDone?: () => void; open?: boolean; pull?: number }) {
   const [collapsed, toggleCollapsed] = useEditorCollapsed()
   const [helpOpen, setHelpOpen] = useState(false)
   // A collapsed editor has no room for the cheat sheet, so ? leaves it be.
@@ -62,7 +83,7 @@ export function GridEditor({ onDone, open = true }: { onDone?: () => void; open?
   // A touch screen shows no keyboard hints.
   const touch = useCoarsePointer()
   const chevronLabel = collapsed ? 'Expand the editor' : 'Collapse the editor'
-  if (onDone) return <EditorSheet open={open} onDone={onDone} />
+  if (onDone) return <EditorSheet open={open} pull={pull} onDone={onDone} />
   return (
     <section
       aria-label="Grid editor"

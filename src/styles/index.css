@@ -512,6 +512,12 @@
     @apply h-full;
   }
 
+  /* The app fills the screen and scrolls inside it, so a drag at an edge never bounces the page. */
+  html,
+  body {
+    @apply overscroll-none;
+  }
+
   body {
     @apply overflow-hidden bg-bg font-sans text-sm/[1.4] text-ink;
     /* A look's display font may come in one weight (Bagel Fat One, Instrument Serif): draw that
