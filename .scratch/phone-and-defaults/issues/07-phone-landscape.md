@@ -1,6 +1,6 @@
 # 07: The phone turned sideways
 
-**Status:** needs-info (A chosen; waiting on A1 or A2 from the mockup)
+**Status:** ready-for-agent
 
 **Reported:** 2026-10-15, by the user on their iPhone (Chrome): "the page really bugs out when I flip my phone sideways."
 
@@ -30,7 +30,7 @@ The user chose A on 2026-10-15. Mockups: <https://claude.ai/artifact/PCvgctMysYf
 
 ## Question for the user
 
-- **A.** Chosen: a landscape version of the phone layout, as above. Still to pick: A1 or A2.
+- **A.** Chosen: a landscape version of the phone layout, as above. The user then picked **A2**.
 - **B.** A smaller fix: the phone layout as it is, letting the page scroll in landscape.
 - **C.** A "turn your phone upright" notice. A web page can't lock the screen's orientation in Safari, or in Chrome on iOS.
 
@@ -39,3 +39,10 @@ The user chose A on 2026-10-15. Mockups: <https://claude.ai/artifact/PCvgctMysYf
 - [ ] Turning the phone in either direction, with the editor sheet open or closed, on Practice or Metronome, keeps you where you were. Nothing is cut off.
 - [ ] Checked at 750 × 340 and 844 × 390 (landscape), and at 390 × 664 after turning back, in light and dark.
 - [ ] A desktop window narrowed to 700 × 400 still gets the desktop layout.
+
+## Decided (2026-10-15)
+
+The user picked A2 on the mockup, with two changes, both now drawn:
+
+- **The rail:** 48 px wide, icons only, no labels. It's lined up from the top like a menu bar: exercises, a short divider, then Practice and Metronome. Settings sits at the foot. The current screen's icon is in the accent on a tinted square.
+- **Metronome in landscape:** no "Metronome" title, since the rail's lit icon already shows where you are. The beat blocks, which you watch while it plays, grow to about 104 px tall, beside the dial.
