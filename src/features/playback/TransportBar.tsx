@@ -12,32 +12,37 @@ const roundButtonClass =
   'flex shrink-0 cursor-pointer touch-manipulation select-none items-center justify-center rounded-full border font-semibold [-webkit-touch-callout:none]'
 
 /** The − and + beside the BPM. */
-const stepClass = 'size-11 rounded-full border-edge bg-panel text-xl/none font-semibold active:border-accent active:text-accent'
+const stepClass = 'rounded-full border-edge bg-panel text-xl/none font-semibold active:border-accent active:text-accent'
 
 /**
  * The phone layout's transport, over the tab bar within reach of a thumb: play/pause, the tempo
  * with − and + buttons that repeat while held, and Edit, given `onEdit`, to open the editor sheet
  * (which covers the bar). On an example, given `onCopy`, Copy takes Edit's place to make an editable copy.
+ * `slim`, with the phone turned sideways, draws it lower, with BPM beside the tempo rather than
+ * under it, and keeps it clear of a notch on the right and the home indicator below.
  */
-export function TransportBar({ onEdit, onCopy }: { onEdit?: () => void; onCopy?: () => void }) {
+export function TransportBar({ onEdit, onCopy, slim = false }: { onEdit?: () => void; onCopy?: () => void; slim?: boolean }) {
   usePlaybackKeys()
+  const step = `${stepClass} ${slim ? 'size-9' : 'size-11'}`
   return (
     <div
       aria-label="Transport"
       role="toolbar"
-      className="flex shrink-0 items-center gap-3 border-t border-line bg-card px-3 py-2"
+      className={`flex shrink-0 items-center gap-3 border-t border-line bg-card ${
+        slim ? 'pt-1 pr-[max(1rem,env(safe-area-inset-right))] pb-[max(0.25rem,calc(env(safe-area-inset-bottom)-0.75rem))] pl-4' : 'px-3 py-2'
+      }`}
     >
-      <PlayPauseButton />
+      <PlayPauseButton className={slim ? 'size-11' : 'size-12'} />
       <div className="flex items-center gap-2">
-        <BpmStep step={-1} className={stepClass}>
+        <BpmStep step={-1} className={step}>
           <span aria-hidden>−</span>
         </BpmStep>
-        <label className="flex flex-col items-center">
+        <label className={`flex items-center ${slim ? 'gap-1' : 'flex-col'}`}>
           {/* 16 px or more, so iOS doesn't zoom in when it's focused. */}
           <BpmInput className={`${fieldClass} w-16 [appearance:textfield] px-1 py-1 text-center text-base font-semibold [&::-webkit-inner-spin-button]:appearance-none`} />
           <span className="text-[11px] text-mute">BPM</span>
         </label>
-        <BpmStep step={1} className={stepClass}>
+        <BpmStep step={1} className={step}>
           <span aria-hidden>+</span>
         </BpmStep>
       </div>
@@ -53,7 +58,7 @@ export function TransportBar({ onEdit, onCopy }: { onEdit?: () => void; onCopy?:
 }
 
 /** The phone's play/pause: a round button, big enough for a thumb. */
-function PlayPauseButton() {
+function PlayPauseButton({ className }: { className: string }) {
   const playing = useAppStore((s) => s.playing)
   return (
     <button
@@ -62,7 +67,7 @@ function PlayPauseButton() {
       // Keep focus off the buttons, so Space pauses rather than clicking them.
       onMouseDown={keepFocus}
       onClick={togglePause}
-      className={`${roundButtonClass} size-12 border-play-button-edge bg-play-button text-lg/none text-on-play-button active:opacity-80`}
+      className={`${roundButtonClass} ${className} border-play-button-edge bg-play-button text-lg/none text-on-play-button active:opacity-80`}
     >
       <span aria-hidden>{playing ? '❚❚' : '▶'}</span>
     </button>

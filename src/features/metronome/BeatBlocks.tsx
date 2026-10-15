@@ -20,8 +20,9 @@ const LEVEL_HEIGHT: Record<BeatLevel, string> = { accent: 'h-full', normal: 'h-2
 /**
  * A block per beat of the bar: tapping one cycles its level (Accent, Normal, Soft, Off), heard on
  * the next pass. The beat playing now is outlined and tinted. Up to 8 sit in a row; more take two rows.
+ * `tall` keeps them full height on a short screen, as beside the dial on a phone turned sideways.
  */
-export function BeatBlocks({ beat }: { beat: number | undefined }) {
+export function BeatBlocks({ beat, tall = false }: { beat: number | undefined; tall?: boolean }) {
   const levels = useAppStore((s) => s.device.metronome.levels)
   const setMetronome = useAppStore((s) => s.setMetronome)
   const columns = levels.length <= 8 ? levels.length : Math.ceil(levels.length / 2)
@@ -34,7 +35,7 @@ export function BeatBlocks({ beat }: { beat: number | undefined }) {
           aria-label={`Beat ${i + 1}: ${LEVEL_NAMES[level]}. Tap to change`}
           onMouseDown={keepFocus}
           onClick={() => setMetronome({ levels: levels.map((l, j) => (j === i ? cycleLevel(l) : l)) })}
-          className={`flex cursor-pointer touch-manipulation items-end rounded-xl p-1 ${levels.length > 8 ? 'h-16 short:h-12' : 'h-26 short:h-16'} ${
+          className={`flex cursor-pointer touch-manipulation items-end rounded-xl p-1 ${levels.length > 8 ? (tall ? 'h-12' : 'h-16 short:h-12') : tall ? 'h-26' : 'h-26 short:h-16'} ${
             beat === i ? 'border-2 border-ink bg-accent-tint' : `bg-card ${level === 'off' ? 'border border-dashed border-edge' : 'border border-line'}`
           }`}
         >

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
+import type { PhoneOrientation } from '@/app/useMediaQuery'
 import { useCoarsePointer } from '@/app/useMediaQuery'
 import { Button } from '@/components/Button'
 import { DoneButton } from '@/components/DoneButton'
@@ -18,14 +19,17 @@ import { useEditorKeys } from './useEditorKeys'
  * The grid editor: the bar tabs, undo, redo and the bar menu over the cursor bar's beat cards. Given
  * `onDone`, it's the phone layout's sheet over the lower part of the screen, its transport and tab
  * bars too: a grab handle, the beat cards two to a row (on most phones they fit; else they scroll),
- * with a small ‹ and › either side, and a row at its foot, in the thumb's reach, of undo, redo, the
+ * or all four in a row with the phone turned sideways (`orientation`), with a small ‹ and › either side, and a row at its foot, in the thumb's reach, of undo, redo, the
  * bar dots and +, the bin, the bar menu and the tick. Going to another bar slides its cards in; the
  * tick, or a drag down on the handle or the cards, closes the sheet (`onDone`). It is drawn in place
  * while `open`, and below the screen, to slide in and out, while not. Otherwise it's docked under
  * the notation, and its chevron collapses it to its header row.
  */
-/** How tall the phone's editor sheet is, from the bottom of the screen. */
-export const EDITOR_SHEET_HEIGHT = '62dvh'
+/**
+ * How tall the phone's editor sheet is, from the bottom of the screen. Turned sideways the screen is
+ * short, so the sheet takes more of it, leaving a strip of the notation over it.
+ */
+export const EDITOR_SHEET_HEIGHT: Record<PhoneOrientation, string> = { portrait: '62dvh', landscape: '76dvh' }
 
 /** The gap, in px, between one bar's cards and the next's as they slide past each other. */
 const SLIDE_GAP = 32
@@ -36,14 +40,24 @@ const SLIDE_GAP = 32
  * and closes past a little way or on a flick. While closed, `pull` (px, up is negative) is a finger
  * pulling it up from below.
  */
-function EditorSheet({ open, pull, onDone }: { open: boolean; pull: number; onDone: () => void }) {
+function EditorSheet({
+  orientation,
+  open,
+  pull,
+  onDone,
+}: {
+  orientation: PhoneOrientation
+  open: boolean
+  pull: number
+  onDone: () => void
+}) {
   const swipe = useSwipe({ down: onDone })
   const cards = useRef<HTMLDivElement>(null)
   const cardsPull = usePullDown(cards, onDone)
   const drag = swipe.offset.y || cardsPull
   const slide = useBarSlide()
   // Made once, so following a finger moves the sheet without drawing its contents again.
-  const strip = useMemo(() => <BeatStrip twoPerRow />, [])
+  const strip = useMemo(() => <BeatStrip phone={orientation} />, [orientation])
   const row = useMemo(
     () => (
       // Most of the home indicator's room is left out, so the cards fit: on the iPhone in Chrome the browser's bar sits under the sheet anyway.
@@ -59,8 +73,11 @@ function EditorSheet({ open, pull, onDone }: { open: boolean; pull: number; onDo
     <section
       aria-label="Grid editor"
       aria-hidden={!open || undefined}
-      className={`fixed inset-x-0 bottom-0 z-20 flex flex-col rounded-t-2xl border-t border-line bg-panel shadow-[0_-6px_18px_color-mix(in_srgb,var(--color-shade)_8%,transparent)] ${drag || pull ? '' : slideTransition}`}
-      style={{ height: EDITOR_SHEET_HEIGHT, transform }}
+      // Sideways, it covers the screen beside the rail (48 px), not the rail, and keeps clear of a notch on the right.
+      className={`fixed right-0 bottom-0 z-20 flex flex-col rounded-t-2xl ${
+        orientation === 'landscape' ? 'left-[calc(3rem+env(safe-area-inset-left))] pr-[env(safe-area-inset-right)]' : 'left-0'
+      } border-t border-line bg-panel shadow-[0_-6px_18px_color-mix(in_srgb,var(--color-shade)_8%,transparent)] ${drag || pull ? '' : slideTransition}`}
+      style={{ height: EDITOR_SHEET_HEIGHT[orientation], transform }}
     >
       <div {...swipe.props} className="flex h-[18px] shrink-0 touch-pan-x items-center justify-center select-none">
         <span aria-hidden className="h-1 w-10 rounded-full bg-edge/60" />
@@ -76,7 +93,7 @@ function EditorSheet({ open, pull, onDone }: { open: boolean; pull: number; onDo
             <div className="w-full shrink-0">{strip}</div>
             {slide && (
               <div aria-hidden className="pointer-events-none w-full shrink-0">
-                <BeatStrip twoPerRow bar={slide.from} />
+                <BeatStrip phone={orientation} bar={slide.from} />
               </div>
             )}
           </div>
@@ -156,7 +173,17 @@ function useBarSlide() {
   return { ...slide, offset: slide.running ? '0px' : over }
 }
 
-export function GridEditor({ onDone, open = true, pull = 0 }: { onDone?: () => void; open?: boolean; pull?: number }) {
+export function GridEditor({
+  onDone,
+  orientation = 'portrait',
+  open = true,
+  pull = 0,
+}: {
+  onDone?: () => void
+  orientation?: PhoneOrientation
+  open?: boolean
+  pull?: number
+}) {
   const [collapsed, toggleCollapsed] = useEditorCollapsed()
   const [helpOpen, setHelpOpen] = useState(false)
   // A collapsed editor has no room for the cheat sheet, so ? leaves it be.
@@ -168,7 +195,7 @@ export function GridEditor({ onDone, open = true, pull = 0 }: { onDone?: () => v
   // A touch screen shows no keyboard hints.
   const touch = useCoarsePointer()
   const chevronLabel = collapsed ? 'Expand the editor' : 'Collapse the editor'
-  if (onDone) return <EditorSheet open={open} pull={pull} onDone={onDone} />
+  if (onDone) return <EditorSheet orientation={orientation} open={open} pull={pull} onDone={onDone} />
   return (
     <section
       aria-label="Grid editor"

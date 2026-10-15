@@ -2,6 +2,7 @@
 // Either sidebar collapses to a rail; below 1000 px both are rails that open over the notation.
 // Below 640 px, the phone layout: a column of header, notation, transport bar and tab bar, with the
 // editor sheet sliding up over the foot of it, and the sidebars sliding in over the whole screen.
+// Turned sideways, the header and tab bar give way to a rail of icons down the left.
 
 import type { ReactNode, RefObject } from 'react'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
@@ -17,7 +18,7 @@ import type { HeaderRoom } from '@/features/playback/TransportControls'
 import { TransportControls } from '@/features/playback/TransportControls'
 import { SettingsSidebar } from '@/features/settings/SettingsSidebar'
 import { useAppStore } from '@/app/store'
-import { useNarrowWindow, usePhoneWindow } from '@/app/useMediaQuery'
+import { useNarrowWindow, usePhoneOrientation, usePhoneWindow } from '@/app/useMediaQuery'
 import { NameInput } from '@/components/NameInput'
 import type { Side } from '@/components/Sidebar'
 import { SidebarFullScreen, SidebarOverlay, SidebarRail } from '@/components/Sidebar'
@@ -79,12 +80,19 @@ export function App() {
  * grid editor up as a sheet over the transport and tab bars, which its tick or a drag down closes;
  * while it's up, a play button floats over the notation above it. An example, which can't be
  * changed, has no read-only notice; Copy takes Edit's place instead, and opens an editable copy.
+ *
+ * Turned sideways, the screen is short, so the header and tab bar go: a rail down the left holds
+ * the exercises button, the screen tabs and settings, the exercise's name sits over the notation,
+ * and the transport bar is drawn slimmer. Turning the phone keeps the screen, the open sheet and the
+ * cursor bar, since it is this same layout either way.
  */
 function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl> }) {
   const { library, settings } = sidebars
   const example = useAppStore((s) => isExample(s.editor.exercise.id))
   const copyToLibrary = useAppStore((s) => s.duplicateOpenExercise)
   const onMetronome = useAppStore((s) => s.device.screen === 'metronome')
+  const orientation = usePhoneOrientation()
+  const landscape = orientation === 'landscape'
   const [editOpen, setEditOpen] = useState(false)
   // Opening an example closes the sheet, so it doesn't come back with the next exercise.
   useEffect(() => {
@@ -101,35 +109,63 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
   const screenSwipe = useSwipe({ left: settings.onOpen, right: library.onOpen })
   // The sheet floats over the screen and moves nothing under it; the notation only gains room at its
   // end, so its last lines can still scroll up clear of the sheet.
-  const underSheet = `max(0px, calc(${EDITOR_SHEET_HEIGHT} - ${footerHeight}px))`
+  const underSheet = `max(0px, calc(${EDITOR_SHEET_HEIGHT[orientation]} - ${footerHeight}px))`
   return (
-    <div className="relative flex h-dvh flex-col overflow-hidden">
-      <header className="mb-(--header-ornament-height) flex shrink-0 items-center gap-1 border-b border-line bg-card px-1 pt-[env(safe-area-inset-top)] shadow-(--header-ornament)">
-        <PhoneHeaderButton label="Open exercises" expanded={library.state === 'overlay'} onClick={library.onOpen}>
-          <MenuIcon />
-        </PhoneHeaderButton>
-        <div className="flex min-w-0 flex-1 justify-center text-base">
+    <div className="relative flex h-dvh overflow-hidden">
+      {landscape && (
+        <nav aria-label="Screens" className="flex w-[calc(3rem+env(safe-area-inset-left))] shrink-0 flex-col items-center gap-1 border-r border-line bg-panel pt-1 pb-1.5 pl-[env(safe-area-inset-left)]">
+          <PhoneHeaderButton label="Open exercises" expanded={library.state === 'overlay'} onClick={library.onOpen} rail>
+            <MenuIcon />
+          </PhoneHeaderButton>
+          <span aria-hidden className="my-0.5 h-px w-6 bg-line" />
+          <ScreenTabs rail />
+          <PhoneHeaderButton label="Open settings" expanded={settings.state === 'overlay'} onClick={settings.onOpen} rail className="mt-auto">
+            <SettingsIcon />
+          </PhoneHeaderButton>
+        </nav>
+      )}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {!landscape && (
+          <header className="mb-(--header-ornament-height) flex shrink-0 items-center gap-1 border-b border-line bg-card px-1 pt-[env(safe-area-inset-top)] shadow-(--header-ornament)">
+            <PhoneHeaderButton label="Open exercises" expanded={library.state === 'overlay'} onClick={library.onOpen}>
+              <MenuIcon />
+            </PhoneHeaderButton>
+            <div className="flex min-w-0 flex-1 justify-center text-base">
+              {onMetronome ? (
+                <h1 className="m-0 font-display text-lg font-semibold">Metronome</h1>
+              ) : (
+                <ExerciseName className="w-full text-center" />
+              )}
+            </div>
+            <PhoneHeaderButton label="Open settings" expanded={settings.state === 'overlay'} onClick={settings.onOpen}>
+              <SettingsIcon />
+            </PhoneHeaderButton>
+          </header>
+        )}
+        <NotSaving className="border-b border-line bg-card px-3 py-1 text-xs" />
+        {/* Sideways there's no header: the name sits over the notation, and the rail's lit icon names the Metronome. */}
+        {landscape && !onMetronome && (
+          <div className="flex shrink-0 bg-paper pt-1.5 pr-[max(1rem,env(safe-area-inset-right))] pl-3 text-sm">
+            <ExerciseName className="max-w-full" />
+          </div>
+        )}
+        {/* A swipe left on the screen opens the settings, and right the exercises, as their buttons do. */}
+        <div {...screenSwipe.props} className="relative flex min-h-0 flex-1 touch-pan-y flex-col">
           {onMetronome ? (
-            <h1 className="m-0 font-display text-lg font-semibold">Metronome</h1>
+            <MetronomeScreen landscape={landscape} />
           ) : (
-            <ExerciseName className="w-full text-center" />
+            <NotationView coveredBottom={editing ? underSheet : undefined} />
           )}
         </div>
-        <PhoneHeaderButton label="Open settings" expanded={settings.state === 'overlay'} onClick={settings.onOpen}>
-          <SettingsIcon />
-        </PhoneHeaderButton>
-      </header>
-      <NotSaving className="border-b border-line bg-card px-3 py-1 text-xs" />
-      {/* A swipe left on the screen opens the settings, and right the exercises, as their buttons do. */}
-      <div {...screenSwipe.props} className="relative flex min-h-0 flex-1 touch-pan-y flex-col">
-        {onMetronome ? <MetronomeScreen /> : <NotationView coveredBottom={editing ? underSheet : undefined} />}
+        {/* Under the sheet while it is up, so out of reach. */}
+        <div ref={footer} {...footerSwipe.props} inert={editing} className="flex shrink-0 touch-pan-x flex-col">
+          {!onMetronome && (
+            <TransportBar slim={landscape} onEdit={example ? undefined : openEditor} onCopy={example ? copyToLibrary : undefined} />
+          )}
+          {!landscape && <ScreenTabs />}
+        </div>
       </div>
-      {/* Under the sheet while it is up, so out of reach. */}
-      <div ref={footer} {...footerSwipe.props} inert={editing} className="flex shrink-0 touch-pan-x flex-col">
-        {!onMetronome && <TransportBar onEdit={example ? undefined : openEditor} onCopy={example ? copyToLibrary : undefined} />}
-        <ScreenTabs />
-      </div>
-      {sheet.present && <GridEditor open={sheet.atOpen} pull={pull} onDone={closeEditor} />}
+      {sheet.present && <GridEditor orientation={orientation} open={sheet.atOpen} pull={pull} onDone={closeEditor} />}
 
       {/* A swipe on the screen pulls in the exercises from the left, or the settings from the right. */}
       <SidebarFullScreen side="left" open={library.state === 'overlay'} pull={Math.max(0, screenSwipe.offset.x)} onClose={library.onCollapse}>
@@ -161,15 +197,28 @@ function PhoneHeaderButton({
   label,
   expanded,
   onClick,
+  rail = false,
+  className = '',
   children,
 }: {
   label: string
   expanded: boolean
   onClick: () => void
+  /** On the rail down the side of a phone turned sideways, where it's as small as the screen tabs beside it. */
+  rail?: boolean
+  className?: string
   children: ReactNode
 }) {
   return (
-    <Button variant="ghost" size="lg" icon aria-label={label} aria-expanded={expanded} onClick={onClick} className="active:bg-hover">
+    <Button
+      variant="ghost"
+      size="lg"
+      icon
+      aria-label={label}
+      aria-expanded={expanded}
+      onClick={onClick}
+      className={`active:bg-hover ${rail ? 'size-10! text-mute' : ''} ${className}`}
+    >
       <span aria-hidden className="flex [&>svg]:size-5">
         {children}
       </span>

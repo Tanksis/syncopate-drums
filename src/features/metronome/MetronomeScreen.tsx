@@ -22,45 +22,71 @@ const pillClass = 'rounded-full! px-5.5!'
 /**
  * The phone's Metronome screen: the time signature and subdivision at the top, a block per beat,
  * the dial, − Play +, then Tap tempo and the Sound sheet. It fits the screen without scrolling: the
- * dial takes the room the rest leaves, and on a short screen the rest is drawn smaller.
+ * dial takes the room the rest leaves, and on a short screen the rest is drawn smaller. Turned
+ * sideways (`landscape`), the dial is on the left, as tall as the screen allows, and the rest is
+ * stacked beside it, the beat blocks kept full height, since they're watched while it plays.
  */
-export function MetronomeScreen() {
+export function MetronomeScreen({ landscape = false }: { landscape?: boolean }) {
   const beat = useMetronomeBeat()
   const [soundOpen, setSoundOpen] = useState(false)
   const [rhythmOpen, setRhythmOpen] = useState(false)
-  return (
-    <main aria-label="Metronome" className="flex min-h-0 flex-1 flex-col overflow-auto bg-bg">
-      <RhythmButtons onOpen={() => setRhythmOpen(true)} />
-      <div className="px-4 pt-3 short:pt-2">
-        <BeatBlocks beat={beat} />
-      </div>
-      <FitDial beat={beat} />
-      <div className="flex items-center justify-center gap-5.5 px-4 pb-3.5 short:pb-2.5">
-        <BpmStep step={-1} tempo="metronome" className={stepClass}>
-          <span aria-hidden>−</span>
-        </BpmStep>
-        <PlayButton />
-        <BpmStep step={1} tempo="metronome" className={stepClass}>
-          <span aria-hidden>+</span>
-        </BpmStep>
-      </div>
-      <div className="flex justify-center gap-3 px-4 pb-5 short:pb-3">
-        <TapTempo />
-        <Button size="lg" onClick={() => setSoundOpen(true)} aria-haspopup="dialog" className={pillClass}>
-          Sound
-        </Button>
-      </div>
+  const rhythm = <RhythmButtons landscape={landscape} onOpen={() => setRhythmOpen(true)} />
+  const blocks = <BeatBlocks beat={beat} tall={landscape} />
+  const play = (
+    <div className={`flex items-center justify-center gap-5.5 ${landscape ? '' : 'px-4 pb-3.5 short:pb-2.5'}`}>
+      <BpmStep step={-1} tempo="metronome" className={stepClass}>
+        <span aria-hidden>−</span>
+      </BpmStep>
+      <PlayButton />
+      <BpmStep step={1} tempo="metronome" className={stepClass}>
+        <span aria-hidden>+</span>
+      </BpmStep>
+    </div>
+  )
+  const more = (
+    <div className={`flex justify-center gap-3 ${landscape ? '' : 'px-4 pb-5 short:pb-3'}`}>
+      <TapTempo />
+      <Button size="lg" onClick={() => setSoundOpen(true)} aria-haspopup="dialog" className={pillClass}>
+        Sound
+      </Button>
+    </div>
+  )
+  const sheets = (
+    <>
       {soundOpen && <SoundSheet onDone={() => setSoundOpen(false)} />}
       {rhythmOpen && <RhythmSheet onDone={() => setRhythmOpen(false)} />}
+    </>
+  )
+  if (landscape)
+    return (
+      <main aria-label="Metronome" className="flex min-h-0 flex-1 items-center gap-6 overflow-auto bg-bg pr-[max(1.5rem,env(safe-area-inset-right))] pl-6">
+        <FitDial beat={beat} className="h-full w-[42%] max-w-80 shrink-0" />
+        <div className="flex min-w-0 flex-1 flex-col gap-2.5 py-2">
+          {rhythm}
+          {blocks}
+          {play}
+          {more}
+        </div>
+        {sheets}
+      </main>
+    )
+  return (
+    <main aria-label="Metronome" className="flex min-h-0 flex-1 flex-col overflow-auto bg-bg">
+      {rhythm}
+      <div className="px-4 pt-3 short:pt-2">{blocks}</div>
+      <FitDial beat={beat} className="min-h-0 flex-[1_1_0] py-3 short:py-2" />
+      {play}
+      {more}
+      {sheets}
     </main>
   )
 }
 
 /** The time signature and subdivision, each a small labelled button showing its value (the subdivision's picture); either opens the Rhythm sheet. */
-function RhythmButtons({ onOpen }: { onOpen: () => void }) {
+function RhythmButtons({ landscape, onOpen }: { landscape: boolean; onOpen: () => void }) {
   const { beats, noteValue, subdivision } = useAppStore((s) => s.device.metronome)
   return (
-    <div className="grid grid-cols-2 gap-2 px-4 pt-2.5">
+    <div className={`grid grid-cols-2 gap-2 ${landscape ? '' : 'px-4 pt-2.5'}`}>
       <RhythmButton label="Time signature" onClick={onOpen}>
         <b className="font-sans text-[22px]/[30px] tabular-nums">
           {beats}/{noteValue}
@@ -95,8 +121,8 @@ function RhythmButton({ label, onClick, children }: { label: string; onClick: ()
 /** The smallest the dial is drawn, in px, however short the screen; below it the screen scrolls. */
 const MIN_DIAL = 140
 
-/** The dial, as large as the room between the blocks and Play allows, up to its full size. */
-function FitDial({ beat }: { beat: number | undefined }) {
+/** The dial, as large as the room its box (`className`) leaves allows, up to its full size. */
+function FitDial({ beat, className }: { beat: number | undefined; className: string }) {
   const ref = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState(DIAL_SIZE)
   useLayoutEffect(() => {
@@ -111,7 +137,7 @@ function FitDial({ beat }: { beat: number | undefined }) {
   }, [])
   return (
     // Its height is the room left, not the dial's, so the dial never pushes the rest down.
-    <div ref={ref} className="flex min-h-0 flex-[1_1_0] items-center justify-center py-3 short:py-2">
+    <div ref={ref} className={`flex items-center justify-center ${className}`}>
       <Dial beat={beat} size={size} />
     </div>
   )
