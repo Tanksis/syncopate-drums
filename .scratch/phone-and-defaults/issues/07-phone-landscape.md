@@ -1,6 +1,6 @@
 # 07: The phone turned sideways
 
-**Status:** needs-triage
+**Status:** needs-info (A chosen; waiting on A1 or A2 from the mockup)
 
 **Reported:** 2026-10-15, by the user on their iPhone (Chrome): "the page really bugs out when I flip my phone sideways."
 
@@ -17,7 +17,7 @@ The layout is chosen by width alone: under 640 px is the phone layout (`PHONE` i
 
 ## What to build
 
-The approach is undecided; see the question below. The recommendation, to confirm with the user:
+The user chose A on 2026-10-15. Mockups: <https://claude.ai/artifact/PCvgctMysYfCvkCEs2vus5> (750 × 340). They show A1, the portrait bars stacked and slimmed, and A2, the tabs moved to a side rail (recommended), each on Practice, with the editor sheet open, and on Metronome.
 
 1. **Keep the phone layout when a phone is turned sideways.** Read a phone from its shorter side, or a short window with a coarse pointer, not from its width alone. A narrow desktop window keeps today's behaviour.
 2. **A landscape arrangement of the phone layout:**
@@ -30,7 +30,7 @@ The approach is undecided; see the question below. The recommendation, to confir
 
 ## Question for the user
 
-- **A.** Recommended: a landscape version of the phone layout, as above.
+- **A.** Chosen: a landscape version of the phone layout, as above. Still to pick: A1 or A2.
 - **B.** A smaller fix: the phone layout as it is, letting the page scroll in landscape.
 - **C.** A "turn your phone upright" notice. A web page can't lock the screen's orientation in Safari, or in Chrome on iOS.
 
