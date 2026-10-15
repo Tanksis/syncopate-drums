@@ -93,11 +93,30 @@ One place a hit can fall within a beat: one of its four sixteenths, or one of it
 _Avoid_: Cell, step, slot
 
 **Click**:
-The metronome sound: every quarter note, with beat 1 accented.
+The exercise's metronome sound: every quarter note, with beat 1 accented. The Metronome screen has its own clicks.
 _Avoid_: Beep, tick
 
 **Count-in**:
 One bar of click played before an exercise starts.
+
+### Metronome
+
+**Screen**:
+What the app shows: **Practice** (the exercise, its notation and editor) or **Metronome**, switched in the header (ADR 0014). The screen last shown is remembered.
+_Avoid_: Mode (that is light or dark)
+
+**Metronome**:
+The screen that plays a click on its own, with its own BPM, time signature, subdivision, beat levels and sound, remembered on the device. Not part of any exercise.
+
+**Time signature**:
+The metronome's beats per bar over the note value that gets the beat: 1–16 over 2, 4, 8 or 16. The BPM counts that note value. Exercises are always 4/4.
+
+**Beat level**:
+How a metronome beat plays: Accent, Normal, Soft or Off, set by tapping its beat block. A changed time signature resets them to beat 1 Accent and the rest Normal.
+_Avoid_: Volume (for a single beat)
+
+**Subdivision**:
+The rhythm clicked inside each beat, quieter than the beat itself: quarters (none), eighths, an off-beat eighth, dotted eighth and sixteenth, triplets, or a triplet or sixteenth grouping with rests. Picked from small notation pictures.
 
 ### Sticking
 
