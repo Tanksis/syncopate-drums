@@ -14,7 +14,7 @@ const MIDDLE_Y = 40
 const NOTES_WIDTH = 46
 
 /** Draws one beat of a subdivision on a stave that isn't drawn, so the glyphs are the notation's without its lines. */
-function drawPicture(el: HTMLDivElement, id: SubdivisionId) {
+function drawPicture(el: HTMLDivElement, id: SubdivisionId, size: number) {
   el.replaceChildren()
   const { triplet, notes } = subdivisionNotation(id)
   const renderer = new Renderer(el, Renderer.Backends.SVG)
@@ -46,32 +46,32 @@ function drawPicture(el: HTMLDivElement, id: SubdivisionId) {
   const w = WIDTH / SCALE
   const h = HEIGHT / SCALE
   svg.setAttribute('viewBox', `${box.x + box.width / 2 - w / 2} ${MIDDLE_Y - h / 2} ${w} ${h}`)
-  svg.setAttribute('width', String(WIDTH))
-  svg.setAttribute('height', String(HEIGHT))
+  svg.setAttribute('width', String(WIDTH * size))
+  svg.setAttribute('height', String(HEIGHT * size))
   // The picture takes its button's text colour.
   recolour(el, 'currentColor')
 }
 
 /**
  * A subdivision drawn as one beat of notation with VexFlow, so its glyphs match the staff's, but
- * with no staff lines. It is named by the subdivision's name.
+ * with no staff lines. It is named by the subdivision's name. `size` scales it from the Rhythm sheet's.
  */
-export function SubdivisionPicture({ id }: { id: SubdivisionId }) {
+export function SubdivisionPicture({ id, size = 1 }: { id: SubdivisionId; size?: number }) {
   const ref = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
     let current = true
-    notationFontsReady.then(() => current && drawPicture(ref.current!, id)).catch((error: unknown) => console.error(error))
+    notationFontsReady.then(() => current && drawPicture(ref.current!, id, size)).catch((error: unknown) => console.error(error))
     return () => {
       current = false
     }
-  }, [id])
+  }, [id, size])
   return (
     <div
       ref={ref}
       role="img"
       aria-label={subdivisionOf(id).name}
       className="pointer-events-none flex items-center justify-center"
-      style={{ width: WIDTH, height: HEIGHT }}
+      style={{ width: WIDTH * size, height: HEIGHT * size }}
     />
   )
 }

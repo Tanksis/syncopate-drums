@@ -10,9 +10,11 @@ import { drawExercise, notationFontsReady } from './staff'
 /**
  * The notation, scrolling in its own area. Given `corner` (the desktop play button), that's pinned
  * at the top left, in a gutter of its own so it never covers bar 1's number, and stays put as the
- * staff scrolls.
+ * staff scrolls. Given `coveredBottom` (a CSS length: how much of the view the phone's editor sheet
+ * covers), the staff gains that much room at its end, so its last lines can scroll up clear of the
+ * sheet, and the cursor's line is kept above it; nothing is laid out again.
  */
-export function NotationView({ corner }: { corner?: ReactNode }) {
+export function NotationView({ corner, coveredBottom }: { corner?: ReactNode; coveredBottom?: string }) {
   const exercise = useAppStore((s) => s.editor.exercise)
   const cursor = useAppStore((s) => s.editor.cursor)
   const dispatch = useAppStore((s) => s.dispatch)
@@ -23,6 +25,7 @@ export function NotationView({ corner }: { corner?: ReactNode }) {
   const look = useAppStore((s) => s.device.look)
   const scrollerRef = useRef<HTMLElement>(null)
   const staffRef = useRef<HTMLDivElement>(null)
+  const coverRef = useRef<HTMLDivElement>(null)
   /** The staff's width and the notation view's height inside its padding. */
   const [area, setArea] = useState<NotationArea>({ width: 0, height: 0 })
   const [fontsReady, setFontsReady] = useState(false)
@@ -69,7 +72,7 @@ export function NotationView({ corner }: { corner?: ReactNode }) {
       old && old.left === box.left && old.top === box.top && old.width === box.width && old.height === box.height ? old : box,
     )
     // Keep the cursor's line in view as typing runs past the bottom.
-    if (!playing) scrollLineIntoView(scrollerRef.current!, staffRef.current!, drawing.line(cursor.bar))
+    if (!playing) scrollLineIntoView(scrollerRef.current!, staffRef.current!, drawing.line(cursor.bar), coverRef.current?.offsetHeight)
   }, [exercise, cursor, area, fontsReady, fontsLoaded, playing, theme, look])
 
   useEffect(() => {
@@ -108,6 +111,7 @@ export function NotationView({ corner }: { corner?: ReactNode }) {
             }}
           />
         </div>
+        {coveredBottom && <div ref={coverRef} aria-hidden style={{ height: coveredBottom }} />}
       </section>
       {corner && <div className="absolute top-2.5 left-2.5 z-10">{corner}</div>}
     </div>

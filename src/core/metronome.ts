@@ -230,8 +230,11 @@ function subdivisionBeatTicks(id: SubdivisionId): Set<number> {
   return new Set(onsets.map((onset) => Math.round(onset * TICKS_PER_BEAT)).filter((tick) => tick > 0))
 }
 
-/** How loud each kind of click plays at its volume's usual level, relative to an accent. */
-const CLICK_GAIN: Record<BeatLevel | 'subdivision', number> = { accent: 1, normal: 0.6, soft: 0.3, off: 0, subdivision: 0.4 }
+/**
+ * How loud each kind of click plays at its volume's usual level, relative to an accent. Soft is 12 dB
+ * under Normal: at 6 dB the two sounded alike on a phone's speaker.
+ */
+const CLICK_GAIN: Record<BeatLevel | 'subdivision', number> = { accent: 1, normal: 0.6, soft: 0.15, off: 0, subdivision: 0.4 }
 
 /** How loud a click plays, 0–MAX_VOLUME: its level's gain at the beats' or the subdivision's volume. */
 export function metronomeClickGain(level: BeatLevel | 'subdivision', settings: MetronomeSettings): number {
