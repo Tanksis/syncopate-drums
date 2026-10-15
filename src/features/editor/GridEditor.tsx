@@ -8,7 +8,7 @@ import { usePullDown } from '@/components/usePullDown'
 import { slideTransition } from '@/components/useSlide'
 import { useSwipe } from '@/components/useSwipe'
 import { BarActions } from './BarActions'
-import { BarTabs } from './BarTabs'
+import { BarPicker, BarTabs } from './BarTabs'
 import { BeatStrip } from './BeatStrip'
 import { CheatSheet } from './CheatSheet'
 import { useEditorKeys } from './useEditorKeys'
@@ -16,14 +16,13 @@ import { useEditorKeys } from './useEditorKeys'
 /**
  * The grid editor: the bar tabs, undo, redo and the bar menu over the cursor bar's beat cards. Given
  * `onDone`, it's the phone layout's sheet over the lower part of the screen, its transport and tab
- * bars too, with a header that stays put while the beat cards, two to a row, scroll under it. The
- * header, under a grab handle, gives the bar tabs a row of their own, with undo, redo, the bar menu,
- * the bin, where the cursor is and the tick on a row under them; the tick or a drag down closes the
- * sheet (`onDone`). It is drawn in place while `open`, and below the screen, to slide in and out,
+ * bars too, with a header that stays put while the beat cards, two to a row, scroll under it (on
+ * most phones they fit). The header, under a grab handle, is one row: ‹ "Bar 3 of 12 ▾" › (a list of
+ * the bars), undo, redo, the bar menu and the tick; the tick or a drag down closes the sheet (`onDone`). It is drawn in place while `open`, and below the screen, to slide in and out,
  * while not. Otherwise it's docked under the notation, and its chevron collapses it to its header row.
  */
 /** How tall the phone's editor sheet is, from the bottom of the screen. */
-export const EDITOR_SHEET_HEIGHT = '55dvh'
+export const EDITOR_SHEET_HEIGHT = '62dvh'
 
 /**
  * The phone's editor sheet: see `GridEditor`. Fixed to the screen's foot, as the full-screen panels
@@ -41,10 +40,9 @@ function EditorSheet({ open, pull, onDone }: { open: boolean; pull: number; onDo
     () => (
       <>
         <span aria-hidden className="mx-auto mb-1.5 h-1 w-10 rounded-full bg-edge/60" />
-        <BarTabs large />
-        <div className="flex items-center gap-1 pr-1 pb-1">
+        <div className="flex items-center gap-1 pb-0.5">
+          <BarPicker />
           <BarActions large />
-          <CursorBar />
           <DoneButton quiet label="Done editing" onClick={onDone} />
         </div>
       </>
@@ -63,8 +61,9 @@ function EditorSheet({ open, pull, onDone }: { open: boolean; pull: number; onDo
       <div {...swipe.props} className="flex shrink-0 touch-pan-x flex-col px-2 pt-1.5 select-none">
         {header}
       </div>
-      {/* The beat cards scroll to the sheet's foot, with the home indicator's room at the end of them. */}
-      <div ref={cards} className="min-h-0 flex-1 overflow-auto overscroll-contain px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+      {/* The beat cards scroll to the sheet's foot. Most of the home indicator's room is left out, so
+          they fit without scrolling: on the iPhone in Chrome the browser's bar sits under the sheet anyway. */}
+      <div ref={cards} className="min-h-0 flex-1 overflow-auto overscroll-contain px-3 pt-1 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)-1.375rem))]">
         {strip}
       </div>
     </section>
@@ -122,17 +121,6 @@ export function GridEditor({ onDone, open = true, pull = 0 }: { onDone?: () => v
         </>
       )}
     </section>
-  )
-}
-
-/** Which bar the cursor is in, of how many: "Bar 3 of 12". */
-function CursorBar() {
-  const bar = useAppStore((s) => s.editor.cursor.bar)
-  const bars = useAppStore((s) => s.editor.exercise.bars.length)
-  return (
-    <span className="flex-1 text-center text-sm text-mute tabular-nums">
-      Bar {bar + 1} of {bars}
-    </span>
   )
 }
 

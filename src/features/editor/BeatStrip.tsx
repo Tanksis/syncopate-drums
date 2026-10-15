@@ -226,9 +226,14 @@ export function BeatStrip({ twoPerRow = false }: { twoPerRow?: boolean }) {
         aria-selected={selected || undefined}
         title={looped ? 'In the loop range' : undefined}
         // A selected bar in the loop range keeps the loop shading inside the selection's border.
-        className={`flex flex-col gap-1.5 rounded-lg border px-2 pb-2 ${twoPerRow ? 'pt-2' : 'pt-1'} ${
-          selected ? 'border-accent' : looped ? 'border-loop-line' : 'border-line'
-        } ${looped ? 'bg-loop' : selected ? 'bg-select' : 'bg-panel'}`}
+        // On a phone (`twoPerRow`) the bar has no box: the bar picker over it shows its selection and loop.
+        className={
+          twoPerRow
+            ? 'flex flex-col'
+            : `flex flex-col gap-1.5 rounded-lg border px-2 pt-1 pb-2 ${selected ? 'border-accent' : looped ? 'border-loop-line' : 'border-line'} ${
+                looped ? 'bg-loop' : selected ? 'bg-select' : 'bg-panel'
+              }`
+        }
       >
         {!twoPerRow && (
           <div className="flex items-center text-xs">

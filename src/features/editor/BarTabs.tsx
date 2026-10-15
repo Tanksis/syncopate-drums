@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useEffect, useRef } from 'react'
 import { useAppStore } from '@/app/store'
 import { keepFocus } from '@/components/keepFocus'
+import { Menu } from '@/components/Menu'
 import { inLoopRange, isExample } from '@/core'
 
 /**
@@ -79,6 +80,57 @@ export function BarTabs({ large = false }: { large?: boolean }) {
           +
         </button>
       )}
+    </div>
+  )
+}
+
+/**
+ * The phone's bars, in little room: ‹ and › either side of "Bar 3 of 12 ▾", which opens a list of
+ * the bars to go to. It's shaded as the cursor bar's tab would be, when selected or in the loop range.
+ */
+export function BarPicker() {
+  const barCount = useAppStore((s) => s.editor.exercise.bars.length)
+  const current = useAppStore((s) => s.editor.cursor.bar)
+  const selection = useAppStore((s) => s.editor.selection)
+  const loopRange = useAppStore((s) => s.editor.exercise.practice.loopRange)
+  const dispatch = useAppStore((s) => s.dispatch)
+  const goTo = (bar: number) => dispatch({ type: 'moveTo', bar, beat: 0 })
+  const selected = selection !== null && current >= selection.first && current <= selection.last
+  const look = selected
+    ? 'border-accent bg-select text-ink'
+    : inLoopRange(loopRange, current)
+      ? 'border-loop-line bg-loop text-loop-ink'
+      : 'border-edge bg-card text-ink'
+  return (
+    <div aria-label="Bars" className="flex min-w-0 flex-1 items-center gap-0.5">
+      <StepButton large label="Previous bar" disabled={current === 0} onClick={() => goTo(current - 1)}>
+        ‹
+      </StepButton>
+      <div className="flex min-w-0 flex-1 justify-center">
+        <Menu
+          label={`Bar ${current + 1} of ${barCount}. Choose a bar`}
+          large
+          align="left"
+          icon={
+            <span className="flex items-center gap-1 whitespace-nowrap">
+              Bar {current + 1} of {barCount}
+              <svg aria-hidden width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-mute">
+                <path d="M3 4.5l3 3 3-3" />
+              </svg>
+            </span>
+          }
+          buttonClassName={`flex h-9 cursor-pointer touch-manipulation items-center rounded-full border px-3 text-sm font-semibold tabular-nums ${look}`}
+          items={Array.from({ length: barCount }, (_, bar) => ({
+            label: `Bar ${bar + 1}`,
+            hint: inLoopRange(loopRange, bar) ? 'looped' : undefined,
+            checked: bar === current,
+            onSelect: () => goTo(bar),
+          }))}
+        />
+      </div>
+      <StepButton large label="Next bar" disabled={current === barCount - 1} onClick={() => goTo(current + 1)}>
+        ›
+      </StepButton>
     </div>
   )
 }
