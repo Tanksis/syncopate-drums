@@ -84,7 +84,7 @@ function RhythmButton({ label, onClick, children }: { label: string; onClick: ()
       aria-haspopup="dialog"
       onMouseDown={keepFocus}
       onClick={onClick}
-      className="flex min-w-0 cursor-pointer touch-manipulation flex-col items-center gap-0.5 rounded-xl border-0 bg-transparent py-1.5 text-ink active:bg-hover"
+      className="flex min-w-0 cursor-pointer touch-manipulation flex-col items-center gap-1.5 rounded-xl border-0 bg-transparent py-1.5 text-ink active:bg-hover"
     >
       <span className="text-xs text-mute">{label}</span>
       {children}
