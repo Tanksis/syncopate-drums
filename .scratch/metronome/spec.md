@@ -18,7 +18,7 @@ A **Metronome** screen beside **Practice**, switched in the header on both phone
 - **Time signature and Subdivision:** two small labelled buttons at the top (phone) open the **Rhythm sheet**:
   - The time signature defaults to 4/4. A beats stepper sits on its left (1–16) and a note-value stepper on its right (2, 4, 8, 16).
   - Subdivision is a grid of 12 notation pictures: quarter, eighths, off-beat eighth (rest then eighth), dotted eighth and sixteenth, triplet, triplet with the first, middle or last rested, sixteenths, eighth and two sixteenths, two sixteenths and eighth, sixteenth-eighth-sixteenth.
-- **Sound:** Beep, Wood block, Cowbell (generated), Hi-hat and Ride bell (the kit's samples), plus one volume for every click (ticket 07).
+- **Sound:** Beep (the Practice screen's click, and the default) and Wood block, both generated, plus one volume for every click (ticket 07). Cowbell, Hi-hat and Ride bell were taken out (ticket 09).
 - **Desktop (D1):** the switch sits in the header's centre. The page shows the blocks over the dial and its controls, and a right panel holds the time signature steppers, the subdivision grid, the sound and the volume. Since ticket 08 the header is the same full-width one on both screens, the Library sidebar stays, and the settings sidebar swaps its top (Practice's groove and sticking, or the time signature and subdivision) over a Settings section that carries over (the mix, the metronome's sound and volume, the theme).
 
 The metronome keeps its own BPM, and every setting is remembered on the device. Starting the metronome stops an exercise, and the other way round.
@@ -72,7 +72,7 @@ The metronome keeps its own BPM, and every setting is remembered on the device. 
 ### App
 
 - The engine plays whichever schedule it is given: `startPlayback` takes the source to schedule from (the exercise or the metronome), and the playhead reports the metronome's beat for the visuals. One engine, so starting one stops the other.
-- Click voices: Beep (the existing synth), Wood block and Cowbell (synthesized), Hi-hat and Ride bell (existing samples). Accent is the loudest and high; Normal is the same high click, quieter; Soft is exactly a subdivision click, lower and quieter; Off is silent (ticket 07). They go through the click layer.
+- Click voices: Beep (the existing synth) and Wood block (synthesized); Cowbell, Hi-hat and Ride bell were taken out (ticket 09). Accent is the loudest and high; Normal is the same high click, quieter; Soft is exactly a subdivision click, lower and quieter; Off is silent (ticket 07). They go through the click layer.
 - Phone (`usePhoneWindow`): the header's centre is the Practice / Metronome switch on the Metronome screen. On Practice, the header stays as it is plus the switch; how they share the row is the builder's call within the header's existing space, checked at 390 px.
 - Desktop: the switch in the header's centre. The Metronome page replaces the notation, editor and both sidebars while shown.
 - Subdivision pictures are drawn with VexFlow, like the staff, without staff lines, so the glyphs match the notation.

@@ -17,7 +17,7 @@ import type {
   ScheduledEvent,
   TimelineEntry,
 } from '@/core'
-import { layerLevels, metronomeClickGain, metronomeSchedule, playheadAt, recordEvents, resumePosition, schedule, trimTimeline } from '@/core'
+import { clickHeard, layerLevels, metronomeClickGain, metronomeSchedule, playheadAt, recordEvents, resumePosition, schedule, trimTimeline } from '@/core'
 
 const LOOKAHEAD = 0.1
 /** Head start for the first event, so it isn't late before the first tick has run. */
@@ -297,7 +297,10 @@ function startSounds(audio: Audio, when: number, event: ScheduledEvent, playing:
     const { velocity } = SAMPLES[event.instrument]
     return [sample(audio, when, event.instrument, velocity * (event.velocity ?? 1), audio.layers[event.kind])]
   }
-  if (playing.kind === 'exercise') return beep(audio, when, event.accent ? 'high' : 'mid', event.accent ? 0.9 : 0.55)
+  if (playing.kind === 'exercise') {
+    if (!clickHeard(event, playing.device)) return []
+    return beep(audio, when, event.accent ? 'high' : 'mid', event.accent ? 0.9 : 0.55)
+  }
   const level = event.level ?? 'normal'
   const gain = metronomeClickGain(level, playing.metronome)
   if (gain <= 0) return []
@@ -324,33 +327,9 @@ const CLICK_PITCH: Record<BeatLevel | 'subdivision', Pitch> = {
  */
 type ClickSound = (audio: Audio, when: number, pitch: Pitch, gain: number) => AudioScheduledSourceNode[]
 
-/**
- * The kit's samples sit level with the snare once the groove layer raises them over the
- * exercise's; on the click layer they are raised the same, so an accent sits with the beep's.
- */
-const SAMPLE_CLICK_GAIN = LAYER_GAIN.groove / LAYER_GAIN.exercise
-
 const CLICK_SOUNDS: Record<MetronomeSound, ClickSound> = {
   beep: (audio, when, pitch, gain) => beep(audio, when, pitch, 0.9 * gain),
   woodBlock,
-  cowbell,
-  hihat: (audio, when, pitch, gain) => [sampleClick(audio, when, 'hihatClosed', pitch, gain)],
-  rideBell: (audio, when, pitch, gain) => [sampleClick(audio, when, 'rideBell', pitch, gain)],
-}
-
-/** How fast a sampled click plays: subdivision clicks a little slower, so lower; the beats as recorded. */
-const SAMPLE_RATE: Record<Pitch, number> = { high: 1, mid: 1, low: 0.85 }
-
-/** A metronome click on one of the kit's samples, into the click layer. */
-function sampleClick(
-  audio: Audio,
-  when: number,
-  instrument: 'hihatClosed' | 'rideBell',
-  pitch: Pitch,
-  gain: number,
-): AudioScheduledSourceNode {
-  const level = SAMPLES[instrument].velocity * SAMPLE_CLICK_GAIN * gain
-  return sample(audio, when, instrument, level, audio.layers.click, SAMPLE_RATE[pitch])
 }
 
 /** Seconds a held sample takes to fade by about 9 dB (one time constant), and when it is cut off. */
@@ -379,25 +358,6 @@ function woodBlock({ ctx, layers }: Audio, when: number, pitch: Pitch, gain: num
   return [osc]
 }
 
-/** A cowbell, after the TR-808's: two detuned square waves through a band-pass, ringing a little longer. */
-function cowbell({ ctx, layers }: Audio, when: number, pitch: Pitch, gain: number): AudioScheduledSourceNode[] {
-  const scale = { high: 1.12, mid: 1, low: 0.84 }[pitch]
-  const band = ctx.createBiquadFilter()
-  band.type = 'bandpass'
-  band.frequency.value = 2640 * scale
-  band.Q.value = 1
-  band.connect(strike(ctx, when, 0.9 * gain, 0.25)).connect(layers.click)
-  return [540, 800].map((frequency) => {
-    const osc = ctx.createOscillator()
-    osc.type = 'square'
-    osc.frequency.value = frequency * scale
-    osc.connect(band)
-    osc.start(when)
-    osc.stop(when + 0.27)
-    return osc
-  })
-}
-
 /** A struck envelope: up to `peak` in a millisecond, then an exponential fall to silence by `decay` seconds. */
 function strike(ctx: AudioContext, when: number, peak: number, decay: number): GainNode {
   const envelope = ctx.createGain()
@@ -413,14 +373,12 @@ function sample(
   instrument: Exclude<Instrument, 'click'>,
   level: number,
   layer: GainNode,
-  playbackRate = 1,
 ): AudioScheduledSourceNode {
   const { files, hold } = SAMPLES[instrument]
   const turn = ((roundRobin.get(instrument) ?? -1) + 1) % files.length
   roundRobin.set(instrument, turn)
   const source = ctx.createBufferSource()
   source.buffer = buffers.get(files[turn])!
-  source.playbackRate.value = playbackRate
   const gain = ctx.createGain()
   gain.gain.value = level
   source.connect(gain).connect(layer)

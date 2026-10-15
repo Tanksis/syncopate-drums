@@ -25,10 +25,10 @@ export type NoteValue = 2 | 4 | 8 | 16
 
 export const NOTE_VALUES: readonly NoteValue[] = [2, 4, 8, 16]
 
-/** The click's sounds: Beep, Wood block and Cowbell are synthesized, Hi-hat and Ride bell are the kit's samples. */
-export type MetronomeSound = 'beep' | 'woodBlock' | 'cowbell' | 'hihat' | 'rideBell'
+/** The click's sounds, both synthesized: Beep is the Practice screen's click. */
+export type MetronomeSound = 'beep' | 'woodBlock'
 
-export const METRONOME_SOUNDS: readonly MetronomeSound[] = ['beep', 'woodBlock', 'cowbell', 'hihat', 'rideBell']
+export const METRONOME_SOUNDS: readonly MetronomeSound[] = ['beep', 'woodBlock']
 
 /** The subdivisions, in the order the Rhythm sheet's grid shows them. */
 export type SubdivisionId =
@@ -142,7 +142,7 @@ export const DEFAULT_METRONOME_SETTINGS: MetronomeSettings = {
   noteValue: 4,
   levels: freshLevels(4),
   subdivision: 'quarter',
-  sound: 'woodBlock',
+  sound: 'beep',
   volume: 1,
 }
 

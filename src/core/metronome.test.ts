@@ -8,14 +8,14 @@ const at120: MetronomeSettings = { ...DEFAULT_METRONOME_SETTINGS, bpm: 120, leve
 const heard = (events: ScheduledEvent[]) => events.map((e) => [e.time, e.level, `${e.position.bar}:${e.position.tick}`])
 
 describe('metronome defaults', () => {
-  it('are 92 BPM in 4/4, beat 1 accented and the rest soft, quarters, on the wood block', () => {
+  it('are 92 BPM in 4/4, beat 1 accented and the rest soft, quarters, on the beep the Practice screen clicks with', () => {
     expect(DEFAULT_METRONOME_SETTINGS).toMatchObject({
       bpm: 92,
       beats: 4,
       noteValue: 4,
       levels: ['accent', 'soft', 'soft', 'soft'],
       subdivision: 'quarter',
-      sound: 'woodBlock',
+      sound: 'beep',
     })
   })
 })
@@ -268,7 +268,7 @@ describe('stored device settings', () => {
       noteValue: 8,
       levels: ['accent', 'normal', 'soft', 'off', 'accent', 'normal', 'normal'],
       subdivision: 'tripletMiddleRest',
-      sound: 'rideBell',
+      sound: 'woodBlock',
       volume: 0.8,
     }
     expect(deviceSettingsFrom({ metronome }).metronome).toEqual(metronome)
@@ -280,7 +280,12 @@ describe('stored device settings', () => {
 
   it('fall back to the default sound or subdivision for one the app does not have', () => {
     const { metronome } = deviceSettingsFrom({ metronome: { sound: 'gong', subdivision: 'quintuplet' } })
-    expect(metronome).toMatchObject({ sound: 'woodBlock', subdivision: 'quarter' })
+    expect(metronome).toMatchObject({ sound: 'beep', subdivision: 'quarter' })
+  })
+
+  it('fall back to the beep for a sound since taken out', () => {
+    for (const sound of ['cowbell', 'hihat', 'rideBell'])
+      expect(deviceSettingsFrom({ metronome: { sound } }).metronome.sound).toBe('beep')
   })
 
   it('pad the levels with Soft, or cut them, to the beats', () => {
