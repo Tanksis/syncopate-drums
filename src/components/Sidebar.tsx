@@ -126,7 +126,7 @@ export function SidebarFullScreen({
       {...swipe.props}
       aria-hidden={!open || undefined}
       style={{ transform }}
-      className={`fixed inset-0 z-30 flex touch-pan-y bg-panel pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] shadow-xl shadow-shade/15 ${
+      className={`fixed inset-0 z-30 flex touch-pan-y bg-panel pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] shadow-xl shadow-shade/15 ${
         swipe.swiping || pull !== 0 ? '' : slideTransition
       } ${open ? '' : 'pointer-events-none'}`}
     >

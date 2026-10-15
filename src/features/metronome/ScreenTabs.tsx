@@ -15,8 +15,10 @@ const SCREEN_TABS: Record<Screen, { name: string; icon: ReactNode }> = {
 /**
  * The phone's tab bar at the foot of the screen, switching between Practice and the Metronome,
  * remembered on this device. Leaving Practice stops the exercise. The arrow keys, Home and End move between them, as in any tab list.
+ * Given `rail`, with the phone turned sideways, they're icons only, one over the other, for the rail
+ * down the side of the screen; the current one is lit in the accent on a tinted square.
  */
-export function ScreenTabs() {
+export function ScreenTabs({ rail = false }: { rail?: boolean }) {
   const screen = useAppStore((s) => s.device.screen)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   const list = useRef<HTMLDivElement>(null)
@@ -28,13 +30,39 @@ export function ScreenTabs() {
   const onKeyDown = (e: KeyboardEvent) => {
     const i = SCREENS.indexOf(screen)
     const n = SCREENS.length
-    const keys: Record<string, number> = { ArrowLeft: (i - 1 + n) % n, ArrowRight: (i + 1) % n, Home: 0, End: n - 1 }
+    const back = (i - 1 + n) % n
+    const on = (i + 1) % n
+    const keys: Record<string, number> = rail
+      ? { ArrowUp: back, ArrowDown: on, Home: 0, End: n - 1 }
+      : { ArrowLeft: back, ArrowRight: on, Home: 0, End: n - 1 }
     const next = keys[e.key]
     if (next === undefined) return
     e.preventDefault()
     choose(SCREENS[next])
     list.current?.querySelectorAll<HTMLElement>('[role=tab]')[next]?.focus()
   }
+  if (rail)
+    return (
+      <div ref={list} role="tablist" aria-label="Screen" aria-orientation="vertical" onKeyDown={onKeyDown} className="flex flex-col gap-1">
+        {SCREENS.map((s) => (
+          <button
+            key={s}
+            type="button"
+            role="tab"
+            aria-label={SCREEN_TABS[s].name}
+            title={SCREEN_TABS[s].name}
+            aria-selected={s === screen}
+            tabIndex={s === screen ? 0 : -1}
+            onClick={() => choose(s)}
+            className="flex size-10 cursor-pointer touch-manipulation items-center justify-center rounded-[10px] border-0 bg-transparent text-mute active:bg-hover aria-selected:bg-accent-tint aria-selected:text-accent"
+          >
+            <span aria-hidden className="flex [&>svg]:size-5">
+              {SCREEN_TABS[s].icon}
+            </span>
+          </button>
+        ))}
+      </div>
+    )
   return (
     <div
       ref={list}

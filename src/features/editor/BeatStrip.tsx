@@ -1,6 +1,7 @@
 import type { PointerEvent } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
+import type { PhoneOrientation } from '@/app/useMediaQuery'
 import { keepFocus } from '@/components/keepFocus'
 import { Button } from '@/components/Button'
 import type { MenuItem } from '@/components/Menu'
@@ -77,12 +78,12 @@ const countLabels = (beat: number, triplet: boolean) =>
  * new hand on the cell. Clicking elsewhere on a card moves the cursor to it. A card's 16ths | trip switch puts
  * it on the sixteenth or the triplet grid, and its ⋯ menu (not on an example) switches the grid,
  * rests the beat, or ties a bar's first beat over the barline. The cursor's card is outlined with a
- * mark beside its row, and the bar selection and a set loop range are shaded. `twoPerRow`, on a
- * phone, lays the cards out two to a row with cells tall enough for a finger, and leaves the bar's
- * number and delete button to the bar tabs and the bar menu above. `bar` draws another bar than the
+ * mark beside its row, and the bar selection and a set loop range are shaded. `phone` gives the
+ * cells room for a finger and leaves the bar's number and delete button to the sheet's bar row; held
+ * upright (`portrait`), the cards sit two to a row, and turned sideways all four in one. `bar` draws another bar than the
  * cursor's, for the phone's slide from one bar to the next.
  */
-export function BeatStrip({ twoPerRow = false, bar }: { twoPerRow?: boolean; bar?: number }) {
+export function BeatStrip({ phone, bar }: { phone?: PhoneOrientation; bar?: number }) {
   const editor = useAppStore((s) => s.editor)
   const { cursor, selection } = editor
   const { loopRange } = editor.exercise.practice
@@ -208,7 +209,7 @@ export function BeatStrip({ twoPerRow = false, bar }: { twoPerRow?: boolean; bar
             onPointerMove={movePress}
             onPointerUp={endPress}
             onPointerCancel={cancelPress}
-            tall={twoPerRow}
+            tall={phone !== undefined}
             flashedHand={flash && samePoint(flash.point, { row, bar: b, beat, position: i }) ? flashedHand : null}
           />
         ))}
@@ -227,16 +228,16 @@ export function BeatStrip({ twoPerRow = false, bar }: { twoPerRow?: boolean; bar
         aria-selected={selected || undefined}
         title={looped ? 'In the loop range' : undefined}
         // A selected bar in the loop range keeps the loop shading inside the selection's border.
-        // On a phone (`twoPerRow`) the bar has no box: the bar picker over it shows its selection and loop.
+        // On a phone the bar has no box: the bar picker over it shows its selection and loop.
         className={
-          twoPerRow
+          phone
             ? 'flex flex-col'
             : `flex flex-col gap-1.5 rounded-lg border px-2 pt-1 pb-2 ${selected ? 'border-accent' : looped ? 'border-loop-line' : 'border-line'} ${
                 looped ? 'bg-loop' : selected ? 'bg-select' : 'bg-panel'
               }`
         }
       >
-        {!twoPerRow && (
+        {!phone && (
           <div className="flex items-center text-xs">
             <span className={`font-semibold ${looped ? 'text-loop-ink' : 'text-ink'}`}>Bar {b + 1}</span>
             {!example && (
@@ -253,7 +254,7 @@ export function BeatStrip({ twoPerRow = false, bar }: { twoPerRow?: boolean; bar
             )}
           </div>
         )}
-        <div className={`grid gap-2 ${twoPerRow ? 'grid-cols-2' : 'grid-cols-4'}`}>
+        <div className={`grid gap-2 ${phone === 'portrait' ? 'grid-cols-2' : 'grid-cols-4'}`}>
           {beats.map((view, beat) => {
             const current = cursor.bar === b && cursor.beat === beat
             const switchGrid = () => dispatch({ type: 'setBeatGrid', bar: b, beat, triplet: !view.triplet })

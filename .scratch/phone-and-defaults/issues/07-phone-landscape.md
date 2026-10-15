@@ -1,6 +1,6 @@
 # 07: The phone turned sideways
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Reported:** 2026-10-15, by the user on their iPhone (Chrome): "the page really bugs out when I flip my phone sideways."
 
@@ -36,9 +36,9 @@ The user chose A on 2026-10-15. Mockups: <https://claude.ai/artifact/PCvgctMysYf
 
 ## Done when
 
-- [ ] Turning the phone in either direction, with the editor sheet open or closed, on Practice or Metronome, keeps you where you were. Nothing is cut off.
-- [ ] Checked at 750 × 340 and 844 × 390 (landscape), and at 390 × 664 after turning back, in light and dark.
-- [ ] A desktop window narrowed to 700 × 400 still gets the desktop layout.
+- [x] Turning the phone in either direction, with the editor sheet open or closed, on Practice or Metronome, keeps you where you were. Nothing is cut off.
+- [x] Checked at 750 × 340 and 844 × 390 (landscape), and at 390 × 664 after turning back, in light and dark.
+- [x] A desktop window narrowed to 700 × 400 still gets the desktop layout.
 
 ## Decided (2026-10-15)
 
