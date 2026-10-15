@@ -6,10 +6,13 @@ import { Button } from '@/components/Button'
 import { PanelHeading } from '@/components/PanelHeading'
 import { Segmented } from '@/components/Segmented'
 import { SelectMenu } from '@/components/SelectMenu'
-import { FullScreenHeading, SidebarHeading } from '@/components/Sidebar'
+import { FullScreenHeading, chevronButtonClass } from '@/components/Sidebar'
 import { Slider } from '@/components/Slider'
-import { SpeakerIcon, SpeakerMutedIcon } from '@/components/icons'
+import { ChevronIcon, SpeakerIcon, SpeakerMutedIcon } from '@/components/icons'
 import { ValueField } from '@/components/ValueField'
+import { keepFocus } from '@/components/keepFocus'
+import { MetronomeVolume } from '@/features/metronome/MetronomeVolume'
+import { SOUND_OPTIONS, pickSound } from '@/features/metronome/SoundSheet'
 import { LoopChip } from '@/features/playback/LoopChip'
 import { CountInToggle } from '@/features/playback/TransportControls'
 import type { ExerciseSettings, HihatFoot, Layer, Theme, VolumeSetting } from '@/core'
@@ -27,25 +30,17 @@ import {
 } from '@/core'
 
 /**
- * The settings, as the desktop's sidebar. `playbackGroup` adds the count-in and loop chip, for when
- * the header has no room for them. `fullScreen`, on a phone, they're the phone's tabbed settings instead.
+ * The Practice screen's own settings, at the top of the desktop's settings sidebar: the groove and
+ * the sticking. `playbackGroup` adds the count-in and loop chip, for when the exercise's bar has no
+ * room for them.
  */
-export function SettingsSidebar({
-  onCollapse,
-  fullScreen = false,
-  playbackGroup = false,
-}: {
-  onCollapse: () => void
-  fullScreen?: boolean
-  playbackGroup?: boolean
-}) {
-  if (fullScreen) return <PhoneSettings onDone={onCollapse} />
+export function PracticeSettings({ playbackGroup = false }: { playbackGroup?: boolean }) {
   return (
-    <aside aria-label="Settings" className="flex w-[250px] flex-col gap-3.5 overflow-auto border-l border-line bg-panel p-3">
-      <SidebarHeading name="Settings" side="right" onCollapse={onCollapse} />
+    <>
       {playbackGroup && (
         <SettingGroup title="Playback">
-          <div className="flex items-center justify-between gap-2">
+          {/* Wrapping, since the two together are a little wider than the sidebar. */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <LoopChip />
             <CountInToggle />
           </div>
@@ -61,16 +56,69 @@ export function SettingsSidebar({
         <Choice label="Lead hand" setting="leadHand" options={['R', 'L']} />
         <ResetOverrides />
       </SettingGroup>
-      <SettingGroup title="Mix">
-        <MixRow layer="click" />
-        <MixRow layer="exercise" />
-        <MixRow layer="groove" />
-      </SettingGroup>
-      <SettingGroup title="Appearance">
-        <LookChoice />
-        <ModeChoice />
-      </SettingGroup>
-    </aside>
+    </>
+  )
+}
+
+/**
+ * The settings that carry over between the screens, at the foot of the desktop's settings sidebar:
+ * the mix, the metronome's sound and volume, and the theme. Its chevron, pointing down, folds it to
+ * its heading, remembered on this device, which leaves the screen's own settings above it the room.
+ */
+export function SharedSettings() {
+  const open = useAppStore((s) => s.device.settingsSectionOpen)
+  const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
+  const id = useId()
+  const label = open ? 'Fold the settings' : 'Open the settings'
+  return (
+    // At most a little over half the sidebar, scrolling past that, so a short window leaves the screen's own settings room.
+    <section aria-labelledby={`${id}-heading`} className="flex max-h-[55%] shrink-0 flex-col gap-3.5 border-t border-line p-3">
+      <div className="flex items-start justify-between gap-2">
+        <PanelHeading id={`${id}-heading`} className={open ? '' : 'mb-0'}>
+          Settings
+        </PanelHeading>
+        <button
+          type="button"
+          aria-label={label}
+          aria-expanded={open}
+          aria-controls={`${id}-groups`}
+          title={label}
+          // Keep focus off the button, so Space still plays.
+          onMouseDown={keepFocus}
+          onClick={() => setDeviceSettings({ settingsSectionOpen: !open })}
+          className={`-mt-1 ${chevronButtonClass} ${open ? '' : '[&_svg]:rotate-180'}`}
+        >
+          <ChevronIcon />
+        </button>
+      </div>
+      {open && (
+        <div id={`${id}-groups`} className="-mx-3 flex min-h-0 flex-col gap-3.5 overflow-auto px-3">
+          <SettingGroup title="Mix">
+            <MixRow layer="click" />
+            <MixRow layer="exercise" />
+            <MixRow layer="groove" />
+          </SettingGroup>
+          <SettingGroup title="Metronome">
+            <MetronomeSound />
+            <MetronomeVolume row />
+          </SettingGroup>
+          <SettingGroup title="Appearance">
+            <LookChoice />
+            <ModeChoice />
+          </SettingGroup>
+        </div>
+      )}
+    </section>
+  )
+}
+
+/** The metronome's click sound, picked from a menu and heard at once. */
+function MetronomeSound() {
+  const sound = useAppStore((s) => s.device.metronome.sound)
+  return (
+    <Labelled label="Sound" stacked={false}>
+      <SelectMenu label="Click sound" options={SOUND_OPTIONS} value={sound} onChange={pickSound} />
+    </Labelled>
   )
 }
 
@@ -87,7 +135,7 @@ type PhoneTab = (typeof PHONE_TABS)[number]['id']
  * The settings over the whole phone screen: Loop and Count-in pinned at the top, then a tab for each
  * section, so one section shows at a time and nothing needs a long scroll. The tick closes them.
  */
-function PhoneSettings({ onDone }: { onDone: () => void }) {
+export function PhoneSettings({ onDone }: { onDone: () => void }) {
   const [tab, setTab] = useState<PhoneTab>('groove')
   const id = useId()
   return (

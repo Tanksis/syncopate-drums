@@ -18,3 +18,7 @@ The separate screen was chosen. It gives the metronome any time signature withou
 - The screen shown is remembered, so the app reopens on the metronome if that was last used.
 - "Mode" already means light or dark (ADR 0013), so the switch is between two **screens**, not modes.
 - Exercises stay 4/4. A time signature on exercises remains possible later and would not change this.
+
+## Amended 2026-10-15 (metronome ticket 08)
+
+On the desktop, the two screens share one layout: a full-width header (the name, the switch in its centre, the settings button) that doesn't change between them, the Library sidebar, and the settings sidebar. Only the space between the sidebars and the top of the settings sidebar swap. Settings about how the app sounds and looks (the mix, the metronome's sound and volume, the theme) sit in a Settings section at the sidebar's foot on both screens. The exercise's name and transport moved from the header to a bar over the notation. The phone keeps its own layout.

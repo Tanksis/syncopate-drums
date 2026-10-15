@@ -19,7 +19,7 @@ A **Metronome** screen beside **Practice**, switched in the header on both phone
   - The time signature defaults to 4/4. A beats stepper sits on its left (1–16) and a note-value stepper on its right (2, 4, 8, 16).
   - Subdivision is a grid of 12 notation pictures: quarter, eighths, off-beat eighth (rest then eighth), dotted eighth and sixteenth, triplet, triplet with the first, middle or last rested, sixteenths, eighth and two sixteenths, two sixteenths and eighth, sixteenth-eighth-sixteenth.
 - **Sound:** Beep, Wood block, Cowbell (generated), Hi-hat and Ride bell (the kit's samples), plus one volume for every click (ticket 07).
-- **Desktop (D1):** the switch sits in the header's centre. The page shows the blocks over the dial and its controls, and a right panel holds the time signature steppers, the subdivision grid, the sound and the volume.
+- **Desktop (D1):** the switch sits in the header's centre. The page shows the blocks over the dial and its controls, and a right panel holds the time signature steppers, the subdivision grid, the sound and the volume. Since ticket 08 the header is the same full-width one on both screens, the Library sidebar stays, and the settings sidebar swaps its top (Practice's groove and sticking, or the time signature and subdivision) over a Settings section that carries over (the mix, the metronome's sound and volume, the theme).
 
 The metronome keeps its own BPM, and every setting is remembered on the device. Starting the metronome stops an exercise, and the other way round.
 

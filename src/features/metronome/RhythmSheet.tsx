@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useAppStore } from '@/app/store'
 import { Button } from '@/components/Button'
+import { PanelHeading } from '@/components/PanelHeading'
 import { Sheet } from '@/components/Sheet'
 import { keepFocus } from '@/components/keepFocus'
 import { MAX_BEATS, NOTE_VALUES, SUBDIVISIONS, subdivisionOf, withTimeSignature } from '@/core'
@@ -21,7 +22,7 @@ export function RhythmSheet({ onDone }: { onDone: () => void }) {
 
 /**
  * The time signature, with the beats' stepper on its left and the note value's on its right.
- * `compact` draws it smaller, for the desktop's panel and a mouse.
+ * `compact` draws it smaller, for the desktop's settings sidebar and a mouse, headed as its groups are.
  */
 export function TimeSignature({ compact = false }: { compact?: boolean }) {
   const metronome = useAppStore((s) => s.device.metronome)
@@ -30,8 +31,8 @@ export function TimeSignature({ compact = false }: { compact?: boolean }) {
   const noteIndex = NOTE_VALUES.indexOf(noteValue)
   const change = (nextBeats: number, nextNoteValue = noteValue) => setMetronome(withTimeSignature(metronome, nextBeats, nextNoteValue))
   return (
-    <div className="flex flex-col gap-2">
-      <span className="font-semibold">Time signature</span>
+    <div className={`flex flex-col ${compact ? '' : 'gap-2'}`}>
+      {compact ? <PanelHeading>Time signature</PanelHeading> : <span className="font-semibold">Time signature</span>}
       <div className={`grid grid-cols-3 items-center rounded-2xl border border-line bg-card ${compact ? 'p-2' : 'p-3'}`}>
         <Stepper
           compact={compact}
@@ -91,10 +92,10 @@ export function SubdivisionGrid({ compact = false }: { compact?: boolean }) {
   const subdivision = useAppStore((s) => s.device.metronome.subdivision)
   const setMetronome = useAppStore((s) => s.setMetronome)
   return (
-    <div className="flex flex-col gap-2">
+    <div className={`flex flex-col ${compact ? '' : 'gap-2'}`}>
       <div className="flex items-baseline justify-between gap-2">
-        <span className="font-semibold">Subdivision</span>
-        <span className="text-[13px] text-mute">{subdivisionOf(subdivision).name}</span>
+        {compact ? <PanelHeading>Subdivision</PanelHeading> : <span className="font-semibold">Subdivision</span>}
+        <span className={`text-mute ${compact ? 'text-xs' : 'text-[13px]'}`}>{subdivisionOf(subdivision).name}</span>
       </div>
       <div className="grid grid-cols-4 gap-1.5">
         {SUBDIVISIONS.map(({ id }) => (

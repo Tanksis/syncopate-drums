@@ -94,6 +94,11 @@ describe('stored device settings', () => {
     expect(deviceSettingsFrom({ countIn: false, theme: 'dark' }).editorCollapsed).toBe(false)
   })
 
+  it('open the Settings section of the settings sidebar unless it was stored folded', () => {
+    expect(DEFAULT_DEVICE_SETTINGS.settingsSectionOpen).toBe(true)
+    expect(deviceSettingsFrom({ settingsSectionOpen: false }).settingsSectionOpen).toBe(false)
+  })
+
   it('keep a stored collapsed editor', () => {
     expect(deviceSettingsFrom({ editorCollapsed: true }).editorCollapsed).toBe(true)
   })
