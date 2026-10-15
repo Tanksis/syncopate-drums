@@ -3,7 +3,7 @@
 
 import type { PlayPosition } from '@/core'
 import { useAppStore } from '@/app/store'
-import { pausePlayback, startPlayback, stopPlayback } from './engine'
+import { audioInterrupted, pausePlayback, startPlayback, stopPlayback } from './engine'
 
 /** Plays from the count-in, or stops if already playing. Call it from a click or key press. */
 export function togglePlayback(): void {
@@ -68,5 +68,25 @@ function play(from: PlayPosition | 'start'): void {
   }, from).catch((error: unknown) => {
     console.error(error)
     setPlaying(false)
+  })
+}
+
+/** How long after the page shows again the audio has to come back by itself. */
+const RESUME_GRACE_MS = 1000
+
+/**
+ * Coming back to the app (on iOS) can leave the audio stopped by the system while the transport
+ * still shows it playing: then it is stopped, so Play starts it afresh. Call it once at launch.
+ */
+export function stopWhenAudioInterrupted(): void {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return
+    setTimeout(() => {
+      if (!audioInterrupted()) return
+      stopPlayback()
+      const { setPlaying, setMetronomePlaying } = useAppStore.getState()
+      setPlaying(false)
+      setMetronomePlaying(false)
+    }, RESUME_GRACE_MS)
   })
 }
