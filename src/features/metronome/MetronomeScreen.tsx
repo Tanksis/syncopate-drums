@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { Button } from '@/components/Button'
 import { keepFocus } from '@/components/keepFocus'
@@ -28,6 +28,7 @@ const pillClass = 'rounded-full! px-5.5!'
  */
 export function MetronomeScreen({ landscape = false }: { landscape?: boolean }) {
   const beat = useMetronomeBeat()
+  const tap = useTapTempo()
   const [soundOpen, setSoundOpen] = useState(false)
   const [rhythmOpen, setRhythmOpen] = useState(false)
   const rhythm = <RhythmButtons landscape={landscape} onOpen={() => setRhythmOpen(true)} />
@@ -45,7 +46,9 @@ export function MetronomeScreen({ landscape = false }: { landscape?: boolean }) 
   )
   const more = (
     <div className={`flex justify-center gap-3 ${landscape ? '' : 'px-4 pb-5 short:pb-3'}`}>
-      <TapTempo />
+      <TapTempo tap={tap} className={pillClass}>
+        Tap tempo
+      </TapTempo>
       <Button size="lg" onClick={() => setSoundOpen(true)} aria-haspopup="dialog" className={pillClass}>
         Sound
       </Button>
@@ -143,8 +146,8 @@ function FitDial({ beat, className }: { beat: number | undefined; className: str
   )
 }
 
-/** Plays the metronome from beat 1, stopping an exercise that's playing, or stops it. */
-function PlayButton() {
+/** Plays the metronome from beat 1, stopping an exercise that's playing, or stops it; `className` sizes it. */
+export function PlayButton({ className = 'size-19 short:size-16' }: { className?: string }) {
   const playing = useAppStore((s) => s.metronomePlaying)
   return (
     <button
@@ -152,7 +155,7 @@ function PlayButton() {
       aria-label={playing ? 'Stop' : 'Play'}
       onMouseDown={keepFocus}
       onClick={toggleMetronome}
-      className="flex size-19 short:size-16 shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-full border border-play-button-edge bg-play-button text-2xl/none text-on-play-button shadow-card select-none active:opacity-80"
+      className={`flex ${className} shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-full border border-play-button-edge bg-play-button text-2xl/none text-on-play-button shadow-card select-none active:opacity-80`}
     >
       <span aria-hidden>{playing ? '■' : '▶'}</span>
     </button>
@@ -162,24 +165,27 @@ function PlayButton() {
 /** How many taps are kept: tapTempo reads the gaps between the last few. */
 const TAPS_KEPT = 5
 
-/** Sets the tempo from the drummer's taps, from the second tap on. */
-function TapTempo() {
+/** A tap of the tempo: from the second tap on, it sets the tempo from the drummer's taps. */
+export function useTapTempo(): () => void {
   const taps = useRef<number[]>([])
-  const setMetronome = useAppStore((s) => s.setMetronome)
-  const tap = () => {
+  return useCallback(() => {
     taps.current = [...taps.current, performance.now()].slice(-TAPS_KEPT)
     const bpm = tapTempo(taps.current)
-    if (bpm !== undefined) setMetronome({ bpm })
-  }
+    if (bpm !== undefined) useAppStore.getState().setMetronome({ bpm })
+  }, [])
+}
+
+/** The button that taps the tempo (`useTapTempo`'s `tap`). */
+export function TapTempo({ tap, className, children }: { tap: () => void; className: string; children: ReactNode }) {
   return (
     <Button
       size="lg"
       // A tap counts as the finger lands, not as it lifts; the keyboard (detail 0) clicks.
       onPointerDown={(e) => e.button === 0 && tap()}
       onClick={(e) => e.detail === 0 && tap()}
-      className={pillClass}
+      className={className}
     >
-      Tap tempo
+      {children}
     </Button>
   )
 }

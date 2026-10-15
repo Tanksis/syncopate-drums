@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { MetronomeSettings, ScheduledEvent } from './index'
-import { DEFAULT_DEVICE_SETTINGS, DEFAULT_METRONOME_SETTINGS, SUBDIVISIONS, deviceSettingsFrom, cycleLevel, dialBpm, dialTurn, metronomeBeat, metronomeClickGain, metronomeSchedule, tapTempo, tempoName, playheadAt, recordEvents, subdivisionNotation, withTimeSignature } from './index'
+import { DEFAULT_DEVICE_SETTINGS, DEFAULT_METRONOME_SETTINGS, SUBDIVISIONS, deviceSettingsFrom, cycleLevel, dialBpm, dialTurn, metronomeBeat, metronomeClickGain, metronomeSchedule, tapTempo, tempoName, wheelSteps, playheadAt, recordEvents, subdivisionNotation, withTimeSignature } from './index'
 
 const at120: MetronomeSettings = { ...DEFAULT_METRONOME_SETTINGS, bpm: 120 }
 
@@ -225,6 +225,29 @@ describe('tempoName', () => {
     [300, 'Presto'],
   ])('calls %i BPM %s', (bpm, name) => {
     expect(tempoName(bpm)).toBe(name)
+  })
+})
+
+describe('wheelSteps', () => {
+  it('moves one BPM for each notch of a mouse wheel, faster scrolling up', () => {
+    expect(wheelSteps(0, -100)).toEqual({ steps: 1, pending: 0 })
+    expect(wheelSteps(0, 100)).toEqual({ steps: -1, pending: 0 })
+    expect(wheelSteps(0, 53)).toEqual({ steps: -1, pending: 0 })
+    expect(wheelSteps(0, -300)).toEqual({ steps: 1, pending: 0 })
+  })
+
+  it("gathers a trackpad's small scrolls until they make a BPM, keeping the rest", () => {
+    expect(wheelSteps(0, -10)).toEqual({ steps: 0, pending: -10 })
+    expect(wheelSteps(-35, -10)).toEqual({ steps: 1, pending: -5 })
+    expect(wheelSteps(30, 45)).toEqual({ steps: -1, pending: 35 })
+  })
+
+  it('starts the gathering again when the scroll turns back', () => {
+    expect(wheelSteps(-30, 10)).toEqual({ steps: 0, pending: 10 })
+  })
+
+  it('drops what was gathered on a notch', () => {
+    expect(wheelSteps(-30, 100)).toEqual({ steps: -1, pending: 0 })
   })
 })
 

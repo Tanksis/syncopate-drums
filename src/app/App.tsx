@@ -1,5 +1,6 @@
 // Layout A, "Workstation": library sidebar | header, notation card, editor panel | settings sidebar.
 // Either sidebar collapses to a rail; below 1000 px both are rails that open over the notation.
+// The header's switch shows the Metronome page instead, under the header, in place of the rest.
 // Below 640 px, the phone layout: a column of header, notation, transport bar and tab bar, with the
 // editor sheet sliding up over the foot of it, and the sidebars sliding in over the whole screen.
 // Turned sideways, the header and tab bar give way to a rail of icons down the left.
@@ -9,6 +10,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { EDITOR_SHEET_HEIGHT, GridEditor } from '@/features/editor/GridEditor'
 import { ExampleNotice } from '@/features/library/ExampleNotice'
 import { LibrarySidebar } from '@/features/library/LibrarySidebar'
+import { MetronomePage } from '@/features/metronome/MetronomePage'
 import { MetronomeScreen } from '@/features/metronome/MetronomeScreen'
 import { ScreenTabs } from '@/features/metronome/ScreenTabs'
 import { NotationView } from '@/features/notation/NotationView'
@@ -33,7 +35,20 @@ export function App() {
   const sidebars = useSidebars()
   const phone = usePhoneWindow()
   const [headerRef, room] = useHeaderRoom()
+  const onMetronome = useAppStore((s) => s.device.screen === 'metronome')
   if (phone) return <PhoneLayout sidebars={sidebars} />
+  if (onMetronome)
+    return (
+      <div className="flex h-dvh flex-col">
+        {/* The switch in the middle, where it sits beside the exercise's controls on Practice. */}
+        <header className={`${headerClass} grid grid-cols-[1fr_auto_1fr]`}>
+          <Wordmark />
+          <ScreenTabs place="header" />
+          <NotSaving className="justify-self-end" />
+        </header>
+        <MetronomePage />
+      </div>
+    )
   return (
     <div className="grid h-dvh grid-cols-[auto_1fr_auto]">
       <SidebarSlot name="Exercises" side="left" {...sidebars.library}>
@@ -41,15 +56,16 @@ export function App() {
       </SidebarSlot>
 
       <main className="flex min-h-0 min-w-0 flex-col">
-        {/* The look's ornament under it draws in the room its margin keeps. */}
-        <header ref={headerRef} className="mb-(--header-ornament-height) flex items-center gap-3 border-b border-line bg-card px-4 py-2 shadow-(--header-ornament)">
-          <h1 className="m-0 shrink-0 font-(family-name:--wordmark-font) text-base font-bold whitespace-nowrap text-(--wordmark-color) [font-style:var(--wordmark-style)] [text-shadow:var(--wordmark-shadow)] [text-transform:var(--wordmark-case)]">
-            Syncopate<span className="text-(--wordmark-bang)">!</span>
-          </h1>
-          {/* The name takes the room the controls leave, and always shows about 12 letters (10 of the wide digit `ch` measures). */}
-          <div className="flex min-w-[10ch] flex-1">
+        <header ref={headerRef} className={`${headerClass} flex`}>
+          <Wordmark />
+          {/*
+            The name takes the room the controls leave, and always shows about 12 letters (10 of the
+            wide digit `ch` measures), or 8 in the least room, where the screen switch needs it too.
+          */}
+          <div className={`flex flex-1 ${room === 'compact' ? 'min-w-[7ch]' : 'min-w-[10ch]'}`}>
             <ExerciseName />
           </div>
+          <ScreenTabs place="header" iconsOnly={room === 'compact'} />
           <NotSaving />
           <TransportControls room={room} />
           <SettingsToggle {...sidebars.settings} />
@@ -68,6 +84,18 @@ export function App() {
         <SettingsSidebar playbackGroup={room === 'compact'} onCollapse={sidebars.settings.onCollapse} />
       </SidebarSlot>
     </div>
+  )
+}
+
+/** The desktop header's look, on either screen; the look's ornament under it draws in the room its margin keeps. */
+const headerClass = 'mb-(--header-ornament-height) items-center gap-3 border-b border-line bg-card px-4 py-2 shadow-(--header-ornament)'
+
+/** The app's name, at the start of the desktop header. */
+function Wordmark() {
+  return (
+    <h1 className="m-0 shrink-0 font-(family-name:--wordmark-font) text-base font-bold whitespace-nowrap text-(--wordmark-color) [font-style:var(--wordmark-style)] [text-shadow:var(--wordmark-shadow)] [text-transform:var(--wordmark-case)]">
+      Syncopate<span className="text-(--wordmark-bang)">!</span>
+    </h1>
   )
 }
 
@@ -118,7 +146,7 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
             <MenuIcon />
           </PhoneHeaderButton>
           <span aria-hidden className="my-0.5 h-px w-6 bg-line" />
-          <ScreenTabs rail />
+          <ScreenTabs place="rail" />
           <PhoneHeaderButton label="Open settings" expanded={settings.state === 'overlay'} onClick={settings.onOpen} rail className="mt-auto">
             <SettingsIcon />
           </PhoneHeaderButton>
@@ -246,9 +274,10 @@ function SettingsToggle({ state, onOpen, onCollapse }: SidebarControl) {
 /**
  * The header widths, in px, below which its controls don't all fit while leaving the exercise name
  * its 12 letters or so, measured in each look's fonts (Warm's need the most): under `full` the BPM
- * slider goes, and under `withoutSlider` the count-in and loop chip move to the Settings sidebar too.
+ * slider goes, and under `withoutSlider` the count-in and loop chip move to the Settings sidebar too,
+ * and the screen switch shows only its icons.
  */
-const HEADER_WIDTH = { full: 924, withoutSlider: 799 }
+const HEADER_WIDTH = { full: 1148, withoutSlider: 1023 }
 
 /**
  * A ref for the desktop header, and how much of the transport fits in it. That depends on the
