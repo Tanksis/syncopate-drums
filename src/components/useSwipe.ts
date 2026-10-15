@@ -1,7 +1,7 @@
 import type { PointerEvent } from 'react'
 import { useRef, useState } from 'react'
 
-export type SwipeDirection = 'left' | 'right' | 'down'
+export type SwipeDirection = 'left' | 'right' | 'up' | 'down'
 
 /** How far, in px, a pointer moves before the gesture is read as across or down. */
 const DECIDE_AFTER = 10
@@ -21,17 +21,18 @@ interface Gesture {
 }
 
 /**
- * Swipes on an element: a drag left or right, or down, that goes far or fast enough calls that
+ * Swipes on an element: a drag left or right, up or down, that goes far or fast enough calls that
  * direction's handler. A gesture that runs the other way is left to the browser (a scroll), and one
  * that starts on a slider or a field is left to it, as is one in a dialog opened over the element. Once a swipe is under way the element captures
  * the pointer, so the button it started on isn't clicked. `offset` follows the pointer along the
  * swipe while it's under way, for an element that moves with it. Give the element the matching
- * `touch-action` (`touch-pan-y` for left and right, `touch-pan-x` for down).
+ * `touch-action` (`touch-pan-y` for left and right, `touch-pan-x` for up and down).
  */
 export function useSwipe(handlers: Partial<Record<SwipeDirection, () => void>>) {
   const gesture = useRef<Gesture | undefined>(undefined)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const across = handlers.left !== undefined || handlers.right !== undefined
+  const upright = handlers.up !== undefined || handlers.down !== undefined
 
   const end = () => {
     gesture.current = undefined
@@ -54,11 +55,13 @@ export function useSwipe(handlers: Partial<Record<SwipeDirection, () => void>>) 
       if (!g.axis) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) < DECIDE_AFTER) return
         const axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'
-        if (axis === 'x' ? !across : handlers.down === undefined) return end()
+        if (axis === 'x' ? !across : !upright) return end()
         g.axis = axis
         e.currentTarget.setPointerCapture(e.pointerId)
       }
-      setOffset(g.axis === 'x' ? { x: dx, y: 0 } : { x: 0, y: Math.max(0, dy) })
+      // Up or down only as far as there's a handler that way.
+      const y = Math.min(handlers.down ? Infinity : 0, Math.max(handlers.up ? -Infinity : 0, dy))
+      setOffset(g.axis === 'x' ? { x: dx, y: 0 } : { x: 0, y })
     },
     onPointerUp: (e: PointerEvent<HTMLElement>) => {
       const g = gesture.current
@@ -68,8 +71,7 @@ export function useSwipe(handlers: Partial<Record<SwipeDirection, () => void>>) 
       const moved = g.axis === 'x' ? e.clientX - g.x : e.clientY - g.y
       const speed = Math.abs(moved) / Math.max(1, e.timeStamp - g.time)
       if (Math.abs(moved) < SWIPE_DISTANCE && (speed < FLICK_SPEED || Math.abs(moved) < FLICK_MIN)) return
-      if (g.axis === 'y' && moved < 0) return // up: no swipe takes it
-      handlers[g.axis === 'y' ? 'down' : moved < 0 ? 'left' : 'right']?.()
+      handlers[g.axis === 'y' ? (moved < 0 ? 'up' : 'down') : moved < 0 ? 'left' : 'right']?.()
     },
     onPointerCancel: end,
   }
