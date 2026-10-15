@@ -1,10 +1,13 @@
 // The exercise model: what an exercise contains and how it is practised.
 
+import type { MetronomeSettings } from './metronome'
+import { DEFAULT_METRONOME_SETTINGS, metronomeSettingsFrom } from './metronome'
+import { TICKS_PER_BEAT, clampBpm } from './units'
+
+export { MAX_BPM, MAX_VOLUME, MIN_BPM, TICKS_PER_BEAT, clampBpm } from './units'
+
 /** Exercises are in 4/4. */
 export const BEATS_PER_BAR = 4
-
-/** Ticks are derived, never stored: 12 per beat fits both the sixteenth and the triplet grid. */
-export const TICKS_PER_BEAT = 12
 
 export const TICKS_PER_BAR = BEATS_PER_BAR * TICKS_PER_BEAT
 
@@ -12,9 +15,6 @@ export const TICKS_PER_BAR = BEATS_PER_BAR * TICKS_PER_BEAT
 export function beatIndex(bar: number, beat: number): number {
   return bar * BEATS_PER_BAR + beat
 }
-
-export const MIN_BPM = 30
-export const MAX_BPM = 300
 
 /** Swing amounts, as the first eighth's share of the beat: 0.5 is straight. */
 export const MIN_SWING = 0.5
@@ -163,7 +163,16 @@ export interface DeviceSettings {
   theme: Theme
   /** How the app looks: a skin of colours, fonts and ornaments over the one layout (ADR 0013). */
   look: Look
+  /** The screen showing, reopened at launch: Practice or the Metronome (ADR 0014). */
+  screen: Screen
+  /** The metronome's own settings, its BPM included: an exercise's tempo is never touched. */
+  metronome: MetronomeSettings
 }
+
+/** The app's screens, switched in the header. */
+export type Screen = 'practice' | 'metronome'
+
+export const SCREENS: readonly Screen[] = ['practice', 'metronome']
 
 /** The colour themes: `auto` follows the device's light or dark setting. */
 export type Theme = 'auto' | 'light' | 'dark'
@@ -191,16 +200,18 @@ export function drawnMode(look: Look, theme: Theme, systemDark: boolean): 'light
 
 /**
  * Device settings as stored, over the defaults for any added since. A stored setting the app no
- * longer has (such as `vimKeys`, ADR 0009), or a theme or look it doesn't have, is dropped.
+ * longer has (such as `vimKeys`, ADR 0009), or a theme, look or screen it doesn't have, is dropped.
+ * The metronome is filled in setting by setting (see `metronomeSettingsFrom`).
  */
 export function deviceSettingsFrom(stored: Record<string, unknown> | undefined): DeviceSettings {
   const known = Object.entries(stored ?? {}).filter(
     ([key, value]) =>
       key in DEFAULT_DEVICE_SETTINGS &&
       (key !== 'theme' || THEMES.includes(value as Theme)) &&
-      (key !== 'look' || LOOKS.includes(value as Look)),
+      (key !== 'look' || LOOKS.includes(value as Look)) &&
+      (key !== 'screen' || SCREENS.includes(value as Screen)),
   )
-  return { ...DEFAULT_DEVICE_SETTINGS, ...Object.fromEntries(known) }
+  return { ...DEFAULT_DEVICE_SETTINGS, ...Object.fromEntries(known), metronome: metronomeSettingsFrom(stored?.metronome) }
 }
 
 /** The library sidebar's tabs: the drummer's own exercises, and the built-in examples. */
@@ -222,13 +233,12 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   editorCollapsed: false,
   theme: 'auto',
   look: 'warm',
+  screen: 'practice',
+  metronome: DEFAULT_METRONOME_SETTINGS,
 }
 
 /** The device settings that are a playback layer's volume. */
 export type VolumeSetting = 'clickVolume' | 'exerciseVolume' | 'grooveVolume'
-
-/** The loudest a layer's volume goes: a little headroom above its usual level. */
-export const MAX_VOLUME = 1.5
 
 const BASE_TICKS: Record<Duration, number> = { quarter: 12, eighth: 6, sixteenth: 3 }
 
@@ -260,12 +270,6 @@ export function newExercise({ id, now, folderId = null }: { id: string; now: num
     lastOpened: now,
     folderId,
   }
-}
-
-/** Keeps a typed or dragged tempo inside the supported 30–300 BPM range, as a whole number. */
-export function clampBpm(bpm: number): number {
-  if (Number.isNaN(bpm)) return MIN_BPM
-  return Math.min(MAX_BPM, Math.max(MIN_BPM, Math.round(bpm)))
 }
 
 /** The exercise at a new tempo, kept inside the supported range. */
