@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react'
-import { Button } from './Button'
+import { DoneButton } from './DoneButton'
 import { useModalDialog } from './useModalDialog'
 
 /**
- * A phone sheet over the lower part of the screen, with its title and Done, which closes it; so do
+ * A phone sheet over the lower part of the screen, with its title and the tick, which closes it; so do
  * Escape and a tap above it. It is modal: the screen under it waits until it closes.
  */
 export function Sheet({ title, onDone, children }: { title: string; onDone: () => void; children: ReactNode }) {
@@ -17,9 +17,7 @@ export function Sheet({ title, onDone, children }: { title: string; onDone: () =
       <div className="flex flex-col gap-4 px-4 pt-3.5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
         <div className="flex items-center justify-between gap-2">
           <h2 className="m-0 font-display text-2xl font-semibold">{title}</h2>
-          <Button variant="primary" size="lg" onClick={onDone} className="px-5">
-            Done
-          </Button>
+          <DoneButton label={`Close ${title.toLowerCase()}`} onClick={onDone} />
         </div>
         {children}
       </div>

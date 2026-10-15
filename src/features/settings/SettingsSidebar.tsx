@@ -3,6 +3,7 @@ import { useId, useRef, useState } from 'react'
 import { LOOK_STYLES, lookName } from '@/app/looks'
 import { useAppStore } from '@/app/store'
 import { Button } from '@/components/Button'
+import { DoneButton } from '@/components/DoneButton'
 import { PanelHeading } from '@/components/PanelHeading'
 import { Segmented } from '@/components/Segmented'
 import { SelectMenu } from '@/components/SelectMenu'
@@ -87,7 +88,7 @@ type PhoneTab = (typeof PHONE_TABS)[number]['id']
 
 /**
  * The settings over the whole phone screen: Loop and Count-in pinned at the top, then a tab for each
- * section, so one section shows at a time and nothing needs a long scroll. Done closes them.
+ * section, so one section shows at a time and nothing needs a long scroll. The tick closes them.
  */
 function PhoneSettings({ onDone }: { onDone: () => void }) {
   const [tab, setTab] = useState<PhoneTab>('groove')
@@ -96,9 +97,7 @@ function PhoneSettings({ onDone }: { onDone: () => void }) {
     <aside aria-label="Settings" className="flex w-full flex-col bg-panel">
       <div className="flex items-center justify-between gap-2 px-4 pt-3.5 pb-2.5">
         <h2 className="m-0 font-display text-2xl font-semibold">Settings</h2>
-        <Button variant="primary" size="lg" onClick={onDone} className="px-5">
-          Done
-        </Button>
+        <DoneButton label="Close settings" onClick={onDone} />
       </div>
       <div className="flex items-center justify-between gap-3 px-4 pb-3.5">
         <LoopChip />

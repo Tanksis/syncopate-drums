@@ -1,6 +1,6 @@
+import type { CSSProperties } from 'react'
 import { useAppStore } from '@/app/store'
 import { Button } from '@/components/Button'
-import { CheckIcon } from '@/components/icons'
 import { keepFocus } from '@/components/keepFocus'
 import { fieldClass } from '@/components/ValueField'
 import { BpmStep } from './BpmStep'
@@ -17,29 +17,18 @@ const stepClass = 'size-11 rounded-full border-edge bg-panel text-xl/none font-s
 
 /**
  * The phone layout's transport, over the tab bar within reach of a thumb: play/pause, the tempo
- * with − and + buttons that repeat while held, and Edit, given `onEdit`, to open the editor sheet.
- * While the sheet is open, given `onDone`, a tick takes Edit's place to close it. On an example,
- * given `onCopy`, Copy takes Edit's place to make an editable copy.
+ * with − and + buttons that repeat while held, and Edit, given `onEdit`, to open the editor sheet
+ * (which covers the bar). On an example, given `onCopy`, Copy takes Edit's place to make an editable copy.
  */
-export function TransportBar({ onEdit, onDone, onCopy }: { onEdit?: () => void; onDone?: () => void; onCopy?: () => void }) {
+export function TransportBar({ onEdit, onCopy }: { onEdit?: () => void; onCopy?: () => void }) {
   usePlaybackKeys()
-  const playing = useAppStore((s) => s.playing)
   return (
     <div
       aria-label="Transport"
       role="toolbar"
       className="flex shrink-0 items-center gap-3 border-t border-line bg-card px-3 py-2"
     >
-      <button
-        type="button"
-        aria-label={playing ? 'Pause' : 'Play'}
-        // Keep focus off the buttons, so Space pauses rather than clicking them.
-        onMouseDown={keepFocus}
-        onClick={togglePause}
-        className={`${roundButtonClass} size-12 border-play-button-edge bg-play-button text-lg/none text-on-play-button active:opacity-80`}
-      >
-        <span aria-hidden>{playing ? '❚❚' : '▶'}</span>
-      </button>
+      <PlayPauseButton />
       <div className="flex items-center gap-2">
         <BpmStep step={-1} className={stepClass}>
           <span aria-hidden>−</span>
@@ -57,12 +46,6 @@ export function TransportBar({ onEdit, onDone, onCopy }: { onEdit?: () => void; 
         <SlotButton aria-label="Copy to Library" onClick={onCopy}>
           Copy
         </SlotButton>
-      ) : onDone ? (
-        <Button variant="primary" size="lg" icon aria-label="Done editing" title="Done editing" onClick={onDone} className="ml-auto">
-          <span aria-hidden className="flex [&>svg]:size-5.5">
-            <CheckIcon />
-          </span>
-        </Button>
       ) : (
         onEdit && <SlotButton onClick={onEdit}>Edit</SlotButton>
       )}
@@ -70,7 +53,25 @@ export function TransportBar({ onEdit, onDone, onCopy }: { onEdit?: () => void; 
   )
 }
 
-/** The button at the right of the bar: Edit, or Copy on an example. (Done is a tick.) */
+/** The phone's play/pause: a round button, big enough for a thumb. `className` and `style` place it. */
+export function PlayPauseButton({ className = '', style }: { className?: string; style?: CSSProperties }) {
+  const playing = useAppStore((s) => s.playing)
+  return (
+    <button
+      type="button"
+      aria-label={playing ? 'Pause' : 'Play'}
+      // Keep focus off the buttons, so Space pauses rather than clicking them.
+      onMouseDown={keepFocus}
+      onClick={togglePause}
+      style={style}
+      className={`${roundButtonClass} size-12 border-play-button-edge bg-play-button text-lg/none text-on-play-button active:opacity-80 ${className}`}
+    >
+      <span aria-hidden>{playing ? '❚❚' : '▶'}</span>
+    </button>
+  )
+}
+
+/** The button at the right of the bar: Edit, or Copy on an example. */
 function SlotButton(props: { 'aria-label'?: string; onClick: () => void; children: string }) {
   return (
     <Button size="lg" {...props} className="ml-auto active:border-accent active:text-accent" />

@@ -3,12 +3,14 @@ import { useAppStore } from '@/app/store'
 import { Button, buttonClass } from '@/components/Button'
 import { Menu } from '@/components/Menu'
 import { PatternDialog } from '@/components/PatternDialog'
+import { TrashIcon } from '@/components/icons'
 import { barRange, isExample } from '@/core'
 
 /**
  * Undo, redo and the bar menu, for editing without the keyboard. The menu's items are the bar keys'
  * commands, so they act on the cursor bar, or on the bars Shift+arrows selected. An example, which
- * can't be changed, has none of them. `large` buttons, quiet ones without a border, are big enough for a finger.
+ * can't be changed, has none of them. `large` buttons, quiet ones without a border, are big enough
+ * for a finger; on a phone (`large`), a bin beside the menu deletes the bars too, as its last item does.
  */
 export function BarActions({ large = false }: { large?: boolean }) {
   const editor = useAppStore((s) => s.editor)
@@ -22,6 +24,7 @@ export function BarActions({ large = false }: { large?: boolean }) {
   const bars = barRange(first, last)
   // A paste writes the whole clipboard from the cursor bar on, up to the end of the exercise.
   const pasted = barRange(bar, Math.min(bar + (editor.clipboard?.length ?? 1), editor.exercise.bars.length) - 1)
+  const deleteBars = { label: `Delete ${bars}`, disabled: editor.exercise.bars.length === 1, onSelect: () => dispatch({ type: 'deleteBar' }) }
   return (
     <div className="flex items-center gap-1">
       <HistoryButton large={large} label="Undo (Ctrl+Z)" disabled={editor.history.undo.length === 0} onClick={() => dispatch({ type: 'undo' })}>
@@ -48,13 +51,16 @@ export function BarActions({ large = false }: { large?: boolean }) {
             disabled: editor.clipboard === null,
             onSelect: () => dispatch({ type: 'pasteBars' }),
           },
-          {
-            label: `Delete ${bars}`,
-            disabled: editor.exercise.bars.length === 1,
-            onSelect: () => dispatch({ type: 'deleteBar' }),
-          },
+          deleteBars,
         ]}
       />
+      {large && (
+        <Button variant="ghost" size="lg" icon aria-label={deleteBars.label} title={deleteBars.label} disabled={deleteBars.disabled} onClick={deleteBars.onSelect}>
+          <span aria-hidden className="flex [&>svg]:size-5">
+            <TrashIcon />
+          </span>
+        </Button>
+      )}
       {filling !== null && (
         <PatternDialog
           title={`Fill bar ${filling + 1} with a pattern`}

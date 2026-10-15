@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
-import { Button } from './Button'
+import { DoneButton } from './DoneButton'
 import { PanelHeading } from './PanelHeading'
 import { keepFocus } from './keepFocus'
-import type { SwipeDirection } from './useSwipe'
+import { slideTransition, useSlide } from './useSlide'
 import { useSwipe } from './useSwipe'
 
 /** Which side of the app a sidebar is on, which way its chevrons point. */
@@ -19,7 +19,7 @@ const chevronButtonClass =
 
 /**
  * A sidebar's heading, with the chevron that collapses the sidebar to its rail, or, shown
- * `fullScreen` on a phone, a Close button.
+ * `fullScreen` on a phone, the tick that closes it.
  */
 export function SidebarHeading({
   name,
@@ -36,9 +36,7 @@ export function SidebarHeading({
     return (
       <div className="flex items-center justify-between gap-2">
         <PanelHeading>{name}</PanelHeading>
-        <Button size="md" aria-label={`Close ${name.toLowerCase()}`} onClick={onCollapse} className="-my-1">
-          Close
-        </Button>
+        <DoneButton label={`Close ${name.toLowerCase()}`} onClick={onCollapse} className="-my-1" />
       </div>
     )
   return (
@@ -89,11 +87,44 @@ export function SidebarOverlay({ side, children }: { side: Side; children: React
   return <div className={`fixed inset-y-0 z-30 flex shadow-xl shadow-shade/10 ${side === 'left' ? 'left-8' : 'right-8'}`}>{children}</div>
 }
 
-/** A sidebar over the whole screen, on a phone; a swipe `onSwipe` takes, back towards its side, closes it. */
-export function SidebarFullScreen({ onSwipe, children }: { onSwipe: Partial<Record<SwipeDirection, () => void>>; children: ReactNode }) {
-  const swipe = useSwipe(onSwipe)
+/**
+ * A sidebar over the whole screen, on a phone, that slides in from its side while `open` and back
+ * out when it closes. A swipe back towards its side follows the finger and closes it (`onClose`).
+ * `pull` is how far, in px, a swipe on the screen under it has pulled it in so far: it follows that
+ * finger too, before it opens.
+ */
+export function SidebarFullScreen({
+  side,
+  open,
+  pull,
+  onClose,
+  children,
+}: {
+  side: Side
+  open: boolean
+  pull: number
+  onClose: () => void
+  children: ReactNode
+}) {
+  const swipe = useSwipe(side === 'left' ? { left: onClose } : { right: onClose })
+  const slide = useSlide(open, pull !== 0)
+  if (!slide.present) return null
+  // Off the screen past its side, or in place; a finger moves it from there, but never past either.
+  const closed = side === 'left' ? '-100%' : '100%'
+  const transform = slide.atOpen
+    ? `translateX(${side === 'left' ? Math.min(0, swipe.offset.x) : Math.max(0, swipe.offset.x)}px)`
+    : side === 'left'
+      ? `translateX(min(0px, calc(${closed} + ${Math.max(0, pull)}px)))`
+      : `translateX(max(0px, calc(${closed} + ${Math.min(0, pull)}px)))`
   return (
-    <div {...swipe.props} className="fixed inset-0 z-30 flex touch-pan-y bg-panel pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+    <div
+      {...swipe.props}
+      aria-hidden={!open || undefined}
+      style={{ transform }}
+      className={`fixed inset-0 z-30 flex touch-pan-y bg-panel pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] shadow-xl shadow-shade/15 ${
+        swipe.swiping || pull !== 0 ? '' : slideTransition
+      } ${open ? '' : 'pointer-events-none'}`}
+    >
       {children}
     </div>
   )

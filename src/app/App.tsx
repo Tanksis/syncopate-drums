@@ -1,18 +1,18 @@
 // Layout A, "Workstation": library sidebar | header, notation card, editor panel | settings sidebar.
 // Either sidebar collapses to a rail; below 1000 px both are rails that open over the notation.
-// Below 640 px, the phone layout: a column of header, notation, the editor sheet when it's open,
-// and transport bar, with the sidebars opening over the whole screen.
+// Below 640 px, the phone layout: a column of header, notation, transport bar and tab bar, with the
+// editor sheet sliding up over the foot of it, and the sidebars sliding in over the whole screen.
 
-import type { ReactNode } from 'react'
-import { useEffect, useLayoutEffect, useState } from 'react'
-import { GridEditor } from '@/features/editor/GridEditor'
+import type { ReactNode, RefObject } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { EDITOR_SHEET_HEIGHT, GridEditor } from '@/features/editor/GridEditor'
 import { ExampleNotice } from '@/features/library/ExampleNotice'
 import { LibrarySidebar } from '@/features/library/LibrarySidebar'
 import { MetronomeScreen } from '@/features/metronome/MetronomeScreen'
 import { ScreenTabs } from '@/features/metronome/ScreenTabs'
 import { NotationView } from '@/features/notation/NotationView'
 import { StaffPlayButton } from '@/features/playback/StaffPlayButton'
-import { TransportBar } from '@/features/playback/TransportBar'
+import { PlayPauseButton, TransportBar } from '@/features/playback/TransportBar'
 import type { HeaderRoom } from '@/features/playback/TransportControls'
 import { TransportControls } from '@/features/playback/TransportControls'
 import { SettingsSidebar } from '@/features/settings/SettingsSidebar'
@@ -23,6 +23,7 @@ import type { Side } from '@/components/Sidebar'
 import { SidebarFullScreen, SidebarOverlay, SidebarRail } from '@/components/Sidebar'
 import { Button } from '@/components/Button'
 import { keepFocus } from '@/components/keepFocus'
+import { useSlide } from '@/components/useSlide'
 import { useSwipe } from '@/components/useSwipe'
 import { MenuIcon, SettingsIcon } from '@/components/icons'
 import { isExample } from '@/core'
@@ -73,10 +74,11 @@ export function App() {
  * The phone layout: a compact header (menu, the exercise name or the screen's, settings), the screen
  * chosen, and the tab bar at the foot that switches between Practice and the Metronome. Practice is
  * the notation filling the screen over the transport bar. Menu and settings open their sidebar over
- * the whole screen; so do a swipe right and left on the screen, and a swipe back the other way
- * closes it. Edit, in the transport bar, opens the grid editor as a sheet under the notation, which
- * the tick in Edit's place or a drag down closes. An example, which can't be changed, has no
- * read-only notice; Copy takes Edit's place instead, and opens an editable copy.
+ * the whole screen, sliding in; so does a swipe right and left on the screen, which pulls it in
+ * under the finger, and a swipe back the other way closes it. Edit, in the transport bar, slides the
+ * grid editor up as a sheet over the transport and tab bars, which its tick or a drag down closes;
+ * while it's up, a play button floats over the notation above it. An example, which can't be
+ * changed, has no read-only notice; Copy takes Edit's place instead, and opens an editable copy.
  */
 function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl> }) {
   const { library, settings } = sidebars
@@ -88,10 +90,14 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
   useEffect(() => {
     if (example) setEditOpen(false)
   }, [example])
-  const editing = editOpen && !example
+  const editing = editOpen && !example && !onMetronome
+  const sheet = useSlide(editing)
+  const [footer, footerHeight] = useHeight()
   const screenSwipe = useSwipe({ left: settings.onOpen, right: library.onOpen })
+  // The notation keeps clear of the sheet, which covers the bars at the foot too.
+  const underSheet = `max(0px, calc(${EDITOR_SHEET_HEIGHT} - ${footerHeight}px))`
   return (
-    <div className="flex h-dvh flex-col">
+    <div className="relative flex h-dvh flex-col overflow-hidden">
       <header className="mb-(--header-ornament-height) flex shrink-0 items-center gap-1 border-b border-line bg-card px-1 pt-[env(safe-area-inset-top)] shadow-(--header-ornament)">
         <PhoneHeaderButton label="Open exercises" expanded={library.state === 'overlay'} onClick={library.onOpen}>
           <MenuIcon />
@@ -109,33 +115,45 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
       </header>
       <NotSaving className="border-b border-line bg-card px-3 py-1 text-xs" />
       {/* A swipe left on the screen opens the settings, and right the exercises, as their buttons do. */}
-      <div {...screenSwipe.props} className="flex min-h-0 flex-1 touch-pan-y flex-col">
+      <div
+        {...screenSwipe.props}
+        // Paper under the sheet, so dragging it down shows more of the notation's page.
+        className={`relative flex min-h-0 flex-1 touch-pan-y flex-col ${editing ? 'bg-paper' : ''}`}
+        style={editing ? { paddingBottom: underSheet } : undefined}
+      >
         {onMetronome ? <MetronomeScreen /> : <NotationView />}
+        {editing && <PlayPauseButton className="absolute right-3 z-10 shadow-card" style={{ bottom: `calc(${underSheet} + 12px)` }} />}
       </div>
-      {!onMetronome && (
-        <>
-          {editing && <GridEditor onDone={() => setEditOpen(false)} />}
-          <TransportBar
-            onEdit={example || editing ? undefined : () => setEditOpen(true)}
-            onDone={editing ? () => setEditOpen(false) : undefined}
-            onCopy={example ? copyToLibrary : undefined}
-          />
-        </>
-      )}
-      <ScreenTabs />
+      {/* Under the sheet while it is up, so out of reach. */}
+      <div ref={footer} inert={editing} className="flex shrink-0 flex-col">
+        {!onMetronome && <TransportBar onEdit={example ? undefined : () => setEditOpen(true)} onCopy={example ? copyToLibrary : undefined} />}
+        <ScreenTabs />
+      </div>
+      {sheet.present && <GridEditor open={sheet.atOpen} onDone={() => setEditOpen(false)} />}
 
-      {library.state === 'overlay' && (
-        <SidebarFullScreen onSwipe={{ left: library.onCollapse }}>
-          <LibrarySidebar fullScreen onCollapse={library.onCollapse} />
-        </SidebarFullScreen>
-      )}
-      {settings.state === 'overlay' && (
-        <SidebarFullScreen onSwipe={{ right: settings.onCollapse }}>
-          <SettingsSidebar fullScreen playbackGroup onCollapse={settings.onCollapse} />
-        </SidebarFullScreen>
-      )}
+      {/* A swipe on the screen pulls in the exercises from the left, or the settings from the right. */}
+      <SidebarFullScreen side="left" open={library.state === 'overlay'} pull={Math.max(0, screenSwipe.offset.x)} onClose={library.onCollapse}>
+        <LibrarySidebar fullScreen onCollapse={library.onCollapse} />
+      </SidebarFullScreen>
+      <SidebarFullScreen side="right" open={settings.state === 'overlay'} pull={Math.min(0, screenSwipe.offset.x)} onClose={settings.onCollapse}>
+        <SettingsSidebar fullScreen playbackGroup onCollapse={settings.onCollapse} />
+      </SidebarFullScreen>
     </div>
   )
+}
+
+/** A ref for an element, and its height in px, kept up to date as it changes. */
+function useHeight(): [RefObject<HTMLDivElement | null>, number] {
+  const ref = useRef<HTMLDivElement>(null)
+  const [height, setHeight] = useState(0)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const observer = new ResizeObserver(() => setHeight(el.offsetHeight))
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+  return [ref, height]
 }
 
 /** A header button on a phone, for the exercises or settings: its icon drawn larger, big enough for a finger. */
