@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { MetronomeSettings, ScheduledEvent } from './index'
-import { DEFAULT_DEVICE_SETTINGS, DEFAULT_METRONOME_SETTINGS, SUBDIVISIONS, deviceSettingsFrom, cycleLevel, dialBpm, dialTurn, metronomeBeat, metronomeClickGain, metronomeSchedule, tapTempo, tempoName, playheadAt, recordEvents, withTimeSignature } from './index'
+import { DEFAULT_DEVICE_SETTINGS, DEFAULT_METRONOME_SETTINGS, SUBDIVISIONS, deviceSettingsFrom, cycleLevel, dialBpm, dialTurn, metronomeBeat, metronomeClickGain, metronomeSchedule, tapTempo, tempoName, playheadAt, recordEvents, subdivisionNotation, withTimeSignature } from './index'
 
 const at120: MetronomeSettings = { ...DEFAULT_METRONOME_SETTINGS, bpm: 120 }
 
@@ -366,5 +366,35 @@ describe('the dial', () => {
   it("stops at the metronome's slowest and fastest", () => {
     expect(dialBpm(30, -1)).toBe(20)
     expect(dialBpm(280, 2)).toBe(300)
+  })
+})
+
+describe('subdivisionNotation', () => {
+  it('draws a quarter as one quarter note', () => {
+    expect(subdivisionNotation('quarter')).toEqual({ triplet: false, notes: [{ duration: 'quarter', dotted: false, rest: false }] })
+  })
+  const note = (duration: string, rest = false, dotted = false) => ({ duration, dotted, rest })
+
+  it('writes the off-beat eighth as an eighth rest then an eighth', () => {
+    expect(subdivisionNotation('offbeatEighth')).toEqual({ triplet: false, notes: [note('eighth', true), note('eighth')] })
+  })
+
+  it('writes uneven straight patterns at their lengths', () => {
+    expect(subdivisionNotation('dottedEighth').notes).toEqual([note('eighth', false, true), note('sixteenth')])
+    expect(subdivisionNotation('sixteenthEighthSixteenth').notes).toEqual([note('sixteenth'), note('eighth'), note('sixteenth')])
+  })
+  it('writes a triplet as three eighths, a rested one as an eighth rest', () => {
+    expect(subdivisionNotation('triplet')).toEqual({ triplet: true, notes: [note('eighth'), note('eighth'), note('eighth')] })
+    expect(subdivisionNotation('tripletFirstRest').notes).toEqual([note('eighth', true), note('eighth'), note('eighth')])
+    expect(subdivisionNotation('tripletMiddleRest').notes).toEqual([note('eighth'), note('eighth', true), note('eighth')])
+    expect(subdivisionNotation('tripletLastRest').notes).toEqual([note('eighth'), note('eighth'), note('eighth', true)])
+  })
+  it('fills exactly one beat for every subdivision', () => {
+    const length = { quarter: 1, eighth: 1 / 2, sixteenth: 1 / 4 }
+    for (const { id } of SUBDIVISIONS) {
+      const { triplet, notes } = subdivisionNotation(id)
+      const total = notes.reduce((sum, n) => sum + length[n.duration] * (n.dotted ? 1.5 : 1), 0) * (triplet ? 2 / 3 : 1)
+      expect(total, id).toBeCloseTo(1)
+    }
   })
 })

@@ -8,6 +8,7 @@ import { BpmStep } from '@/features/playback/BpmStep'
 import { toggleMetronome } from '@/features/playback/transport'
 import { BeatBlocks } from './BeatBlocks'
 import { Dial } from './Dial'
+import { RhythmSheet } from './RhythmSheet'
 import { SoundSheet } from './SoundSheet'
 import { useMetronomeBeat } from './useMetronomeBeat'
 
@@ -24,9 +25,10 @@ const pillClass = 'rounded-full! px-5.5!'
 export function MetronomeScreen() {
   const beat = useMetronomeBeat()
   const [soundOpen, setSoundOpen] = useState(false)
+  const [rhythmOpen, setRhythmOpen] = useState(false)
   return (
     <main aria-label="Metronome" className="flex min-h-0 flex-1 flex-col overflow-auto bg-bg">
-      <RhythmButtons />
+      <RhythmButtons onOpen={() => setRhythmOpen(true)} />
       <div className="px-4 pt-3">
         <BeatBlocks beat={beat} />
       </div>
@@ -49,34 +51,37 @@ export function MetronomeScreen() {
         </Button>
       </div>
       {soundOpen && <SoundSheet onDone={() => setSoundOpen(false)} />}
+      {rhythmOpen && <RhythmSheet onDone={() => setRhythmOpen(false)} />}
     </main>
   )
 }
 
-/** The time signature and subdivision, each a small labelled button showing its value. */
-function RhythmButtons() {
+/** The time signature and subdivision, each a small labelled button showing its value; either opens the Rhythm sheet. */
+function RhythmButtons({ onOpen }: { onOpen: () => void }) {
   const { beats, noteValue, subdivision } = useAppStore((s) => s.device.metronome)
   const name = SUBDIVISIONS.find((s) => s.id === subdivision)?.name
   return (
     <div className="grid grid-cols-2 gap-2 px-4 pt-2.5">
-      <RhythmButton label="Time signature">
+      <RhythmButton label="Time signature" onClick={onOpen}>
         <b className="font-sans text-[22px]/[30px] tabular-nums">
           {beats}/{noteValue}
         </b>
       </RhythmButton>
-      <RhythmButton label="Subdivision">
+      <RhythmButton label="Subdivision" onClick={onOpen}>
         <span className="truncate text-sm/[30px] font-semibold">{name}</span>
       </RhythmButton>
     </div>
   )
 }
 
-/** A small button with its setting's name over its value. The Rhythm sheet it opens comes with metronome ticket 04. */
-function RhythmButton({ label, children }: { label: string; children: ReactNode }) {
+/** A small button with its setting's name over its value. */
+function RhythmButton({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
   return (
     <button
       type="button"
+      aria-haspopup="dialog"
       onMouseDown={keepFocus}
+      onClick={onClick}
       className="flex min-w-0 cursor-pointer touch-manipulation flex-col items-center gap-0.5 rounded-xl border-0 bg-transparent py-1.5 text-ink active:bg-hover"
     >
       <span className="text-xs text-mute">{label}</span>
