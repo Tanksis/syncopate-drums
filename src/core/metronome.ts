@@ -127,15 +127,13 @@ export interface MetronomeSettings {
   levels: BeatLevel[]
   subdivision: SubdivisionId
   sound: MetronomeSound
-  /** The beats' volume, from 0 (silent) to MAX_VOLUME; 1 is its usual level. */
-  beatVolume: number
-  /** The subdivision clicks' volume, as for the beats. */
-  subdivisionVolume: number
+  /** Every click's volume, beats and subdivisions alike, from 0 (silent) to MAX_VOLUME; 1 is its usual level. */
+  volume: number
 }
 
-/** A bar of levels for a time signature: beat 1 accented, the rest normal. */
+/** A bar of levels for a time signature: beat 1 accented, the rest soft. */
 function freshLevels(beats: number): BeatLevel[] {
-  return Array.from({ length: beats }, (_, beat) => (beat === 0 ? 'accent' : 'normal'))
+  return Array.from({ length: beats }, (_, beat) => (beat === 0 ? 'accent' : 'soft'))
 }
 
 export const DEFAULT_METRONOME_SETTINGS: MetronomeSettings = {
@@ -145,14 +143,13 @@ export const DEFAULT_METRONOME_SETTINGS: MetronomeSettings = {
   levels: freshLevels(4),
   subdivision: 'quarter',
   sound: 'woodBlock',
-  beatVolume: 1,
-  subdivisionVolume: 1,
+  volume: 1,
 }
 
 /**
  * A metronome as stored, over the defaults for any setting added since. A sound or subdivision the
  * app doesn't have falls back to the default, numbers are kept in range, and the levels are padded
- * with Normal or cut to the beats.
+ * with Soft or cut to the beats. A metronome stored before there was one volume takes its beats' volume.
  */
 export function metronomeSettingsFrom(stored: unknown): MetronomeSettings {
   const s: Record<string, unknown> = typeof stored === 'object' && stored !== null ? { ...stored } : {}
@@ -164,7 +161,7 @@ export function metronomeSettingsFrom(stored: unknown): MetronomeSettings {
   const beats = storedBeats !== undefined && Number.isInteger(storedBeats) && storedBeats >= 1 && storedBeats <= MAX_BEATS ? storedBeats : defaults.beats
   const storedLevels: unknown = s.levels
   const levels = Array.isArray(storedLevels)
-    ? Array.from({ length: beats }, (_, beat): BeatLevel => oneOf(storedLevels[beat], BEAT_LEVELS, 'normal'))
+    ? Array.from({ length: beats }, (_, beat): BeatLevel => oneOf(storedLevels[beat], BEAT_LEVELS, 'soft'))
     : freshLevels(beats)
   return {
     bpm: clampMetronomeBpm(number(s.bpm) ?? defaults.bpm),
@@ -177,8 +174,7 @@ export function metronomeSettingsFrom(stored: unknown): MetronomeSettings {
       defaults.subdivision,
     ),
     sound: oneOf(s.sound, METRONOME_SOUNDS, defaults.sound),
-    beatVolume: volume(s.beatVolume, defaults.beatVolume),
-    subdivisionVolume: volume(s.subdivisionVolume, defaults.subdivisionVolume),
+    volume: volume(s.volume ?? s.beatVolume, defaults.volume),
   }
 }
 
@@ -187,7 +183,7 @@ export function cycleLevel(level: BeatLevel): BeatLevel {
   return BEAT_LEVELS[(BEAT_LEVELS.indexOf(level) + 1) % BEAT_LEVELS.length]
 }
 
-/** A new time signature, with the blocks reset to beat 1 accented and the rest normal. */
+/** A new time signature, with the blocks reset to beat 1 accented and the rest soft. */
 export function withTimeSignature(settings: MetronomeSettings, beats: number, noteValue: NoteValue): MetronomeSettings {
   return { ...settings, beats, noteValue, levels: freshLevels(beats) }
 }
@@ -231,14 +227,14 @@ function subdivisionBeatTicks(id: SubdivisionId): Set<number> {
 }
 
 /**
- * How loud each kind of click plays at its volume's usual level, relative to an accent. Soft is 12 dB
- * under Normal: at 6 dB the two sounded alike on a phone's speaker.
+ * How loud each kind of click plays at the usual volume, relative to an accent. Normal is a quieter
+ * accent, and Soft is exactly a subdivision click (the engine gives them the same pitches too).
  */
-const CLICK_GAIN: Record<BeatLevel | 'subdivision', number> = { accent: 1, normal: 0.6, soft: 0.15, off: 0, subdivision: 0.4 }
+const CLICK_GAIN: Record<BeatLevel | 'subdivision', number> = { accent: 1, normal: 0.6, soft: 0.4, off: 0, subdivision: 0.4 }
 
-/** How loud a click plays, 0–MAX_VOLUME: its level's gain at the beats' or the subdivision's volume. */
+/** How loud a click plays, 0–MAX_VOLUME: its level's gain at the volume. */
 export function metronomeClickGain(level: BeatLevel | 'subdivision', settings: MetronomeSettings): number {
-  return CLICK_GAIN[level] * (level === 'subdivision' ? settings.subdivisionVolume : settings.beatVolume)
+  return CLICK_GAIN[level] * settings.volume
 }
 
 /** Taps further apart than this start a new tempo. */

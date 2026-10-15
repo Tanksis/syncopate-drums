@@ -112,11 +112,11 @@ The screen that plays a click on its own, with its own BPM, time signature, subd
 The metronome's beats per bar over the note value that gets the beat: 1–16 over 2, 4, 8 or 16. The BPM counts that note value. Exercises are always 4/4.
 
 **Beat level**:
-How a metronome beat plays: Accent, Normal, Soft or Off, set by tapping its beat block. A changed time signature resets them to beat 1 Accent and the rest Normal.
+How a metronome beat plays: Accent, Normal, Soft or Off, set by tapping its beat block. Accent is the loudest, high click; Normal is the same high click, quieter, a lighter accent; Soft is exactly a subdivision click. A changed time signature resets them to beat 1 Accent and the rest Soft.
 _Avoid_: Volume (for a single beat)
 
 **Subdivision**:
-The rhythm clicked inside each beat, quieter than the beat itself: quarters (none), eighths, an off-beat eighth, dotted eighth and sixteenth, triplets, or a triplet or sixteenth grouping with rests. Picked from small notation pictures.
+The rhythm clicked inside each beat, with the same low click as a Soft beat: quarters (none), eighths, an off-beat eighth, dotted eighth and sixteenth, triplets, or a triplet or sixteenth grouping with rests. Picked from small notation pictures.
 
 ### Sticking
 
