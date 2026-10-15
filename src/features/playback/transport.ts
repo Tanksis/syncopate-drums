@@ -1,5 +1,5 @@
-// Starting, pausing and stopping playback: the engine plays, the store records that it is playing
-// and where a pause resumes.
+// Starting, pausing and stopping playback: the engine plays the exercise or the metronome, one at a
+// time, and the store records which is playing and where a pause resumes.
 
 import type { PlayPosition } from '@/core'
 import { useAppStore } from '@/app/store'
@@ -33,12 +33,30 @@ export function togglePause(): void {
   play(paused?.exerciseId === editor.exercise.id ? paused.position : 'start')
 }
 
+/** Plays the metronome from its first beat, stopping an exercise that is playing, or stops it if already playing. */
+export function toggleMetronome(): void {
+  const { metronomePlaying, setPlaying, setMetronomePlaying } = useAppStore.getState()
+  if (metronomePlaying) {
+    stopPlayback()
+    setMetronomePlaying(false)
+    return
+  }
+  setPlaying(false)
+  setMetronomePlaying(true)
+  startPlayback(() => ({ kind: 'metronome', metronome: useAppStore.getState().device.metronome })).catch((error: unknown) => {
+    console.error(error)
+    setMetronomePlaying(false)
+  })
+}
+
+/** Plays the open exercise, stopping the metronome if it is playing. */
 function play(from: PlayPosition | 'start'): void {
-  const { setPlaying } = useAppStore.getState()
+  const { setPlaying, setMetronomePlaying } = useAppStore.getState()
+  setMetronomePlaying(false)
   setPlaying(true)
   startPlayback(() => {
     const { editor, device } = useAppStore.getState()
-    return { exercise: editor.exercise, device }
+    return { kind: 'exercise', exercise: editor.exercise, device }
   }, from).catch((error: unknown) => {
     console.error(error)
     setPlaying(false)

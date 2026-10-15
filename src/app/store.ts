@@ -53,8 +53,10 @@ interface AppState {
   device: DeviceSettings
   /** False when storage couldn't be opened, so changes are not being saved. */
   saving: boolean
-  /** Transport: whether playback is running (or starting). */
+  /** Transport: whether the exercise is playing (or starting). */
   playing: boolean
+  /** Whether the metronome is playing (or starting). At most one of it and `playing` is true. */
+  metronomePlaying: boolean
   /** Where a paused playback resumes, in the exercise it was paused in. */
   paused: PausedAt | undefined
   /** How many edits an open example has refused, so the read-only notice can flash at each. */
@@ -69,6 +71,7 @@ interface AppState {
   /** The hi-hat foot played and drawn in every bar, in place of the groove's own. */
   setHihatFoot: (hihatFoot: HihatFoot) => void
   setPlaying: (playing: boolean) => void
+  setMetronomePlaying: (metronomePlaying: boolean) => void
   setPaused: (paused: PausedAt | undefined) => void
   /** Volumes, the exercise mute, the count-in and the sidebars, kept for this device; `dragging` as for `setBpm`. */
   setDeviceSettings: (settings: Partial<DeviceSettings>, options?: { dragging?: boolean }) => void
@@ -239,6 +242,7 @@ export const useAppStore = create<AppState>()((set, get) => {
     device: DEFAULT_DEVICE_SETTINGS,
     saving: false,
     playing: false,
+    metronomePlaying: false,
     paused: undefined,
     refusedEdits: 0,
     dispatch: (command) => {
@@ -269,6 +273,7 @@ export const useAppStore = create<AppState>()((set, get) => {
       if (exercise !== editor.exercise) change(exercise, { ...editor, exercise })
     },
     setPlaying: (playing) => set({ playing }),
+    setMetronomePlaying: (metronomePlaying) => set({ metronomePlaying }),
     setPaused: (paused) => set({ paused }),
     setDeviceSettings: (settings, { dragging = false } = {}) => {
       const device = { ...get().device, ...settings }
