@@ -4,6 +4,7 @@ import { useAppStore } from '@/app/store'
 import { MetronomeIcon, PracticeIcon } from '@/components/icons'
 import type { Screen } from '@/core'
 import { SCREENS } from '@/core'
+import { stopExercise } from '@/features/playback/transport'
 
 /** Each screen's tab: its name and icon. */
 const SCREEN_TABS: Record<Screen, { name: string; icon: ReactNode }> = {
@@ -13,14 +14,16 @@ const SCREEN_TABS: Record<Screen, { name: string; icon: ReactNode }> = {
 
 /**
  * The phone's tab bar at the foot of the screen, switching between Practice and the Metronome,
- * remembered on this device. The arrow keys, Home and End move between them, as in any tab list.
+ * remembered on this device. Leaving Practice stops the exercise. The arrow keys, Home and End move between them, as in any tab list.
  */
 export function ScreenTabs() {
   const screen = useAppStore((s) => s.device.screen)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   const list = useRef<HTMLDivElement>(null)
   const choose = (next: Screen) => {
-    if (next !== screen) setDeviceSettings({ screen: next })
+    if (next === screen) return
+    if (screen === 'practice') stopExercise()
+    setDeviceSettings({ screen: next })
   }
   const onKeyDown = (e: KeyboardEvent) => {
     const i = SCREENS.indexOf(screen)

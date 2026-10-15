@@ -33,6 +33,14 @@ export function togglePause(): void {
   play(paused?.exerciseId === editor.exercise.id ? paused.position : 'start')
 }
 
+/** Stops the exercise if it is playing, as leaving the Practice screen does. A pause is kept, to resume from. */
+export function stopExercise(): void {
+  const { playing, setPlaying } = useAppStore.getState()
+  if (!playing) return
+  stopPlayback()
+  setPlaying(false)
+}
+
 /** Plays the metronome from its first beat, stopping an exercise that is playing, or stops it if already playing. */
 export function toggleMetronome(): void {
   const { metronomePlaying, setPlaying, setMetronomePlaying } = useAppStore.getState()
