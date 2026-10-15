@@ -1,5 +1,10 @@
 # 06: Phone editor sheet header
 
-**What to build:** The phone editor sheet's header gives the bar tabs most of the row, with smaller undo, redo, menu and Done, so bars are easy to pick and ‹ › don't crowd them. Picked from a mockup. See [spec](../spec.md) 6.
+**What to build:** Option E1, "two-row header", from the mockup at <https://claude.ai/artifact/MVnC3q9tkZte3cKvUQGfkZ>. The bar tabs get a row of their own, ‹ and › at its ends and + after; undo, redo, the bar menu, "Bar N of M" and Done go on a row under it. See [spec](../spec.md) 6.
 
-**Status:** needs-info (waiting on the user's pick from the mockup)
+**As built:** about six tabs show instead of one. Undo, redo and the menu are quiet 44 px buttons; the menu opens rightwards, as it now sits at the left.
+
+**Status:** done
+
+- [x] Bars easy to pick, ‹ › clear of the tabs
+- [x] Checked at 390 × 844, light and dark
