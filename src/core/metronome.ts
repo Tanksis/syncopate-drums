@@ -46,6 +46,8 @@ export type SubdivisionId =
 
 export interface Subdivision {
   id: SubdivisionId
+  /** What the picture shows, in words: its accessible name. */
+  name: string
   /**
    * Where the picture's notes fall within one beat, as fractions of it. Onset 0 is the beat
    * itself; the others are subdivision clicks. A picture whose first onset is rested still plays
@@ -55,18 +57,18 @@ export interface Subdivision {
 }
 
 export const SUBDIVISIONS: readonly Subdivision[] = [
-  { id: 'quarter', onsets: [0] },
-  { id: 'eighths', onsets: [0, 1 / 2] },
-  { id: 'offbeatEighth', onsets: [1 / 2] },
-  { id: 'dottedEighth', onsets: [0, 3 / 4] },
-  { id: 'triplet', onsets: [0, 1 / 3, 2 / 3] },
-  { id: 'tripletFirstRest', onsets: [1 / 3, 2 / 3] },
-  { id: 'tripletMiddleRest', onsets: [0, 2 / 3] },
-  { id: 'tripletLastRest', onsets: [0, 1 / 3] },
-  { id: 'sixteenths', onsets: [0, 1 / 4, 1 / 2, 3 / 4] },
-  { id: 'eighthTwoSixteenths', onsets: [0, 1 / 2, 3 / 4] },
-  { id: 'twoSixteenthsEighth', onsets: [0, 1 / 4, 1 / 2] },
-  { id: 'sixteenthEighthSixteenth', onsets: [0, 1 / 4, 3 / 4] },
+  { id: 'quarter', name: 'Quarter notes', onsets: [0] },
+  { id: 'eighths', name: 'Eighth notes', onsets: [0, 1 / 2] },
+  { id: 'offbeatEighth', name: 'Off-beat eighth', onsets: [1 / 2] },
+  { id: 'dottedEighth', name: 'Dotted eighth and sixteenth', onsets: [0, 3 / 4] },
+  { id: 'triplet', name: 'Triplet', onsets: [0, 1 / 3, 2 / 3] },
+  { id: 'tripletFirstRest', name: 'Triplet, first rested', onsets: [1 / 3, 2 / 3] },
+  { id: 'tripletMiddleRest', name: 'Triplet, middle rested', onsets: [0, 2 / 3] },
+  { id: 'tripletLastRest', name: 'Triplet, last rested', onsets: [0, 1 / 3] },
+  { id: 'sixteenths', name: 'Sixteenth notes', onsets: [0, 1 / 4, 1 / 2, 3 / 4] },
+  { id: 'eighthTwoSixteenths', name: 'Eighth and two sixteenths', onsets: [0, 1 / 2, 3 / 4] },
+  { id: 'twoSixteenthsEighth', name: 'Two sixteenths and eighth', onsets: [0, 1 / 4, 1 / 2] },
+  { id: 'sixteenthEighthSixteenth', name: 'Sixteenth, eighth, sixteenth', onsets: [0, 1 / 4, 3 / 4] },
 ]
 
 export interface MetronomeSettings {
@@ -225,4 +227,25 @@ const TEMPO_NAMES: readonly [number, string][] = [
 /** The tempo name shown under the dial's BPM. */
 export function tempoName(bpm: number): string {
   return TEMPO_NAMES.find(([below]) => bpm < below)![1]
+}
+
+/** A point on the screen relative to the dial's centre, in px, y growing downwards. */
+export interface DialPoint {
+  x: number
+  y: number
+}
+
+/** How far a drag around the dial turned it from one point to the next, in turns: clockwise is positive. */
+export function dialTurn(from: DialPoint, to: DialPoint): number {
+  const turn = (Math.atan2(to.y, to.x) - Math.atan2(from.y, from.x)) / (2 * Math.PI)
+  // Across the left of the ring the angle jumps a whole turn; a move between two points is the shorter way round.
+  return turn > 0.5 ? turn - 1 : turn < -0.5 ? turn + 1 : turn
+}
+
+/** How many BPM a whole turn of the dial moves the tempo. */
+const BPM_PER_TURN = 60
+
+/** The tempo once the dial has turned `turned` turns (clockwise faster) from a drag that began at `startBpm`. */
+export function dialBpm(startBpm: number, turned: number): number {
+  return clampMetronomeBpm(startBpm + turned * BPM_PER_TURN)
 }

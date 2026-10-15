@@ -8,6 +8,8 @@ import { useEffect, useLayoutEffect, useState } from 'react'
 import { GridEditor } from '@/features/editor/GridEditor'
 import { ExampleNotice } from '@/features/library/ExampleNotice'
 import { LibrarySidebar } from '@/features/library/LibrarySidebar'
+import { MetronomeScreen } from '@/features/metronome/MetronomeScreen'
+import { ScreenSwitch } from '@/features/metronome/ScreenSwitch'
 import { NotationView } from '@/features/notation/NotationView'
 import { StaffPlayButton } from '@/features/playback/StaffPlayButton'
 import { TransportBar } from '@/features/playback/TransportBar'
@@ -67,16 +69,18 @@ export function App() {
 }
 
 /**
- * The phone layout: a compact header (menu, the exercise name, settings), the notation filling the screen,
- * and the transport bar at the bottom. Menu and settings open their sidebar over the whole screen. Edit, in
- * the transport bar, opens the grid editor as a sheet under the notation, which Done closes. An
- * example, which can't be changed, has no read-only notice; Copy takes Edit's place instead, and
- * opens an editable copy.
+ * The phone layout: a compact header (menu, the exercise name, the Practice / Metronome switch,
+ * settings), then the screen chosen. Practice is the notation filling the screen and the transport
+ * bar at the bottom; on the Metronome screen the switch takes the name's place. Menu and settings
+ * open their sidebar over the whole screen. Edit, in the transport bar, opens the grid editor as a
+ * sheet under the notation, which Done closes. An example, which can't be changed, has no read-only
+ * notice; Copy takes Edit's place instead, and opens an editable copy.
  */
 function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl> }) {
   const { library, settings } = sidebars
   const example = useAppStore((s) => isExample(s.editor.exercise.id))
   const copyToLibrary = useAppStore((s) => s.duplicateOpenExercise)
+  const metronome = useAppStore((s) => s.device.screen === 'metronome')
   const [editOpen, setEditOpen] = useState(false)
   // Opening an example closes the sheet, so it doesn't come back with the next exercise.
   useEffect(() => {
@@ -89,20 +93,33 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
         <PhoneHeaderButton label="Open exercises" expanded={library.state === 'overlay'} onClick={library.onOpen}>
           <MenuIcon />
         </PhoneHeaderButton>
-        <div className="flex min-w-0 flex-1 justify-center text-base">
-          <ExerciseName className="w-full text-center" />
-        </div>
+        {metronome ? (
+          <ScreenSwitch className="mx-2 flex-1" />
+        ) : (
+          <>
+            <div className="flex min-w-0 flex-1 justify-center text-base">
+              <ExerciseName className="w-full text-center" />
+            </div>
+            <ScreenSwitch />
+          </>
+        )}
         <PhoneHeaderButton label="Open settings" expanded={settings.state === 'overlay'} onClick={settings.onOpen}>
           <SettingsIcon />
         </PhoneHeaderButton>
       </header>
       <NotSaving className="border-b border-line bg-card px-3 py-1 text-xs" />
-      <NotationView />
-      {editing && <GridEditor onDone={() => setEditOpen(false)} />}
-      <TransportBar
-        onEdit={example || editing ? undefined : () => setEditOpen(true)}
-        onCopy={example ? copyToLibrary : undefined}
-      />
+      {metronome ? (
+        <MetronomeScreen />
+      ) : (
+        <>
+          <NotationView />
+          {editing && <GridEditor onDone={() => setEditOpen(false)} />}
+          <TransportBar
+            onEdit={example || editing ? undefined : () => setEditOpen(true)}
+            onCopy={example ? copyToLibrary : undefined}
+          />
+        </>
+      )}
 
       {library.state === 'overlay' && (
         <SidebarFullScreen>

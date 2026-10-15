@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { MetronomeSettings, ScheduledEvent } from './index'
-import { DEFAULT_DEVICE_SETTINGS, DEFAULT_METRONOME_SETTINGS, SUBDIVISIONS, deviceSettingsFrom, cycleLevel, metronomeBeat, metronomeClickGain, metronomeSchedule, tapTempo, tempoName, playheadAt, recordEvents, withTimeSignature } from './index'
+import { DEFAULT_DEVICE_SETTINGS, DEFAULT_METRONOME_SETTINGS, SUBDIVISIONS, deviceSettingsFrom, cycleLevel, dialBpm, dialTurn, metronomeBeat, metronomeClickGain, metronomeSchedule, tapTempo, tempoName, playheadAt, recordEvents, withTimeSignature } from './index'
 
 const at120: MetronomeSettings = { ...DEFAULT_METRONOME_SETTINGS, bpm: 120 }
 
@@ -341,5 +341,30 @@ describe('metronomeBeat', () => {
   it('carries on into the next bar', () => {
     expect(beatHeardAt(12)).toEqual({ bar: 1, beat: 0 })
     expect(beatHeardAt(13.6)).toEqual({ bar: 1, beat: 3 })
+  })
+})
+
+describe('the dial', () => {
+  it('turns clockwise as positive, in turns, by points around its centre on the screen', () => {
+    // From the top to the right is a quarter turn clockwise, with y growing downwards.
+    expect(dialTurn({ x: 0, y: -10 }, { x: 10, y: 0 })).toBeCloseTo(0.25)
+    expect(dialTurn({ x: 10, y: 0 }, { x: 0, y: -10 })).toBeCloseTo(-0.25)
+  })
+
+  it('reads a small move across the left of the ring as the small turn it is', () => {
+    // Just above the left, then just below it: a little anticlockwise, not most of a turn.
+    expect(dialTurn({ x: -10, y: -1 }, { x: -10, y: 1 })).toBeCloseTo(-0.0317, 3)
+    expect(dialTurn({ x: -10, y: 1 }, { x: -10, y: -1 })).toBeCloseTo(0.0317, 3)
+  })
+
+  it('moves the BPM 60 for a whole turn from where the drag began, as a whole number', () => {
+    expect(dialBpm(92, 0.25)).toBe(107)
+    expect(dialBpm(92, -0.1)).toBe(86)
+    expect(dialBpm(92, 1 / 120)).toBe(93) // half a BPM rounds up
+  })
+
+  it("stops at the metronome's slowest and fastest", () => {
+    expect(dialBpm(30, -1)).toBe(20)
+    expect(dialBpm(280, 2)).toBe(300)
   })
 })
