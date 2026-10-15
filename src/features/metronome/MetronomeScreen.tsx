@@ -67,7 +67,10 @@ function RhythmButtons({ onOpen }: { onOpen: () => void }) {
         </b>
       </RhythmButton>
       <RhythmButton label="Subdivision" onClick={onOpen}>
-        <SubdivisionPicture id={subdivision} size={0.75} />
+        {/* On the time signature's 30 px line, so the two sit level. */}
+        <span className="flex h-[30px] items-center">
+          <SubdivisionPicture id={subdivision} size={0.75} inline />
+        </span>
       </RhythmButton>
     </div>
   )
