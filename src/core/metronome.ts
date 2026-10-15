@@ -1,6 +1,6 @@
 // The metronome: its own screen's settings, and the clicks they make (ADR 0014).
 
-import { MAX_BPM, MAX_VOLUME, TICKS_PER_BEAT } from './model'
+import { MAX_VOLUME, TICKS_PER_BEAT, clampBpm } from './units'
 import type { PlayPosition, ScheduledEvent, ScheduleResult } from './schedule'
 
 /** The metronome goes slower than an exercise; both top out at MAX_BPM. */
@@ -11,8 +11,7 @@ export const MAX_BEATS = 16
 
 /** Keeps a metronome tempo inside MIN_METRONOME_BPM–MAX_BPM, as a whole number. */
 export function clampMetronomeBpm(bpm: number): number {
-  if (Number.isNaN(bpm)) return MIN_METRONOME_BPM
-  return Math.min(MAX_BPM, Math.max(MIN_METRONOME_BPM, Math.round(bpm)))
+  return clampBpm(bpm, MIN_METRONOME_BPM)
 }
 
 /** How a beat block plays: tapping a block cycles it through these, in this order. */
@@ -109,29 +108,29 @@ export const DEFAULT_METRONOME_SETTINGS: MetronomeSettings = {
  */
 export function metronomeSettingsFrom(stored: unknown): MetronomeSettings {
   const s: Record<string, unknown> = typeof stored === 'object' && stored !== null ? { ...stored } : {}
-  const d = DEFAULT_METRONOME_SETTINGS
+  const defaults = DEFAULT_METRONOME_SETTINGS
   const number = (value: unknown) => (typeof value === 'number' && !Number.isNaN(value) ? value : undefined)
   const oneOf = <T>(value: unknown, options: readonly T[], fallback: T) => (options.includes(value as T) ? (value as T) : fallback)
   const volume = (value: unknown, fallback: number) => Math.min(MAX_VOLUME, Math.max(0, number(value) ?? fallback))
   const storedBeats = number(s.beats)
-  const beats = storedBeats !== undefined && Number.isInteger(storedBeats) && storedBeats >= 1 && storedBeats <= MAX_BEATS ? storedBeats : d.beats
+  const beats = storedBeats !== undefined && Number.isInteger(storedBeats) && storedBeats >= 1 && storedBeats <= MAX_BEATS ? storedBeats : defaults.beats
   const storedLevels: unknown = s.levels
   const levels = Array.isArray(storedLevels)
     ? Array.from({ length: beats }, (_, beat): BeatLevel => oneOf(storedLevels[beat], BEAT_LEVELS, 'normal'))
     : freshLevels(beats)
   return {
-    bpm: clampMetronomeBpm(number(s.bpm) ?? d.bpm),
+    bpm: clampMetronomeBpm(number(s.bpm) ?? defaults.bpm),
     beats,
-    noteValue: oneOf(s.noteValue, NOTE_VALUES, d.noteValue),
+    noteValue: oneOf(s.noteValue, NOTE_VALUES, defaults.noteValue),
     levels,
     subdivision: oneOf(
       s.subdivision,
       SUBDIVISIONS.map((sub) => sub.id),
-      d.subdivision,
+      defaults.subdivision,
     ),
-    sound: oneOf(s.sound, METRONOME_SOUNDS, d.sound),
-    beatVolume: volume(s.beatVolume, d.beatVolume),
-    subdivisionVolume: volume(s.subdivisionVolume, d.subdivisionVolume),
+    sound: oneOf(s.sound, METRONOME_SOUNDS, defaults.sound),
+    beatVolume: volume(s.beatVolume, defaults.beatVolume),
+    subdivisionVolume: volume(s.subdivisionVolume, defaults.subdivisionVolume),
   }
 }
 

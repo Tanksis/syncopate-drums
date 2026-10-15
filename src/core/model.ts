@@ -2,12 +2,12 @@
 
 import type { MetronomeSettings } from './metronome'
 import { DEFAULT_METRONOME_SETTINGS, metronomeSettingsFrom } from './metronome'
+import { TICKS_PER_BEAT, clampBpm } from './units'
+
+export { MAX_BPM, MAX_VOLUME, MIN_BPM, TICKS_PER_BEAT, clampBpm } from './units'
 
 /** Exercises are in 4/4. */
 export const BEATS_PER_BAR = 4
-
-/** Ticks are derived, never stored: 12 per beat fits both the sixteenth and the triplet grid. */
-export const TICKS_PER_BEAT = 12
 
 export const TICKS_PER_BAR = BEATS_PER_BAR * TICKS_PER_BEAT
 
@@ -15,9 +15,6 @@ export const TICKS_PER_BAR = BEATS_PER_BAR * TICKS_PER_BEAT
 export function beatIndex(bar: number, beat: number): number {
   return bar * BEATS_PER_BAR + beat
 }
-
-export const MIN_BPM = 30
-export const MAX_BPM = 300
 
 /** Swing amounts, as the first eighth's share of the beat: 0.5 is straight. */
 export const MIN_SWING = 0.5
@@ -243,9 +240,6 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
 /** The device settings that are a playback layer's volume. */
 export type VolumeSetting = 'clickVolume' | 'exerciseVolume' | 'grooveVolume'
 
-/** The loudest a layer's volume goes: a little headroom above its usual level. */
-export const MAX_VOLUME = 1.5
-
 const BASE_TICKS: Record<Duration, number> = { quarter: 12, eighth: 6, sixteenth: 3 }
 
 /** How many ticks an item (or any value of a duration, dotted or not, triplet or not) lasts. */
@@ -276,12 +270,6 @@ export function newExercise({ id, now, folderId = null }: { id: string; now: num
     lastOpened: now,
     folderId,
   }
-}
-
-/** Keeps a typed or dragged tempo inside the supported 30–300 BPM range, as a whole number. */
-export function clampBpm(bpm: number): number {
-  if (Number.isNaN(bpm)) return MIN_BPM
-  return Math.min(MAX_BPM, Math.max(MIN_BPM, Math.round(bpm)))
 }
 
 /** The exercise at a new tempo, kept inside the supported range. */
