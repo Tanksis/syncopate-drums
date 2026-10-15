@@ -79,9 +79,10 @@ const countLabels = (beat: number, triplet: boolean) =>
  * rests the beat, or ties a bar's first beat over the barline. The cursor's card is outlined with a
  * mark beside its row, and the bar selection and a set loop range are shaded. `twoPerRow`, on a
  * phone, lays the cards out two to a row with cells tall enough for a finger, and leaves the bar's
- * number and delete button to the bar tabs and the bar menu above.
+ * number and delete button to the bar tabs and the bar menu above. `bar` draws another bar than the
+ * cursor's, for the phone's slide from one bar to the next.
  */
-export function BeatStrip({ twoPerRow = false }: { twoPerRow?: boolean }) {
+export function BeatStrip({ twoPerRow = false, bar }: { twoPerRow?: boolean; bar?: number }) {
   const editor = useAppStore((s) => s.editor)
   const { cursor, selection } = editor
   const { loopRange } = editor.exercise.practice
@@ -215,7 +216,7 @@ export function BeatStrip({ twoPerRow = false }: { twoPerRow?: boolean }) {
     )
   }
 
-  const b = cursor.bar
+  const b = bar ?? cursor.bar
   const beats = views[b]
   const selected = selection !== null && b >= selection.first && b <= selection.last
   const looped = inLoopRange(loopRange, b)
@@ -254,7 +255,7 @@ export function BeatStrip({ twoPerRow = false }: { twoPerRow?: boolean }) {
         )}
         <div className={`grid gap-2 ${twoPerRow ? 'grid-cols-2' : 'grid-cols-4'}`}>
           {beats.map((view, beat) => {
-            const current = cursor.beat === beat
+            const current = cursor.bar === b && cursor.beat === beat
             const switchGrid = () => dispatch({ type: 'setBeatGrid', bar: b, beat, triplet: !view.triplet })
             return (
               <div
