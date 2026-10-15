@@ -77,10 +77,11 @@ export function SubdivisionPicture({ id, size = 1, inline = false }: { id: Subdi
       ref={ref}
       role="img"
       aria-label={subdivisionOf(id).name}
-      // Heavier: the stems and noteheads outlined in their colour, in the picture's units. The beams
-      // are heavy already, and outlined they'd run together, as would a triplet's "3" with its beam.
+      // A touch heavier: the stems and noteheads outlined in their colour, in the picture's units. The
+      // beams are heavy already, and outlined they'd run together, as would a triplet's "3" with its
+      // beam. Centred on its notes, a triplet's "3" stands above the picture's box, so it isn't clipped.
       className={`pointer-events-none flex items-center justify-center ${
-        inline ? '[&_.vf-notehead_text]:[stroke-width:2.5px] [&_.vf-notehead_text,&_.vf-stem_path]:[stroke:currentColor] [&_.vf-stem_path]:[stroke-width:3.5px]' : ''
+        inline ? '[&_.vf-notehead_text]:[stroke-width:0.8px] [&_.vf-notehead_text,&_.vf-stem_path]:[stroke:currentColor] [&_.vf-stem_path]:[stroke-width:2.4px] [&_svg]:overflow-visible' : ''
       }`}
       style={{ width: WIDTH * size, height: HEIGHT * size }}
     />
