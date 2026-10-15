@@ -1,5 +1,6 @@
 import type { KeyboardEvent, ReactNode } from 'react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { buttonClass } from './Button'
 import { keepFocus } from './keepFocus'
 
@@ -26,7 +27,7 @@ interface Anchor {
 
 /**
  * A ⋯ button (or `icon`) that opens a small popover of items under it, or over it where there's no
- * room below; the popover lines up with the button's right edge, or its left with `align="left"`.
+ * room below, or, with room for it on neither side, on the roomier side, scrolling; the popover lines up with the button's right edge, or its left with `align="left"`.
  * It closes on a choice, `Esc`, a click or tap outside it, or a scroll.
  *
  * Tab reaches the button; Enter, Space or ↓ opens the menu with focus on the ticked item (or the
@@ -66,14 +67,18 @@ export function Menu({
   }
   const enabledItems = () => [...(popover.current?.querySelectorAll<HTMLElement>('[role^=menuitem]:not(:disabled)') ?? [])]
 
-  // Under the button, or over it if it would run off the bottom of the window; opened from the
-  // keyboard, the focus goes to the ticked item, or the first.
+  // Under the button, or over it if it would run off the bottom of the window, or on the roomier
+  // side, cut short to scroll, if it fits on neither; opened from the keyboard, the focus goes to
+  // the ticked item, or the first.
   useLayoutEffect(() => {
     const menu = popover.current
     if (!anchor || !menu) return
     const { height } = menu.getBoundingClientRect()
-    const below = anchor.bottom + 4
-    menu.style.top = `${below + height > window.innerHeight ? Math.max(4, anchor.top - 4 - height) : below}px`
+    const below = window.innerHeight - 4 - (anchor.bottom + 4)
+    const above = anchor.top - 4 - 4
+    const under = height <= below || (height > above && below >= above)
+    if (height > below && height > above) menu.style.maxHeight = `${under ? below : above}px`
+    menu.style.top = `${under ? anchor.bottom + 4 : anchor.top - 4 - Math.min(height, above)}px`
     if (!anchor.byKeyboard) return
     const enabled = enabledItems()
     ;(enabled.find((item) => item.getAttribute('aria-checked') === 'true') ?? enabled[0])?.focus({ preventScroll: true })
@@ -84,7 +89,7 @@ export function Menu({
     // A click outside, a scroll or a resize leaves the focus where it lands.
     const dismiss = () => setAnchor(null)
     const onPointerDown = (e: PointerEvent) => {
-      if (!(e.target instanceof Node && root.current?.contains(e.target))) dismiss()
+      if (!(e.target instanceof Node && (root.current?.contains(e.target) || popover.current?.contains(e.target)))) dismiss()
     }
     const onKeyDown = (e: globalThis.KeyboardEvent) => {
       if (e.key !== 'Escape') return
@@ -154,40 +159,44 @@ export function Menu({
       >
         {icon}
       </button>
-      {anchor && (
-        // Fixed, so a scrolling panel around the button doesn't clip it.
-        <div
-          ref={popover}
-          role="menu"
-          aria-label={label}
-          onKeyDown={onMenuKeyDown}
-          style={align === 'left' ? { left: anchor.left } : { right: anchor.right }}
-          className="fixed z-30 flex min-w-44 flex-col rounded-lg border border-line bg-card p-1 text-sm shadow-popover"
-        >
-          {items.map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
-              aria-checked={item.checked}
-              disabled={item.disabled}
-              tabIndex={-1}
-              onMouseDown={keepFocus}
-              onClick={() => {
-                close()
-                item.onSelect()
-              }}
-              className={`flex cursor-pointer items-center gap-2 rounded px-2 text-left whitespace-nowrap ${large ? 'py-3 text-base' : 'py-1.5'} enabled:hover:bg-select focus-visible:bg-select focus-visible:-outline-offset-2 disabled:cursor-default disabled:opacity-40`}
-            >
-              <span aria-hidden className="w-3 text-accent">
-                {item.checked ? '✓' : ''}
-              </span>
-              {item.label}
-              {item.hint && <span className="ml-auto pl-3 text-mute">{item.hint}</span>}
-            </button>
-          ))}
-        </div>
-      )}
+      {anchor &&
+        // Fixed, so a scrolling panel around the button doesn't clip it, and in the body, so a moved
+        // (transformed) panel around the button, which a fixed box is placed from, doesn't move it.
+        createPortal(
+          <div
+            ref={popover}
+            role="menu"
+            aria-label={label}
+            onKeyDown={onMenuKeyDown}
+            style={align === 'left' ? { left: anchor.left } : { right: anchor.right }}
+            className="fixed z-30 flex min-w-44 flex-col overflow-y-auto overscroll-contain rounded-lg border border-line bg-card p-1 text-sm shadow-popover"
+          >
+            {items.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
+                aria-checked={item.checked}
+                disabled={item.disabled}
+                tabIndex={-1}
+                onMouseDown={keepFocus}
+                onClick={() => {
+                  close()
+                  item.onSelect()
+                }}
+                className={`flex cursor-pointer items-center gap-2 rounded px-2 text-left whitespace-nowrap ${large ? 'py-3 text-base' : 'py-1.5'} enabled:hover:bg-select focus-visible:bg-select focus-visible:-outline-offset-2 disabled:cursor-default disabled:opacity-40`}
+              >
+                <span aria-hidden className="w-3 text-accent">
+                  {item.checked ? '✓' : ''}
+                </span>
+                {item.label}
+                {item.hint && <span className="ml-auto pl-3 text-mute">{item.hint}</span>}
+              </button>
+            ))}
+          </div>,
+          // A dialog is drawn over the body, so a menu in one stays in it.
+          button.current?.closest('dialog') ?? document.body,
+        )}
     </div>
   )
 }
