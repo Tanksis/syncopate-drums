@@ -1,4 +1,3 @@
-import type { CSSProperties } from 'react'
 import { useAppStore } from '@/app/store'
 import { Button } from '@/components/Button'
 import { keepFocus } from '@/components/keepFocus'
@@ -53,8 +52,8 @@ export function TransportBar({ onEdit, onCopy }: { onEdit?: () => void; onCopy?:
   )
 }
 
-/** The phone's play/pause: a round button, big enough for a thumb. `className` and `style` place it. */
-export function PlayPauseButton({ className = '', style }: { className?: string; style?: CSSProperties }) {
+/** The phone's play/pause: a round button, big enough for a thumb. */
+function PlayPauseButton() {
   const playing = useAppStore((s) => s.playing)
   return (
     <button
@@ -63,8 +62,7 @@ export function PlayPauseButton({ className = '', style }: { className?: string;
       // Keep focus off the buttons, so Space pauses rather than clicking them.
       onMouseDown={keepFocus}
       onClick={togglePause}
-      style={style}
-      className={`${roundButtonClass} size-12 border-play-button-edge bg-play-button text-lg/none text-on-play-button active:opacity-80 ${className}`}
+      className={`${roundButtonClass} size-12 border-play-button-edge bg-play-button text-lg/none text-on-play-button active:opacity-80`}
     >
       <span aria-hidden>{playing ? '❚❚' : '▶'}</span>
     </button>

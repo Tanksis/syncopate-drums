@@ -311,6 +311,10 @@ describe('metronomeClickGain', () => {
     expect(gain('off')).toBe(0)
   })
 
+  it('plays Soft at most a quarter as loud as Normal (12 dB under), so the two are told apart', () => {
+    expect(gain('soft')).toBeLessThanOrEqual(gain('normal') / 4)
+  })
+
   it('plays subdivision clicks quieter than a normal beat', () => {
     expect(gain('subdivision')).toBeGreaterThan(0)
     expect(gain('subdivision')).toBeLessThan(gain('normal'))

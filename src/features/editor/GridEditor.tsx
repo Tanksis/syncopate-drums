@@ -30,7 +30,7 @@ function EditorSheet({ open, onDone }: { open: boolean; onDone: () => void }) {
   return (
     <section
       aria-label="Grid editor"
-      className={`absolute inset-x-0 bottom-0 z-20 flex flex-col rounded-t-2xl border-t border-line bg-panel pb-[env(safe-area-inset-bottom)] shadow-[0_-6px_18px_color-mix(in_srgb,var(--color-shade)_8%,transparent)] ${swipe.swiping ? '' : slideTransition}`}
+      className={`absolute inset-x-0 bottom-0 z-20 flex flex-col rounded-t-2xl border-t border-line bg-panel shadow-[0_-6px_18px_color-mix(in_srgb,var(--color-shade)_8%,transparent)] ${swipe.swiping ? '' : slideTransition}`}
       style={{ height: EDITOR_SHEET_HEIGHT, transform: open ? `translateY(${swipe.offset.y}px)` : 'translateY(100%)' }}
     >
       <div {...swipe.props} className="flex shrink-0 touch-pan-x flex-col px-2 pt-1.5 select-none">
@@ -39,10 +39,11 @@ function EditorSheet({ open, onDone }: { open: boolean; onDone: () => void }) {
         <div className="flex items-center gap-1 pr-1 pb-1">
           <BarActions large />
           <CursorBar />
-          <DoneButton label="Done editing" onClick={onDone} />
+          <DoneButton quiet label="Done editing" onClick={onDone} />
         </div>
       </div>
-      <div className="min-h-0 flex-1 overflow-auto px-3 pb-3">
+      {/* The beat cards scroll to the sheet's foot, with the home indicator's room at the end of them. */}
+      <div className="min-h-0 flex-1 overflow-auto px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
         <BeatStrip twoPerRow />
       </div>
     </section>

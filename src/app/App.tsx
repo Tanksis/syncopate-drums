@@ -12,7 +12,7 @@ import { MetronomeScreen } from '@/features/metronome/MetronomeScreen'
 import { ScreenTabs } from '@/features/metronome/ScreenTabs'
 import { NotationView } from '@/features/notation/NotationView'
 import { StaffPlayButton } from '@/features/playback/StaffPlayButton'
-import { PlayPauseButton, TransportBar } from '@/features/playback/TransportBar'
+import { TransportBar } from '@/features/playback/TransportBar'
 import type { HeaderRoom } from '@/features/playback/TransportControls'
 import { TransportControls } from '@/features/playback/TransportControls'
 import { SettingsSidebar } from '@/features/settings/SettingsSidebar'
@@ -94,7 +94,8 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
   const sheet = useSlide(editing)
   const [footer, footerHeight] = useHeight()
   const screenSwipe = useSwipe({ left: settings.onOpen, right: library.onOpen })
-  // The notation keeps clear of the sheet, which covers the bars at the foot too.
+  // The sheet floats over the screen and moves nothing under it; the notation only gains room at its
+  // end, so its last lines can still scroll up clear of the sheet.
   const underSheet = `max(0px, calc(${EDITOR_SHEET_HEIGHT} - ${footerHeight}px))`
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden">
@@ -115,14 +116,8 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
       </header>
       <NotSaving className="border-b border-line bg-card px-3 py-1 text-xs" />
       {/* A swipe left on the screen opens the settings, and right the exercises, as their buttons do. */}
-      <div
-        {...screenSwipe.props}
-        // Paper under the sheet, so dragging it down shows more of the notation's page.
-        className={`relative flex min-h-0 flex-1 touch-pan-y flex-col ${editing ? 'bg-paper' : ''}`}
-        style={editing ? { paddingBottom: underSheet } : undefined}
-      >
-        {onMetronome ? <MetronomeScreen /> : <NotationView />}
-        {editing && <PlayPauseButton className="absolute right-3 z-10 shadow-card" style={{ bottom: `calc(${underSheet} + 12px)` }} />}
+      <div {...screenSwipe.props} className="relative flex min-h-0 flex-1 touch-pan-y flex-col">
+        {onMetronome ? <MetronomeScreen /> : <NotationView coveredBottom={editing ? underSheet : undefined} />}
       </div>
       {/* Under the sheet while it is up, so out of reach. */}
       <div ref={footer} inert={editing} className="flex shrink-0 flex-col">

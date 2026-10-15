@@ -47,11 +47,11 @@ export function followPlayback(scroller: HTMLElement, staff: HTMLElement, drawin
   }
 }
 
-/** Scrolls the notation view just enough to show the whole of a line. */
-export function scrollLineIntoView(scroller: HTMLElement, staff: HTMLElement, line: DrawnLine) {
+/** Scrolls the notation view just enough to show the whole of a line, above `covered` px at its foot. */
+export function scrollLineIntoView(scroller: HTMLElement, staff: HTMLElement, line: DrawnLine, covered = 0) {
   const offset = staff.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop
   const top = offset + line.top
   const bottom = offset + line.bottom
   if (top < scroller.scrollTop) scroller.scrollTop = top
-  else if (bottom > scroller.scrollTop + scroller.clientHeight) scroller.scrollTop = bottom - scroller.clientHeight
+  else if (bottom > scroller.scrollTop + scroller.clientHeight - covered) scroller.scrollTop = bottom - scroller.clientHeight + covered
 }
