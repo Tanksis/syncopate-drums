@@ -298,3 +298,23 @@ const BPM_PER_TURN = 60
 export function dialBpm(startBpm: number, turned: number): number {
   return clampMetronomeBpm(startBpm + turned * BPM_PER_TURN)
 }
+
+/** A scroll of at least this many px in one wheel event is a mouse wheel's notch, a BPM each. */
+const WHEEL_NOTCH_PX = 50
+
+/** How far a trackpad scrolls, in px, to move the tempo by one BPM. */
+const WHEEL_PX_PER_BPM = 40
+
+/**
+ * The BPM a wheel event over the dial moves the tempo by (scrolling up faster), and the scroll
+ * gathered towards the next one: a mouse wheel moves it a BPM a notch, and a trackpad's small
+ * scrolls are gathered until they make a BPM. `pending` and `deltaY` are in px.
+ */
+export function wheelSteps(pending: number, deltaY: number): { steps: number; pending: number } {
+  if (Math.abs(deltaY) >= WHEEL_NOTCH_PX) return { steps: -Math.sign(deltaY), pending: 0 }
+  // A scroll the other way starts the gathering again.
+  const gathered = Math.sign(pending) === -Math.sign(deltaY) ? deltaY : pending + deltaY
+  // `|| 0` makes a -0 a plain 0.
+  const steps = -Math.trunc(gathered / WHEEL_PX_PER_BPM) || 0
+  return { steps, pending: gathered + steps * WHEEL_PX_PER_BPM }
+}

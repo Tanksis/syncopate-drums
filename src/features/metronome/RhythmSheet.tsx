@@ -21,8 +21,11 @@ export function RhythmSheet({ onDone }: { onDone: () => void }) {
   )
 }
 
-/** The time signature, with the beats' stepper on its left and the note value's on its right. */
-function TimeSignature() {
+/**
+ * The time signature, with the beats' stepper on its left and the note value's on its right.
+ * `compact` draws it smaller, for the desktop's panel and a mouse.
+ */
+export function TimeSignature({ compact = false }: { compact?: boolean }) {
   const metronome = useAppStore((s) => s.device.metronome)
   const setMetronome = useAppStore((s) => s.setMetronome)
   const { beats, noteValue } = metronome
@@ -31,8 +34,9 @@ function TimeSignature() {
   return (
     <div className="flex flex-col gap-2">
       <span className="font-semibold">Time signature</span>
-      <div className="grid grid-cols-3 items-center rounded-2xl border border-line bg-card p-3">
+      <div className={`grid grid-cols-3 items-center rounded-2xl border border-line bg-card ${compact ? 'p-2' : 'p-3'}`}>
         <Stepper
+          compact={compact}
           label="Beats"
           more={{ name: 'More beats', disabled: beats >= MAX_BEATS, onClick: () => change(beats + 1) }}
           fewer={{ name: 'Fewer beats', disabled: beats <= 1, onClick: () => change(beats - 1) }}
@@ -40,12 +44,13 @@ function TimeSignature() {
         <div
           role="img"
           aria-label={`Time signature ${beats}/${noteValue}`}
-          className="flex flex-col items-center font-sans text-5xl/[0.95] font-bold tabular-nums"
+          className={`flex flex-col items-center font-sans font-bold tabular-nums ${compact ? 'text-[40px]/[0.95]' : 'text-5xl/[0.95]'}`}
         >
           <span>{beats}</span>
           <span>{noteValue}</span>
         </div>
         <Stepper
+          compact={compact}
           label="Note"
           more={{ name: 'Shorter note value', disabled: noteIndex === NOTE_VALUES.length - 1, onClick: () => change(beats, NOTE_VALUES[noteIndex + 1]) }}
           fewer={{ name: 'Longer note value', disabled: noteIndex === 0, onClick: () => change(beats, NOTE_VALUES[noteIndex - 1]) }}
@@ -62,9 +67,15 @@ interface Step {
 }
 
 /** + over its label over −. */
-function Stepper({ label, more, fewer }: { label: string; more: Step; fewer: Step }) {
+function Stepper({ label, more, fewer, compact }: { label: string; more: Step; fewer: Step; compact: boolean }) {
   const step = (s: Step, glyph: ReactNode) => (
-    <Button size="lg" aria-label={s.name} disabled={s.disabled} onClick={s.onClick} className="w-12 rounded-xl border-edge text-xl">
+    <Button
+      size={compact ? 'md' : 'lg'}
+      aria-label={s.name}
+      disabled={s.disabled}
+      onClick={s.onClick}
+      className={`rounded-xl border-edge ${compact ? 'h-8 w-10 text-lg/none' : 'w-12 text-xl'}`}
+    >
       <span aria-hidden>{glyph}</span>
     </Button>
   )
@@ -77,8 +88,8 @@ function Stepper({ label, more, fewer }: { label: string; more: Step; fewer: Ste
   )
 }
 
-/** The 12 subdivisions' pictures, the chosen one marked and named above them. */
-function SubdivisionGrid() {
+/** The 12 subdivisions' pictures, the chosen one marked and named above them; `compact` as for `TimeSignature`. */
+export function SubdivisionGrid({ compact = false }: { compact?: boolean }) {
   const subdivision = useAppStore((s) => s.device.metronome.subdivision)
   const setMetronome = useAppStore((s) => s.setMetronome)
   return (
@@ -95,9 +106,9 @@ function SubdivisionGrid() {
             aria-pressed={id === subdivision}
             onMouseDown={keepFocus}
             onClick={() => setMetronome({ subdivision: id })}
-            className="flex h-14 cursor-pointer touch-manipulation items-center justify-center rounded-xl border border-line bg-card text-ink aria-pressed:border-2 aria-pressed:border-accent aria-pressed:bg-accent-tint"
+            className={`flex ${compact ? 'h-11' : 'h-14'} cursor-pointer touch-manipulation items-center justify-center rounded-xl border border-line bg-card text-ink aria-pressed:border-2 aria-pressed:border-accent aria-pressed:bg-accent-tint`}
           >
-            <SubdivisionPicture id={id} />
+            <SubdivisionPicture id={id} size={compact ? 0.85 : 1} />
           </button>
         ))}
       </div>

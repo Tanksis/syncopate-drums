@@ -1,8 +1,8 @@
 import type { KeyboardEvent, PointerEvent } from 'react'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useAppStore } from '@/app/store'
 import type { DialPoint } from '@/core'
-import { MAX_BPM, MIN_METRONOME_BPM, dialBpm, dialTurn, tempoName } from '@/core'
+import { MAX_BPM, MIN_METRONOME_BPM, dialBpm, dialTurn, tempoName, wheelSteps } from '@/core'
 import { LEVEL_COLOUR } from './BeatBlocks'
 
 /** The dial's size and the radius its beat dots sit on, in px, at full size. */
@@ -16,13 +16,16 @@ const MIN_LABEL_PX = 11
 /** Near the centre a point's angle jumps about, so a point closer than this, in px, doesn't turn the dial. */
 const DEAD_CENTRE = 12
 
+/** How many px a line of a wheel scrolled in lines counts as. */
+const WHEEL_LINE_PX = 40
 
 /**
- * The metronome's tempo on a ring with a dot per beat: the BPM in the middle, with its tempo name.
- * Dragging around the ring changes the BPM (clockwise faster), saved once the drag ends; the arrow
- * keys change it by one. While playing, the beat's dot grows and takes its level's colour.
+ * The metronome's tempo on a ring with a dot per beat: the BPM in the middle, with its tempo name
+ * and any `hint`. Dragging around the ring changes the BPM (clockwise faster), saved once the drag
+ * ends; the mouse wheel over it changes it a BPM a notch (up faster), and the arrow keys by one.
+ * While playing, the beat's dot grows and takes its level's colour.
  */
-export function Dial({ beat, size = SIZE }: { beat: number | undefined; size?: number }) {
+export function Dial({ beat, size = SIZE, hint }: { beat: number | undefined; size?: number; hint?: string }) {
   const { bpm, levels } = useAppStore((s) => s.device.metronome)
   const setMetronome = useAppStore((s) => s.setMetronome)
   // `last` is unset until the drag reaches a point outside the dead centre; `moved` once it changed the BPM.
@@ -62,6 +65,26 @@ export function Dial({ beat, size = SIZE }: { beat: number | undefined; size?: n
     // Saves the tempo the drag left, now.
     if (moved) setMetronome({ bpm: useAppStore.getState().device.metronome.bpm })
   }
+  // React's wheel listener is passive, and this one has to keep the page from scrolling.
+  const slider = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = slider.current!
+    let pending = 0
+    const onWheel = (e: WheelEvent) => {
+      // Ctrl and the wheel, or a pinch, zooms the page; a sideways scroll scrolls it.
+      if (e.ctrlKey || e.deltaY === 0) return
+      e.preventDefault()
+      const step = wheelSteps(pending, e.deltaMode === WheelEvent.DOM_DELTA_PIXEL ? e.deltaY : e.deltaY * WHEEL_LINE_PX)
+      pending = step.pending
+      if (step.steps === 0) return
+      const { device, setMetronome } = useAppStore.getState()
+      // Saved once the wheel stops, as a drag is.
+      setMetronome({ bpm: device.metronome.bpm + step.steps }, { dragging: true })
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [])
+
   const onKeyDown = (e: KeyboardEvent) => {
     const by = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1, PageUp: 10, PageDown: -10 }[e.key]
     if (by === undefined) return
@@ -75,6 +98,7 @@ export function Dial({ beat, size = SIZE }: { beat: number | undefined; size?: n
     <div className="shrink-0" style={{ width: size, height: size }}>
       <div className="origin-top-left" style={{ transform: `scale(${size / SIZE})` }}>
         <div
+          ref={slider}
           role="slider"
           tabIndex={0}
           aria-label="Tempo"
@@ -117,6 +141,7 @@ export function Dial({ beat, size = SIZE }: { beat: number | undefined; size?: n
             <span className="text-mute" style={{ fontSize: Math.max(13, MIN_LABEL_PX / (size / SIZE)) }}>
               BPM · {tempoName(bpm)}
             </span>
+            {hint && <span className="mt-1.5 text-xs text-mute">{hint}</span>}
           </div>
         </div>
       </div>

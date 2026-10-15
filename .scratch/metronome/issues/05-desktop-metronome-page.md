@@ -4,9 +4,9 @@
 
 **Blocked by:** 04
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The header switch fits beside the existing header controls at 1280 px with both sidebars' rails (remeasure `HEADER_WIDTH`)
-- [ ] The page replaces the notation, editor and sidebars while shown
-- [ ] Space plays and stops, − / + and the arrow keys change the BPM, T taps; the wheel over the dial changes the BPM
-- [ ] Checked in the browser at 1280, light and dark, and in every theme
+- [x] The header switch fits beside the existing header controls at 1280 px with both sidebars' rails (remeasure `HEADER_WIDTH`)
+- [x] The page replaces the notation, editor and sidebars while shown
+- [x] Space plays and stops, − / + and the arrow keys change the BPM, T taps; the wheel over the dial changes the BPM
+- [x] Checked in the browser at 1280, light and dark, and in every theme

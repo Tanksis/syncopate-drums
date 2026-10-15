@@ -6,7 +6,7 @@ import { METRONOME_SOUNDS } from '@/core'
 import { previewMetronomeSound } from '@/features/playback/engine'
 import { MetronomeVolume } from './MetronomeVolume'
 
-/** Each sound's name in the Sound sheet. */
+/** Each sound's name. */
 const SOUND_NAMES: Record<MetronomeSound, string> = {
   beep: 'Beep',
   woodBlock: 'Wood block',
@@ -15,23 +15,28 @@ const SOUND_NAMES: Record<MetronomeSound, string> = {
   rideBell: 'Ride bell',
 }
 
+/** The sounds to pick from, by name, in order. */
+export const SOUND_OPTIONS = METRONOME_SOUNDS.map((s) => ({ value: s, label: SOUND_NAMES[s] }))
+
+/** Picks the click's sound, and plays it once so it's heard at once. */
+export function pickSound(sound: MetronomeSound): void {
+  const { setMetronome } = useAppStore.getState()
+  setMetronome({ sound })
+  previewMetronomeSound(useAppStore.getState().device.metronome).catch((error: unknown) => console.error(error))
+}
+
 /** The phone's Sound sheet: the click's sound, heard at once when picked, and the beats' volume. */
 export function SoundSheet({ onDone }: { onDone: () => void }) {
   const sound = useAppStore((s) => s.device.metronome.sound)
-  const setMetronome = useAppStore((s) => s.setMetronome)
-  const pick = (next: MetronomeSound) => {
-    setMetronome({ sound: next })
-    previewMetronomeSound(useAppStore.getState().device.metronome).catch((error: unknown) => console.error(error))
-  }
   return (
     <Sheet title="Sound" onDone={onDone}>
       <div className="flex flex-col gap-2">
         <span className="font-semibold">Click</span>
         <Segmented
           label="Click sound"
-          options={METRONOME_SOUNDS.map((s) => ({ value: s, label: SOUND_NAMES[s] }))}
+          options={SOUND_OPTIONS}
           value={sound}
-          onChange={pick}
+          onChange={pickSound}
           className="flex-col rounded-2xl! [&>button]:h-11 [&>button]:text-base"
         />
       </div>
