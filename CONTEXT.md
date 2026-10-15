@@ -37,7 +37,7 @@ The span of bars within an exercise that repeats during practice; the whole exer
 How an exercise is practiced rather than what it contains: BPM, loop range, groove preset, swing amount and hi-hat foot. Remembered per exercise.
 
 **Device settings**:
-How the app is set up on this computer rather than how an exercise is practiced: volumes and mutes (the Mix), the count-in toggle, the theme and mode, which exercise was last open, which sidebar tab is showing, which folders are collapsed, and whether the grid editor is collapsed. Kept per device and never exported.
+How the app is set up on this computer rather than how an exercise is practiced: volumes and mutes (the Mix), the count-in toggle, the theme and mode, which exercise was last open, which sidebar tab is showing, which folders are collapsed, whether the grid editor is collapsed, which screen is showing, and the metronome's settings. Kept per device and never exported.
 
 **Mix**:
 How loud each playback layer (click, exercise, groove) plays on this device, and which are muted, set in the Mix section of Settings. A muted layer plays nothing, so the drummer can practise against any combination.

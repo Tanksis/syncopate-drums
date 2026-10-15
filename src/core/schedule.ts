@@ -3,6 +3,7 @@
 // the position it is given, at the BPM it is given, so a tempo change only affects what comes next.
 
 import type { DeviceSettings, Exercise, LoopRange, PracticeSettings, Row } from './model'
+import type { BeatLevel } from './metronome'
 import { ROWS, TICKS_PER_BAR, TICKS_PER_BEAT, loopBars, noteId } from './model'
 import { grooveHitsByTick } from './groove'
 import { placeItems } from './speller'
@@ -31,6 +32,8 @@ export interface ScheduledEvent {
   accent: boolean
   /** How hard a groove hit is played, 0–1 of the instrument's usual level; other events always play at 1. */
   velocity?: number
+  /** A metronome click's beat block level, or `subdivision` for a click between the beats. */
+  level?: BeatLevel | 'subdivision'
   /** The struck note's id (see `noteId`). */
   noteId?: string
   position: PlayPosition

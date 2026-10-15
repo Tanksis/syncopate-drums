@@ -1,5 +1,8 @@
 // The exercise model: what an exercise contains and how it is practised.
 
+import type { MetronomeSettings } from './metronome'
+import { DEFAULT_METRONOME_SETTINGS, metronomeSettingsFrom } from './metronome'
+
 /** Exercises are in 4/4. */
 export const BEATS_PER_BAR = 4
 
@@ -163,7 +166,16 @@ export interface DeviceSettings {
   theme: Theme
   /** How the app looks: a skin of colours, fonts and ornaments over the one layout (ADR 0013). */
   look: Look
+  /** The screen showing, reopened at launch: Practice or the Metronome (ADR 0014). */
+  screen: Screen
+  /** The metronome's own settings, its BPM included: an exercise's tempo is never touched. */
+  metronome: MetronomeSettings
 }
+
+/** The app's screens, switched in the header. */
+export type Screen = 'practice' | 'metronome'
+
+export const SCREENS: readonly Screen[] = ['practice', 'metronome']
 
 /** The colour themes: `auto` follows the device's light or dark setting. */
 export type Theme = 'auto' | 'light' | 'dark'
@@ -191,16 +203,18 @@ export function drawnMode(look: Look, theme: Theme, systemDark: boolean): 'light
 
 /**
  * Device settings as stored, over the defaults for any added since. A stored setting the app no
- * longer has (such as `vimKeys`, ADR 0009), or a theme or look it doesn't have, is dropped.
+ * longer has (such as `vimKeys`, ADR 0009), or a theme, look or screen it doesn't have, is dropped.
+ * The metronome is filled in setting by setting (see `metronomeSettingsFrom`).
  */
 export function deviceSettingsFrom(stored: Record<string, unknown> | undefined): DeviceSettings {
   const known = Object.entries(stored ?? {}).filter(
     ([key, value]) =>
       key in DEFAULT_DEVICE_SETTINGS &&
       (key !== 'theme' || THEMES.includes(value as Theme)) &&
-      (key !== 'look' || LOOKS.includes(value as Look)),
+      (key !== 'look' || LOOKS.includes(value as Look)) &&
+      (key !== 'screen' || SCREENS.includes(value as Screen)),
   )
-  return { ...DEFAULT_DEVICE_SETTINGS, ...Object.fromEntries(known) }
+  return { ...DEFAULT_DEVICE_SETTINGS, ...Object.fromEntries(known), metronome: metronomeSettingsFrom(stored?.metronome) }
 }
 
 /** The library sidebar's tabs: the drummer's own exercises, and the built-in examples. */
@@ -222,6 +236,8 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   editorCollapsed: false,
   theme: 'auto',
   look: 'warm',
+  screen: 'practice',
+  metronome: DEFAULT_METRONOME_SETTINGS,
 }
 
 /** The device settings that are a playback layer's volume. */
