@@ -1,5 +1,5 @@
-// Keeping the screen awake for a phone on the music stand: a screen wake lock is held while
-// playback runs and for a minute after it stops or pauses, then released so the screen may sleep.
+// Keeping the screen awake for a phone on the music stand: a screen wake lock is held while an
+// exercise or the metronome plays and for a minute after it stops or pauses, then released so the screen may sleep.
 // The browser drops the lock when the page is hidden, so it's requested again on return while
 // playing or within that minute. Where the API is missing, or the browser refuses, the screen
 // simply sleeps as usual.
@@ -8,6 +8,9 @@ import { useAppStore } from '@/app/store'
 
 /** How long the screen stays awake after playback stops or pauses. */
 const LINGER_MS = 60_000
+
+/** Whether an exercise or the metronome is playing. */
+const playing = (state: ReturnType<typeof useAppStore.getState>) => state.playing || state.metronomePlaying
 
 /** Holds a screen wake lock while playing and for a minute after. Call it once at launch. */
 export function keepAwakeWhilePlaying(): void {
@@ -38,14 +41,14 @@ export function keepAwakeWhilePlaying(): void {
 
   /** Whether the screen should be kept awake: playing, or within the minute after. */
   function awake(): boolean {
-    return useAppStore.getState().playing || releaseTimer !== undefined
+    return playing(useAppStore.getState()) || releaseTimer !== undefined
   }
 
   useAppStore.subscribe((state, previous) => {
-    if (state.playing === previous.playing) return
+    if (playing(state) === playing(previous)) return
     clearTimeout(releaseTimer)
     releaseTimer = undefined
-    if (state.playing) acquire()
+    if (playing(state)) acquire()
     else
       releaseTimer = setTimeout(() => {
         releaseTimer = undefined
