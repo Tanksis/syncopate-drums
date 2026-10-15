@@ -4,7 +4,7 @@ Date: 2026-10-14
 
 Status: accepted
 
-The user wants the app's visual style to be a choice. Six of the mocked-up directions became **looks**: Studio, Warm, Bold, Score, Riso and Catalogue (`.scratch/design-and-looks/spec.md`). The app already draws every colour from tokens in `src/styles/index.css` and switches light and dark with `data-theme` on `<html>`. Looks reuse that mechanism.
+The user wants the app's visual style to be a choice. Six of the mocked-up directions became **looks**: Studio, Warm, Bold, Score, Riso and Catalogue (`.scratch/design-and-looks/spec.md`). *Amended 2026-10-15:* only Warm (the default) and Studio remain; see the end. The app already draws every colour from tokens in `src/styles/index.css` and switches light and dark with `data-theme` on `<html>`. Looks reuse that mechanism.
 
 ## What a look may change
 
@@ -41,3 +41,7 @@ The fonts are OFL-1.1, which the shipped-licence check didn't allow. `scripts/ch
 - Adding a look means one block of token values (two with dark), its fonts and a menu entry. No component changes.
 - Components must use tokens for radius, border width, shadows and fonts as well as colour, or a look won't reach them.
 - Every look is checked to AA in each of its modes.
+
+## Amendment 2026-10-15: two looks
+
+The user cut the looks to **Warm** (the default) and **Studio**. Bold, Score, Riso and Catalogue, their tokens and their fonts are gone. A stored look the app no longer has loads as Warm, as any unknown look did. With no light-only look left, `withLook`, `LIGHT_ONLY_LOOKS` and the disabled Mode went too; `drawnMode` takes only the mode. The ornament hooks stay, so a look can still be added as one token block and its fonts.

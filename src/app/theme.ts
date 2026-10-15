@@ -12,13 +12,9 @@ import { drawnMode } from '@/core'
 const THEME_MIRROR_KEY = 'syncopate-theme'
 const LOOK_MIRROR_KEY = 'syncopate-look'
 
-/** The mode drawn: light for a light-only look, else the setting with `auto` resolved by the device's. */
+/** The mode drawn: the setting, with `auto` resolved by the device's. */
 export function useResolvedTheme(): 'light' | 'dark' {
-  return drawnMode(
-    useAppStore((s) => s.device.look),
-    useAppStore((s) => s.device.theme),
-    useSystemDark(),
-  )
+  return drawnMode(useAppStore((s) => s.device.theme), useSystemDark())
 }
 
 /**
@@ -34,7 +30,7 @@ export function followTheme() {
   const root = document.documentElement
   const apply = () => {
     const { look, theme } = useAppStore.getState().device
-    const mode = drawnMode(look, theme, media.matches)
+    const mode = drawnMode(theme, media.matches)
     root.dataset.look = look
     root.dataset.theme = mode
     root.style.colorScheme = mode

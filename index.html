@@ -8,16 +8,15 @@
     <script>
       // Applies the look and mode before the first paint, so a launch shows no frame of the wrong
       // look, or a light frame in dark. The app mirrors its look and mode settings to these keys
-      // (src/app/theme.ts); without them, Warm, following the device. A light-only look draws light
-      // whatever the mode (drawnMode in src/core/model.ts; keep the lists in step with LOOKS there).
+      // (src/app/theme.ts); without them, or with a look since removed, Warm, following the device
+      // (keep the list in step with LOOKS in src/core/model.ts).
       ;(function () {
         var look, theme
         try {
           look = localStorage.getItem('syncopate-look')
           theme = localStorage.getItem('syncopate-theme')
         } catch (e) {}
-        if (['studio', 'warm', 'bold', 'score', 'riso', 'catalogue'].indexOf(look) < 0) look = 'warm'
-        if (['score', 'riso', 'catalogue'].indexOf(look) >= 0) theme = 'light'
+        if (['warm', 'studio'].indexOf(look) < 0) look = 'warm'
         if (theme !== 'light' && theme !== 'dark') theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
         document.documentElement.dataset.look = look
         document.documentElement.dataset.theme = theme

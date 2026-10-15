@@ -180,21 +180,12 @@ export type Theme = 'auto' | 'light' | 'dark'
 export const THEMES: readonly Theme[] = ['auto', 'light', 'dark']
 
 /** The looks, in the order the Theme menu lists them; Warm is the default. */
-export type Look = 'studio' | 'warm' | 'bold' | 'score' | 'riso' | 'catalogue'
+export type Look = 'warm' | 'studio'
 
-export const LOOKS: readonly Look[] = ['studio', 'warm', 'bold', 'score', 'riso', 'catalogue']
+export const LOOKS: readonly Look[] = ['warm', 'studio']
 
-/** The looks drawn on paper only, with no dark version: they draw light whatever the mode. */
-export const LIGHT_ONLY_LOOKS: readonly Look[] = ['score', 'riso', 'catalogue']
-
-/** Chooses a look. A light-only look sets the mode to `auto`, which leaving it keeps. */
-export function withLook(settings: DeviceSettings, look: Look): DeviceSettings {
-  return LIGHT_ONLY_LOOKS.includes(look) ? { ...settings, look, theme: 'auto' } : { ...settings, look }
-}
-
-/** The mode a look is drawn in: light for a light-only look, else the mode with `auto` resolved by the device. */
-export function drawnMode(look: Look, theme: Theme, systemDark: boolean): 'light' | 'dark' {
-  if (LIGHT_ONLY_LOOKS.includes(look)) return 'light'
+/** The mode drawn: the setting, with `auto` resolved by the device's. */
+export function drawnMode(theme: Theme, systemDark: boolean): 'light' | 'dark' {
   return theme === 'auto' ? (systemDark ? 'dark' : 'light') : theme
 }
 
