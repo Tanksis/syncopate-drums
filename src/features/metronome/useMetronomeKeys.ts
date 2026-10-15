@@ -6,8 +6,8 @@ import { toggleMetronome } from '@/features/playback/transport'
 /** The keys that change the BPM, and by how much. */
 const BPM_KEYS: Record<string, number> = { '-': -1, _: -1, '+': 1, '=': 1, ArrowDown: -1, ArrowLeft: -1, ArrowUp: 1, ArrowRight: 1 }
 
-/** A field that's typed into, where − + and T are text. */
-const TYPED = 'input:not([type=range]), textarea, select, [contenteditable]'
+/** A field that's typed into, where − + and T are text, or an open menu, where a letter picks an item. */
+const TYPED = 'input:not([type=range]), textarea, select, [contenteditable], [role=menu]'
 
 /** A control that takes the arrow keys itself: a field, a slider, tabs, a radio group or a menu. */
 const TAKES_ARROWS = `${TYPED}, input, [role=slider], [role=tablist], [role=radiogroup], [role=menu]`
@@ -16,7 +16,8 @@ const TAKES_ARROWS = `${TYPED}, input, [role=slider], [role=tablist], [role=radi
  * The desktop Metronome page's keys: Space (or Ctrl+Space) plays and stops it, − and + and the
  * arrow keys change the BPM, held to repeat, and T taps the tempo (`tap`). Space is left to a
  * focused control that takes it and to an open dialog, as the exercise's Space is; the others to a
- * field being typed in, and the arrows to a control that moves with them.
+ * field being typed in or a menu, and the arrows to a control that moves with them. Only the
+ * Metronome page mounts it, and the exercise's keys (`usePlaybackKeys`) aren't mounted there.
  */
 export function useMetronomeKeys(tap: () => void) {
   useEffect(() => {
@@ -25,7 +26,8 @@ export function useMetronomeKeys(tap: () => void) {
       const target = e.target instanceof Element ? e.target : null
       if (e.code === 'Space') {
         if (e.shiftKey) return
-        if (!e.ctrlKey && (usesSpace(e.target) || document.querySelector('dialog[open]'))) return
+        // The dial, focused by a drag, takes no Space of its own.
+        if (!e.ctrlKey && ((usesSpace(e.target) && !target?.closest('[role=slider]')) || document.querySelector('dialog[open]'))) return
         e.preventDefault()
         if (!e.repeat) toggleMetronome()
         return

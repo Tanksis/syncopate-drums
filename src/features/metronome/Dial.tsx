@@ -71,8 +71,8 @@ export function Dial({ beat, size = SIZE, hint }: { beat: number | undefined; si
     const el = slider.current!
     let pending = 0
     const onWheel = (e: WheelEvent) => {
-      // Ctrl and the wheel, or a pinch, zooms the page.
-      if (e.ctrlKey) return
+      // Ctrl and the wheel, or a pinch, zooms the page; a sideways scroll scrolls it.
+      if (e.ctrlKey || e.deltaY === 0) return
       e.preventDefault()
       const step = wheelSteps(pending, e.deltaMode === WheelEvent.DOM_DELTA_PIXEL ? e.deltaY : e.deltaY * WHEEL_LINE_PX)
       pending = step.pending

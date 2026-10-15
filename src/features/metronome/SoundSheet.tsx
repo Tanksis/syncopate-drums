@@ -6,14 +6,17 @@ import { METRONOME_SOUNDS } from '@/core'
 import { previewMetronomeSound } from '@/features/playback/engine'
 import { MetronomeVolume } from './MetronomeVolume'
 
-/** Each sound's name, as the Sound sheet and the desktop's panel offer it. */
-export const SOUND_NAMES: Record<MetronomeSound, string> = {
+/** Each sound's name. */
+const SOUND_NAMES: Record<MetronomeSound, string> = {
   beep: 'Beep',
   woodBlock: 'Wood block',
   cowbell: 'Cowbell',
   hihat: 'Hi-hat',
   rideBell: 'Ride bell',
 }
+
+/** The sounds to pick from, by name, in order. */
+export const SOUND_OPTIONS = METRONOME_SOUNDS.map((s) => ({ value: s, label: SOUND_NAMES[s] }))
 
 /** Picks the click's sound, and plays it once so it's heard at once. */
 export function pickSound(sound: MetronomeSound): void {
@@ -31,7 +34,7 @@ export function SoundSheet({ onDone }: { onDone: () => void }) {
         <span className="font-semibold">Click</span>
         <Segmented
           label="Click sound"
-          options={METRONOME_SOUNDS.map((s) => ({ value: s, label: SOUND_NAMES[s] }))}
+          options={SOUND_OPTIONS}
           value={sound}
           onChange={pickSound}
           className="flex-col rounded-2xl! [&>button]:h-11 [&>button]:text-base"

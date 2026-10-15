@@ -26,9 +26,8 @@ const LEVEL_HEIGHT: Record<BeatLevel, string> = { accent: 'h-full', normal: 'h-2
 export function BeatBlocks({ beat, tall = false, large = false }: { beat: number | undefined; tall?: boolean; large?: boolean }) {
   const levels = useAppStore((s) => s.device.metronome.levels)
   const setMetronome = useAppStore((s) => s.setMetronome)
-  const columns = levels.length <= 8 ? levels.length : Math.ceil(levels.length / 2)
   return (
-    <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+    <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${blockColumns(levels.length)}, minmax(0, 1fr))` }}>
       {levels.map((level, i) => (
         <button
           key={i}
@@ -47,9 +46,14 @@ export function BeatBlocks({ beat, tall = false, large = false }: { beat: number
   )
 }
 
-/** A block's height: smaller in two rows, and on a short screen unless `tall`. */
+/** A block's height: smaller in two rows, and on a short screen unless `tall`; tallest when `large`. */
 function blockHeight(twoRows: boolean, tall: boolean, large: boolean): string {
   if (large) return twoRows ? 'h-20' : 'h-38'
   if (twoRows) return tall ? 'h-12' : 'h-16 short:h-12'
   return tall ? 'h-26' : 'h-26 short:h-16'
+}
+
+/** How many blocks sit in a row for `beats` beats: all of them up to 8, then half in each of two rows. */
+export function blockColumns(beats: number): number {
+  return beats <= 8 ? beats : Math.ceil(beats / 2)
 }

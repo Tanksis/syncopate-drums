@@ -1,13 +1,12 @@
 import { useAppStore } from '@/app/store'
 import { SelectMenu } from '@/components/SelectMenu'
-import { METRONOME_SOUNDS } from '@/core'
 import { BpmStep } from '@/features/playback/BpmStep'
-import { BeatBlocks } from './BeatBlocks'
+import { BeatBlocks, blockColumns } from './BeatBlocks'
 import { Dial } from './Dial'
 import { PlayButton, TapTempo, useTapTempo } from './MetronomeScreen'
 import { MetronomeVolume } from './MetronomeVolume'
 import { SubdivisionGrid, TimeSignature } from './RhythmSheet'
-import { SOUND_NAMES, pickSound } from './SoundSheet'
+import { SOUND_OPTIONS, pickSound } from './SoundSheet'
 import { useMetronomeKeys } from './useMetronomeKeys'
 import { useMetronomeBeat } from './useMetronomeBeat'
 
@@ -28,11 +27,10 @@ export function MetronomePage() {
   const tap = useTapTempo()
   useMetronomeKeys(tap)
   const beats = useAppStore((s) => s.device.metronome.levels.length)
-  const columns = beats <= 8 ? beats : Math.ceil(beats / 2)
   return (
     <div className="flex min-h-0 flex-1">
       <main aria-label="Metronome" className="flex min-w-0 flex-1 flex-col items-center justify-center-safe gap-8.5 overflow-auto bg-bg p-6">
-        <div className="w-full" style={{ maxWidth: columns * BLOCK_PITCH - 8 }}>
+        <div className="w-full" style={{ maxWidth: blockColumns(beats) * BLOCK_PITCH - 8 }}>
           <BeatBlocks beat={beat} large />
         </div>
         <div className="flex flex-wrap items-center justify-center gap-x-16 gap-y-6">
@@ -80,7 +78,7 @@ function Sound() {
     <div className="flex items-center justify-between gap-3">
       <span className="font-semibold">Sound</span>
       <div className="flex w-40">
-        <SelectMenu label="Click sound" options={METRONOME_SOUNDS.map((s) => ({ value: s, label: SOUND_NAMES[s] }))} value={sound} onChange={pickSound} />
+        <SelectMenu label="Click sound" options={SOUND_OPTIONS} value={sound} onChange={pickSound} />
       </div>
     </div>
   )

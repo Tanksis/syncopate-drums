@@ -17,7 +17,7 @@ const SCREEN_TABS: Record<Screen, { name: string; icon: ReactNode }> = {
  * Where the tabs sit: the phone's tab bar at the foot of the screen, the rail down its side when
  * it's turned sideways, or the desktop header.
  */
-export type ScreenTabsPlace = 'foot' | 'rail' | 'header'
+type ScreenTabsPlace = 'foot' | 'rail' | 'header'
 
 /**
  * The tabs switching between Practice and the Metronome, remembered on this device. Leaving

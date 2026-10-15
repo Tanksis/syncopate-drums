@@ -314,6 +314,7 @@ export function wheelSteps(pending: number, deltaY: number): { steps: number; pe
   if (Math.abs(deltaY) >= WHEEL_NOTCH_PX) return { steps: -Math.sign(deltaY), pending: 0 }
   // A scroll the other way starts the gathering again.
   const gathered = Math.sign(pending) === -Math.sign(deltaY) ? deltaY : pending + deltaY
-  const steps = -Math.trunc(gathered / WHEEL_PX_PER_BPM)
-  return { steps: steps + 0, pending: gathered + steps * WHEEL_PX_PER_BPM }
+  // `|| 0` makes a -0 a plain 0.
+  const steps = -Math.trunc(gathered / WHEEL_PX_PER_BPM) || 0
+  return { steps, pending: gathered + steps * WHEEL_PX_PER_BPM }
 }
