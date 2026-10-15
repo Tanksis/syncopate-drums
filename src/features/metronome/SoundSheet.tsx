@@ -10,9 +10,6 @@ import { MetronomeVolume } from './MetronomeVolume'
 const SOUND_NAMES: Record<MetronomeSound, string> = {
   beep: 'Beep',
   woodBlock: 'Wood block',
-  cowbell: 'Cowbell',
-  hihat: 'Hi-hat',
-  rideBell: 'Ride bell',
 }
 
 /** The sounds to pick from, by name, in order. */

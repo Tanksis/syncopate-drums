@@ -274,10 +274,10 @@ function SettingsToggle({ state, onOpen, onCollapse }: SidebarControl) {
 /**
  * The exercise bar's widths, in px, below which its controls don't all fit while leaving the
  * exercise name its 12 letters or so, measured in each look's fonts (Warm's need the most): under
- * `full` the BPM slider goes, and under `withoutSlider` the count-in and loop chip move to the
+ * `full` the BPM slider goes, and under `withoutSlider` the click mute, count-in and loop chip move to the
  * settings sidebar too.
  */
-const EXERCISE_BAR_WIDTH = { full: 780, withoutSlider: 662 }
+const EXERCISE_BAR_WIDTH = { full: 788, withoutSlider: 702 }
 
 /**
  * A ref for the exercise's bar over the notation, and how much of the transport fits in it. That

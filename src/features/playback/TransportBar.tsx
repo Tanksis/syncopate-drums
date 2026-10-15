@@ -3,7 +3,7 @@ import { Button } from '@/components/Button'
 import { keepFocus } from '@/components/keepFocus'
 import { fieldClass } from '@/components/ValueField'
 import { BpmStep } from './BpmStep'
-import { BpmInput } from './TransportControls'
+import { BpmInput, ClickMute } from './TransportControls'
 import { togglePause } from './transport'
 import { usePlaybackKeys } from './usePlaybackKeys'
 
@@ -16,7 +16,7 @@ const stepClass = 'rounded-full border-edge bg-panel text-xl/none font-semibold 
 
 /**
  * The phone layout's transport, over the tab bar within reach of a thumb: play/pause, the tempo
- * with − and + buttons that repeat while held, and Edit, given `onEdit`, to open the editor sheet
+ * with − and + buttons that repeat while held, the click mute, and Edit, given `onEdit`, to open the editor sheet
  * (which covers the bar). On an example, given `onCopy`, Copy takes Edit's place to make an editable copy.
  * `slim`, with the phone turned sideways, draws it lower, with BPM beside the tempo rather than
  * under it, and keeps it clear of a notch on the right and the home indicator below.
@@ -46,6 +46,7 @@ export function TransportBar({ onEdit, onCopy, slim = false }: { onEdit?: () => 
           <span aria-hidden>+</span>
         </BpmStep>
       </div>
+      <ClickMute size={slim ? 'md' : 'lg'} />
       {onCopy ? (
         <SlotButton aria-label="Copy to Library" onClick={onCopy}>
           Copy

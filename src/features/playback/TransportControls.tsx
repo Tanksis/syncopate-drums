@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useAppStore } from '@/app/store'
+import { Button } from '@/components/Button'
+import type { ButtonSize } from '@/components/Button'
 import { Slider } from '@/components/Slider'
 import { Switch } from '@/components/Switch'
-import { MinusIcon, PlusIcon } from '@/components/icons'
+import { MinusIcon, PlusIcon, SpeakerIcon, SpeakerMutedIcon } from '@/components/icons'
 import { MAX_BPM, MIN_BPM } from '@/core'
 import { BpmStep } from './BpmStep'
 import { LoopChip } from './LoopChip'
@@ -11,12 +13,12 @@ import { usePlaybackKeys } from './usePlaybackKeys'
 
 /**
  * How much of the transport the exercise's bar, over the notation, has room for: all of it, all but the BPM slider, or only
- * the position and the tempo, with the count-in and loop chip in the Settings sidebar.
+ * the position and the tempo, with the click mute, count-in and loop chip in the Settings sidebar.
  */
 export type TransportRoom = 'full' | 'withoutSlider' | 'compact'
 
 /**
- * The exercise bar's playback position, tempo, count-in and loop chip. Play is on the staff
+ * The exercise bar's playback position, tempo, click mute, count-in and loop chip. Play is on the staff
  * (`StaffPlayButton`); Ctrl+Space and Space work from here.
  */
 export function TransportControls({ room }: { room: TransportRoom }) {
@@ -28,6 +30,7 @@ export function TransportControls({ room }: { room: TransportRoom }) {
       {room !== 'compact' && (
         <>
           <span aria-hidden className="h-6 w-px bg-line" />
+          <ClickMute />
           <CountInToggle />
           <LoopChip />
         </>
@@ -57,7 +60,7 @@ function Tempo({ slider }: { slider: boolean }) {
         <PlusIcon />
       </BpmStep>
       {slider && (
-        <Slider label="BPM slider" min={MIN_BPM} max={MAX_BPM} value={bpm} onChange={setBpm} className="ml-1.5 w-28" />
+        <Slider label="BPM slider" min={MIN_BPM} max={MAX_BPM} value={bpm} onChange={setBpm} className="ml-1.5 w-20" />
       )}
     </div>
   )
@@ -109,5 +112,28 @@ export function CountInToggle() {
       checked={countIn}
       onChange={(on) => setDeviceSettings({ countIn: on })}
     />
+  )
+}
+
+/**
+ * Mutes the metronome's click while the exercise plays, as Mix's Click row does: the count-in
+ * still clicks. Kept for this device.
+ */
+export function ClickMute({ size = 'md' }: { size?: ButtonSize }) {
+  const muted = useAppStore((s) => s.device.clickMuted)
+  const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
+  return (
+    <Button
+      variant="ghost"
+      icon
+      size={size}
+      aria-label="Mute the click"
+      aria-pressed={muted}
+      title={muted ? 'Unmute the click' : 'Mute the click (the count-in still plays)'}
+      onClick={() => setDeviceSettings({ clickMuted: !muted })}
+      className="aria-pressed:text-danger!"
+    >
+      {muted ? <SpeakerMutedIcon /> : <SpeakerIcon />}
+    </Button>
   )
 }
