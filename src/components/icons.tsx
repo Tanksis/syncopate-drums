@@ -100,3 +100,25 @@ export const SpeakerMutedIcon = () => (
     <path d="M2.5 6h2.5l3.5-3v10L5 10H2.5zM11 6l3.5 4M14.5 6L11 10" />
   </Icon>
 )
+
+/** A tick: done. */
+export const CheckIcon = () => (
+  <Icon>
+    <path d="M3 8.5l3.2 3.2L13 4.8" />
+  </Icon>
+)
+
+/** A note on a staff: the Practice screen. */
+export const PracticeIcon = () => (
+  <Icon>
+    <path d="M1.5 4h13M1.5 6.5h13M1.5 9h13M1.5 11.5h13M7.4 9V3" />
+    <circle cx="6" cy="9" r="1.4" fill="currentColor" />
+  </Icon>
+)
+
+/** A metronome with its arm swung over: the Metronome screen. */
+export const MetronomeIcon = () => (
+  <Icon>
+    <path d="M5.5 1.5h5l3 13h-11zM8 11.5l3-7" />
+  </Icon>
+)

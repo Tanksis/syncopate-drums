@@ -42,7 +42,7 @@ export function MetronomeScreen() {
           <span aria-hidden>+</span>
         </BpmStep>
       </div>
-      <div className="flex justify-center gap-3 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
+      <div className="flex justify-center gap-3 px-4 pb-5">
         <TapTempo />
         <Button size="lg" onClick={() => setSoundOpen(true)} aria-haspopup="dialog" className={pillClass}>
           Sound

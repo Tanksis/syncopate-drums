@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import { Button } from './Button'
 import { PanelHeading } from './PanelHeading'
 import { keepFocus } from './keepFocus'
+import type { SwipeDirection } from './useSwipe'
+import { useSwipe } from './useSwipe'
 
 /** Which side of the app a sidebar is on, which way its chevrons point. */
 export type Side = 'left' | 'right'
@@ -87,7 +89,12 @@ export function SidebarOverlay({ side, children }: { side: Side; children: React
   return <div className={`fixed inset-y-0 z-30 flex shadow-xl shadow-shade/10 ${side === 'left' ? 'left-8' : 'right-8'}`}>{children}</div>
 }
 
-/** A sidebar over the whole screen, on a phone. */
-export function SidebarFullScreen({ children }: { children: ReactNode }) {
-  return <div className="fixed inset-0 z-30 flex bg-panel pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">{children}</div>
+/** A sidebar over the whole screen, on a phone; a swipe `onSwipe` takes, back towards its side, closes it. */
+export function SidebarFullScreen({ onSwipe, children }: { onSwipe: Partial<Record<SwipeDirection, () => void>>; children: ReactNode }) {
+  const swipe = useSwipe(onSwipe)
+  return (
+    <div {...swipe.props} className="fixed inset-0 z-30 flex touch-pan-y bg-panel pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+      {children}
+    </div>
+  )
 }

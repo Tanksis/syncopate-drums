@@ -9,7 +9,7 @@ import { GridEditor } from '@/features/editor/GridEditor'
 import { ExampleNotice } from '@/features/library/ExampleNotice'
 import { LibrarySidebar } from '@/features/library/LibrarySidebar'
 import { MetronomeScreen } from '@/features/metronome/MetronomeScreen'
-import { ScreenSwitch } from '@/features/metronome/ScreenSwitch'
+import { ScreenTabs } from '@/features/metronome/ScreenTabs'
 import { NotationView } from '@/features/notation/NotationView'
 import { StaffPlayButton } from '@/features/playback/StaffPlayButton'
 import { TransportBar } from '@/features/playback/TransportBar'
@@ -23,6 +23,7 @@ import type { Side } from '@/components/Sidebar'
 import { SidebarFullScreen, SidebarOverlay, SidebarRail } from '@/components/Sidebar'
 import { Button } from '@/components/Button'
 import { keepFocus } from '@/components/keepFocus'
+import { useSwipe } from '@/components/useSwipe'
 import { MenuIcon, SettingsIcon } from '@/components/icons'
 import { isExample } from '@/core'
 
@@ -69,12 +70,13 @@ export function App() {
 }
 
 /**
- * The phone layout: a compact header (menu, the exercise name, the Practice / Metronome switch,
- * settings), then the screen chosen. Practice is the notation filling the screen and the transport
- * bar at the bottom; on the Metronome screen the switch takes the name's place. Menu and settings
- * open their sidebar over the whole screen. Edit, in the transport bar, opens the grid editor as a
- * sheet under the notation, which Done closes. An example, which can't be changed, has no read-only
- * notice; Copy takes Edit's place instead, and opens an editable copy.
+ * The phone layout: a compact header (menu, the exercise name or the screen's, settings), the screen
+ * chosen, and the tab bar at the foot that switches between Practice and the Metronome. Practice is
+ * the notation filling the screen over the transport bar. Menu and settings open their sidebar over
+ * the whole screen; so do a swipe right and left on the screen, and a swipe back the other way
+ * closes it. Edit, in the transport bar, opens the grid editor as a sheet under the notation, which
+ * the tick in Edit's place or a drag down closes. An example, which can't be changed, has no
+ * read-only notice; Copy takes Edit's place instead, and opens an editable copy.
  */
 function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl> }) {
   const { library, settings } = sidebars
@@ -87,47 +89,48 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
     if (example) setEditOpen(false)
   }, [example])
   const editing = editOpen && !example
+  const screenSwipe = useSwipe({ left: settings.onOpen, right: library.onOpen })
   return (
     <div className="flex h-dvh flex-col">
       <header className="mb-(--header-ornament-height) flex shrink-0 items-center gap-1 border-b border-line bg-card px-1 pt-[env(safe-area-inset-top)] shadow-(--header-ornament)">
         <PhoneHeaderButton label="Open exercises" expanded={library.state === 'overlay'} onClick={library.onOpen}>
           <MenuIcon />
         </PhoneHeaderButton>
-        {onMetronome ? (
-          <ScreenSwitch className="mx-2 flex-1" />
-        ) : (
-          <>
-            <div className="flex min-w-0 flex-1 justify-center text-base">
-              <ExerciseName className="w-full text-center" />
-            </div>
-            <ScreenSwitch />
-          </>
-        )}
+        <div className="flex min-w-0 flex-1 justify-center text-base">
+          {onMetronome ? (
+            <h1 className="m-0 font-display text-lg font-semibold">Metronome</h1>
+          ) : (
+            <ExerciseName className="w-full text-center" />
+          )}
+        </div>
         <PhoneHeaderButton label="Open settings" expanded={settings.state === 'overlay'} onClick={settings.onOpen}>
           <SettingsIcon />
         </PhoneHeaderButton>
       </header>
       <NotSaving className="border-b border-line bg-card px-3 py-1 text-xs" />
-      {onMetronome ? (
-        <MetronomeScreen />
-      ) : (
+      {/* A swipe left on the screen opens the settings, and right the exercises, as their buttons do. */}
+      <div {...screenSwipe.props} className="flex min-h-0 flex-1 touch-pan-y flex-col">
+        {onMetronome ? <MetronomeScreen /> : <NotationView />}
+      </div>
+      {!onMetronome && (
         <>
-          <NotationView />
           {editing && <GridEditor onDone={() => setEditOpen(false)} />}
           <TransportBar
             onEdit={example || editing ? undefined : () => setEditOpen(true)}
+            onDone={editing ? () => setEditOpen(false) : undefined}
             onCopy={example ? copyToLibrary : undefined}
           />
         </>
       )}
+      <ScreenTabs />
 
       {library.state === 'overlay' && (
-        <SidebarFullScreen>
+        <SidebarFullScreen onSwipe={{ left: library.onCollapse }}>
           <LibrarySidebar fullScreen onCollapse={library.onCollapse} />
         </SidebarFullScreen>
       )}
       {settings.state === 'overlay' && (
-        <SidebarFullScreen>
+        <SidebarFullScreen onSwipe={{ right: settings.onCollapse }}>
           <SettingsSidebar fullScreen playbackGroup onCollapse={settings.onCollapse} />
         </SidebarFullScreen>
       )}
