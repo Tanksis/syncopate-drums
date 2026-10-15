@@ -4,11 +4,11 @@
 
 **Blocked by:** none
 
-**Status:** ready-for-agent
+**Status:** done (merged in PR #97, 2026-10-15)
 
-- [ ] `MetronomeSettings`, `BeatLevel`, the subdivision ids and patterns, and the defaults (92 BPM, 4/4, Accent-Normal-Normal-Normal, quarters, Wood block)
-- [ ] `withTimeSignature` resets the levels; `cycleLevel` goes Accent → Normal → Soft → Off → Accent
-- [ ] `metronomeSchedule` returns the `ScheduleResult` shape, loops forever, and keeps beat length at `60 / bpm` for every note value
-- [ ] `tapTempo` and `tempoName`
-- [ ] `DeviceSettings.screen` and `DeviceSettings.metronome`; `deviceSettingsFrom` validates them
-- [ ] Tests for all of the above (see spec, Testing Decisions)
+- [x] `MetronomeSettings`, `BeatLevel`, the subdivision ids and patterns, and the defaults (92 BPM, 4/4, Accent-Normal-Normal-Normal, quarters, Wood block)
+- [x] `withTimeSignature` resets the levels; `cycleLevel` goes Accent → Normal → Soft → Off → Accent
+- [x] `metronomeSchedule` returns the `ScheduleResult` shape, loops forever, and keeps beat length at `60 / bpm` for every note value
+- [x] `tapTempo` and `tempoName`
+- [x] `DeviceSettings.screen` and `DeviceSettings.metronome`; `deviceSettingsFrom` validates them
+- [x] Tests for all of the above (see spec, Testing Decisions)
