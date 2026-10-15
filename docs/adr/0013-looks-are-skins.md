@@ -23,7 +23,7 @@ A look is never free-form CSS. A new ornament means adding a token-driven hook t
 
 ## Look and mode are two settings
 
-The device setting `theme` (Auto / Light / Dark) stays as the **mode**. `look` is a second device setting, defaulting to Studio.
+The device setting `theme` (Auto / Light / Dark) stays as the **mode**. `look` is a second device setting, defaulting to Studio. *Amended 2026-10-14:* the app calls a look a **theme**, and the default is Warm; the code keeps `look`, and its `theme` setting stays the mode.
 
 - Studio, Warm and Bold come in light and dark, and follow the mode.
 - Score, Riso and Catalogue are **light only**: their identity is paper and ink. Choosing one sets the mode to Auto, and the look draws light whatever the mode or the device says. Mode is disabled while it's chosen. Leaving it keeps the mode at Auto.

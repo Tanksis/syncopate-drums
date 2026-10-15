@@ -233,16 +233,18 @@ export function BeatStrip({ twoPerRow = false }: { twoPerRow?: boolean }) {
         {!twoPerRow && (
           <div className="flex items-center text-xs">
             <span className={`font-semibold ${looped ? 'text-loop-ink' : 'text-ink'}`}>Bar {b + 1}</span>
-            <Button
-              variant="ghost"
-              title={`Delete bar ${b + 1} (Ctrl+Backspace)`}
-              aria-label={`Delete bar ${b + 1}`}
-              tabIndex={-1}
-              onClick={() => dispatch({ type: 'deleteBar', bar: b })}
-              className="ml-auto enabled:hover:text-danger!"
-            >
-              ✕ delete
-            </Button>
+            {!example && (
+              <Button
+                variant="ghost"
+                title={`Delete bar ${b + 1} (Ctrl+Backspace)`}
+                aria-label={`Delete bar ${b + 1}`}
+                tabIndex={-1}
+                onClick={() => dispatch({ type: 'deleteBar', bar: b })}
+                className="ml-auto enabled:hover:text-danger!"
+              >
+                ✕ delete
+              </Button>
+            )}
           </div>
         )}
         <div className={`grid gap-2 ${twoPerRow ? 'grid-cols-2' : 'grid-cols-4'}`}>
@@ -264,7 +266,7 @@ export function BeatStrip({ twoPerRow = false }: { twoPerRow?: boolean }) {
               >
                 <div className="flex items-center gap-1.5">
                   <span className="text-lg/none font-bold">{beat + 1}</span>
-                  <GridSwitch bar={b} beat={beat} triplet={view.triplet} onSwitch={switchGrid} />
+                  <GridSwitch bar={b} beat={beat} triplet={view.triplet} disabled={example} onSwitch={switchGrid} />
                   {!example && <Menu label={`Bar ${b + 1}, beat ${beat + 1} menu`} items={beatMenu(editor, b, beat, view, switchGrid, dispatch)} />}
                 </div>
                 {rowCells('snare', view.snare, b, beat)}
@@ -310,10 +312,22 @@ function beatMenu(
 }
 
 /**
- * A beat's 16ths | trip switch, its current grid lit. It's left out of the Tab order, which would
+ * A beat's 16ths | trip switch, its current grid lit, disabled on an example. It's left out of the Tab order, which would
  * otherwise stop at every beat twice; the beat's ⋯ menu switches the grid from the keyboard.
  */
-function GridSwitch({ bar, beat, triplet, onSwitch }: { bar: number; beat: number; triplet: boolean; onSwitch: () => void }) {
+function GridSwitch({
+  bar,
+  beat,
+  triplet,
+  disabled,
+  onSwitch,
+}: {
+  bar: number
+  beat: number
+  triplet: boolean
+  disabled: boolean
+  onSwitch: () => void
+}) {
   const option = (grid: 'sixteenth' | 'triplet', label: string) => ({
     value: grid === 'triplet',
     label,
@@ -328,6 +342,7 @@ function GridSwitch({ bar, beat, triplet, onSwitch }: { bar: number; beat: numbe
       options={[option('sixteenth', '16ths'), option('triplet', 'trip')]}
       value={triplet}
       onChange={onSwitch}
+      disabled={disabled}
       className="ml-auto"
     />
   )

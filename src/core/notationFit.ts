@@ -28,6 +28,11 @@ export const NOTATION_LAYOUT = {
 export const MAX_NOTATION_SCALE = 1.6
 /** Where one bar a line is narrower than its minimum, the notation is drawn smaller, but no smaller than this. */
 export const MIN_NOTATION_SCALE = 0.8
+/**
+ * Scaling up may squeeze a bar, one a line, to this share of its minimum width, and no further: so
+ * eighths on a phone still fill it, and busier music is drawn smaller rather than crammed.
+ */
+const SCALE_UP_SQUEEZE = 0.8
 /** The scale goes up in hundredths, by this many. */
 const SCALE_STEP = 5
 
@@ -69,7 +74,7 @@ export function minBarWidthFor(parts: readonly StaffBar[]): number {
  * The scale (0.8 to 1.6, in steps of 0.05) and bars a line to draw an exercise of `bars` bars at,
  * in an area `width` by `height`, given one line's height at scale 1 and the narrowest a bar may be
  * (`minBarWidth`, 190 unless the music is busy). The largest scale that needs no more lines than
- * scale 1 and fits the height; 1 if even scale 1 overflows the height; below 1, the largest scale
+ * scale 1, fits the height and leaves a bar 80% of `minBarWidth`; 1 if even scale 1 overflows the height; below 1, the largest scale
  * at which one bar a line is `minBarWidth` wide (no lower than 0.8), if it isn't at 1. Also the
  * width of a bar in the drawing's units (before scaling), past the first bar's clef: an exercise on
  * one line shares the line (up to `maxBarWidth` a bar); a longer one gets a share of a full line a
@@ -103,7 +108,8 @@ export function notationFit({
   } else if (heightAt(1) <= height) {
     for (let h = 100 + SCALE_STEP; h <= MAX_NOTATION_SCALE * 100; h += SCALE_STEP) {
       const scale = h / 100
-      if (linesAt(scale) <= lines && heightAt(scale) <= height) hundredths = h
+      const roomy = availableAt(width, scale) >= minBarWidth * SCALE_UP_SQUEEZE
+      if (roomy && linesAt(scale) <= lines && heightAt(scale) <= height) hundredths = h
     }
   }
   const scale = hundredths / 100

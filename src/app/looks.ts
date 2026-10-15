@@ -1,6 +1,6 @@
 import type { Look } from '@/core'
 
-/** Each look's name, as the Look menu and the light-only hint show it. */
+/** Each look's name, as the Theme menu and the light-only hint show it. */
 const LOOK_NAMES: Record<Look, string> = {
   studio: 'Studio',
   warm: 'Warm',
@@ -13,7 +13,7 @@ const LOOK_NAMES: Record<Look, string> = {
 export const lookName = (look: Look) => LOOK_NAMES[look]
 
 /**
- * The looks the app has styles for (ADR 0013), in the Look menu's order, with each one's
+ * The looks the app has styles for (ADR 0013), in the Theme menu's order, with each one's
  * self-hosted fonts, imported only while it's chosen. A look's tokens are in styles/index.css.
  */
 export const LOOK_STYLES: readonly { look: Look; loadFonts: () => Promise<unknown> }[] = [

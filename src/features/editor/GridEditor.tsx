@@ -3,7 +3,6 @@ import { useAppStore } from '@/app/store'
 import { useCoarsePointer } from '@/app/useMediaQuery'
 import { Button } from '@/components/Button'
 import { ChevronIcon } from '@/components/icons'
-import { isExample } from '@/core'
 import { BarActions } from './BarActions'
 import { BarTabs } from './BarTabs'
 import { BeatStrip } from './BeatStrip'
@@ -89,28 +88,9 @@ export function GridEditor({ onDone }: { onDone?: () => void }) {
   )
 }
 
-/**
- * Whether the docked editor is collapsed, and its toggle. That's the device setting, except that an
- * example opens collapsed, so the music shows first; expanding it there isn't saved, and lasts
- * until another exercise is opened.
- */
+/** Whether the docked editor is collapsed, the device setting, and its toggle. */
 function useEditorCollapsed(): [boolean, () => void] {
-  const id = useAppStore((s) => s.editor.exercise.id)
-  const savedCollapsed = useAppStore((s) => s.device.editorCollapsed)
+  const collapsed = useAppStore((s) => s.device.editorCollapsed)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
-  /** The open example has been expanded since it was opened. */
-  const [exampleExpanded, setExampleExpanded] = useState(false)
-  // Opening another exercise forgets it, during the render, so a reopened example never shows expanded for a frame.
-  const [openedId, setOpenedId] = useState(id)
-  if (openedId !== id) {
-    setOpenedId(id)
-    setExampleExpanded(false)
-  }
-  const example = isExample(id)
-  const collapsed = example ? !exampleExpanded || openedId !== id : savedCollapsed
-  const toggle = () => {
-    if (example) setExampleExpanded(collapsed)
-    else setDeviceSettings({ editorCollapsed: !collapsed })
-  }
-  return [collapsed, toggle]
+  return [collapsed, () => setDeviceSettings({ editorCollapsed: !collapsed })]
 }
