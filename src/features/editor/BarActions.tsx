@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAppStore } from '@/app/store'
-import { Button } from '@/components/Button'
+import { Button, buttonClass } from '@/components/Button'
 import { Menu } from '@/components/Menu'
 import { PatternDialog } from '@/components/PatternDialog'
 import { barRange, isExample } from '@/core'
@@ -8,7 +8,7 @@ import { barRange, isExample } from '@/core'
 /**
  * Undo, redo and the bar menu, for editing without the keyboard. The menu's items are the bar keys'
  * commands, so they act on the cursor bar, or on the bars Shift+arrows selected. An example, which
- * can't be changed, has none of them. `large` buttons are big enough for a finger.
+ * can't be changed, has none of them. `large` buttons, quiet ones without a border, are big enough for a finger.
  */
 export function BarActions({ large = false }: { large?: boolean }) {
   const editor = useAppStore((s) => s.editor)
@@ -33,6 +33,9 @@ export function BarActions({ large = false }: { large?: boolean }) {
       <Menu
         label="Bar menu"
         large={large}
+        buttonClassName={large ? buttonClass({ variant: 'ghost', size: 'lg', icon: true }) : undefined}
+        // On a phone it's at the left of the sheet, so it opens rightwards to stay on the screen.
+        align={large ? 'left' : 'right'}
         items={[
           { label: `Add a bar after ${cursorBar}`, onSelect: () => dispatch({ type: 'addBar' }) },
           { label: `Duplicate ${cursorBar}`, onSelect: () => dispatch({ type: 'duplicateBar' }) },
@@ -83,7 +86,7 @@ function HistoryButton({
 }) {
   return (
     <Button
-      variant={large ? 'secondary' : 'ghost'}
+      variant="ghost"
       size={large ? 'lg' : 'sm'}
       icon
       aria-label={label}

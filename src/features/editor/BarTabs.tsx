@@ -8,8 +8,8 @@ import { inLoopRange, isExample } from '@/core'
  * A tab for each bar, the cursor's lit, the selection and loop range shaded as on the beat strip's
  * bar: a click goes to that bar, which the beat strip then shows (without taking a selection
  * along), as do ‹ and ›. The + adds a bar of rests at the end and goes to it; an example, which
- * can't be changed, has none. `large` tabs, on a phone, are big enough for a finger and stay on one
- * line: the numbered tabs scroll sideways between ‹ and ›, keeping the cursor's tab in view.
+ * can't be changed, has none. `large` tabs, on a phone, are big enough for a finger and take a row
+ * of their own: the numbered tabs scroll sideways between ‹ and ›, keeping the cursor's tab in view.
  */
 export function BarTabs({ large = false }: { large?: boolean }) {
   const barCount = useAppStore((s) => s.editor.exercise.bars.length)
@@ -24,9 +24,9 @@ export function BarTabs({ large = false }: { large?: boolean }) {
   useEffect(() => {
     if (large) currentTab.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   }, [large, current, barCount])
-  const tab = `cursor-pointer border font-semibold ${large ? 'h-9 min-w-9 rounded-lg px-2 text-sm' : 'min-w-7 rounded-md px-1.5 py-0.5 text-xs'}`
+  const tab = `cursor-pointer border font-semibold ${large ? 'h-10 min-w-10 rounded-lg px-2 text-sm' : 'min-w-7 rounded-md px-1.5 py-0.5 text-xs'}`
   return (
-    <div aria-label="Bars" className={`flex items-center gap-1 ${large ? 'min-w-0' : 'flex-wrap'}`}>
+    <div aria-label="Bars" className={`flex items-center gap-1 ${large ? 'w-full min-w-0' : 'flex-wrap'}`}>
       {!large && <span className="mr-1 text-xs text-mute">Bar</span>}
       <StepButton large={large} label="Previous bar" disabled={current === 0} onClick={() => goTo(current - 1)}>
         ‹
@@ -86,7 +86,7 @@ export function BarTabs({ large = false }: { large?: boolean }) {
 /** The numbered tabs: in a sideways-scrolling line where `sideways`, or left in the row's wrap. */
 function Scroller({ sideways, children }: { sideways: boolean; children: ReactNode }) {
   if (!sideways) return children
-  return <div className="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none]">{children}</div>
+  return <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">{children}</div>
 }
 
 /** ‹ or ›: to the bar before or after the cursor's. */
@@ -114,7 +114,7 @@ function StepButton({
       onMouseDown={keepFocus}
       onClick={onClick}
       className={`cursor-pointer rounded-md text-mute hover:text-accent disabled:cursor-default disabled:opacity-30 disabled:hover:text-mute ${
-        large ? 'h-9 min-w-7 shrink-0 text-xl/none' : 'px-1 text-sm/none'
+        large ? 'h-10 min-w-9 shrink-0 text-2xl/none' : 'px-1 text-sm/none'
       }`}
     >
       {children}

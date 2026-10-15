@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react'
-import { useId } from 'react'
+import type { KeyboardEvent, ReactNode } from 'react'
+import { useId, useRef, useState } from 'react'
 import { LOOK_STYLES, lookName } from '@/app/looks'
 import { useAppStore } from '@/app/store'
 import { Button } from '@/components/Button'
@@ -28,7 +28,10 @@ import {
   withLook,
 } from '@/core'
 
-/** `playbackGroup` adds the count-in and loop chip, for when the header has no room for them. */
+/**
+ * The settings, as the desktop's sidebar. `playbackGroup` adds the count-in and loop chip, for when
+ * the header has no room for them. `fullScreen`, on a phone, they're the phone's tabbed settings instead.
+ */
 export function SettingsSidebar({
   onCollapse,
   fullScreen = false,
@@ -38,12 +41,10 @@ export function SettingsSidebar({
   fullScreen?: boolean
   playbackGroup?: boolean
 }) {
+  if (fullScreen) return <PhoneSettings onDone={onCollapse} />
   return (
-    <aside
-      aria-label="Settings"
-      className={`flex flex-col gap-3.5 overflow-auto bg-panel p-3 ${fullScreen ? 'w-full' : 'w-[250px] border-l border-line'}`}
-    >
-      <SidebarHeading name="Settings" side="right" fullScreen={fullScreen} onCollapse={onCollapse} />
+    <aside aria-label="Settings" className="flex w-[250px] flex-col gap-3.5 overflow-auto border-l border-line bg-panel p-3">
+      <SidebarHeading name="Settings" side="right" onCollapse={onCollapse} />
       {playbackGroup && (
         <SettingGroup title="Playback">
           <div className="flex items-center justify-between gap-2">
@@ -53,8 +54,8 @@ export function SettingsSidebar({
         </SettingGroup>
       )}
       <SettingGroup title="Groove">
-        <GroovePicker large={fullScreen} />
-        <HihatFootChoice large={fullScreen} />
+        <GroovePicker />
+        <HihatFootChoice />
         <Swing />
       </SettingGroup>
       <SettingGroup title="Sticking">
@@ -63,15 +64,129 @@ export function SettingsSidebar({
         <ResetOverrides />
       </SettingGroup>
       <SettingGroup title="Mix">
-        <MixRow layer="click" large={fullScreen} />
-        <MixRow layer="exercise" large={fullScreen} />
-        <MixRow layer="groove" large={fullScreen} />
+        <MixRow layer="click" />
+        <MixRow layer="exercise" />
+        <MixRow layer="groove" />
       </SettingGroup>
       <SettingGroup title="Appearance">
-        <LookChoice large={fullScreen} />
+        <LookChoice />
         <ModeChoice />
       </SettingGroup>
     </aside>
+  )
+}
+
+const PHONE_TABS = [
+  { id: 'groove', name: 'Groove' },
+  { id: 'sticking', name: 'Sticking' },
+  { id: 'mix', name: 'Mix' },
+  { id: 'theme', name: 'Theme' },
+] as const
+
+type PhoneTab = (typeof PHONE_TABS)[number]['id']
+
+/**
+ * The settings over the whole phone screen: Loop and Count-in pinned at the top, then a tab for each
+ * section, so one section shows at a time and nothing needs a long scroll. Done closes them.
+ */
+function PhoneSettings({ onDone }: { onDone: () => void }) {
+  const [tab, setTab] = useState<PhoneTab>('groove')
+  const id = useId()
+  return (
+    <aside aria-label="Settings" className="flex w-full flex-col bg-panel">
+      <div className="flex items-center justify-between gap-2 px-4 pt-3.5 pb-2.5">
+        <h2 className="m-0 font-display text-2xl font-semibold">Settings</h2>
+        <Button variant="primary" size="lg" onClick={onDone} className="px-5">
+          Done
+        </Button>
+      </div>
+      <div className="flex items-center justify-between gap-3 px-4 pb-3.5">
+        <LoopChip />
+        <CountInToggle />
+      </div>
+      <PhoneTabs id={id} tab={tab} onChange={setTab} />
+      <div role="tabpanel" id={`${id}-panel`} aria-labelledby={`${id}-${tab}`} className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto px-4 py-5">
+        {tab === 'groove' && (
+          <>
+            <GroovePicker large />
+            <HihatFootChoice large />
+            <Swing stacked />
+          </>
+        )}
+        {tab === 'sticking' && (
+          <>
+            <Choice label="Mode" setting="sticking" options={['natural', 'alternate', 'off']} stacked />
+            <Choice label="Lead hand" setting="leadHand" options={['R', 'L']} stacked />
+            <ResetOverrides />
+          </>
+        )}
+        {tab === 'mix' && (
+          <>
+            <MixRow layer="click" large />
+            <MixRow layer="exercise" large />
+            <MixRow layer="groove" large />
+          </>
+        )}
+        {tab === 'theme' && (
+          <>
+            <LookChoice large />
+            <ModeChoice stacked />
+          </>
+        )}
+      </div>
+    </aside>
+  )
+}
+
+/** The phone settings' section tabs; the arrow keys, Home and End move between them, as in any tab list. */
+function PhoneTabs({ id, tab, onChange }: { id: string; tab: PhoneTab; onChange: (tab: PhoneTab) => void }) {
+  const list = useRef<HTMLDivElement>(null)
+  const onKeyDown = (e: KeyboardEvent) => {
+    const i = PHONE_TABS.findIndex((t) => t.id === tab)
+    const n = PHONE_TABS.length
+    const keys: Record<string, number> = { ArrowLeft: (i - 1 + n) % n, ArrowRight: (i + 1) % n, Home: 0, End: n - 1 }
+    const next = keys[e.key]
+    if (next === undefined) return
+    e.preventDefault()
+    onChange(PHONE_TABS[next].id)
+    list.current?.querySelectorAll<HTMLElement>('[role=tab]')[next]?.focus()
+  }
+  return (
+    <div ref={list} role="tablist" aria-label="Settings sections" onKeyDown={onKeyDown} className="mx-4 grid grid-cols-4 border-b border-line">
+      {PHONE_TABS.map((t) => (
+        <button
+          key={t.id}
+          type="button"
+          role="tab"
+          id={`${id}-${t.id}`}
+          aria-selected={t.id === tab}
+          aria-controls={`${id}-panel`}
+          tabIndex={t.id === tab ? 0 : -1}
+          onClick={() => onChange(t.id)}
+          className="-mb-px h-11 cursor-pointer touch-manipulation border-0 border-b-3 border-solid border-transparent bg-transparent font-semibold text-mute aria-selected:border-accent aria-selected:text-accent"
+        >
+          {t.name}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** A setting's name and its control: side by side, or `stacked` with the name above a full-width control. */
+function Labelled({ label, stacked, children }: { label: string; stacked: boolean; children: ReactNode }) {
+  if (stacked)
+    return (
+      <div className="flex flex-col gap-2">
+        <span className="font-semibold">{label}</span>
+        {/* A row, so a control that grows (flex-1) takes the width rather than the height. */}
+        <div className="flex">{children}</div>
+      </div>
+    )
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-20 shrink-0 text-mute">{label}</span>
+      {children}
+    </div>
   )
 }
 
@@ -85,12 +200,11 @@ function SettingGroup({ title, children }: { title: string; children?: ReactNode
 }
 
 /** The groove layer played and drawn with the exercise, or none. */
-function GroovePicker({ large }: { large: boolean }) {
+function GroovePicker({ large = false }: { large?: boolean }) {
   const groove = useAppStore((s) => s.editor.exercise.practice.groove)
   const setGroove = useAppStore((s) => s.setGroove)
   return (
-    <div className="flex items-center gap-2">
-      <span className="w-20 shrink-0 text-mute">Preset</span>
+    <Labelled label="Preset" stacked={large}>
       <SelectMenu
         label="Groove preset"
         large={large}
@@ -98,7 +212,7 @@ function GroovePicker({ large }: { large: boolean }) {
         value={groovePreset(groove).id}
         onChange={setGroove}
       />
-    </div>
+    </Labelled>
   )
 }
 
@@ -111,12 +225,11 @@ const HIHAT_FOOT_OPTIONS: Record<HihatFoot, { label: string; hint?: string }> = 
 }
 
 /** The hi-hat foot played in every bar, with any groove or none, in place of the groove's own (ADR 0010). */
-function HihatFootChoice({ large }: { large: boolean }) {
+function HihatFootChoice({ large = false }: { large?: boolean }) {
   const hihatFoot = useAppStore((s) => s.editor.exercise.practice.hihatFoot)
   const setHihatFoot = useAppStore((s) => s.setHihatFoot)
   return (
-    <div className="flex items-center gap-2">
-      <span className="w-20 shrink-0 text-mute">Hi-hat foot</span>
+    <Labelled label="Hi-hat foot" stacked={large}>
       <SelectMenu
         label="Hi-hat foot"
         large={large}
@@ -124,7 +237,7 @@ function HihatFootChoice({ large }: { large: boolean }) {
         value={hihatFoot}
         onChange={setHihatFoot}
       />
-    </div>
+    </Labelled>
   )
 }
 
@@ -140,36 +253,46 @@ const SWING_PRESETS = [
 const swingFromPercent = (percent: number) =>
   SWING_PRESETS.find((preset) => Math.abs(preset.swing * 100 - percent) < 0.05)?.swing ?? percent / 100
 
-/** The swing amount: a slider from straight to dotted, and chips for straight and the common feels. */
-function Swing() {
+/**
+ * The swing amount: a slider from straight to dotted, and chips for straight and the common feels.
+ * `stacked`, its name and percent sit over a full-width slider.
+ */
+function Swing({ stacked = false }: { stacked?: boolean }) {
   const swing = useAppStore((s) => s.editor.exercise.practice.swing)
   const setSwing = useAppStore((s) => s.setSwing)
   const preset = SWING_PRESETS.find((p) => Math.abs(p.swing - swing) < 1e-6)
+  const slider = (
+    <Slider label="Swing" min={MIN_SWING} max={MAX_SWING} step={0.005} value={swing} reset={MIN_SWING} onChange={setSwing} className="flex-1" />
+  )
+  const percent = (
+    <ValueField
+      label="Swing %"
+      value={swing * 100}
+      unit="%"
+      min={MIN_SWING * 100}
+      max={MAX_SWING * 100}
+      decimals={1}
+      onChange={(percent) => setSwing(swingFromPercent(percent))}
+      className="w-16 sm:w-14"
+    />
+  )
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center gap-2">
-        <span className="text-mute">Swing</span>
-        <Slider
-          label="Swing"
-          min={MIN_SWING}
-          max={MAX_SWING}
-          step={0.005}
-          value={swing}
-          reset={MIN_SWING}
-          onChange={setSwing}
-          className="flex-1"
-        />
-        <ValueField
-          label="Swing %"
-          value={swing * 100}
-          unit="%"
-          min={MIN_SWING * 100}
-          max={MAX_SWING * 100}
-          decimals={1}
-          onChange={(percent) => setSwing(swingFromPercent(percent))}
-          className="w-16 sm:w-14"
-        />
-      </div>
+    <div className={`flex flex-col ${stacked ? 'gap-2.5' : 'gap-1.5'}`}>
+      {stacked ? (
+        <>
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-semibold">Swing</span>
+            {percent}
+          </div>
+          <div className="flex">{slider}</div>
+        </>
+      ) : (
+        <div className="flex items-center gap-2">
+          <span className="text-mute">Swing</span>
+          {slider}
+          {percent}
+        </div>
+      )}
       <Segmented
         label="Swing presets"
         fill
@@ -186,8 +309,9 @@ function Swing() {
 /**
  * A playback layer in the mix: its volume on this device, 100% being its usual level, and a button
  * that mutes it, so the drummer can practise against any combination; both apply while playing.
+ * `large`, on a phone, its name and percent sit over the slider and a finger-sized mute.
  */
-function MixRow({ layer, large }: { layer: Layer; large: boolean }) {
+function MixRow({ layer, large = false }: { layer: Layer; large?: boolean }) {
   const setting: VolumeSetting = `${layer}Volume`
   const mute = `${layer}Muted` as const
   const label = layer[0].toUpperCase() + layer.slice(1)
@@ -196,52 +320,73 @@ function MixRow({ layer, large }: { layer: Layer; large: boolean }) {
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   const setVolume = (value: number, dragging = false) =>
     setDeviceSettings({ [setting]: value }, { dragging })
+  const slider = (
+    <Slider
+      label={`${label} volume`}
+      min={0}
+      max={MAX_VOLUME}
+      step={0.01}
+      value={volume}
+      reset={DEFAULT_DEVICE_SETTINGS[setting]}
+      onChange={(value, { dragging }) => setVolume(value, dragging)}
+      className={`flex-1 ${muted ? 'opacity-40' : ''}`}
+    />
+  )
+  const percent = (
+    <ValueField
+      label={`${label} volume %`}
+      value={volume * 100}
+      unit="%"
+      min={0}
+      max={MAX_VOLUME * 100}
+      decimals={0}
+      onChange={(percent) => setVolume(percent / 100)}
+      className="w-14 sm:w-12"
+    />
+  )
+  const muteButton = (
+    <Button
+      variant="ghost"
+      icon
+      size={large ? 'lg' : 'md'}
+      aria-label={`Mute the ${layer}`}
+      aria-pressed={muted}
+      title={muted ? `Unmute the ${layer}` : `Mute the ${layer}`}
+      onClick={() => setDeviceSettings({ [mute]: !muted })}
+      className="-mr-1 aria-pressed:text-danger!"
+    >
+      {muted ? <SpeakerMutedIcon /> : <SpeakerIcon />}
+    </Button>
+  )
+  if (large)
+    return (
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-semibold">{label}</span>
+          {percent}
+        </div>
+        <div className="flex items-center gap-2">
+          {slider}
+          {muteButton}
+        </div>
+      </div>
+    )
   return (
     <div className="flex items-center gap-2">
       <span className="w-14 text-mute">{label}</span>
-      <Slider
-        label={`${label} volume`}
-        min={0}
-        max={MAX_VOLUME}
-        step={0.01}
-        value={volume}
-        reset={DEFAULT_DEVICE_SETTINGS[setting]}
-        onChange={(value, { dragging }) => setVolume(value, dragging)}
-        className={`flex-1 ${muted ? 'opacity-40' : ''}`}
-      />
-      <ValueField
-        label={`${label} volume %`}
-        value={volume * 100}
-        unit="%"
-        min={0}
-        max={MAX_VOLUME * 100}
-        decimals={0}
-        onChange={(percent) => setVolume(percent / 100)}
-        className="w-14 sm:w-12"
-      />
-      <Button
-        variant="ghost"
-        icon
-        size={large ? 'lg' : 'md'}
-        aria-label={`Mute the ${layer}`}
-        aria-pressed={muted}
-        title={muted ? `Unmute the ${layer}` : `Mute the ${layer}`}
-        onClick={() => setDeviceSettings({ [mute]: !muted })}
-        className="-mr-1 aria-pressed:text-danger!"
-      >
-        {muted ? <SpeakerMutedIcon /> : <SpeakerIcon />}
-      </Button>
+      {slider}
+      {percent}
+      {muteButton}
     </div>
   )
 }
 
 /** The theme: how the app looks on this device, its look in code (ADR 0013); a light-only one sets the mode to Auto. */
-function LookChoice({ large }: { large: boolean }) {
+function LookChoice({ large = false }: { large?: boolean }) {
   const device = useAppStore((s) => s.device)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   return (
-    <div className="flex items-center gap-2">
-      <span className="w-20 shrink-0 text-mute">Theme</span>
+    <Labelled label="Theme" stacked={large}>
       <SelectMenu
         label="Theme"
         large={large}
@@ -249,7 +394,7 @@ function LookChoice({ large }: { large: boolean }) {
         value={device.look}
         onChange={(look) => setDeviceSettings(withLook(device, look))}
       />
-    </div>
+    </Labelled>
   )
 }
 
@@ -259,7 +404,7 @@ const MODE_NAMES: Record<Theme, string> = { auto: 'Auto', light: 'Light', dark: 
  * The mode, light or dark on this device, or Auto to follow the device's own setting. A light-only
  * look draws light whatever it is, so the mode is disabled while one is chosen, saying why.
  */
-function ModeChoice() {
+function ModeChoice({ stacked = false }: { stacked?: boolean }) {
   const theme = useAppStore((s) => s.device.theme)
   const look = useAppStore((s) => s.device.look)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
@@ -267,10 +412,11 @@ function ModeChoice() {
   const hint = useId()
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-mute">Mode</span>
+      <div className={stacked ? 'flex flex-col gap-2' : 'flex items-center justify-between gap-2'}>
+        <span className={stacked ? 'font-semibold' : 'text-mute'}>Mode</span>
         <Segmented
           label="Mode"
+          fill={stacked}
           options={THEMES.map((option) => ({ value: option, label: MODE_NAMES[option] }))}
           value={theme}
           onChange={(option) => setDeviceSettings({ theme: option })}
@@ -279,7 +425,7 @@ function ModeChoice() {
         />
       </div>
       {lightOnly && (
-        <p id={hint} className="m-0 self-end text-xs text-mute">
+        <p id={hint} className={`m-0 text-xs text-mute ${stacked ? '' : 'self-end'}`}>
           {lookName(look)} is light only
         </p>
       )}
@@ -304,18 +450,21 @@ function Choice<K extends keyof ExerciseSettings>({
   label,
   setting,
   options,
+  stacked = false,
 }: {
   label: string
   setting: K
   options: ExerciseSettings[K][]
+  stacked?: boolean
 }) {
   const value = useAppStore((s) => s.editor.exercise[setting])
   const dispatch = useAppStore((s) => s.dispatch)
   return (
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-mute">{label}</span>
+    <div className={stacked ? 'flex flex-col gap-2' : 'flex items-center justify-between gap-2'}>
+      <span className={stacked ? 'font-semibold' : 'text-mute'}>{label}</span>
       <Segmented
         label={label}
+        fill={stacked}
         options={options.map((option) => ({ value: option, label: String(option) }))}
         value={value}
         onChange={(option) => dispatch({ type: 'setExerciseSettings', settings: { [setting]: option } })}
