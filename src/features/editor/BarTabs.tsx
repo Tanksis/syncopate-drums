@@ -84,42 +84,42 @@ export function BarTabs({ large = false }: { large?: boolean }) {
   )
 }
 
+/** The most bars the phone's row shows as dots; past it, "3 / 12" opens a list of them. */
+export const MAX_BAR_DOTS = 6
+
 /**
- * The phone's bars, in little room: ‹ and › either side of "Bar 3 of 12 ▾", which opens a list of
- * the bars to go to. It's shaded as the cursor bar's tab would be, when selected or in the loop range.
+ * The phone's bars, in the row at the foot of the editor sheet: a dot for each, which goes to that
+ * bar, the cursor's a pill in the accent, the selection's and the loop range's shaded as their tabs
+ * would be. The beat cards above swipe between bars too. A dashed + adds a bar of rests at the end
+ * and goes to it, as the tabs' + does; an example has none. Past MAX_BAR_DOTS bars, "3 / 12" stands
+ * in for the dots and opens a list of the bars to go to.
  */
-export function BarPicker() {
+export function BarDots() {
   const barCount = useAppStore((s) => s.editor.exercise.bars.length)
+  const example = useAppStore((s) => isExample(s.editor.exercise.id))
   const current = useAppStore((s) => s.editor.cursor.bar)
   const selection = useAppStore((s) => s.editor.selection)
   const loopRange = useAppStore((s) => s.editor.exercise.practice.loopRange)
   const dispatch = useAppStore((s) => s.dispatch)
   const goTo = (bar: number) => dispatch({ type: 'moveTo', bar, beat: 0 })
-  const selected = selection !== null && current >= selection.first && current <= selection.last
-  const look = selected
-    ? 'border-accent bg-select text-ink'
-    : inLoopRange(loopRange, current)
-      ? 'border-loop-line bg-loop text-loop-ink'
-      : 'border-edge bg-card text-ink'
+  const isSelected = (bar: number) => selection !== null && bar >= selection.first && bar <= selection.last
+  const dot = (bar: number) =>
+    bar === current
+      ? 'w-4 bg-accent'
+      : isSelected(bar)
+        ? 'w-2 bg-select ring-[1.5px] ring-accent'
+        : inLoopRange(loopRange, bar)
+          ? 'w-2 bg-loop ring-[1.5px] ring-loop-line'
+          : 'w-2 bg-edge/55'
   return (
-    <div aria-label="Bars" className="flex min-w-0 flex-1 items-center gap-0.5">
-      <StepButton large label="Previous bar" disabled={current === 0} onClick={() => goTo(current - 1)}>
-        ‹
-      </StepButton>
-      <div className="flex min-w-0 flex-1 justify-center">
+    <div aria-label="Bars" className="flex min-w-0 flex-1 items-center justify-center">
+      {barCount > MAX_BAR_DOTS ? (
         <Menu
           label={`Bar ${current + 1} of ${barCount}. Choose a bar`}
           large
           align="left"
-          icon={
-            <span className="flex items-center gap-1 whitespace-nowrap">
-              Bar {current + 1} of {barCount}
-              <svg aria-hidden width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-mute">
-                <path d="M3 4.5l3 3 3-3" />
-              </svg>
-            </span>
-          }
-          buttonClassName={`flex h-9 cursor-pointer touch-manipulation items-center rounded-full border px-3 text-sm font-semibold tabular-nums ${look}`}
+          icon={`${current + 1} / ${barCount}`}
+          buttonClassName="flex h-9 cursor-pointer touch-manipulation items-center rounded-full border border-edge bg-card px-3 text-sm font-semibold text-ink tabular-nums"
           items={Array.from({ length: barCount }, (_, bar) => ({
             label: `Bar ${bar + 1}`,
             hint: inLoopRange(loopRange, bar) ? 'looped' : undefined,
@@ -127,10 +127,39 @@ export function BarPicker() {
             onSelect: () => goTo(bar),
           }))}
         />
-      </div>
-      <StepButton large label="Next bar" disabled={current === barCount - 1} onClick={() => goTo(current + 1)}>
-        ›
-      </StepButton>
+      ) : (
+        Array.from({ length: barCount }, (_, bar) => (
+          <button
+            key={bar}
+            type="button"
+            aria-label={`Go to bar ${bar + 1}${inLoopRange(loopRange, bar) ? ', in the loop' : ''}`}
+            aria-current={bar === current || undefined}
+            title={`Bar ${bar + 1}`}
+            tabIndex={-1}
+            onMouseDown={keepFocus}
+            onClick={() => goTo(bar)}
+            className="flex h-11 w-5 shrink-0 cursor-pointer touch-manipulation items-center justify-center"
+          >
+            <span aria-hidden className={`h-2 rounded-full transition-[width] ${dot(bar)}`} />
+          </button>
+        ))
+      )}
+      {!example && (
+        <button
+          type="button"
+          aria-label="Add a bar at the end"
+          title="Add a bar at the end"
+          tabIndex={-1}
+          onMouseDown={keepFocus}
+          onClick={() => {
+            goTo(barCount - 1)
+            dispatch({ type: 'addBar' })
+          }}
+          className="ml-1.5 flex size-7 shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-full border border-dashed border-edge text-sm/none text-mute hover:text-accent"
+        >
+          +
+        </button>
+      )}
     </div>
   )
 }
