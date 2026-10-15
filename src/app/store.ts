@@ -6,6 +6,7 @@ import type { DeviceSettings, EditCommand, MetronomeSettings, EditorState, Exerc
 import {
   DEFAULT_DEVICE_SETTINGS,
   addedOnTop,
+  clampMetronomeBpm,
   applyEdit,
   deleteFolder,
   duplicateExercise,
@@ -75,7 +76,10 @@ interface AppState {
   setPaused: (paused: PausedAt | undefined) => void
   /** Volumes, the exercise mute, the count-in and the sidebars, kept for this device; `dragging` as for `setBpm`. */
   setDeviceSettings: (settings: Partial<DeviceSettings>, options?: { dragging?: boolean }) => void
-  /** The metronome's settings, kept for this device and played at once; `dragging` as for `setBpm`. */
+  /**
+   * The metronome's settings, kept for this device and played at once, its BPM kept in range;
+   * `dragging` as for `setBpm`.
+   */
   setMetronome: (settings: Partial<MetronomeSettings>, options?: { dragging?: boolean }) => void
   /** Loops just that bar, or with `extend` grows the loop range to take it in. */
   loopBar: (bar: number, options?: { extend?: boolean }) => void
@@ -282,7 +286,10 @@ export const useAppStore = create<AppState>()((set, get) => {
       set({ device })
       saveDevice(device, { debounced: dragging })
     },
-    setMetronome: (settings, options) => get().setDeviceSettings({ metronome: { ...get().device.metronome, ...settings } }, options),
+    setMetronome: (settings, options) => {
+      const metronome = { ...get().device.metronome, ...settings }
+      get().setDeviceSettings({ metronome: { ...metronome, bpm: clampMetronomeBpm(metronome.bpm) } }, options)
+    },
     loopBar: (bar, options) => {
       const { editor } = get()
       const exercise = loopAt(editor.exercise, bar, options)

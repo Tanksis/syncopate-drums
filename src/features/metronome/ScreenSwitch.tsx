@@ -4,6 +4,7 @@ import { useAppStore } from '@/app/store'
 import type { Screen } from '@/core'
 import { SCREENS } from '@/core'
 
+/** Each screen's name on its tab. */
 const SCREEN_NAMES: Record<Screen, string> = { practice: 'Practice', metronome: 'Metronome' }
 
 /**

@@ -2,7 +2,6 @@ import type { ReactNode } from 'react'
 import { useEffect, useRef } from 'react'
 import { useAppStore } from '@/app/store'
 import { keepFocus } from '@/components/keepFocus'
-import { clampMetronomeBpm } from '@/core'
 
 /** How long a BPM button is held before it repeats, and how often it repeats then, in ms. */
 const REPEAT_DELAY = 400
@@ -30,7 +29,7 @@ export function BpmStep({
   /** Moves the tempo by `by`; while `dragging`, it isn't saved yet. */
   const change = (by: number, dragging: boolean) => {
     const { editor, device, setBpm, setMetronome } = useAppStore.getState()
-    if (tempo === 'metronome') setMetronome({ bpm: clampMetronomeBpm(device.metronome.bpm + by) }, { dragging })
+    if (tempo === 'metronome') setMetronome({ bpm: device.metronome.bpm + by }, { dragging })
     else setBpm(editor.exercise.practice.bpm + by, { dragging })
   }
   const release = () => {

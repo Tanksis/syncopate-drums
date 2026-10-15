@@ -1,20 +1,17 @@
 import type { KeyboardEvent, PointerEvent } from 'react'
 import { useRef } from 'react'
 import { useAppStore } from '@/app/store'
-import type { BeatLevel, DialPoint } from '@/core'
-import { MAX_BPM, MIN_METRONOME_BPM, clampMetronomeBpm, dialBpm, dialTurn, tempoName } from '@/core'
+import type { DialPoint } from '@/core'
+import { MAX_BPM, MIN_METRONOME_BPM, dialBpm, dialTurn, tempoName } from '@/core'
+import { LEVEL_COLOUR } from './BeatBlocks'
 
 /** The dial's size and the radius its beat dots sit on, in px. */
 const SIZE = 280
 const DOT_RADIUS = 117
 
-/** A playing dot's colour takes its level's; Off shows only its outline. */
-const PLAYING_DOT: Record<BeatLevel, string> = {
-  accent: 'bg-accent',
-  normal: 'bg-ink',
-  soft: 'bg-edge',
-  off: 'bg-card',
-}
+/** Near the centre a point's angle jumps about, so a point closer than this, in px, doesn't turn the dial. */
+const DEAD_CENTRE = 12
+
 
 /**
  * The metronome's tempo on a ring with a dot per beat: the BPM in the middle, with its tempo name.
@@ -24,7 +21,8 @@ const PLAYING_DOT: Record<BeatLevel, string> = {
 export function Dial({ beat }: { beat: number | undefined }) {
   const { bpm, levels } = useAppStore((s) => s.device.metronome)
   const setMetronome = useAppStore((s) => s.setMetronome)
-  const drag = useRef<{ startBpm: number; turned: number; last: DialPoint } | undefined>(undefined)
+  // `last` is unset until the drag reaches a point outside the dead centre; `moved` once it changed the BPM.
+  const drag = useRef<{ startBpm: number; turned: number; last?: DialPoint; moved: boolean } | undefined>(undefined)
 
   const pointFrom = (e: PointerEvent<HTMLElement>): DialPoint => {
     const box = e.currentTarget.getBoundingClientRect()
@@ -33,30 +31,39 @@ export function Dial({ beat }: { beat: number | undefined }) {
   const onPointerDown = (e: PointerEvent<HTMLElement>) => {
     if (e.button !== 0) return
     e.currentTarget.setPointerCapture(e.pointerId)
-    drag.current = { startBpm: bpm, turned: 0, last: pointFrom(e) }
+    drag.current = { startBpm: bpm, turned: 0, moved: false }
+    // The press is where the turn is measured from.
+    onPointerMove(e)
   }
   const onPointerMove = (e: PointerEvent<HTMLElement>) => {
     const current = drag.current
     if (!current) return
     const point = pointFrom(e)
-    // Right at the centre the angle jumps about, so a point there doesn't turn the dial.
-    if (Math.hypot(point.x, point.y) < 12) return
-    current.turned += dialTurn(current.last, point)
+    if (Math.hypot(point.x, point.y) < DEAD_CENTRE) return
+    if (current.last) current.turned += dialTurn(current.last, point)
     current.last = point
     const next = dialBpm(current.startBpm, current.turned)
-    if (next !== useAppStore.getState().device.metronome.bpm) setMetronome({ bpm: next }, { dragging: true })
+    // Past the slowest or fastest the drag starts again from there, so turning back moves at once.
+    if (next === MIN_METRONOME_BPM || next === MAX_BPM) {
+      current.startBpm = next
+      current.turned = 0
+    }
+    if (next === useAppStore.getState().device.metronome.bpm) return
+    current.moved = true
+    setMetronome({ bpm: next }, { dragging: true })
   }
   const onPointerEnd = () => {
-    if (!drag.current) return
+    const moved = drag.current?.moved
     drag.current = undefined
-    setMetronome({}, { dragging: false })
+    // Saves the tempo the drag left, now.
+    if (moved) setMetronome({ bpm: useAppStore.getState().device.metronome.bpm })
   }
   const onKeyDown = (e: KeyboardEvent) => {
     const by = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1, PageUp: 10, PageDown: -10 }[e.key]
     if (by === undefined) return
     e.preventDefault()
     e.stopPropagation()
-    setMetronome({ bpm: clampMetronomeBpm(bpm + by) })
+    setMetronome({ bpm: bpm + by })
   }
 
   return (
@@ -86,7 +93,7 @@ export function Dial({ beat }: { beat: number | undefined }) {
             key={i}
             aria-hidden
             className={`absolute rounded-full border-2 transition-all duration-75 ${level === 'off' ? 'border-edge' : 'border-card'} ${
-              on ? PLAYING_DOT[level] : level === 'off' ? 'bg-card' : 'bg-edge/40'
+              on ? LEVEL_COLOUR[level] : level === 'off' ? 'bg-card' : 'bg-edge/40'
             }`}
             style={{
               width: size,

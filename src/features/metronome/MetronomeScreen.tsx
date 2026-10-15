@@ -14,6 +14,9 @@ import { useMetronomeBeat } from './useMetronomeBeat'
 /** The − and + beside Play. */
 const stepClass = 'size-13 rounded-full border-edge bg-card text-2xl/none active:border-accent active:text-accent'
 
+/** Tap tempo and Sound: round, finger-sized buttons. */
+const pillClass = 'rounded-full! px-5.5!'
+
 /**
  * The phone's Metronome screen: the time signature and subdivision at the top, a block per beat,
  * the dial, − Play +, then Tap tempo and the Sound sheet.
@@ -41,7 +44,7 @@ export function MetronomeScreen() {
       </div>
       <div className="flex justify-center gap-3 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
         <TapTempo />
-        <Button size="lg" onClick={() => setSoundOpen(true)} aria-haspopup="dialog" className="rounded-full! px-5.5!">
+        <Button size="lg" onClick={() => setSoundOpen(true)} aria-haspopup="dialog" className={pillClass}>
           Sound
         </Button>
       </div>
@@ -68,6 +71,7 @@ function RhythmButtons() {
   )
 }
 
+/** A small button with its setting's name over its value. The Rhythm sheet it opens comes with metronome ticket 04. */
 function RhythmButton({ label, children }: { label: string; children: ReactNode }) {
   return (
     <button
@@ -115,7 +119,7 @@ function TapTempo() {
       // A tap counts as the finger lands, not as it lifts; the keyboard (detail 0) clicks.
       onPointerDown={(e) => e.button === 0 && tap()}
       onClick={(e) => e.detail === 0 && tap()}
-      className="rounded-full! px-5.5!"
+      className={pillClass}
     >
       Tap tempo
     </Button>

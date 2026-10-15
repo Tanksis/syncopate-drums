@@ -6,7 +6,8 @@ import { METRONOME_SOUNDS } from '@/core'
 import { previewMetronomeSound } from '@/features/playback/engine'
 import { MetronomeVolume } from './MetronomeVolume'
 
-export const SOUND_NAMES: Record<MetronomeSound, string> = {
+/** Each sound's name in the Sound sheet. */
+const SOUND_NAMES: Record<MetronomeSound, string> = {
   beep: 'Beep',
   woodBlock: 'Wood block',
   cowbell: 'Cowbell',

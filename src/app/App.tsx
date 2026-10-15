@@ -80,7 +80,7 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
   const { library, settings } = sidebars
   const example = useAppStore((s) => isExample(s.editor.exercise.id))
   const copyToLibrary = useAppStore((s) => s.duplicateOpenExercise)
-  const metronome = useAppStore((s) => s.device.screen === 'metronome')
+  const onMetronome = useAppStore((s) => s.device.screen === 'metronome')
   const [editOpen, setEditOpen] = useState(false)
   // Opening an example closes the sheet, so it doesn't come back with the next exercise.
   useEffect(() => {
@@ -93,7 +93,7 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
         <PhoneHeaderButton label="Open exercises" expanded={library.state === 'overlay'} onClick={library.onOpen}>
           <MenuIcon />
         </PhoneHeaderButton>
-        {metronome ? (
+        {onMetronome ? (
           <ScreenSwitch className="mx-2 flex-1" />
         ) : (
           <>
@@ -108,7 +108,7 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
         </PhoneHeaderButton>
       </header>
       <NotSaving className="border-b border-line bg-card px-3 py-1 text-xs" />
-      {metronome ? (
+      {onMetronome ? (
         <MetronomeScreen />
       ) : (
         <>
