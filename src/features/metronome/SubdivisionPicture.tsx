@@ -14,7 +14,7 @@ const MIDDLE_Y = 40
 const NOTES_WIDTH = 46
 
 /** Draws one beat of a subdivision on a stave that isn't drawn, so the glyphs are the notation's without its lines. */
-function drawPicture(el: HTMLDivElement, id: SubdivisionId, size: number) {
+function drawPicture(el: HTMLDivElement, id: SubdivisionId, size: number, inline: boolean) {
   el.replaceChildren()
   const { triplet, notes } = subdivisionNotation(id)
   const renderer = new Renderer(el, Renderer.Backends.SVG)
@@ -40,12 +40,17 @@ function drawPicture(el: HTMLDivElement, id: SubdivisionId, size: number) {
   beams.forEach((b) => b.setContext(ctx).draw())
   tuplet?.setContext(ctx).draw()
 
-  // Centred across on what was drawn, and at a fixed height, so every picture's glyphs are one size and sit level.
+  // Centred across on what was drawn, and at a fixed height, so every picture's glyphs are one size and
+  // sit level; `inline`, centred down on the notes too (from stem tip to notehead, as VexFlow boxes
+  // them: a glyph's own box runs far above and below it), to sit level with the text beside it.
   const svg = el.querySelector('svg')!
   const box = svg.getBBox()
   const w = WIDTH / SCALE
   const h = HEIGHT / SCALE
-  svg.setAttribute('viewBox', `${box.x + box.width / 2 - w / 2} ${MIDDLE_Y - h / 2} ${w} ${h}`)
+  const top = Math.min(...staveNotes.map((n) => n.getBoundingBox().getY()))
+  const bottom = Math.max(...staveNotes.map((n) => n.getBoundingBox().getY() + n.getBoundingBox().getH()))
+  const middle = inline ? (top + bottom) / 2 : MIDDLE_Y
+  svg.setAttribute('viewBox', `${box.x + box.width / 2 - w / 2} ${middle - h / 2} ${w} ${h}`)
   svg.setAttribute('width', String(WIDTH * size))
   svg.setAttribute('height', String(HEIGHT * size))
   // The picture takes its button's text colour.
@@ -55,22 +60,28 @@ function drawPicture(el: HTMLDivElement, id: SubdivisionId, size: number) {
 /**
  * A subdivision drawn as one beat of notation with VexFlow, so its glyphs match the staff's, but
  * with no staff lines. It is named by the subdivision's name. `size` scales it from the Rhythm sheet's.
+ * An `inline` picture stands for a value written in bold beside it (the Metronome screen's "4/4"): it
+ * is centred on its own glyphs, and drawn heavier to match the bold text.
  */
-export function SubdivisionPicture({ id, size = 1 }: { id: SubdivisionId; size?: number }) {
+export function SubdivisionPicture({ id, size = 1, inline = false }: { id: SubdivisionId; size?: number; inline?: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
     let current = true
-    notationFontsReady.then(() => current && drawPicture(ref.current!, id, size)).catch((error: unknown) => console.error(error))
+    notationFontsReady.then(() => current && drawPicture(ref.current!, id, size, inline)).catch((error: unknown) => console.error(error))
     return () => {
       current = false
     }
-  }, [id, size])
+  }, [id, size, inline])
   return (
     <div
       ref={ref}
       role="img"
       aria-label={subdivisionOf(id).name}
-      className="pointer-events-none flex items-center justify-center"
+      // Heavier: the stems and noteheads outlined in their colour, in the picture's units. The beams
+      // are heavy already, and outlined they'd run together, as would a triplet's "3" with its beam.
+      className={`pointer-events-none flex items-center justify-center ${
+        inline ? '[&_.vf-notehead_text]:[stroke-width:2.5px] [&_.vf-notehead_text,&_.vf-stem_path]:[stroke:currentColor] [&_.vf-stem_path]:[stroke-width:3.5px]' : ''
+      }`}
       style={{ width: WIDTH * size, height: HEIGHT * size }}
     />
   )
