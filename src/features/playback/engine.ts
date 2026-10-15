@@ -162,8 +162,25 @@ function heardTime(ctx: AudioContext): number {
   return output - HIGHLIGHT_LATENCY
 }
 
-/** The audio context, running, with the samples loaded: made on first use. */
+/**
+ * Whether playback is meant to be running but the system has stopped the audio: on iOS, leaving
+ * the app interrupts the page's audio context.
+ */
+export function audioInterrupted(): boolean {
+  return cursor !== undefined && audio !== undefined && audio.ctx.state !== 'running'
+}
+
+/**
+ * The audio context, running, with the samples loaded: made on first use. A context that isn't
+ * running once it has been started was stopped by the system (on iOS, by leaving the app), and
+ * its resume() may wait for good, so a fresh one is made, here in the Play gesture, keeping the
+ * samples.
+ */
 async function readyAudio(): Promise<Audio> {
+  if (audio && audio.ctx.state !== 'running') {
+    audio.ctx.close().catch(() => {})
+    audio = { ...createAudio(), buffers: audio.buffers }
+  }
   const ready = (audio ??= createAudio())
   loading ??= loadSamples(ready).catch((error) => {
     loading = undefined // let the next start try again
