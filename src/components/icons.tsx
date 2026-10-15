@@ -41,6 +41,20 @@ export const TrashIcon = () => (
   </Icon>
 )
 
+/** A curved arrow back: undo. */
+export const UndoIcon = () => (
+  <Icon>
+    <path d="M5.6 2.4L2.4 5.6l3.2 3.2M2.4 5.6h7.2a4 4 0 0 1 0 8H8" />
+  </Icon>
+)
+
+/** A curved arrow on: redo. */
+export const RedoIcon = () => (
+  <Icon>
+    <path d="M10.4 2.4l3.2 3.2-3.2 3.2M13.6 5.6H6.4a4 4 0 0 0 0 8H8" />
+  </Icon>
+)
+
 /** Three dots in a row. */
 export const MoreIcon = () => (
   <Icon>
