@@ -112,4 +112,21 @@ describe('notationFit with a busy minimum bar width', () => {
   it('stays at 1 where a quarter bar fits at 1, even if the height is short', () => {
     expect(notationFit({ bars: 1, width: 390, height: 100, lineHeight: LINE, minBarWidth: 190 }).scale).toBe(1)
   })
+
+  it('scales triplets up on a phone only while a bar keeps 80% of its minimum, so they stay spread out', () => {
+    // 390 / 1.3 = 300, less 2 × 10 margin and the 70 clef: 210, the last scale with 80% of 260 (208).
+    expect(notationFit({ bars: 2, width: 390, height: 800, lineHeight: LINE, minBarWidth: 260 })).toEqual({
+      scale: 1.3,
+      barsPerLine: 1,
+      barWidth: 210,
+    })
+  })
+
+  it('still scales eighths up to 1.6 on a phone, with 80% of 190 to spare', () => {
+    expect(notationFit({ bars: 4, width: 390, height: 1000, lineHeight: LINE, minBarWidth: 190 })).toEqual({
+      scale: 1.6,
+      barsPerLine: 1,
+      barWidth: 153,
+    })
+  })
 })

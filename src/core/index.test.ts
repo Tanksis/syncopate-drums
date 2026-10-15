@@ -114,8 +114,8 @@ describe('stored device settings', () => {
 })
 
 describe('looks', () => {
-  it('start on Studio', () => {
-    expect(DEFAULT_DEVICE_SETTINGS.look).toBe('studio')
+  it('start on Warm', () => {
+    expect(DEFAULT_DEVICE_SETTINGS.look).toBe('warm')
   })
 
   it('set the mode to auto when choosing a light-only look', () => {
@@ -156,8 +156,8 @@ describe('looks', () => {
     expect(deviceSettingsFrom({ look: 'neon', countIn: false })).toEqual({ ...DEFAULT_DEVICE_SETTINGS, countIn: false })
   })
 
-  it('load settings stored before looks with Studio', () => {
-    expect(deviceSettingsFrom({ theme: 'dark' })).toMatchObject({ look: 'studio', theme: 'dark' })
+  it('load settings stored before looks with Warm', () => {
+    expect(deviceSettingsFrom({ theme: 'dark' })).toMatchObject({ look: 'warm', theme: 'dark' })
   })
 })
 

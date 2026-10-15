@@ -170,7 +170,7 @@ export type Theme = 'auto' | 'light' | 'dark'
 
 export const THEMES: readonly Theme[] = ['auto', 'light', 'dark']
 
-/** The looks, in the order the Look menu lists them; Studio is the default. */
+/** The looks, in the order the Theme menu lists them; Warm is the default. */
 export type Look = 'studio' | 'warm' | 'bold' | 'score' | 'riso' | 'catalogue'
 
 export const LOOKS: readonly Look[] = ['studio', 'warm', 'bold', 'score', 'riso', 'catalogue']
@@ -221,7 +221,7 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   settingsSidebarOpen: true,
   editorCollapsed: false,
   theme: 'auto',
-  look: 'studio',
+  look: 'warm',
 }
 
 /** The device settings that are a playback layer's volume. */

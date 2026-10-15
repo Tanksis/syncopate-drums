@@ -37,19 +37,19 @@ The span of bars within an exercise that repeats during practice; the whole exer
 How an exercise is practiced rather than what it contains: BPM, loop range, groove preset, swing amount and hi-hat foot. Remembered per exercise.
 
 **Device settings**:
-How the app is set up on this computer rather than how an exercise is practiced: volumes and mutes (the Mix), the count-in toggle, the look and mode, which exercise was last open, which sidebar tab is showing, which folders are collapsed, and whether the grid editor is collapsed. Kept per device and never exported.
+How the app is set up on this computer rather than how an exercise is practiced: volumes and mutes (the Mix), the count-in toggle, the theme and mode, which exercise was last open, which sidebar tab is showing, which folders are collapsed, and whether the grid editor is collapsed. Kept per device and never exported.
 
 **Mix**:
 How loud each playback layer (click, exercise, groove) plays on this device, and which are muted, set in the Mix section of Settings. A muted layer plays nothing, so the drummer can practise against any combination.
 _Avoid_: Volume (for the section)
 
-**Look**:
-The app's visual style, chosen in Appearance: Studio (the default), Warm, Bold, Score, Riso or Catalogue. A look changes colours, fonts, corners, borders, shadows and a few ornaments, never the layout (ADR 0013). Score, Riso and Catalogue are light only.
-_Avoid_: Skin, theme (for the look itself)
+**Theme**:
+The app's visual style, chosen in Appearance: Studio, Warm (the default), Bold, Score, Riso or Catalogue. A theme changes colours, fonts, corners, borders, shadows and a few ornaments, never the layout (ADR 0013). Score, Riso and Catalogue are light only. In code it is the `look` (ADR 0013's word), and the code's `theme` is the mode.
+_Avoid_: Look (in the app's text), skin
 
 **Mode**:
-Whether the app draws light or dark: Auto (follows the device), Light or Dark. A light-only look always draws light.
-_Avoid_: Theme
+Whether the app draws light or dark: Auto (follows the device), Light or Dark. A light-only theme always draws light. In code it is the `theme` device setting.
+_Avoid_: Theme (for the mode)
 
 **Snare row**:
 One of an exercise's two rhythms over the same bars: the notes played on the snare with the hands, written in the hands part. Sticking gives this row's notes their hands; a kick row note gets K only where no hand plays with it.

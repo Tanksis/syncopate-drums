@@ -71,6 +71,13 @@ export const LoopIcon = () => (
   </Icon>
 )
 
+/** Three lines: a menu, the phone's list of exercises. */
+export const MenuIcon = () => (
+  <Icon>
+    <path d="M2.5 4h11M2.5 8h11M2.5 12h11" />
+  </Icon>
+)
+
 /** Two sliders: settings. */
 export const SettingsIcon = () => (
   <Icon>

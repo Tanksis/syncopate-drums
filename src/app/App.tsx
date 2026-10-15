@@ -21,7 +21,7 @@ import type { Side } from '@/components/Sidebar'
 import { SidebarFullScreen, SidebarOverlay, SidebarRail } from '@/components/Sidebar'
 import { Button } from '@/components/Button'
 import { keepFocus } from '@/components/keepFocus'
-import { SettingsIcon } from '@/components/icons'
+import { MenuIcon, SettingsIcon } from '@/components/icons'
 import { isExample } from '@/core'
 
 export function App() {
@@ -67,8 +67,8 @@ export function App() {
 }
 
 /**
- * The phone layout: a compact header (☰, the exercise name, ⚙), the notation filling the screen,
- * and the transport bar at the bottom. ☰ and ⚙ open their sidebar over the whole screen. Edit, in
+ * The phone layout: a compact header (menu, the exercise name, settings), the notation filling the screen,
+ * and the transport bar at the bottom. Menu and settings open their sidebar over the whole screen. Edit, in
  * the transport bar, opens the grid editor as a sheet under the notation, which Done closes. An
  * example, which can't be changed, has no read-only notice; Copy takes Edit's place instead, and
  * opens an editable copy.
@@ -87,13 +87,13 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
     <div className="flex h-dvh flex-col">
       <header className="mb-(--header-ornament-height) flex shrink-0 items-center gap-1 border-b border-line bg-card px-1 pt-[env(safe-area-inset-top)] shadow-(--header-ornament)">
         <PhoneHeaderButton label="Open exercises" expanded={library.state === 'overlay'} onClick={library.onOpen}>
-          ☰
+          <MenuIcon />
         </PhoneHeaderButton>
         <div className="flex min-w-0 flex-1 justify-center text-base">
           <ExerciseName className="w-full text-center" />
         </div>
         <PhoneHeaderButton label="Open settings" expanded={settings.state === 'overlay'} onClick={settings.onOpen}>
-          ⚙
+          <SettingsIcon />
         </PhoneHeaderButton>
       </header>
       <NotSaving className="border-b border-line bg-card px-3 py-1 text-xs" />
@@ -118,7 +118,7 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
   )
 }
 
-/** A header button on a phone: ☰ or ⚙, big enough for a finger. */
+/** A header button on a phone, for the exercises or settings: its icon drawn larger, big enough for a finger. */
 function PhoneHeaderButton({
   label,
   expanded,
@@ -132,7 +132,9 @@ function PhoneHeaderButton({
 }) {
   return (
     <Button variant="ghost" size="lg" icon aria-label={label} aria-expanded={expanded} onClick={onClick} className="active:bg-hover">
-      <span aria-hidden>{children}</span>
+      <span aria-hidden className="flex [&>svg]:size-5">
+        {children}
+      </span>
     </Button>
   )
 }

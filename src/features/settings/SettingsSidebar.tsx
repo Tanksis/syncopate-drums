@@ -235,15 +235,15 @@ function MixRow({ layer, large }: { layer: Layer; large: boolean }) {
   )
 }
 
-/** How the app looks on this device (ADR 0013); a light-only look sets the mode to Auto. */
+/** The theme: how the app looks on this device, its look in code (ADR 0013); a light-only one sets the mode to Auto. */
 function LookChoice({ large }: { large: boolean }) {
   const device = useAppStore((s) => s.device)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   return (
     <div className="flex items-center gap-2">
-      <span className="w-20 shrink-0 text-mute">Look</span>
+      <span className="w-20 shrink-0 text-mute">Theme</span>
       <SelectMenu
-        label="Look"
+        label="Theme"
         large={large}
         options={LOOK_STYLES.map((style) => ({ value: style.look, label: lookName(style.look) }))}
         value={device.look}

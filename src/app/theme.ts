@@ -44,7 +44,7 @@ export function followTheme() {
       localStorage.setItem(THEME_MIRROR_KEY, theme)
       localStorage.setItem(LOOK_MIRROR_KEY, look)
     } catch {
-      // Storage blocked: the next launch starts in Studio and Auto until the app loads the settings.
+      // Storage blocked: the next launch starts in Warm and Auto until the app loads the settings.
     }
   }
   // If storage failed to open, the settings are only the defaults, so the inline script's stand.
