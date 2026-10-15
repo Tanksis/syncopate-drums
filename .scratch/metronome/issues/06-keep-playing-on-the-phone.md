@@ -4,9 +4,9 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done, bar the iPhone check
 
-- [ ] Wake Lock while playing, released on stop, re-requested on `visibilitychange`
-- [ ] `navigator.audioSession.type = 'playback'` where supported, set from the Play gesture
-- [ ] Nothing breaks where neither API exists
+- [x] Wake Lock while playing, released on stop, re-requested on `visibilitychange`
+- [x] `navigator.audioSession.type = 'playback'` where supported, set from the Play gesture
+- [x] Nothing breaks where neither API exists
 - [ ] Left to the user: checked on their iPhone (screen stays on; heard with the silent switch on)

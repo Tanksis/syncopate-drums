@@ -177,6 +177,7 @@ export function audioInterrupted(): boolean {
  * samples.
  */
 async function readyAudio(): Promise<Audio> {
+  playThroughSilentSwitch()
   if (audio && audio.ctx.state !== 'running') {
     audio.ctx.close().catch(() => {})
     audio = { ...createAudio(), buffers: audio.buffers }
@@ -191,7 +192,6 @@ async function readyAudio(): Promise<Audio> {
 }
 
 function createAudio(): Audio {
-  playThroughSilentSwitch()
   const ctx = new AudioContext({ latencyHint: 'interactive' })
   const master = ctx.createGain()
   master.connect(ctx.destination)
@@ -208,7 +208,8 @@ function createAudio(): Audio {
 
 /**
  * On iOS, Web Audio is muted by the silent switch unless the page's audio session is "playback",
- * like a music app. Set before the audio context starts; browsers without the API skip it.
+ * like a music app. Set in each Play gesture, before the audio context starts or resumes; browsers
+ * without the API skip it.
  */
 function playThroughSilentSwitch(): void {
   const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession
