@@ -15,6 +15,7 @@ import { MetronomeVolume } from '@/features/metronome/MetronomeVolume'
 import { SOUND_OPTIONS, pickSound } from '@/features/metronome/SoundSheet'
 import { LoopChip } from '@/features/playback/LoopChip'
 import { ClickToggle, CountInToggle } from '@/features/playback/TransportControls'
+import { PrototypeGroove } from './GrooveSettingsPrototype'
 import type { ExerciseSettings, HihatFoot, Layer, Theme, VolumeSetting } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
@@ -49,11 +50,15 @@ export function PracticeSettings({ playbackGroup = false }: { playbackGroup?: bo
           </div>
         </SettingGroup>
       )}
-      <SettingGroup title="Groove">
-        <GroovePicker />
-        <HihatFootChoice />
-        <Swing />
-      </SettingGroup>
+      <PrototypeGroove
+        current={
+          <SettingGroup title="Groove">
+            <GroovePicker />
+            <HihatFootChoice />
+            <Swing />
+          </SettingGroup>
+        }
+      />
       <SettingGroup title="Sticking">
         <Choice label="Mode" setting="sticking" options={['natural', 'alternate', 'off']} />
         <Choice label="Lead hand" setting="leadHand" options={['R', 'L']} />
@@ -151,11 +156,16 @@ export function PhoneSettings({ onDone }: { onDone: () => void }) {
       <PhoneTabs id={id} tab={tab} onChange={setTab} />
       <div role="tabpanel" id={`${id}-panel`} aria-labelledby={`${id}-${tab}`} className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto px-4 py-5">
         {tab === 'groove' && (
-          <>
-            <GroovePicker large />
-            <HihatFootChoice large />
-            <Swing stacked />
-          </>
+          <PrototypeGroove
+            large
+            current={
+              <>
+                <GroovePicker large />
+                <HihatFootChoice large />
+                <Swing stacked />
+              </>
+            }
+          />
         )}
         {tab === 'sticking' && (
           <>

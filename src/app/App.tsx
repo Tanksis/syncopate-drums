@@ -20,6 +20,7 @@ import { TransportBar } from '@/features/playback/TransportBar'
 import type { TransportRoom } from '@/features/playback/TransportControls'
 import { TransportControls } from '@/features/playback/TransportControls'
 import { PhoneSettings } from '@/features/settings/SettingsSidebar'
+import { GrooveVariantSwitcher } from '@/features/settings/GrooveSettingsPrototype'
 import { SettingsSidebar } from '@/app/SettingsSidebar'
 import { useAppStore } from '@/app/store'
 import { useNarrowWindow, usePhoneOrientation, usePhoneWindow } from '@/app/useMediaQuery'
@@ -38,9 +39,16 @@ export function App() {
   const phone = usePhoneWindow()
   const [barRef, room] = useExerciseBarRoom()
   const onMetronome = useAppStore((s) => s.device.screen === 'metronome')
-  if (phone) return <PhoneLayout sidebars={sidebars} />
+  if (phone)
+    return (
+      <>
+        <PhoneLayout sidebars={sidebars} />
+        <GrooveVariantSwitcher />
+      </>
+    )
   return (
     <div className="flex h-dvh flex-col">
+      <GrooveVariantSwitcher />
       {/* The same header on both screens, the switch in its middle, so nothing in it moves when the screen does. */}
       <header className={`${headerClass} grid grid-cols-[1fr_auto_1fr]`}>
         <Wordmark />
