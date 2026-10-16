@@ -17,6 +17,7 @@ import { ScreenTabs } from '@/features/metronome/ScreenTabs'
 import { NotationView } from '@/features/notation/NotationView'
 import { StaffPlayButton } from '@/features/playback/StaffPlayButton'
 import { TransportBar } from '@/features/playback/TransportBar'
+import { BeatFlashPrototype } from '@/features/playback/BeatFlashPrototype'
 import type { TransportRoom } from '@/features/playback/TransportControls'
 import { TransportControls } from '@/features/playback/TransportControls'
 import { PhoneSettings } from '@/features/settings/SettingsSidebar'
@@ -71,8 +72,9 @@ export function App() {
             <ExampleNotice />
             {/* The music on a card, which takes the height the editor leaves, all of it when that's collapsed. */}
             <div className="flex min-h-0 flex-1 flex-col p-3">
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-card border-(length:--border-card) border-line bg-paper shadow-card">
+              <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-card border-(length:--border-card) border-line bg-paper shadow-card">
                 <NotationView corner={<StaffPlayButton />} />
+                <BeatFlashPrototype />
               </div>
             </div>
             <GridEditor />
@@ -182,7 +184,10 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
           {onMetronome ? (
             <MetronomeScreen landscape={landscape} />
           ) : (
-            <NotationView coveredBottom={editing ? underSheet : undefined} />
+            <>
+              <NotationView coveredBottom={editing ? underSheet : undefined} />
+              <BeatFlashPrototype />
+            </>
           )}
         </div>
         {/* Under the sheet while it is up, so out of reach. */}
