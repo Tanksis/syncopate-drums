@@ -125,23 +125,25 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
           className="w-full flex-1 py-1"
         />
       ) : (
-        <button
-          type="button"
-          title="Click to open, double-click to rename"
-          aria-current={exercise.id === openId}
-          // Not keepFocus, whose mousedown preventDefault would stop the row being dragged: a mouse
-          // click lets the focus go afterwards instead (a keyboard one, detail 0, keeps it).
-          onClick={(e) => {
-            if (e.detail > 0) e.currentTarget.blur()
-            openExercise(exercise.id)
-          }}
-          onDoubleClick={() => setRenamingId(exercise.id)}
-          className={listButtonClass(exercise.id === openId)}
-        >
-          {exercise.name}
-        </button>
+        <>
+          <button
+            type="button"
+            title="Click to open, double-click to rename"
+            aria-current={exercise.id === openId}
+            // Not keepFocus, whose mousedown preventDefault would stop the row being dragged: a mouse
+            // click lets the focus go afterwards instead (a keyboard one, detail 0, keeps it).
+            onClick={(e) => {
+              if (e.detail > 0) e.currentTarget.blur()
+              openExercise(exercise.id)
+            }}
+            onDoubleClick={() => setRenamingId(exercise.id)}
+            className={listButtonClass(exercise.id === openId)}
+          >
+            {exercise.name}
+          </button>
+          <RenamePencil name={exercise.name} onClick={() => setRenamingId(exercise.id)} />
+        </>
       )}
-      {renamingId !== exercise.id && <RenamePencil name={exercise.name} onClick={() => setRenamingId(exercise.id)} />}
     </li>
   )
 
@@ -339,16 +341,16 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
                       className="w-full flex-1 py-1 font-semibold"
                     />
                   ) : (
-                    <span
-                      title="Double-click to rename"
-                      onDoubleClick={() => setRenamingId(folder.id)}
-                      className="min-w-0 flex-1 cursor-default truncate py-1 font-semibold select-none"
-                    >
-                      {folder.name}
-                    </span>
-                  )}
-                  {renamingId !== folder.id && (
-                    <RenamePencil name={folder.name} onClick={() => setRenamingId(folder.id)} />
+                    <>
+                      <span
+                        title="Double-click to rename"
+                        onDoubleClick={() => setRenamingId(folder.id)}
+                        className="min-w-0 flex-1 cursor-default truncate py-1 font-semibold select-none"
+                      >
+                        {folder.name}
+                      </span>
+                      <RenamePencil name={folder.name} onClick={() => setRenamingId(folder.id)} />
+                    </>
                   )}
                   <span title={exerciseCount(count)} className="shrink-0 px-1 text-xs text-mute">
                     {count}
@@ -456,7 +458,10 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
   )
 }
 
-/** A row's pencil, shown on hover or focus, that starts the same rename as a double-click. */
+/**
+ * A row's pencil, shown on hover or focus, that starts the same rename as a double-click. Its
+ * keepFocus means a drag can't start from it, which a rename button can do without.
+ */
 function RenamePencil({ name, onClick }: { name: string; onClick: () => void }) {
   return (
     <button
