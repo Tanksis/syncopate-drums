@@ -6,9 +6,10 @@ import { isExample } from '@/core'
  * The first visit's welcome: a card over the notation's paper, the example dimmed behind it, saying
  * what the app does and offering New exercise or Browse examples. Either, or ✕, closes it for good on
  * this device (`welcomeDismissed`). It shows only over an example, which is where a first visit lands.
- * Its parent is the paper, positioned, so the card can cover it.
+ * Its parent is the paper, positioned, so the card can cover it. `onBrowse` shows the Examples list:
+ * it opens the Library's sidebar or sheet.
  */
-export function WelcomeCard({ onBrowse }: { /** Shows the Examples list: opens the Library's sidebar or sheet. */ onBrowse: () => void }) {
+export function WelcomeCard({ onBrowse }: { onBrowse: () => void }) {
   const shown = useAppStore((s) => !s.device.welcomeDismissed && isExample(s.editor.exercise.id))
   const createExercise = useAppStore((s) => s.createExercise)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)

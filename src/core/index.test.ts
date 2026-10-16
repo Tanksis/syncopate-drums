@@ -121,6 +121,10 @@ describe('stored device settings', () => {
     expect(deviceSettingsFrom({ welcomeDismissed: 'yes', countIn: false })).toEqual({ ...DEFAULT_DEVICE_SETTINGS, countIn: false })
   })
 
+  it('drop any stored yes-or-no setting that is not a boolean', () => {
+    expect(deviceSettingsFrom({ countIn: 0, clickMuted: 'true' })).toEqual(DEFAULT_DEVICE_SETTINGS)
+  })
+
   it('drop a stored theme the app does not have', () => {
     expect(deviceSettingsFrom({ theme: 'sepia', countIn: false })).toEqual({ ...DEFAULT_DEVICE_SETTINGS, countIn: false })
   })

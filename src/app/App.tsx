@@ -74,7 +74,7 @@ export function App() {
             <div className="flex min-h-0 flex-1 flex-col p-3">
               <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-card border-(length:--border-card) border-line bg-paper shadow-card">
                 <NotationView corner={<StaffPlayButton />} />
-                <WelcomeCard onBrowse={showSidebar(sidebars.library)} />
+                <WelcomeCard onBrowse={sidebarShower(sidebars.library)} />
               </div>
             </div>
             <GridEditor />
@@ -186,7 +186,7 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
           ) : (
             <>
               <NotationView coveredBottom={editing ? underSheet : undefined} />
-              <WelcomeCard onBrowse={showSidebar(library)} />
+              <WelcomeCard onBrowse={sidebarShower(library)} />
             </>
           )}
         </div>
@@ -374,8 +374,8 @@ function useSidebars(): Record<SidebarId, SidebarControl> {
   return { library: control('library'), settings: control('settings') }
 }
 
-/** Shows a sidebar, open or over the screen, leaving it be if it already shows (its open toggles an overlay). */
-function showSidebar({ state, onOpen }: SidebarControl): () => void {
+/** A handler that shows a sidebar, open or over the screen, leaving it be if it already shows (its open toggles an overlay). */
+function sidebarShower({ state, onOpen }: SidebarControl): () => void {
   return () => {
     if (state === 'rail') onOpen()
   }
