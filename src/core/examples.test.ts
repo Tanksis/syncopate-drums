@@ -6,6 +6,7 @@ import {
   TRIPLET_SWING,
   applyEdit,
   barTicks,
+  editorBeatViews,
   copyExample,
   exampleAccepts,
   exampleExercises,
@@ -14,6 +15,7 @@ import {
   isUnchangedNew,
   itemTicks,
   leftoverExamples,
+  meter,
   newEditorState,
   newExercise,
   staffParts,
@@ -24,17 +26,18 @@ import {
 const examples = exampleExercises()
 
 describe('the example exercises', () => {
-  it('are four, named for what they show, in order', () => {
+  it('are five, named for what they show, in order', () => {
     expect(examples.map((e) => e.name)).toEqual([
       'Example: syncopated eighths',
       'Example: jazz comping',
       'Example: rock beat',
       'Example: triplets',
+      'Example: slow blues',
     ])
   })
 
   it('are listed by their titles, without the "Example: " prefix', () => {
-    expect(examples.map(exampleTitle)).toEqual(['syncopated eighths', 'jazz comping', 'rock beat', 'triplets'])
+    expect(examples.map(exampleTitle)).toEqual(['syncopated eighths', 'jazz comping', 'rock beat', 'triplets', 'slow blues'])
   })
 
   it('each have a fixed id that isExample recognises, and come out the same from two calls', () => {
@@ -43,6 +46,7 @@ describe('the example exercises', () => {
       'example:jazz-comping',
       'example:rock-beat',
       'example:triplets',
+      'example:slow-blues',
     ])
     expect(examples.every((e) => isExample(e.id))).toBe(true)
     expect(exampleExercises()).toEqual(examples)
@@ -61,17 +65,18 @@ describe('the example exercises', () => {
     }
   })
 
-  it('fill every bar with four beats in both rows', () => {
+  it("fill every bar with their time signature's beats in both rows", () => {
     for (const exercise of examples) {
+      const { beats } = meter(exercise.timeSignature)
       for (const bar of exercise.bars) {
-        for (const row of ROWS) expect(bar[row].reduce((sum, item) => sum + itemTicks(item), 0)).toBe(barTicks(4))
+        for (const row of ROWS) expect(bar[row].reduce((sum, item) => sum + itemTicks(item), 0)).toBe(barTicks(beats))
       }
     }
   })
 })
 
 describe('what each example shows', () => {
-  const [eighths, comping, rock, triplets] = examples
+  const [eighths, comping, rock, triplets, blues] = examples
 
   /** Each event of a part as `start drums`, or `start rest`. */
   const show = (events: readonly StaffEvent[]) =>
@@ -112,6 +117,14 @@ describe('what each example shows', () => {
     const hands = sticking(triplets).map((n) => n.shown)
     expect(hands).toHaveLength(18)
     expect(hands.join('')).toBe('RLRLRLRLRLRLRLRLRL')
+  })
+
+  it('slow blues: 12/8, the snare on 2 and 4 and the kick on 1 with pickups into 3', () => {
+    expect(blues.timeSignature).toBe('12/8')
+    const grid = (row: 'snare' | 'kick') =>
+      editorBeatViews(newEditorState(blues)).map((bar) => bar.map((beat) => beat[row].hits).join(' '))
+    expect(grid('snare')).toEqual(['... x.. ... x..'])
+    expect(grid('kick')).toEqual(['x.. ..x x.x ...'])
   })
 })
 

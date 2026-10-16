@@ -273,12 +273,22 @@ function TimeSignatureChoice({ large = false }: { large?: boolean }) {
       <Segmented
         label="Time signature"
         fill
-        className={large ? '' : 'text-xs'}
-        options={TIME_SIGNATURES.map((ts) => ({ value: ts, label: ts }))}
+        options={TIME_SIGNATURES.map((ts) => ({ value: ts, label: ts, face: <StackedTimeSignature timeSignature={ts} /> }))}
         value={timeSignature}
         onChange={(ts: TimeSignature) => dispatch({ type: 'setTimeSignature', timeSignature: ts })}
       />
     </div>
+  )
+}
+
+/** A time signature as a staff prints it, one number over the other. */
+function StackedTimeSignature({ timeSignature }: { timeSignature: TimeSignature }) {
+  const [top, bottom] = timeSignature.split('/')
+  return (
+    <span className="flex flex-col items-center py-0.5 leading-none tabular-nums">
+      <span>{top}</span>
+      <span>{bottom}</span>
+    </span>
   )
 }
 

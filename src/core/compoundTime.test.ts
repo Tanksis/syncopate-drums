@@ -206,6 +206,16 @@ describe('writing compound time', () => {
     ])
   })
 
+  it('writes a note held through a whole beat as a dotted quarter, however the beat was written', () => {
+    const state = inTime('6/8')
+    const bars = setBeat(state.exercise.bars, 'snare', 0, 0, 'x..')
+    const parts = staffParts(bars, 'off', { compound: true })
+    expect(parts[0].hands.map((e) => `${e.start} ${e.kind} ${e.duration}${e.triplet ? '3' : ''}`)).toEqual([
+      '0 chord quarter',
+      '12 rest quarter',
+    ])
+  })
+
   it('writes each value half as long again: a beat is a dotted quarter, two eighths a quarter', () => {
     const value = (duration: Duration, dotted: boolean, triplet: boolean) => compoundValue({ duration, dotted, triplet })
     expect(value('quarter', false, false)).toEqual({ duration: 'quarter', dotted: true })

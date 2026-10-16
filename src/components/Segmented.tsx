@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from 'react'
+import type { KeyboardEvent, ReactNode } from 'react'
 import { useRef } from 'react'
 import { keepFocus } from './keepFocus'
 
@@ -6,6 +6,8 @@ import { keepFocus } from './keepFocus'
 export interface SegmentedOption<T> {
   value: T
   label: string
+  /** What the option shows in place of its label, which is then its accessible name. */
+  face?: ReactNode
   /** The option's accessible name, when its label alone is too short to say what it is. */
   ariaLabel?: string
   title?: string
@@ -89,7 +91,7 @@ export function Segmented<T extends string | number | boolean>({
             type="button"
             role="radio"
             aria-checked={on}
-            aria-label={option.ariaLabel}
+            aria-label={option.ariaLabel ?? (option.face ? option.label : undefined)}
             title={option.title}
             disabled={disabled}
             tabIndex={tabbable && i === stop ? 0 : -1}
@@ -103,7 +105,7 @@ export function Segmented<T extends string | number | boolean>({
               on ? 'bg-accent font-semibold text-on-accent' : 'text-mute enabled:hover:bg-card enabled:hover:text-ink'
             }`}
           >
-            {option.label}
+            {option.face ?? option.label}
           </button>
         )
       })}

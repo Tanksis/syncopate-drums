@@ -62,9 +62,9 @@ const ROW_LOOK: Record<Row, { name: string; disc: string; hold: string }> = {
   kick: { name: 'Kick', disc: 'bg-kick', hold: 'bg-kick/80' },
 }
 
-/** What each grid position of a beat is counted as: 1 e & a, 1 trip let, or in compound time's eighths 1 & a. */
+/** What each grid position of a beat is counted as: 1 e & a, 1 trip let, or in compound time's eighths 1 la li. */
 const countLabels = (beat: number, triplet: boolean, compound: boolean) =>
-  compound ? [`${beat + 1}`, '&', 'a'] : triplet ? [`${beat + 1}`, 'trip', 'let'] : [`${beat + 1}`, 'e', '&', 'a']
+  compound ? [`${beat + 1}`, 'la', 'li'] : triplet ? [`${beat + 1}`, 'trip', 'let'] : [`${beat + 1}`, 'e', '&', 'a']
 
 /**
  * The bars and beats of the exercise, the main editor. It shows one bar at a time, the cursor's

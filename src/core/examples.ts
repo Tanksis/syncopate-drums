@@ -2,14 +2,16 @@
 // a syncopation method book (never copied from one), each showing one part of the app.
 
 import type { EditCommand } from './editor'
-import type { Bar, Exercise, LibraryTab, PracticeSettings, Row } from './model'
-import { MIN_SWING, TRIPLET_SWING, newExercise, restBar } from './model'
+import type { Bar, Exercise, LibraryTab, PracticeSettings, Row, TimeSignature } from './model'
+import { MIN_SWING, TRIPLET_SWING, meter, newExercise, restBar } from './model'
 import { setBeat } from './speller'
 
 /** One example as written here; everything else is a new exercise's default, the lead hand R among it. */
 type Example = Pick<Exercise, 'id' | 'name' | 'sticking'> &
   Pick<PracticeSettings, 'bpm' | 'groove' | 'swing'> & {
-    /** Each row bar by bar, as four beat figures' hits separated by spaces; a missing row rests. */
+    /** 4/4 unless given. */
+    timeSignature?: TimeSignature
+    /** Each row bar by bar, as each beat figure's hits separated by spaces; a missing row rests. */
     rows: Partial<Record<Row, string[]>>
   }
 
@@ -62,16 +64,30 @@ const EXAMPLES: readonly Example[] = [
     sticking: 'alternate',
     rows: { snare: ['xxx xxx x.x x...', 'xxx .xx xxx x...'] },
   },
+  {
+    id: `${EXAMPLE_PREFIX}slow-blues`,
+    name: `${EXAMPLE_NAME_PREFIX}slow blues`,
+    bpm: 50,
+    groove: 'off',
+    swing: MIN_SWING,
+    sticking: 'off',
+    timeSignature: '12/8',
+    rows: {
+      snare: ['... x.. ... x..'],
+      kick: ['x.. ..x x.x ...'],
+    },
+  },
 ]
 
 /** The example exercises, in order, under their fixed ids and never opened; every call gives an equal set. */
 export function exampleExercises(): Exercise[] {
-  return EXAMPLES.map(({ id, name, bpm, groove, swing, sticking, rows }) => {
+  return EXAMPLES.map(({ id, name, bpm, groove, swing, sticking, timeSignature = '4/4', rows }) => {
     const base = newExercise({ id, now: 0 })
     return {
       ...base,
       name,
-      bars: writeRows(rows),
+      timeSignature,
+      bars: writeRows(rows, meter(timeSignature).beats),
       sticking,
       practice: { ...base.practice, bpm, groove, swing },
     }
@@ -144,13 +160,12 @@ export function exampleAccepts(command: EditCommand): boolean {
   return EXAMPLE_ACCEPTS[command.type]
 }
 
-/** The bars, each beat written through the speller so the spelling is the app's own. */
-function writeRows(rows: Example['rows']): Bar[] {
+/** The bars of `beats` beats, each beat written through the speller so the spelling is the app's own. */
+function writeRows(rows: Example['rows'], beats: number): Bar[] {
   const barCount = Math.max(...Object.values(rows).map((bars) => bars.length))
-  let bars: Bar[] = Array.from({ length: barCount }, () => restBar())
+  let bars: Bar[] = Array.from({ length: barCount }, () => restBar(beats))
   for (const [row, lines] of Object.entries(rows) as [Row, string[]][]) {
     lines.forEach((line, bar) => {
-      // The examples are in 4/4.
       line.split(' ').forEach((hits, beat) => (bars = setBeat(bars, row, bar, beat, hits)))
     })
   }
