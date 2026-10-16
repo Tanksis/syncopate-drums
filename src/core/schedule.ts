@@ -4,7 +4,7 @@
 
 import type { DeviceSettings, Exercise, LoopRange, PracticeSettings, Row } from './model'
 import type { BeatLevel } from './metronome'
-import { ROWS, TICKS_PER_BAR, TICKS_PER_BEAT, loopBars, noteId } from './model'
+import { ROWS, TICKS_PER_BEAT, barTicks, loopBars, meter, noteId } from './model'
 import { grooveHitsByTick } from './groove'
 import { placeItems } from './speller'
 
@@ -50,7 +50,7 @@ export interface ScheduleResult {
 
 /**
  * Every event from `from` up to `window` seconds later. `'start'` begins playback: with the
- * count-in on, one bar of clicks comes before the loop range. Playback wraps from the end of the
+ * count-in on, one bar of clicks (of the exercise's time signature) comes before the loop range. Playback wraps from the end of the
  * loop range to its start, so a changed range applies at the next wrap, or at once from a
  * position already past its end.
  */
@@ -64,8 +64,10 @@ export function schedule(
   const secondsPerTick = 60 / practice.bpm / TICKS_PER_BEAT
   const swing = effectiveSwing(practice.swing, practice.bpm)
   const struck = ROWS.map((row) => ({ row, ticks: struckTicks(exercise, row) }))
-  const groove = grooveHitsByTick(practice.groove, practice.hihatFoot)
+  const { beats } = meter(exercise.timeSignature)
+  const groove = grooveHitsByTick(practice.groove, practice.hihatFoot, beats)
   const loop = loopBars(practice.loopRange, exercise.bars.length)
+  const ticksPerBar = barTicks(beats)
   let position: PlayPosition
   if (from === 'start') position = device.countIn ? { bar: -1, tick: 0 } : { bar: loop.first, tick: 0 }
   else position = from.bar > loop.last ? { bar: loop.first, tick: 0 } : from
@@ -91,7 +93,7 @@ export function schedule(
         events.push({ time, kind: 'groove', instrument, accent: false, velocity, position })
       }
     }
-    position = advance(position, loop)
+    position = advance(position, loop, ticksPerBar)
   }
   // Swing can move a groove's & past a triplet note later in the beat, so put the events in time order.
   events.sort((a, b) => a.time - b.time)
@@ -122,8 +124,8 @@ function swingShift(beatTick: number, swing: number): number {
 }
 
 /** The next tick: from the count-in into the loop range, and from its last bar back to its first. */
-function advance({ bar, tick }: PlayPosition, loop: LoopRange): PlayPosition {
-  if (tick + 1 < TICKS_PER_BAR) return { bar, tick: tick + 1 }
+function advance({ bar, tick }: PlayPosition, loop: LoopRange, ticksPerBar: number): PlayPosition {
+  if (tick + 1 < ticksPerBar) return { bar, tick: tick + 1 }
   return { bar: bar < 0 || bar >= loop.last ? loop.first : bar + 1, tick: 0 }
 }
 

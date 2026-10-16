@@ -3,8 +3,20 @@
 import { inKnownFolder } from './folders'
 import { GROOVE_PRESETS } from './groove'
 import { migrateExercise } from './migrate'
-import type { Duration, Exercise, Folder, Hand, Item, StickingMode } from './model'
-import { HIHAT_FOOT_SETTINGS, MAX_BPM, MAX_SWING, MIN_BPM, MIN_SWING, ROWS, SCHEMA_VERSION, TICKS_PER_BAR, itemTicks } from './model'
+import type { Duration, Exercise, Folder, Hand, Item, StickingMode, TimeSignature } from './model'
+import {
+  HIHAT_FOOT_SETTINGS,
+  MAX_BPM,
+  MAX_SWING,
+  MIN_BPM,
+  MIN_SWING,
+  ROWS,
+  SCHEMA_VERSION,
+  TIME_SIGNATURES,
+  barTicks,
+  itemTicks,
+  meter,
+} from './model'
 
 /** Marks a file as an exercise export. Chosen before the app was named, and kept. */
 export const EXPORT_FORMAT = 'drum-app-exercises'
@@ -146,7 +158,9 @@ function exerciseProblem(exercise: Exercise): string | null {
   if (typeof e.id !== 'string' || e.id === '') return 'has no id'
   if (typeof e.name !== 'string') return 'has no name'
   if (!Array.isArray(e.bars) || e.bars.length === 0) return 'has no bars'
-  if (!e.bars.every(isBar)) return "has a bar that isn't four beats of notes and rests in each row"
+  if (!oneOf(e.timeSignature, TIME_SIGNATURES)) return 'has an unknown time signature'
+  const { beats } = meter(e.timeSignature as TimeSignature)
+  if (!e.bars.every((bar) => isBar(bar, beats))) return `has a bar that isn't ${e.timeSignature} of notes and rests in each row`
   if (!oneOf(e.sticking, STICKING_MODES)) return 'has an unknown sticking mode'
   if (!oneOf(e.leadHand, HANDS)) return 'has an unknown lead hand'
   if (!isFiniteNumber(e.lastOpened)) return 'has no last-opened time'
@@ -174,14 +188,14 @@ function practiceProblem(practice: unknown, barCount: number): string | null {
   return null
 }
 
-function isBar(bar: unknown): boolean {
-  return isRecord(bar) && ROWS.every((row) => isRowOfBar(bar[row]))
+function isBar(bar: unknown, beats: number): boolean {
+  return isRecord(bar) && ROWS.every((row) => isRowOfBar(bar[row], beats))
 }
 
-/** One row of a bar: notes and rests adding up to four beats. */
-function isRowOfBar(items: unknown): boolean {
+/** One row of a bar: notes and rests adding up to the bar's beats. */
+function isRowOfBar(items: unknown, beats: number): boolean {
   if (!Array.isArray(items) || !items.every(isItem)) return false
-  return items.reduce((ticks: number, item: Item) => ticks + itemTicks(item), 0) === TICKS_PER_BAR
+  return items.reduce((ticks: number, item: Item) => ticks + itemTicks(item), 0) === barTicks(beats)
 }
 
 function isItem(item: unknown): item is Item {

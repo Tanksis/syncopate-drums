@@ -3,8 +3,8 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_DEVICE_SETTINGS,
-  TICKS_PER_BAR,
   TICKS_PER_BEAT,
+  barTicks,
   clampBpm,
   deviceSettingsFrom,
   drawnMode,
@@ -18,7 +18,7 @@ describe('ticks', () => {
   it('fit both a sixteenth and an eighth-note triplet in one beat', () => {
     expect(TICKS_PER_BEAT % 4).toBe(0)
     expect(TICKS_PER_BEAT % 3).toBe(0)
-    expect(TICKS_PER_BAR).toBe(48)
+    expect(barTicks(4)).toBe(48)
   })
 })
 

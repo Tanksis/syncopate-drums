@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Bar, Item, Row } from './index'
-import { FIGURES, REST_FIGURE, TICKS_PER_BAR, beatViews, clearBeatToDownbeat, itemTicks, restBar, restItems, setBeat, setHold, toggleCutShort, toggleHit, toggleTie } from './index'
+import { FIGURES, REST_FIGURE, barTicks, beatViews, clearBeatToDownbeat, itemTicks, restBar, restItems, setBeat, setHold, toggleCutShort, toggleHit, toggleTie } from './index'
 
 /** A row in shorthand: q e s for note values, `.` for a dot, 3 for a triplet, r for a rest, ~ for a tie. */
 function text(bars: Bar[], row: Row = 'snare'): string {
@@ -69,7 +69,7 @@ describe('the auto-speller', () => {
   it('keeps every bar exactly four beats long', () => {
     for (const figure of FIGURES) {
       const bars = bar(figure.hits, figure.hits, figure.hits, figure.hits)
-      expect(bars[0].snare.reduce((t, i) => t + itemTicks(i), 0)).toBe(TICKS_PER_BAR)
+      expect(bars[0].snare.reduce((t, i) => t + itemTicks(i), 0)).toBe(barTicks(4))
     }
   })
 })
@@ -189,7 +189,7 @@ describe('tie and cut round-trip', () => {
         tiedInto: tie && figure.hits[0] === 'x',
         cutShort: cut && CUTTABLE.includes(figure.key),
       })
-      for (const each of bars) expect(each.snare.reduce((t, i) => t + itemTicks(i), 0)).toBe(TICKS_PER_BAR)
+      for (const each of bars) expect(each.snare.reduce((t, i) => t + itemTicks(i), 0)).toBe(barTicks(4))
       // toggling both again restores the plain figure
       if (cut) bars = toggleCutShort(bars, 'snare', b, beat)
       if (tie) bars = toggleTie(bars, 'snare', b, beat)

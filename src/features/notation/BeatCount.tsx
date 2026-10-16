@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import type { CountedBeat } from '@/core'
-import { beatCountAt } from '@/core'
+import { beatCountAt, meter } from '@/core'
 import { playhead } from '@/features/playback/engine'
 
 /**
@@ -10,6 +10,7 @@ import { playhead } from '@/features/playback/engine'
  */
 export function useBeatCount(on: boolean): CountedBeat | undefined {
   const playing = useAppStore((s) => s.playing)
+  const { beats } = meter(useAppStore((s) => s.editor.exercise.timeSignature))
   const [now, setNow] = useState<CountedBeat>()
   useEffect(() => {
     if (!playing || !on) {
@@ -19,14 +20,16 @@ export function useBeatCount(on: boolean): CountedBeat | undefined {
     let frame = requestAnimationFrame(function step() {
       const head = playhead()
       if (head) {
-        const count = beatCountAt(head.position)
+        const count = beatCountAt(head.position, beats)
         // The same beat keeps the same object, so React skips the render while the beat is unchanged.
-        setNow((old) => (old?.countIn === count.countIn && old.beat === count.beat ? old : count))
+        setNow((old) =>
+          old?.countIn === count.countIn && old.beat === count.beat && old.beats === count.beats ? old : count,
+        )
       }
       frame = requestAnimationFrame(step)
     })
     return () => cancelAnimationFrame(frame)
-  }, [playing, on])
+  }, [playing, on, beats])
   return now
 }
 

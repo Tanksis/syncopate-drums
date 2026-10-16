@@ -1,7 +1,7 @@
 // Sticking patterns: a fill typed as hands, kicks and rests (`RLRK`, `RL.L`), laid on a bar's grid.
 
 import type { Bar, Exercise, Hand, Row } from './model'
-import { BEATS_PER_BAR, ROWS, TICKS_PER_BEAT, itemTicks, newExercise, restBar } from './model'
+import { ROWS, TICKS_PER_BEAT, itemTicks, meter, newExercise, restBar } from './model'
 import { setBeat, slotTicks, toggleHit, toggleTie } from './speller'
 import { sticking } from './sticking'
 
@@ -45,8 +45,9 @@ export function withPattern(
   const ticks = slotTicks(grid === 'triplets')
   const typed = new Map<number, Hand>()
   let step = from
-  let bars = cutTies(exercise.bars, bar).map((b, i) => (i === bar ? restBar() : b))
-  for (let beat = 0; beat < BEATS_PER_BAR; beat++) {
+  const { beats } = meter(exercise.timeSignature)
+  let bars = cutTies(exercise.bars, bar).map((b, i) => (i === bar ? restBar(beats) : b))
+  for (let beat = 0; beat < beats; beat++) {
     const beatSteps = ticks.map(() => pattern[step++ % pattern.length])
     beatSteps.forEach((s, i) => {
       if (s === 'R' || s === 'L') typed.set(beat * TICKS_PER_BEAT + ticks[i], s)
@@ -96,7 +97,7 @@ export function exerciseFromPattern({
     ...newExercise({ id, now, folderId }),
     name,
     sticking: 'natural',
-    bars: Array.from({ length: bars }, restBar),
+    bars: Array.from({ length: bars }, () => restBar()),
   }
   let step = 0
   for (let bar = 0; bar < bars; bar++) {

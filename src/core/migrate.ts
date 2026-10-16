@@ -35,6 +35,8 @@ const steps: Record<number, (exercise: Stored) => Stored> = {
     practice: typeof practice === 'object' && practice !== null ? { ...practice, hihatFoot: 'off' } : practice,
     schemaVersion: 4,
   }),
+  // Version 4 was always in 4/4.
+  4: (exercise) => ({ ...exercise, timeSignature: '4/4', schemaVersion: 5 }),
 }
 
 /** The stored exercise in the current shape; throws for one from a newer version of the app. */

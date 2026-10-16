@@ -9,7 +9,7 @@
 import type { StemmableNote } from 'vexflow/bravura'
 import { Beam, Dot, Formatter, Fraction, GhostNote, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
 import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, NoteSticking, PlayPosition, StaffEvent } from '@/core'
-import { NOTATION_LAYOUT, TICKS_PER_BEAT, inLoopRange, minBarWidthFor, notationFit, staffParts, sticking, swingOn } from '@/core'
+import { NOTATION_LAYOUT, TICKS_PER_BEAT, inLoopRange, meter, minBarWidthFor, notationFit, staffParts, sticking, swingOn } from '@/core'
 
 /** A design token from styles/index.css, read when the notation draws so it follows the look and mode. */
 const token = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(`--${name}`).trim()
@@ -231,7 +231,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
 
     const stave = new Stave(x, y, w, { spaceAboveStaffLn: spaceAbove })
     if (column === 0) stave.addClef('percussion')
-    if (b === 0) stave.addTimeSignature('4/4')
+    if (b === 0) stave.addTimeSignature(exercise.timeSignature)
     if (b === cursor?.bar) {
       ctx.save()
       ctx.setFillStyle(colour.currentBar)
@@ -259,7 +259,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
         if (Math.floor(event.start / TICKS_PER_BEAT) === cursor.beat) note.setStyle({ fillStyle: colour.notationAccent, strokeStyle: colour.notationAccent })
       }
     }
-    drawParts(stave, drawings, 4, Math.max(30, x + w - stave.getNoteStartX() - 18))
+    drawParts(stave, drawings, meter(exercise.timeSignature).beats, Math.max(30, x + w - stave.getNoteStartX() - 18))
 
     const top = stave.getYForLine(-PLAYHEAD_OVERHANG)
     const bottom = stave.getYForLine(4 + PLAYHEAD_OVERHANG)

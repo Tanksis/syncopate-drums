@@ -6,14 +6,42 @@ import { TICKS_PER_BEAT, clampBpm } from './units'
 
 export { MAX_BPM, MAX_VOLUME, MIN_BPM, TICKS_PER_BEAT, clampBpm } from './units'
 
-/** Exercises are in 4/4. */
-export const BEATS_PER_BAR = 4
+/** An exercise's time signature, as written at the start of the staff. */
+export type TimeSignature = '4/4' | '3/4' | '2/4'
 
-export const TICKS_PER_BAR = BEATS_PER_BAR * TICKS_PER_BEAT
+/** The time signatures, in the order the Time group offers them. */
+export const TIME_SIGNATURES: readonly TimeSignature[] = ['4/4', '3/4', '2/4']
 
-/** A beat's index across the whole exercise: bar × 4 + beat. */
-export function beatIndex(bar: number, beat: number): number {
-  return bar * BEATS_PER_BAR + beat
+/** What a time signature means for the bar: how many beats it has, each `TICKS_PER_BEAT` long. */
+export interface Meter {
+  beats: number
+}
+
+const METERS: Record<TimeSignature, Meter> = { '4/4': { beats: 4 }, '3/4': { beats: 3 }, '2/4': { beats: 2 } }
+
+export function meter(timeSignature: TimeSignature): Meter {
+  return METERS[timeSignature]
+}
+
+/** How long a bar of this many beats lasts, in ticks. */
+export const barTicks = (beats: number) => beats * TICKS_PER_BEAT
+
+/**
+ * How many beats the bars have, read from the first one: every bar of an exercise lasts as long
+ * as its time signature's bar.
+ */
+export function barBeats(bars: readonly Bar[]): number {
+  return rowBeats(bars[0]?.snare ?? [])
+}
+
+/** How many beats one bar's row of items lasts; an exercise with no bars is taken as 4/4. */
+export function rowBeats(items: readonly Item[]): number {
+  return items.reduce((ticks, item) => ticks + itemTicks(item), 0) / TICKS_PER_BEAT || 4
+}
+
+/** A beat's index across the whole exercise: bar × beats + beat. */
+export function beatIndex(bar: number, beat: number, beats: number): number {
+  return bar * beats + beat
 }
 
 /** Swing amounts, as the first eighth's share of the beat: 0.5 is straight. */
@@ -23,7 +51,7 @@ export const MAX_SWING = 0.75
 export const TRIPLET_SWING = 2 / 3
 
 /** Bumped whenever the stored shape changes; storage and import migrate through it. */
-export const SCHEMA_VERSION = 4
+export const SCHEMA_VERSION = 5
 
 export type Hand = 'R' | 'L'
 
@@ -73,7 +101,7 @@ export interface Rest extends ItemBase {
 
 export type Item = Note | Rest
 
-/** One measure: each row's items in order, each row adding up to four beats. */
+/** One measure: each row's items in order, each row adding up to the time signature's beats. */
 export type Bar = Record<Row, Item[]>
 
 /** First and last bar index, inclusive. */
@@ -117,6 +145,8 @@ export interface Exercise {
   name: string
   schemaVersion: number
   bars: Bar[]
+  /** Every bar has its beats; changed through the editor, so it can be undone. */
+  timeSignature: TimeSignature
   sticking: StickingMode
   leadHand: Hand
   practice: PracticeSettings
@@ -253,13 +283,13 @@ export function itemTicks(item: Pick<Item, 'duration' | 'dotted' | 'triplet'>): 
   return item.triplet ? (ticks * 2) / 3 : ticks
 }
 
-/** A row's four beats of quarter rests. */
-export function restItems(): Item[] {
-  return Array.from({ length: BEATS_PER_BAR }, () => ({ kind: 'rest', duration: 'quarter', dotted: false, triplet: false }))
+/** A row's beats of quarter rests, four unless given another number. */
+export function restItems(beats = 4): Item[] {
+  return Array.from({ length: beats }, () => ({ kind: 'rest', duration: 'quarter', dotted: false, triplet: false }))
 }
 
-export function restBar(): Bar {
-  return { snare: restItems(), kick: restItems() }
+export function restBar(beats = 4): Bar {
+  return { snare: restItems(beats), kick: restItems(beats) }
 }
 
 /** A new exercise always starts from the same fixed defaults, in the folder given (none by default). */
@@ -269,6 +299,7 @@ export function newExercise({ id, now, folderId = null }: { id: string; now: num
     name: 'Untitled',
     schemaVersion: SCHEMA_VERSION,
     bars: [restBar()],
+    timeSignature: '4/4',
     sticking: 'off',
     leadHand: 'R',
     practice: { bpm: 80, loopRange: null, groove: 'off', hihatFoot: 'off', swing: MIN_SWING },

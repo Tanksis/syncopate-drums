@@ -3,9 +3,9 @@ import type { EditCommand, StaffEvent } from './index'
 import {
   ROWS,
   SCHEMA_VERSION,
-  TICKS_PER_BAR,
   TRIPLET_SWING,
   applyEdit,
+  barTicks,
   copyExample,
   exampleAccepts,
   exampleExercises,
@@ -64,7 +64,7 @@ describe('the example exercises', () => {
   it('fill every bar with four beats in both rows', () => {
     for (const exercise of examples) {
       for (const bar of exercise.bars) {
-        for (const row of ROWS) expect(bar[row].reduce((sum, item) => sum + itemTicks(item), 0)).toBe(TICKS_PER_BAR)
+        for (const row of ROWS) expect(bar[row].reduce((sum, item) => sum + itemTicks(item), 0)).toBe(barTicks(4))
       }
     }
   })

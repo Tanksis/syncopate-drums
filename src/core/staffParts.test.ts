@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Bar, GroovePresetId, StaffEvent } from './index'
-import { FIGURES, TICKS_PER_BAR, itemTicks, restBar, restItems, setBeat, setHold, staffParts, toggleCutShort, toggleTie } from './index'
+import { FIGURES, barTicks, itemTicks, restBar, restItems, setBeat, setHold, staffParts, toggleCutShort, toggleTie } from './index'
 
 /**
  * A part in shorthand, one event per entry: its start tick, its value (q e s, `.` for a dot, 3 for
@@ -186,15 +186,15 @@ describe('the staff parts: hands up, feet down', () => {
         (bars, figure, i) => setBeat(bars, 'snare', Math.floor(i / 4), i % 4, figure.hits),
         Array.from({ length: Math.ceil(FIGURES.length / 4) }, restBar),
       )
-      const fills = (part: StaffEvent[]) => expect([0, TICKS_PER_BAR]).toContain(part.reduce((ticks, e) => ticks + itemTicks(e), 0))
+      const fills = (part: StaffEvent[]) => expect([0, barTicks(4)]).toContain(part.reduce((ticks, e) => ticks + itemTicks(e), 0))
       for (const { hands: h, feet: f } of staffParts(line, groove)) {
-        expect(h.reduce((ticks, e) => ticks + itemTicks(e), 0)).toBe(TICKS_PER_BAR)
+        expect(h.reduce((ticks, e) => ticks + itemTicks(e), 0)).toBe(barTicks(4))
         fills(f)
         expect([...h, ...f].filter((e) => e.kind === 'rest')).toEqual([])
       }
       // As a kick row alone, the parts still fill every bar and the hands part never rests.
       for (const { hands: h, feet: f } of staffParts(asKicks(line), groove)) {
-        expect(h.reduce((ticks, e) => ticks + itemTicks(e), 0)).toBe(TICKS_PER_BAR)
+        expect(h.reduce((ticks, e) => ticks + itemTicks(e), 0)).toBe(barTicks(4))
         fills(f)
         expect(h.filter((e) => e.kind === 'rest')).toEqual([])
       }
@@ -388,7 +388,7 @@ describe('swing written as triplets (ADR 0006)', () => {
   it('writes the straight hi-hat eighths swung, and still fills every bar', () => {
     const parts = swung([restBar()], 'hihatEighths')
     expect(show(parts.hands).slice(0, 3)).toEqual(['0 e3 hihat', '4 e3 rest', '8 e3 hihat'])
-    expect(parts.hands.reduce((ticks, e) => ticks + itemTicks(e), 0)).toBe(TICKS_PER_BAR)
+    expect(parts.hands.reduce((ticks, e) => ticks + itemTicks(e), 0)).toBe(barTicks(4))
   })
 
   it.each(['off', 'jazz', 'jazzFeathered', 'hihatEighths'] as const)(
@@ -400,8 +400,8 @@ describe('swing written as triplets (ADR 0006)', () => {
       )
       for (const bars of [line, asKicks(line)]) {
         for (const { hands: h, feet: f } of staffParts(bars, groove, { swung: true })) {
-          expect(h.reduce((ticks, e) => ticks + itemTicks(e), 0)).toBe(TICKS_PER_BAR)
-          expect([0, TICKS_PER_BAR]).toContain(f.reduce((ticks, e) => ticks + itemTicks(e), 0))
+          expect(h.reduce((ticks, e) => ticks + itemTicks(e), 0)).toBe(barTicks(4))
+          expect([0, barTicks(4)]).toContain(f.reduce((ticks, e) => ticks + itemTicks(e), 0))
         }
       }
     },

@@ -3,7 +3,7 @@
 
 import type { EditCommand } from './editor'
 import type { Bar, Exercise, LibraryTab, PracticeSettings, Row } from './model'
-import { BEATS_PER_BAR, MIN_SWING, TRIPLET_SWING, newExercise, restBar } from './model'
+import { MIN_SWING, TRIPLET_SWING, newExercise, restBar } from './model'
 import { setBeat } from './speller'
 
 /** One example as written here; everything else is a new exercise's default, the lead hand R among it. */
@@ -108,7 +108,7 @@ export function tabListing(id: string): LibraryTab {
 
 /**
  * Which edit commands an example takes: those that move the cursor, or select or copy bars. Every
- * command that would change its bars, sticking, lead hand or overrides is refused, and so are undo
+ * command that would change its bars, time signature, sticking, lead hand or overrides is refused, and so are undo
  * and redo, since it has no changes to go back over. A new command must be listed here, so it can't
  * slip past the read-only rule. (Practice settings aren't edit commands.)
  */
@@ -132,6 +132,7 @@ const EXAMPLE_ACCEPTS: Record<EditCommand['type'], boolean> = {
   fillPattern: false,
   kicksInGaps: false,
   setExerciseSettings: false,
+  setTimeSignature: false,
   flipOverride: false,
   resetOverrides: false,
   undo: false,
@@ -146,11 +147,11 @@ export function exampleAccepts(command: EditCommand): boolean {
 /** The bars, each beat written through the speller so the spelling is the app's own. */
 function writeRows(rows: Example['rows']): Bar[] {
   const barCount = Math.max(...Object.values(rows).map((bars) => bars.length))
-  let bars: Bar[] = Array.from({ length: barCount }, restBar)
+  let bars: Bar[] = Array.from({ length: barCount }, () => restBar())
   for (const [row, lines] of Object.entries(rows) as [Row, string[]][]) {
     lines.forEach((line, bar) => {
-      const beats = line.split(' ')
-      for (let beat = 0; beat < BEATS_PER_BAR; beat++) bars = setBeat(bars, row, bar, beat, beats[beat])
+      // The examples are in 4/4.
+      line.split(' ').forEach((hits, beat) => (bars = setBeat(bars, row, bar, beat, hits)))
     })
   }
   return bars
