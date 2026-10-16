@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { Button, buttonClass } from '@/components/Button'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { DuplicateIcon, MoreIcon, PencilIcon, PlusIcon, TrashIcon } from '@/components/icons'
+import { DuplicateIcon, HelpIcon, MoreIcon, PencilIcon, PlusIcon, TrashIcon } from '@/components/icons'
 import { Menu } from '@/components/Menu'
 import { NameInput } from '@/components/NameInput'
 import { PatternDialog } from '@/components/PatternDialog'
@@ -46,8 +46,9 @@ const TABS: { id: LibraryTab; label: string }[] = [
  * then the exercises in no folder (click to open, double-click to rename, tick to select, drag
  * onto a folder or "No folder" to move it there). The selection stays through filtering and can
  * be exported, deleted or moved to a folder together. Examples: the built-in examples, to open, and Copy to Library for the open one.
+ * Given `onHelp` (the phone's, which has no header button for it), Help at its foot opens the Help page.
  */
-export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse: () => void; fullScreen?: boolean }) {
+export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onCollapse: () => void; fullScreen?: boolean; onHelp?: () => void }) {
   const library = useAppStore((s) => s.library)
   const openId = useAppStore((s) => s.editor.exercise.id)
   const tab = useAppStore((s) => s.device.libraryTab)
@@ -411,6 +412,12 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
               ))}
           </ul>
         </>
+      )}
+      {onHelp && (
+        <Button variant="ghost" size={toolSize(fullScreen)} onClick={onHelp} className="mt-auto gap-2 self-start">
+          <HelpIcon />
+          Help
+        </Button>
       )}
       {folderToDelete && (
         <ConfirmDialog

@@ -4,9 +4,13 @@
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The page opens and closes on phone (full screen) and desktop (dialog-sized panel); Escape closes it on desktop
-- [ ] The quick start, keys and words, matching what the app does now
-- [ ] About with the storage note, export pointer and credits
-- [ ] Checked at 390 × 844 and 1280, light and dark, Warm and Studio
+- [x] The page opens and closes on phone (full screen) and desktop (dialog-sized panel); Escape closes it on desktop
+- [x] The quick start, keys and words, matching what the app does now
+- [x] About with the storage note, export pointer and credits
+- [x] Checked at 390 × 844 and 1280, light and dark, Warm and Studio
+
+## Comments
+
+- Done. Keys are left off the phone's Help, which has no keyboard. In the same change, Appearance's "Fit notation to the card" switch became **Notation: Fit | Normal**, at the user's request.

@@ -9,7 +9,6 @@ import { SelectMenu } from '@/components/SelectMenu'
 import { SettingGroup } from '@/components/SettingGroup'
 import { FullScreenHeading, chevronButtonClass } from '@/components/Sidebar'
 import { Slider } from '@/components/Slider'
-import { Switch } from '@/components/Switch'
 import { ChevronIcon, SpeakerIcon, SpeakerMutedIcon } from '@/components/icons'
 import { ValueField } from '@/components/ValueField'
 import { keepFocus } from '@/components/keepFocus'
@@ -473,18 +472,27 @@ function ModeChoice({ stacked = false }: { stacked?: boolean }) {
   )
 }
 
-/** Whether a short exercise grows to fill the desktop's notation card, on this device. */
+/** Whether a short exercise grows to fill the desktop's notation card (Fit) or is drawn at its usual size, on this device. */
 function FitNotationChoice() {
   const fitNotation = useAppStore((s) => s.device.fitNotation)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
-  const label = 'Fit notation to the card'
   return (
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-mute">{label}</span>
-      <Switch label={label} labelHidden checked={fitNotation} onChange={(on) => setDeviceSettings({ fitNotation: on })} />
+    <div className="flex items-center justify-between gap-2" title="Fit draws a short exercise larger, to fill the card">
+      <span className="text-mute">Notation</span>
+      <Segmented
+        label="Notation"
+        options={NOTATION_SIZES}
+        value={fitNotation}
+        onChange={(fit) => setDeviceSettings({ fitNotation: fit })}
+      />
     </div>
   )
 }
+
+const NOTATION_SIZES: SegmentedOption<boolean>[] = [
+  { value: true, label: 'Fit' },
+  { value: false, label: 'Normal' },
+]
 
 /** Clears every sticking override in one undoable step; shown only when there are some. */
 function ResetOverrides() {

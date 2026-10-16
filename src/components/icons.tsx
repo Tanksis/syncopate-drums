@@ -92,6 +92,15 @@ export const MenuIcon = () => (
   </Icon>
 )
 
+/** A question mark in a ring: help. */
+export const HelpIcon = () => (
+  <Icon>
+    <circle cx="8" cy="8" r="6.25" />
+    <path d="M6.2 6.2a1.9 1.9 0 1 1 2.6 1.75c-.5.22-.8.6-.8 1.15v.4" />
+    <circle cx="8" cy="11.6" r=".4" fill="currentColor" />
+  </Icon>
+)
+
 /** Two sliders: settings. */
 export const SettingsIcon = () => (
   <Icon>

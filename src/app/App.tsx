@@ -9,6 +9,7 @@
 import type { ReactNode, RefObject } from 'react'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { EDITOR_SHEET_HEIGHT, GridEditor } from '@/features/editor/GridEditor'
+import { HelpPage } from '@/features/help/HelpPage'
 import { ExampleNotice } from '@/features/library/ExampleNotice'
 import { LibrarySidebar } from '@/features/library/LibrarySidebar'
 import { WelcomeCard } from '@/features/library/WelcomeCard'
@@ -31,7 +32,7 @@ import { Button } from '@/components/Button'
 import { keepFocus } from '@/components/keepFocus'
 import { useSlide } from '@/components/useSlide'
 import { useSwipe } from '@/components/useSwipe'
-import { MenuIcon, PencilIcon, SettingsIcon } from '@/components/icons'
+import { HelpIcon, MenuIcon, PencilIcon, SettingsIcon } from '@/components/icons'
 import { isExample } from '@/core'
 
 export function App() {
@@ -40,7 +41,16 @@ export function App() {
   const [barRef, room] = useExerciseBarRoom()
   const onMetronome = useAppStore((s) => s.device.screen === 'metronome')
   const fitNotation = useAppStore((s) => s.device.fitNotation)
-  if (phone) return <PhoneLayout sidebars={sidebars} />
+  // The Help page, over the rest; app state, like the sheets, so no route.
+  const [helpOpen, setHelpOpen] = useState(false)
+  const help = helpOpen && <HelpPage onClose={() => setHelpOpen(false)} />
+  if (phone)
+    return (
+      <>
+        <PhoneLayout sidebars={sidebars} onHelp={() => setHelpOpen(true)} />
+        {help}
+      </>
+    )
   return (
     <div className="flex h-dvh flex-col">
       {/* The same header on both screens, the switch in its middle, so nothing in it moves when the screen does. */}
@@ -49,9 +59,13 @@ export function App() {
         <ScreenTabs place="header" />
         <div className="flex items-center justify-end gap-3">
           <NotSaving />
+          <Button size="md" icon aria-label="Help" title="Help and about" onClick={() => setHelpOpen(true)}>
+            <HelpIcon />
+          </Button>
           <SettingsToggle {...sidebars.settings} />
         </div>
       </header>
+      {help}
 
       {/* The sidebars stay put under it on both screens; an overlay opens over this, below the header. */}
       <div className="relative grid min-h-0 flex-1 grid-cols-[auto_1fr_auto] grid-rows-[minmax(0,1fr)]">
@@ -104,7 +118,8 @@ function Wordmark() {
 
 /**
  * The phone layout: a compact header (menu, the exercise name or the screen's, settings), the screen
- * chosen, and the tab bar at the foot that switches between Practice and the Metronome. Practice is
+ * chosen, and the tab bar at the foot that switches between Practice and the Metronome; Help is at the
+ * foot of the menu's sidebar, and `onHelp` opens it. Practice is
  * the notation filling the screen over the transport bar. Menu and settings open their sidebar over
  * the whole screen, sliding in; so does a swipe right and left on the screen, which pulls it in
  * under the finger, and a swipe back the other way closes it. Edit, in the transport bar, slides the
@@ -117,7 +132,7 @@ function Wordmark() {
  * and the transport bar is drawn slimmer. Turning the phone keeps the screen, the open sheet and the
  * cursor bar, since it is this same layout either way.
  */
-function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl> }) {
+function PhoneLayout({ sidebars, onHelp }: { sidebars: Record<SidebarId, SidebarControl>; onHelp: () => void }) {
   const { library, settings } = sidebars
   const example = useAppStore((s) => isExample(s.editor.exercise.id))
   const copyToLibrary = useAppStore((s) => s.duplicateOpenExercise)
@@ -203,7 +218,7 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
 
       {/* A swipe on the screen pulls in the exercises from the left, or the settings from the right. */}
       <SidebarFullScreen side="left" open={library.state === 'overlay'} pull={Math.max(0, screenSwipe.offset.x)} onClose={library.onCollapse}>
-        <LibrarySidebar fullScreen onCollapse={library.onCollapse} />
+        <LibrarySidebar fullScreen onCollapse={library.onCollapse} onHelp={onHelp} />
       </SidebarFullScreen>
       <SidebarFullScreen side="right" open={settings.state === 'overlay'} pull={Math.min(0, screenSwipe.offset.x)} onClose={settings.onCollapse}>
         <PhoneSettings onDone={settings.onCollapse} />

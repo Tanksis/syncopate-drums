@@ -1,7 +1,18 @@
 import { useEffect } from 'react'
 import { useAppStore } from '@/app/store'
 import { usesSpace } from '@/components/focus'
+import type { KeyHelpGroup } from '@/features/editor/keyHelp'
 import { toggleMetronome } from '@/features/playback/transport'
+
+/** The keys below, for the Help page. Keep it in step with `useMetronomeKeys`. */
+export const METRONOME_KEY_HELP: KeyHelpGroup = {
+  title: 'Metronome',
+  keys: [
+    ['Space', 'start / stop'],
+    ['-  +  ← → ↑ ↓', 'BPM down / up, held to repeat'],
+    ['T', 'tap the tempo'],
+  ],
+}
 
 /** The keys that change the BPM, and by how much. */
 const BPM_KEYS: Record<string, number> = { '-': -1, _: -1, '+': 1, '=': 1, ArrowDown: -1, ArrowLeft: -1, ArrowUp: 1, ArrowRight: 1 }
