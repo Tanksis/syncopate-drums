@@ -9,6 +9,7 @@ import {
   copyExample,
   exampleAccepts,
   exampleExercises,
+  exampleTitle,
   isExample,
   isUnchangedNew,
   itemTicks,
@@ -30,6 +31,10 @@ describe('the example exercises', () => {
       'Example: rock beat',
       'Example: triplets',
     ])
+  })
+
+  it('are listed by their titles, without the "Example: " prefix', () => {
+    expect(examples.map(exampleTitle)).toEqual(['syncopated eighths', 'jazz comping', 'rock beat', 'triplets'])
   })
 
   it('each have a fixed id that isExample recognises, and come out the same from two calls', () => {

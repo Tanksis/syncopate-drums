@@ -17,7 +17,7 @@ import { MetronomeVolume } from '@/features/metronome/MetronomeVolume'
 import { SOUND_OPTIONS, pickSound } from '@/features/metronome/SoundSheet'
 import { LoopChip } from '@/features/playback/LoopChip'
 import { ClickToggle, CountInToggle } from '@/features/playback/TransportControls'
-import type { ExerciseSettings, HihatFoot, Layer, Theme, VolumeSetting } from '@/core'
+import type { ExerciseSettings, Hand, HihatFoot, Layer, StickingMode, Theme, VolumeSetting } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
   GROOVE_PRESETS,
@@ -57,8 +57,8 @@ export function PracticeSettings({ playbackGroup = false }: { playbackGroup?: bo
         <Swing />
       </SettingGroup>
       <SettingGroup title="Sticking">
-        <Choice label="Mode" setting="sticking" options={['natural', 'alternate', 'off']} />
-        <Choice label="Lead hand" setting="leadHand" options={['R', 'L']} />
+        <Choice label="Mode" setting="sticking" options={STICKING_MODES} />
+        <Choice label="Lead hand" setting="leadHand" options={LEAD_HANDS} />
         <ResetOverrides />
       </SettingGroup>
     </>
@@ -162,8 +162,8 @@ export function PhoneSettings({ onDone }: { onDone: () => void }) {
         )}
         {tab === 'sticking' && (
           <>
-            <Choice label="Mode" setting="sticking" options={['natural', 'alternate', 'off']} stacked />
-            <Choice label="Lead hand" setting="leadHand" options={['R', 'L']} stacked />
+            <Choice label="Mode" setting="sticking" options={STICKING_MODES} stacked />
+            <Choice label="Lead hand" setting="leadHand" options={LEAD_HANDS} stacked />
             <ResetOverrides />
           </>
         )}
@@ -220,18 +220,33 @@ function PhoneTabs({ id, tab, onChange }: { id: string; tab: PhoneTab; onChange:
 }
 
 /** A setting's name and its control: side by side, or `stacked` with the name above a full-width control. */
-function Labelled({ label, stacked, children }: { label: string; stacked: boolean; children: ReactNode }) {
+function Labelled({
+  label,
+  title,
+  stacked,
+  children,
+}: {
+  label: string
+  /** A tooltip on the label, saying what the setting does. */
+  title?: string
+  stacked: boolean
+  children: ReactNode
+}) {
   if (stacked)
     return (
       <div className="flex flex-col gap-2">
-        <span className="font-semibold">{label}</span>
+        <span className="font-semibold" title={title}>
+          {label}
+        </span>
         {/* A row, so a control that grows (flex-1) takes the width rather than the height. */}
         <div className="flex">{children}</div>
       </div>
     )
   return (
     <div className="flex items-center gap-2">
-      <span className="w-20 shrink-0 text-mute">{label}</span>
+      <span className="w-20 shrink-0 text-mute" title={title}>
+        {label}
+      </span>
       {children}
     </div>
   )
@@ -267,7 +282,7 @@ function HihatFootChoice({ large = false }: { large?: boolean }) {
   const hihatFoot = useAppStore((s) => s.editor.exercise.practice.hihatFoot)
   const setHihatFoot = useAppStore((s) => s.setHihatFoot)
   return (
-    <Labelled label="Hi-hat foot" stacked={large}>
+    <Labelled label="Hi-hat foot" title="The hi-hat pedal played under every bar" stacked={large}>
       <SelectMenu
         label="Hi-hat foot"
         large={large}
@@ -344,6 +359,11 @@ function Swing({ stacked = false }: { stacked?: boolean }) {
   )
 }
 
+/** What a layer's volume sets, where its name alone doesn't say. */
+const MIX_TITLES: Partial<Record<Layer, string>> = {
+  exercise: "How loud the exercise's own notes play",
+}
+
 /**
  * A playback layer in the mix: its volume on this device, 100% being its usual level, and a button
  * that mutes it, so the drummer can practise against any combination; both apply while playing.
@@ -353,6 +373,7 @@ function MixRow({ layer, large = false }: { layer: Layer; large?: boolean }) {
   const setting: VolumeSetting = `${layer}Volume`
   const mute = `${layer}Muted` as const
   const label = layer[0].toUpperCase() + layer.slice(1)
+  const title = MIX_TITLES[layer]
   const volume = useAppStore((s) => s.device[setting])
   const muted = useAppStore((s) => s.device[mute])
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
@@ -400,7 +421,9 @@ function MixRow({ layer, large = false }: { layer: Layer; large?: boolean }) {
     return (
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
-          <span className="font-semibold">{label}</span>
+          <span className="font-semibold" title={title}>
+            {label}
+          </span>
           {percent}
         </div>
         <div className="flex items-center gap-2">
@@ -410,7 +433,8 @@ function MixRow({ layer, large = false }: { layer: Layer; large?: boolean }) {
       </div>
     )
   return (
-    <div className="flex items-center gap-2">
+    // The tooltip covers the whole row, the slider among it; the mute keeps its own.
+    <div className="flex items-center gap-2" title={title}>
       <span className="w-14 text-mute">{label}</span>
       {slider}
       {percent}
@@ -482,6 +506,20 @@ function ResetOverrides() {
 }
 
 /** A row of buttons choosing one value of an exercise setting; each change is an undoable edit. */
+/** The sticking modes, by name; the stored values stay lowercase. */
+const STICKING_MODES: Option<StickingMode>[] = [
+  { value: 'natural', label: 'Natural' },
+  { value: 'alternate', label: 'Alternate' },
+  { value: 'off', label: 'Off' },
+]
+
+const LEAD_HANDS: Option<Hand>[] = [
+  { value: 'R', label: 'R' },
+  { value: 'L', label: 'L' },
+]
+
+type Option<T> = { value: T; label: string }
+
 function Choice<K extends keyof ExerciseSettings>({
   label,
   setting,
@@ -490,7 +528,7 @@ function Choice<K extends keyof ExerciseSettings>({
 }: {
   label: string
   setting: K
-  options: ExerciseSettings[K][]
+  options: Option<ExerciseSettings[K]>[]
   stacked?: boolean
 }) {
   const value = useAppStore((s) => s.editor.exercise[setting])
@@ -501,7 +539,7 @@ function Choice<K extends keyof ExerciseSettings>({
       <Segmented
         label={label}
         fill={stacked}
-        options={options.map((option) => ({ value: option, label: String(option) }))}
+        options={options}
         value={value}
         onChange={(option) => dispatch({ type: 'setExerciseSettings', settings: { [setting]: option } })}
       />

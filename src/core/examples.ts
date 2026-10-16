@@ -92,8 +92,13 @@ export function copyExample(
   example: Exercise,
   { id, now, folderId }: { id: string; now: number; folderId: string | null },
 ): Exercise {
-  const name = example.name.startsWith(EXAMPLE_NAME_PREFIX) ? example.name.slice(EXAMPLE_NAME_PREFIX.length) : example.name
-  return { ...example, id, name, lastOpened: now, folderId }
+  return { ...example, id, name: exampleTitle(example), lastOpened: now, folderId }
+}
+
+/** An example's name without the "Example: " prefix, as the Examples tab lists it. */
+export function exampleTitle(example: Exercise): string {
+  const { name } = example
+  return name.startsWith(EXAMPLE_NAME_PREFIX) ? name.slice(EXAMPLE_NAME_PREFIX.length) : name
 }
 
 /** The sidebar tab that lists an exercise: Examples for an example, otherwise Library. */

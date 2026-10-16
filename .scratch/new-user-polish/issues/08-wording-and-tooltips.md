@@ -4,8 +4,8 @@
 
 **Blocked by:** none
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `exampleTitle` in `src/core/examples.ts`, tested; the Examples tab uses it
-- [ ] Sticking mode labels capitalised on desktop and phone
-- [ ] The three tooltips, with the wording in the spec
+- [x] `exampleTitle` in `src/core/examples.ts`, tested; the Examples tab uses it
+- [x] Sticking mode labels capitalised on desktop and phone
+- [x] The three tooltips, with the wording in the spec
