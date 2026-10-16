@@ -28,7 +28,13 @@ export function SettingsSidebar({ onCollapse, playbackGroup }: { onCollapse: () 
   return (
     <aside aria-label="Settings" className="flex min-h-0 w-[250px] flex-col border-l border-line bg-panel">
       <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-auto p-3">
-        <SidebarHeading name={onMetronome ? 'Metronome' : 'Practice'} sidebarName="Settings" side="right" onCollapse={onCollapse} />
+        <SidebarHeading
+          // PROTOTYPE (named): the top says whose settings these are, so the rail's "Settings" isn't a new name.
+          name={`${onMetronome ? 'Metronome' : 'Practice'}${variant === 'named' ? ' settings' : ''}`}
+          sidebarName="Settings"
+          side="right"
+          onCollapse={onCollapse}
+        />
         {onMetronome ? <MetronomeRhythm /> : <PracticeSettings playbackGroup={playbackGroup} />}
       </div>
       <SharedSettings />

@@ -23,9 +23,9 @@ const VARIANTS = ['current', 'C'] as const
 type Variant = (typeof VARIANTS)[number]
 const NAMES: Record<Variant, string> = { current: 'Today', C: 'Pattern + feet' }
 
-const SIDEBARS = ['today', 'one'] as const
+const SIDEBARS = ['today', 'named', 'one'] as const
 type Sidebar = (typeof SIDEBARS)[number]
-const SIDEBAR_NAMES: Record<Sidebar, string> = { today: 'Today', one: 'One list' }
+const SIDEBAR_NAMES: Record<Sidebar, string> = { today: 'Today', named: 'Renamed', one: 'One list' }
 
 const HEADINGS = ['current', 'rule', 'title', 'card'] as const
 type Heading = (typeof HEADINGS)[number]
@@ -57,7 +57,7 @@ const useProto = create<{
 }>(() => ({
   variant: readParam('groove', VARIANTS, 'C'),
   heading: readParam('heading', HEADINGS, 'rule'),
-  sidebar: readParam('sidebar', SIDEBARS, 'one'),
+  sidebar: readParam('sidebar', SIDEBARS, 'named'),
   timeSig: '4/4',
   silentPattern: null,
   bass: 'off',

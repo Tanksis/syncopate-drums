@@ -15,7 +15,7 @@ import { MetronomeVolume } from '@/features/metronome/MetronomeVolume'
 import { SOUND_OPTIONS, pickSound } from '@/features/metronome/SoundSheet'
 import { LoopChip } from '@/features/playback/LoopChip'
 import { ClickToggle, CountInToggle } from '@/features/playback/TransportControls'
-import { PrototypeGroove, ProtoGroup } from './GrooveSettingsPrototype'
+import { PrototypeGroove, ProtoGroup, useSidebarVariant } from './GrooveSettingsPrototype'
 import type { ExerciseSettings, HihatFoot, Layer, Theme, VolumeSetting } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
@@ -77,13 +77,15 @@ export function SharedSettings() {
   const open = useAppStore((s) => s.device.settingsSectionOpen)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   const id = useId()
-  const label = open ? 'Fold the settings' : 'Open the settings'
+  // PROTOTYPE (named): the folding part is General, not a second "Settings".
+  const name = useSidebarVariant() === 'named' ? 'General' : 'Settings'
+  const label = open ? `Fold ${name === 'General' ? 'the general settings' : 'the settings'}` : `Open ${name === 'General' ? 'the general settings' : 'the settings'}`
   return (
     // At most a little over half the sidebar, scrolling past that, so a short window leaves the screen's own settings room.
     <section aria-labelledby={`${id}-heading`} className="flex max-h-[55%] shrink-0 flex-col gap-3.5 border-t border-line p-3">
       <div className="flex items-start justify-between gap-2">
         <PanelHeading id={`${id}-heading`} className={open ? '' : 'mb-0'}>
-          Settings
+          {name}
         </PanelHeading>
         <button
           type="button"
