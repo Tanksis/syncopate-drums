@@ -1,6 +1,6 @@
 # Spec: New-user polish
 
-Status: ready-for-agent
+Status: ready-for-agent for tickets 01, 02, 08 and 10. Tickets 03–06 and 09 are needs-info: the user wants to see them mocked or prototyped first. Ticket 07 (the sticking tip) is wontfix (2026-10-16).
 
 Source: the user's goal on 2026-10-16: before accounts, sync, a public library or iOS, the app should be easy to understand for a new user, and polished and complete. Inputs:
 - A walk-through of the app as a first-time user on desktop (Chrome) and an emulated iPhone 13 (WebKit) found ten problems, numbered 1–10 below. The user confirmed all ten.
@@ -18,7 +18,6 @@ A drummer who opens Syncopate! for the first time lands on an example, with no w
 - **A welcome and a way in:** the first visit opens the first example with a short welcome card that offers **New exercise** and **Browse examples**. The phone's **Copy** becomes **Edit a copy**, and the Library's empty state gets a button.
 - **Visible affordances:** a pencil beside the exercise's name and **Rename** in the Library's menus; **Snare** and **Kick** labels on the editor's rows, so the kick's colour explains itself; bigger grid chips, beat menus and undo/redo on desktop.
 - **Notation that fits:** the empty-staff hint moves off the staff lines, and a short exercise is drawn larger on a roomy desktop card.
-- **Sticking hint:** a one-time tip on the first new exercise that sticking is off and where to turn it on.
 - **Wording and tooltips:** no "Example:" in the Examples tab, sticking modes capitalised, and tooltips on Hi-hat foot, the Loop chip and the Exercise volume.
 - **Settings sidebar:** rule-style group headings everywhere, and the sections named **Practice settings** / **Metronome settings** over a folding **General**.
 - **Beat count:** a large `1 2 3 4` in the notation card's corner while playing, the current beat enlarged, beat 1 in the accent colour, and a **count-in** label during the count-in.
@@ -42,7 +41,7 @@ A drummer who opens Syncopate! for the first time lands on an example, with no w
 9. As a desktop user, a beat's **16ths / trip** switch, its ⋯ menu and the editor's undo and redo are big enough to hit easily.
 10. As a user with an empty exercise, the hint "Tap or click a grid position below to add hits." sits above the staff, not over its lines.
 11. As a desktop user with a short exercise, the staff is drawn larger, so it fills more of the card.
-12. As a new user, the first time I add a note to a new exercise, a tip says sticking is off and where to turn it on. I can dismiss it, and it never comes back.
+12. *(Dropped: the sticking tip, ticket 07, wontfix.)*
 
 ### Wording
 
@@ -75,9 +74,8 @@ A drummer who opens Syncopate! for the first time lands on an example, with no w
 
 - `DeviceSettings` gains:
   - `welcomeDismissed: boolean` (default false);
-  - `stickingTipSeen: boolean` (default false);
   - `beatCount: boolean` (default true).
-  `deviceSettingsFrom` validates all three. Device settings are never exported, so no schema bump.
+  `deviceSettingsFrom` validates both. Device settings are never exported, so no schema bump.
 - A pure `beatCountAt(position)` (in `src/core/`, beside the timeline) maps a playback position to `{ countIn: boolean, beat: number, beats: number }`. `beats` comes from the bar, which is `BEATS_PER_BAR` today, so the time-signatures work only changes it there.
 - The examples' list shows `exampleTitle(example)`, the name without its `Example: ` prefix. The stored name and Copy to Library keep their present behaviour.
 
@@ -91,7 +89,6 @@ A drummer who opens Syncopate! for the first time lands on an example, with no w
 - **Desktop sizes:** the 16ths/trip switch, the beat ⋯ button and undo/redo go from their present size to at least 32 px high hit areas at `sm` and up; the phone sizes stay.
 - **Empty-staff hint:** placed in the paper's space above the first staff, not centred over it.
 - **Short exercises:** `notationFit` may scale the staff above 1 when every line fits with room to spare, capped at 1.4, on desktop only.
-- **Sticking tip:** a dismissible line under the staff, the first time a note is added to an ordinary exercise whose sticking is off while `stickingTipSeen` is false: "Sticking is off. Turn it on in Settings › Sticking to see R and L under the notes." It sets `stickingTipSeen` when dismissed or once sticking is turned on.
 - **Wording:** `Choice` labels the sticking modes Natural / Alternate / Off (the values stay lowercase). Tooltips:
   - Hi-hat foot: "The hi-hat pedal played under every bar".
   - The Loop chip (all bars): "Click a bar number to loop it, Shift+click to extend". It has this already when idle, so check it shows in every state.
@@ -109,7 +106,7 @@ A drummer who opens Syncopate! for the first time lands on an example, with no w
 
 - Unit tests:
   - `beatCountAt`: a count-in position, each beat of a bar, a position that falls between beats, and the last beat before the loop wraps.
-  - `deviceSettingsFrom` for the three new fields (valid, missing, junk).
+  - `deviceSettingsFrom` for the two new fields (valid, missing, junk).
   - `exampleTitle`.
 - Every screen is checked in the browser at 390 × 844, at 1280 with both sidebars open and at 1440, in light and dark, Warm and Studio, with real mouse events (see the memory on real-mouse checks).
 - First-visit checks start from a cleared IndexedDB.
@@ -118,7 +115,7 @@ A drummer who opens Syncopate! for the first time lands on an example, with no w
 ## Out of Scope
 
 - The Groove/Time redesign: the Pattern picker, Feet, the time signature, the swing chips (which also fixes finding 9's cramped swing presets) and the jazz pattern's visible swing change with Undo (finding 7). These are in the `time-signatures` spec.
-- Changing new exercises to start with sticking on (the user kept #50's choice).
+- Changing new exercises to start with sticking on (the user kept #50's choice), and any tip about sticking being off (ticket 07; the user declined it on 2026-10-16).
 - A guided tour or tooltips that walk through the app.
 - A speed trainer, share-by-link, gap click, print/PDF, a practice log.
 - Accounts, sync, the public library, iOS.

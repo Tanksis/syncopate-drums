@@ -4,9 +4,13 @@
 
 **Blocked by:** none
 
-**Status:** ready-for-agent
+**Status:** wontfix
 
 - [ ] `DeviceSettings.stickingTipSeen`, validated, with tests
 - [ ] Shown once, never on an example, never with sticking on
 - [ ] Dismissing it or turning sticking on hides it for good
 - [ ] The wording points at the right place on the phone too (Settings › Sticking tab)
+
+## Comments
+
+- 2026-10-16: The user doesn't agree with this one. New exercises keep starting with sticking off, with no tip.

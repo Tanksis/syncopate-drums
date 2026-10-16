@@ -4,7 +4,7 @@
 
 **Blocked by:** none
 
-**Status:** ready-for-agent
+**Status:** needs-info
 
 - [ ] `DeviceSettings.welcomeDismissed`, validated by `deviceSettingsFrom`, with tests
 - [ ] The welcome shows on a fresh device, on an example, on phone and desktop; it never shows again once dismissed
@@ -12,3 +12,7 @@
 - [ ] The phone's slot button reads Edit a copy (measured in both looks)
 - [ ] The empty Library has a New exercise button and the hint
 - [ ] Checked from a cleared IndexedDB at 390 × 844 and 1280
+
+## Comments
+
+- 2026-10-16: The user wants to see this mocked or prototyped before agreeing to it. It waits for the `prototype/new-user-polish` verdict.

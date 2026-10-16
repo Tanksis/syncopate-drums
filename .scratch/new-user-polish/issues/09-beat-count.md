@@ -4,7 +4,7 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** needs-info
 
 - [ ] `beatCountAt` in `src/core/`, unit-tested (count-in, each beat, between beats, the loop wrap)
 - [ ] `DeviceSettings.beatCount` (default on), validated, with tests; the switch on desktop and phone
@@ -12,3 +12,7 @@
 - [ ] With reduced motion, the beat changes colour without scaling
 - [ ] Add **Beat count** to `CONTEXT.md`
 - [ ] Checked playing at 390 × 844 and 1280, light and dark; the by-ear sync is left to the user
+
+## Comments
+
+- 2026-10-16: The user wants to see this mocked or prototyped before agreeing to it. It waits for the `prototype/new-user-polish` verdict.
