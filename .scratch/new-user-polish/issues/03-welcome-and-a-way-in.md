@@ -4,15 +4,19 @@
 
 **Blocked by:** none
 
-**Status:** ready-for-agent
+**Status:** done (merged in PR #131, 2026-10-16)
 
-- [ ] `DeviceSettings.welcomeDismissed`, validated by `deviceSettingsFrom`, with tests
-- [ ] The welcome shows on a fresh device, on an example, on phone and desktop; it never shows again once dismissed
-- [ ] New exercise opens an empty, editable exercise in the Library; Browse examples shows the Examples list (the phone's Library sheet on its Examples tab)
-- [ ] The empty Library has a New exercise button and the hint, with Examples as a link to the tab
-- [ ] Checked from a cleared IndexedDB at 390 × 844 and 1280
+- [x] `DeviceSettings.welcomeDismissed`, validated by `deviceSettingsFrom`, with tests
+- [x] The welcome shows on a fresh device, on an example, on phone and desktop; it never shows again once dismissed
+- [x] New exercise opens an empty, editable exercise in the Library; Browse examples shows the Examples list (the phone's Library sheet on its Examples tab)
+- [x] The empty Library has a New exercise button and the hint, with Examples as a link to the tab
+- [x] Checked from a cleared IndexedDB at 390 × 844 and 1280
 
 ## Comments
 
 - 2026-10-16: The user wants to see this mocked or prototyped before agreeing to it. It waits for the `prototype/new-user-polish` verdict.
 - 2026-10-16: Prototype verdict (`prototype/new-user-polish`, commit 53472b9): the welcome card (over the start page and the banner), the Copy label kept (over "Edit a copy" and "Make it mine"), and the empty Library's button (over the panel).
+- 2026-10-16: Done in PR #131. Choices the spec left open:
+  - The welcome checks only that `welcomeDismissed` is false and an example is open, so a returning user also sees it once, the next time they open an example.
+  - `deviceSettingsFrom` drops a non-boolean for every yes-or-no setting, not only this one.
+  - The card's text is the prototype's two-sentence draft, which the user may rewrite.
