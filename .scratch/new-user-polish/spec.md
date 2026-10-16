@@ -1,6 +1,6 @@
 # Spec: New-user polish
 
-Status: ready-for-agent for tickets 01–04, 06, 08, 10 and 11. Ticket 09 is needs-info until the user picks the corner count or a strip on `prototype/new-user-polish`. Tickets 05 (row labels, bigger controls) and 07 (the sticking tip) are wontfix. Prototype verdict 2026-10-16.
+Status: ready-for-agent for tickets 01–04, 06 and 08–11. Tickets 05 (row labels, bigger controls) and 07 (the sticking tip) are wontfix. Prototype verdict 2026-10-16: the beat count is the corner one.
 
 Source: the user's goal on 2026-10-16: before accounts, sync, a public library or iOS, the app should be easy to understand for a new user, and polished and complete. Inputs:
 - A walk-through of the app as a first-time user on desktop (Chrome) and an emulated iPhone 13 (WebKit) found ten problems, numbered 1–10 below. The user confirmed all ten.
@@ -125,4 +125,4 @@ A drummer who opens Syncopate! for the first time lands on an example, with no w
 
 - The first new-user test didn't cover audio by ear on a real iPhone, the 1280 px desktop layout or editing in the phone sheet. Cover the last two in this spec's browser checks.
 - The welcome's wording, the hint's wording and the Help page's text are drafts; the user may rewrite them in review.
-- The prototype that settled tickets 03–06 is on the `prototype/new-user-polish` branch (never merged); its verdict commit is 53472b9.
+- The prototype that settled tickets 03–06 and 09 is on the `prototype/new-user-polish` branch (never merged); its verdict commit is 53472b9.
