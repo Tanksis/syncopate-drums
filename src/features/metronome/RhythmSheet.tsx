@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useAppStore } from '@/app/store'
 import { Button } from '@/components/Button'
-import { PanelHeading } from '@/components/PanelHeading'
+import { SettingGroup } from '@/components/SettingGroup'
 import { Sheet } from '@/components/Sheet'
 import { keepFocus } from '@/components/keepFocus'
 import { MAX_BEATS, NOTE_VALUES, SUBDIVISIONS, subdivisionOf, withTimeSignature } from '@/core'
@@ -30,31 +30,35 @@ export function TimeSignature({ compact = false }: { compact?: boolean }) {
   const { beats, noteValue } = metronome
   const noteIndex = NOTE_VALUES.indexOf(noteValue)
   const change = (nextBeats: number, nextNoteValue = noteValue) => setMetronome(withTimeSignature(metronome, nextBeats, nextNoteValue))
-  return (
-    <div className={`flex flex-col ${compact ? '' : 'gap-2'}`}>
-      {compact ? <PanelHeading>Time signature</PanelHeading> : <span className="font-semibold">Time signature</span>}
-      <div className={`grid grid-cols-3 items-center rounded-2xl border border-line bg-card ${compact ? 'p-2' : 'p-3'}`}>
-        <Stepper
-          compact={compact}
-          label="Beats"
-          more={{ name: 'More beats', disabled: beats >= MAX_BEATS, onClick: () => change(beats + 1) }}
-          fewer={{ name: 'Fewer beats', disabled: beats <= 1, onClick: () => change(beats - 1) }}
-        />
-        <div
-          role="img"
-          aria-label={`Time signature ${beats}/${noteValue}`}
-          className={`flex flex-col items-center font-sans font-bold tabular-nums ${compact ? 'text-[40px]/[0.95]' : 'text-5xl/[0.95]'}`}
-        >
-          <span>{beats}</span>
-          <span>{noteValue}</span>
-        </div>
-        <Stepper
-          compact={compact}
-          label="Note"
-          more={{ name: 'Shorter note value', disabled: noteIndex === NOTE_VALUES.length - 1, onClick: () => change(beats, NOTE_VALUES[noteIndex + 1]) }}
-          fewer={{ name: 'Longer note value', disabled: noteIndex === 0, onClick: () => change(beats, NOTE_VALUES[noteIndex - 1]) }}
-        />
+  const card = (
+    <div className={`grid grid-cols-3 items-center rounded-2xl border border-line bg-card ${compact ? 'p-2' : 'p-3'}`}>
+      <Stepper
+        compact={compact}
+        label="Beats"
+        more={{ name: 'More beats', disabled: beats >= MAX_BEATS, onClick: () => change(beats + 1) }}
+        fewer={{ name: 'Fewer beats', disabled: beats <= 1, onClick: () => change(beats - 1) }}
+      />
+      <div
+        role="img"
+        aria-label={`Time signature ${beats}/${noteValue}`}
+        className={`flex flex-col items-center font-sans font-bold tabular-nums ${compact ? 'text-[40px]/[0.95]' : 'text-5xl/[0.95]'}`}
+      >
+        <span>{beats}</span>
+        <span>{noteValue}</span>
       </div>
+      <Stepper
+        compact={compact}
+        label="Note"
+        more={{ name: 'Shorter note value', disabled: noteIndex === NOTE_VALUES.length - 1, onClick: () => change(beats, NOTE_VALUES[noteIndex + 1]) }}
+        fewer={{ name: 'Longer note value', disabled: noteIndex === 0, onClick: () => change(beats, NOTE_VALUES[noteIndex - 1]) }}
+      />
+    </div>
+  )
+  if (compact) return <SettingGroup title="Time signature">{card}</SettingGroup>
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="font-semibold">Time signature</span>
+      {card}
     </div>
   )
 }
@@ -91,26 +95,36 @@ function Stepper({ label, more, fewer, compact }: { label: string; more: Step; f
 export function SubdivisionGrid({ compact = false }: { compact?: boolean }) {
   const subdivision = useAppStore((s) => s.device.metronome.subdivision)
   const setMetronome = useAppStore((s) => s.setMetronome)
+  const name = <span className={`text-mute ${compact ? 'text-xs' : 'text-[13px]'}`}>{subdivisionOf(subdivision).name}</span>
+  const grid = (
+    <div className="grid grid-cols-4 gap-1.5">
+      {SUBDIVISIONS.map(({ id }) => (
+        <button
+          key={id}
+          type="button"
+          aria-pressed={id === subdivision}
+          onMouseDown={keepFocus}
+          onClick={() => setMetronome({ subdivision: id })}
+          className={`flex ${compact ? 'h-11' : 'h-14'} cursor-pointer touch-manipulation items-center justify-center rounded-xl border border-line bg-card text-ink aria-pressed:border-2 aria-pressed:border-accent aria-pressed:bg-accent-tint`}
+        >
+          <SubdivisionPicture id={id} size={compact ? 0.85 : 1} />
+        </button>
+      ))}
+    </div>
+  )
+  if (compact)
+    return (
+      <SettingGroup title="Subdivision" aside={name}>
+        {grid}
+      </SettingGroup>
+    )
   return (
-    <div className={`flex flex-col ${compact ? '' : 'gap-2'}`}>
+    <div className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between gap-2">
-        {compact ? <PanelHeading>Subdivision</PanelHeading> : <span className="font-semibold">Subdivision</span>}
-        <span className={`text-mute ${compact ? 'text-xs' : 'text-[13px]'}`}>{subdivisionOf(subdivision).name}</span>
+        <span className="font-semibold">Subdivision</span>
+        {name}
       </div>
-      <div className="grid grid-cols-4 gap-1.5">
-        {SUBDIVISIONS.map(({ id }) => (
-          <button
-            key={id}
-            type="button"
-            aria-pressed={id === subdivision}
-            onMouseDown={keepFocus}
-            onClick={() => setMetronome({ subdivision: id })}
-            className={`flex ${compact ? 'h-11' : 'h-14'} cursor-pointer touch-manipulation items-center justify-center rounded-xl border border-line bg-card text-ink aria-pressed:border-2 aria-pressed:border-accent aria-pressed:bg-accent-tint`}
-          >
-            <SubdivisionPicture id={id} size={compact ? 0.85 : 1} />
-          </button>
-        ))}
-      </div>
+      {grid}
     </div>
   )
 }

@@ -6,6 +6,7 @@ import { Button } from '@/components/Button'
 import { PanelHeading } from '@/components/PanelHeading'
 import { Segmented } from '@/components/Segmented'
 import { SelectMenu } from '@/components/SelectMenu'
+import { SettingGroup } from '@/components/SettingGroup'
 import { FullScreenHeading, chevronButtonClass } from '@/components/Sidebar'
 import { Slider } from '@/components/Slider'
 import { ChevronIcon, SpeakerIcon, SpeakerMutedIcon } from '@/components/icons'
@@ -231,15 +232,6 @@ function Labelled({ label, stacked, children }: { label: string; stacked: boolea
       <span className="w-20 shrink-0 text-mute">{label}</span>
       {children}
     </div>
-  )
-}
-
-function SettingGroup({ title, children }: { title: string; children?: ReactNode }) {
-  return (
-    <section className="flex flex-col gap-1.5">
-      <PanelHeading>{title}</PanelHeading>
-      {children}
-    </section>
   )
 }
 
