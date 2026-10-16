@@ -9,7 +9,7 @@
 //   size     05: the editor's small controls on desktop (today | large)
 //   hint     06: the empty-staff hint (today | above | editor)
 //   fit      06: a short exercise in a big card (today | centre | hug | grow)
-//   count    09: the beat count while playing (off | corner | bar | strip)
+//   count    09: the beat count while playing (off | corner | bar | strip | fixed | over)
 // Nothing here is stored: a dismissed welcome comes back on reload.
 
 import type { ReactNode } from 'react'
@@ -29,7 +29,7 @@ const QUESTIONS = {
   size: { label: '05 Control size', options: { today: 'Today', large: 'Larger' } },
   hint: { label: '06 Empty hint', options: { today: 'Today', above: 'Above staff', editor: 'In editor' } },
   fit: { label: '06 Short exercise', options: { today: 'Today', centre: 'Centred', hug: 'Card hugs', grow: 'Grow' } },
-  count: { label: '09 Beat count', options: { off: 'Off', corner: 'Corner', bar: 'In the bar', strip: 'Strip' } },
+  count: { label: '09 Beat count', options: { off: 'Off', corner: 'Corner', bar: 'In the bar', strip: 'Strip', fixed: 'Strip, always there', over: 'Strip over the staff' } },
 } as const
 
 type Question = keyof typeof QUESTIONS
@@ -413,11 +413,15 @@ export function BarCount({ children }: { children: ReactNode }) {
 export function StripCount() {
   const count = useAnswer('count')
   const now = useBeat()
-  if (count !== 'strip' || !now) return null
+  // strip: appears on Play and pushes the staff down. fixed: always there, dim
+  // when stopped, so nothing moves. over: floats over the top of the card.
+  if (count !== 'strip' && count !== 'fixed' && count !== 'over') return null
+  if (!now && count !== 'fixed') return null
+  const place = count === 'over' ? 'absolute inset-x-0 top-0 z-10 bg-paper/90 backdrop-blur-sm sm:left-14' : 'shrink-0 bg-paper'
   return (
-    <div aria-hidden className="flex shrink-0 gap-1.5 border-b border-line bg-paper px-3 py-1.5">
+    <div aria-hidden className={`flex gap-1.5 border-b border-line px-3 py-1.5 ${place}`}>
       {Array.from({ length: BEATS_PER_BAR }, (_, b) => {
-        const on = now.beat === b
+        const on = now?.beat === b
         return (
           <span
             key={b}
@@ -425,7 +429,7 @@ export function StripCount() {
               on ? (b === 0 ? 'bg-accent text-on-accent' : 'bg-ink text-paper') : 'bg-line/50 text-mute'
             }`}
           >
-            {now.countIn && b === 0 && !on ? 'count-in' : b + 1}
+            {now?.countIn && b === 0 && !on ? 'count-in' : b + 1}
           </span>
         )
       })}
