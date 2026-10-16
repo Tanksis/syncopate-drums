@@ -1,33 +1,32 @@
 import { useEffect, useState } from 'react'
 import { useAppStore } from '@/app/store'
-import type { BeatCount as Count } from '@/core'
+import type { CountedBeat } from '@/core'
 import { beatCountAt } from '@/core'
 import { playhead } from '@/features/playback/engine'
 
-/** The beat count the drummer is hearing while the exercise plays, read on each animation frame; undefined when stopped. */
-export function useBeatCount(): Count | undefined {
+/**
+ * The beat the drummer is hearing while the exercise plays, read on each animation frame; undefined
+ * when stopped, or when the beat count is switched off (`on`), when it doesn't read at all.
+ */
+export function useBeatCount(on: boolean): CountedBeat | undefined {
   const playing = useAppStore((s) => s.playing)
-  const [now, setNow] = useState<Count>()
+  const [now, setNow] = useState<CountedBeat>()
   useEffect(() => {
-    if (!playing) {
+    if (!playing || !on) {
       setNow(undefined)
       return
     }
-    let last = ''
     let frame = requestAnimationFrame(function step() {
       const head = playhead()
       if (head) {
         const count = beatCountAt(head.position)
-        const key = `${head.position.bar}:${count.beat}`
-        if (key !== last) {
-          last = key
-          setNow(count)
-        }
+        // The same beat keeps the same object, so React skips the render while the beat is unchanged.
+        setNow((old) => (old?.countIn === count.countIn && old.beat === count.beat ? old : count))
       }
       frame = requestAnimationFrame(step)
     })
     return () => cancelAnimationFrame(frame)
-  }, [playing])
+  }, [playing, on])
   return now
 }
 
@@ -36,7 +35,7 @@ export function useBeatCount(): Count | undefined {
  * (only lit, with reduced motion) and beat 1 in the accent colour, with **count-in** beside it during
  * the count-in. Smaller on a phone. Decoration only: the audio is what the drummer counts by.
  */
-export function BeatCount({ count, small }: { count: Count; small: boolean }) {
+export function BeatCount({ count, small }: { count: CountedBeat; small: boolean }) {
   return (
     <div
       aria-hidden
@@ -48,7 +47,7 @@ export function BeatCount({ count, small }: { count: Count; small: boolean }) {
         return (
           <span
             key={beat}
-            className={`${small ? 'text-2xl' : 'text-3xl'} transition-[color,transform] duration-75 motion-reduce:scale-100! ${
+            className={`${small ? 'text-2xl' : 'text-3xl'} transition-[color,scale] duration-75 motion-reduce:scale-100! ${
               on ? (beat === 0 ? 'scale-150 text-accent' : 'scale-125 text-ink') : 'text-line'
             }`}
           >

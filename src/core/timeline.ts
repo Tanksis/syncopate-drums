@@ -68,15 +68,15 @@ export function positionLabel({ bar, tick }: PlayPosition): string {
   return `${bar < 0 ? 'count-in' : bar + 1} · ${beat}`
 }
 
-/** What the beat count shows at a position: the beat (counted from 0) of a bar of `beats`, and whether it's the count-in. */
-export interface BeatCount {
+/** The beat the beat count shows at a position: the beat (counted from 0) of a bar of `beats`, and whether it's the count-in. */
+export interface CountedBeat {
   countIn: boolean
   beat: number
   beats: number
 }
 
 /** The beat count at a playback position: the beat the position falls in, of the bar's beats. */
-export function beatCountAt({ bar, tick }: PlayPosition): BeatCount {
+export function beatCountAt({ bar, tick }: PlayPosition): CountedBeat {
   return { countIn: bar < 0, beat: Math.floor(tick / TICKS_PER_BEAT), beats: BEATS_PER_BAR }
 }
 
