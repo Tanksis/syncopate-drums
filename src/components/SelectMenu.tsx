@@ -38,17 +38,26 @@ export function SelectMenu<T extends string>({
         checked: option.value === value,
         onSelect: () => onChange(option.value),
       }))}
-      icon={
-        <>
-          <span className="truncate">{current?.label}</span>
-          <span className="shrink-0 text-mute">
-            <ChevronIcon />
-          </span>
-        </>
-      }
-      buttonClassName={`flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-1 rounded-md border border-edge bg-card text-left text-ink hover:border-accent aria-expanded:border-accent ${
-        large ? 'h-11 px-3 touch-manipulation' : 'px-2 py-0.5'
-      }`}
+      icon={<SelectButtonFace text={current?.label} />}
+      buttonClassName={`flex-1 ${selectButtonClass(large)}`}
     />
   )
 }
+
+/** What a select menu's button shows: its text, cut short if long, and a `ChevronIcon` on the right. */
+export function SelectButtonFace({ text }: { text?: string }) {
+  return (
+    <>
+      <span className="truncate">{text}</span>
+      <span className="shrink-0 text-mute">
+        <ChevronIcon />
+      </span>
+    </>
+  )
+}
+
+/** A select menu's button: a bordered box around a `SelectButtonFace`. */
+export const selectButtonClass = (large = false) =>
+  `flex min-w-0 cursor-pointer items-center justify-between gap-1 rounded-md border border-edge bg-card text-left text-ink hover:border-accent aria-expanded:border-accent ${
+    large ? 'h-11 px-3 touch-manipulation' : 'px-2 py-0.5'
+  }`

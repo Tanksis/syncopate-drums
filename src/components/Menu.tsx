@@ -171,9 +171,10 @@ export function Menu({
             style={align === 'left' ? { left: anchor.left } : { right: anchor.right }}
             className="fixed z-30 flex min-w-44 flex-col overflow-y-auto overscroll-contain rounded-lg border border-line bg-card p-1 text-sm shadow-popover"
           >
-            {items.map((item) => (
+            {/* By place, as two items may share a label (two folders of one name). */}
+            {items.map((item, index) => (
               <button
-                key={item.label}
+                key={index}
                 type="button"
                 role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
                 aria-checked={item.checked}

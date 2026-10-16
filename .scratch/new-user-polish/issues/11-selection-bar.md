@@ -4,12 +4,12 @@
 
 **Blocked by:** none
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Export and Delete read so, keeping their tooltips (Export's says it downloads the selected exercises as one file)
-- [ ] Move to… opens a `Menu`, keyboard-reachable like the others, and moving works as before
-- [ ] Focus doesn't stay on the menu afterwards, so Space and Enter still reach the editor
-- [ ] Checked at 1280 with both sidebars open and in the phone's Library sheet, light and dark, Warm and Studio, with real mouse events
+- [x] Export and Delete read so, keeping their tooltips (Export's says it downloads the selected exercises as one file)
+- [x] Move to… opens a `Menu`, keyboard-reachable like the others, and moving works as before
+- [x] Focus doesn't stay on the menu afterwards, so Space and Enter still reach the editor
+- [x] Checked at 1280 with both sidebars open and in the phone's Library sheet, light and dark, Warm and Studio, with real mouse events
 
 ## Comments
 
