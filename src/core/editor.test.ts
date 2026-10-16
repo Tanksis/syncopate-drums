@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Bar, Cursor, EditorState, ExerciseSettings, KeyPress, Row } from './index'
 import {
-  BEATS_PER_BAR,
   FIGURES,
   REST_FIGURE,
   applyEdit,
@@ -61,10 +60,10 @@ function type(typed: string[], state = fresh()): EditorState {
     const figure = key === REST_FIGURE.key ? REST_FIGURE : FIGURES.find((f) => f.key === key)
     if (!figure) throw new Error(`no figure for ${JSON.stringify(key)}`)
     let bars = setBeat(s.exercise.bars, row, bar, beat, figure.hits)
-    const last = beat === BEATS_PER_BAR - 1
+    const last = beat === 3
     if (last && bar === bars.length - 1) bars = [...bars, restBar()]
     const cursor = last ? { ...s.cursor, bar: bar + 1, beat: 0 } : { ...s.cursor, beat: beat + 1 }
-    const pendingGrid = s.pendingGrid.filter((i) => i !== beatIndex(bar, beat))
+    const pendingGrid = s.pendingGrid.filter((i) => i !== beatIndex(bar, beat, 4))
     return { ...withBars(bars), cursor, pendingGrid }
   }, state)
 }

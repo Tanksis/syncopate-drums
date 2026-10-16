@@ -17,23 +17,24 @@ import { MetronomeVolume } from '@/features/metronome/MetronomeVolume'
 import { SOUND_OPTIONS, pickSound } from '@/features/metronome/SoundSheet'
 import { LoopChip } from '@/features/playback/LoopChip'
 import { ClickToggle, CountInToggle } from '@/features/playback/TransportControls'
-import type { ExerciseSettings, Hand, HihatFoot, Layer, StickingMode, Theme, VolumeSetting } from '@/core'
+import type { ExerciseSettings, Hand, HihatFoot, Layer, StickingMode, Theme, TimeSignature, VolumeSetting } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
   GROOVE_PRESETS,
-  HIHAT_FOOT_SETTINGS,
   MAX_SWING,
   MAX_VOLUME,
   MIN_SWING,
   THEMES,
+  TIME_SIGNATURES,
   TRIPLET_SWING,
   groovePreset,
+  hihatFootOptions,
   overrideCount,
 } from '@/core'
 
 /**
- * The Practice screen's own settings, at the top of the desktop's settings sidebar: the groove and
- * the sticking. `playbackGroup` adds the Click and Count-in chips and the loop chip, for when the exercise's bar has no
+ * The Practice screen's own settings, at the top of the desktop's settings sidebar: the time, the
+ * groove and the sticking. `playbackGroup` adds the Click and Count-in chips and the loop chip, for when the exercise's bar has no
  * room for them.
  */
 export function PracticeSettings({ playbackGroup = false }: { playbackGroup?: boolean }) {
@@ -51,6 +52,9 @@ export function PracticeSettings({ playbackGroup = false }: { playbackGroup?: bo
           </div>
         </SettingGroup>
       )}
+      <SettingGroup title="Time">
+        <TimeSignatureChoice />
+      </SettingGroup>
       <SettingGroup title="Groove">
         <GroovePicker />
         <HihatFootChoice />
@@ -156,6 +160,8 @@ export function PhoneSettings({ onDone }: { onDone: () => void }) {
       <div role="tabpanel" id={`${id}-panel`} aria-labelledby={`${id}-${tab}`} className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto px-4 py-5">
         {tab === 'groove' && (
           <>
+            <TimeSignatureChoice large />
+            <hr className="w-full border-0 border-t border-line" />
             <GroovePicker large />
             <HihatFootChoice large />
             <Swing stacked />
@@ -250,6 +256,27 @@ function Labelled({
   )
 }
 
+/**
+ * The exercise's time signature, as chips. A change cuts or pads every bar to the new one's beats,
+ * as an undoable edit, so it goes through the editor like the sticking settings.
+ */
+function TimeSignatureChoice({ large = false }: { large?: boolean }) {
+  const timeSignature = useAppStore((s) => s.editor.exercise.timeSignature)
+  const dispatch = useAppStore((s) => s.dispatch)
+  return (
+    <div className="flex flex-col gap-2" title="Cuts or pads every bar to the new beats; Ctrl+Z undoes it">
+      <span className={large ? 'font-semibold' : 'text-mute'}>Time signature</span>
+      <Segmented
+        label="Time signature"
+        fill
+        options={TIME_SIGNATURES.map((ts) => ({ value: ts, label: ts }))}
+        value={timeSignature}
+        onChange={(ts: TimeSignature) => dispatch({ type: 'setTimeSignature', timeSignature: ts })}
+      />
+    </div>
+  )
+}
+
 /** The groove layer played and drawn with the exercise, or none. */
 function GroovePicker({ large = false }: { large?: boolean }) {
   const groove = useAppStore((s) => s.editor.exercise.practice.groove)
@@ -278,13 +305,14 @@ const HIHAT_FOOT_OPTIONS: Record<HihatFoot, { label: string; hint?: string }> = 
 /** The hi-hat foot played in every bar, with any groove or none, in place of the groove's own (ADR 0010). */
 function HihatFootChoice({ large = false }: { large?: boolean }) {
   const hihatFoot = useAppStore((s) => s.editor.exercise.practice.hihatFoot)
+  const timeSignature = useAppStore((s) => s.editor.exercise.timeSignature)
   const setHihatFoot = useAppStore((s) => s.setHihatFoot)
   return (
     <Labelled label="Hi-hat foot" title="The hi-hat pedal played under every bar" stacked={large}>
       <SelectMenu
         label="Hi-hat foot"
         large={large}
-        options={HIHAT_FOOT_SETTINGS.map((option) => ({ value: option, ...HIHAT_FOOT_OPTIONS[option] }))}
+        options={hihatFootOptions(timeSignature).map((option) => ({ value: option, ...HIHAT_FOOT_OPTIONS[option] }))}
         value={hihatFoot}
         onChange={setHihatFoot}
       />

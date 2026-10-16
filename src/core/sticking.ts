@@ -3,7 +3,7 @@
 // range or which pass is playing.
 
 import type { Exercise, Hand, Note } from './model'
-import { BEATS_PER_BAR, TICKS_PER_BEAT, noteId } from './model'
+import { TICKS_PER_BEAT, meter, noteId } from './model'
 import type { PlacedItem } from './speller'
 import { placeItems } from './speller'
 
@@ -45,7 +45,7 @@ const other = (hand: Hand): Hand => (hand === 'R' ? 'L' : 'R')
 export function sticking(exercise: Exercise): NoteSticking[] {
   const { leadHand, sticking: mode } = exercise
   const placed = placeItems(exercise.bars, 'snare')
-  const hands = mode === 'alternate' ? alternate(placed, leadHand) : natural(placed, leadHand)
+  const hands = mode === 'alternate' ? alternate(placed, leadHand) : natural(placed, leadHand, meter(exercise.timeSignature).beats)
   const snare = placed.flatMap((p, i): HandSticking[] => {
     if (!isStruck(p)) return []
     // Hidden hands keep their overrides, so switching back brings them back.
@@ -82,8 +82,8 @@ function alternate(placed: readonly PlacedItem[], lead: Hand): Hand[] {
  * Ties each hand to a grid position: a straight beat's grid is its finest subdivision, starting
  * on the lead hand; a run of back-to-back triplet beats alternates on through every slot.
  */
-function natural(placed: readonly PlacedItem[], lead: Hand): Hand[] {
-  const beatOf = (p: PlacedItem) => p.bar * BEATS_PER_BAR + Math.floor(p.start / TICKS_PER_BEAT)
+function natural(placed: readonly PlacedItem[], lead: Hand, beats: number): Hand[] {
+  const beatOf = (p: PlacedItem) => p.bar * beats + Math.floor(p.start / TICKS_PER_BEAT)
   const byBeat = new Map<number, number[]>()
   placed.forEach((p, i) => {
     const indexes = byBeat.get(beatOf(p))

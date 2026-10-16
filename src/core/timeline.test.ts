@@ -95,11 +95,11 @@ describe('the position shown in the header', () => {
 
 describe('the beat count', () => {
   it('counts the count-in, saying so', () => {
-    expect(beatCountAt({ bar: -1, tick: 24 })).toEqual({ countIn: true, beat: 2, beats: 4 })
+    expect(beatCountAt({ bar: -1, tick: 24 }, 4)).toEqual({ countIn: true, beat: 2, beats: 4 })
   })
 
   it('counts each beat of a bar, from 0', () => {
-    expect([0, 12, 24, 36].map((tick) => beatCountAt({ bar: 2, tick }))).toEqual([
+    expect([0, 12, 24, 36].map((tick) => beatCountAt({ bar: 2, tick }, 4))).toEqual([
       { countIn: false, beat: 0, beats: 4 },
       { countIn: false, beat: 1, beats: 4 },
       { countIn: false, beat: 2, beats: 4 },
@@ -108,13 +108,13 @@ describe('the beat count', () => {
   })
 
   it('holds the beat between beats: the & of 2 is still beat 2', () => {
-    expect(beatCountAt({ bar: 0, tick: 18 }).beat).toBe(1)
+    expect(beatCountAt({ bar: 0, tick: 18 }, 4).beat).toBe(1)
   })
 
   it('counts the last beat before the loop wraps, then 1 again, not the count-in', () => {
     // A one-bar exercise: a bar of count-in (4 s), the bar from 4 s, and the loop back to it at 8 s.
     const timeline = played(resting('off'), 9)
-    const countAt = (time: number) => beatCountAt(playheadAt(timeline, time)!.position)
+    const countAt = (time: number) => beatCountAt(playheadAt(timeline, time)!.position, 4)
     expect(countAt(7.5)).toEqual({ countIn: false, beat: 3, beats: 4 })
     expect(countAt(8.1)).toEqual({ countIn: false, beat: 0, beats: 4 })
   })

@@ -93,14 +93,14 @@ One place a hit can fall within a beat: one of its four sixteenths, or one of it
 _Avoid_: Cell, step, slot
 
 **Click**:
-The exercise's metronome sound: every quarter note, with beat 1 accented. The Metronome screen has its own clicks.
+The exercise's metronome sound: every beat of the bar, with beat 1 accented. The Metronome screen has its own clicks.
 _Avoid_: Beep, tick
 
 **Count-in**:
-One bar of click played before an exercise starts.
+One bar of click, in the exercise's time signature, played before an exercise starts.
 
 **Beat count**:
-The large count of the bar's beats (1 2 3 4) in the notation view's top-right corner while an exercise plays: the beat being heard is enlarged, beat 1 is in the accent colour, and **count-in** shows beside it during the count-in. On unless switched off in Appearance, on this device.
+The large count of the bar's beats (1 2 3 4 in 4/4) in the notation view's top-right corner while an exercise plays: the beat being heard is enlarged, beat 1 is in the accent colour, and **count-in** shows beside it during the count-in. On unless switched off in Appearance, on this device.
 
 ### Metronome
 
@@ -112,7 +112,7 @@ _Avoid_: Mode (that is light or dark)
 The screen that plays a click on its own, with its own BPM, time signature, subdivision, beat levels and sound, remembered on the device. Not part of any exercise.
 
 **Time signature**:
-The metronome's beats per bar over the note value that gets the beat: 1–16 over 2, 4, 8 or 16. The BPM counts that note value. Exercises are always 4/4.
+An exercise's beats per bar, written at the start of its staff: 4/4, 3/4 or 2/4, and 4/4 for a new exercise. It is part of the exercise, not a practice setting: changing it cuts each bar to its first beats or pads it with rest beats, and can be undone. The metronome has its own, any of 1–16 over 2, 4, 8 or 16, its BPM counting that note value.
 
 **Beat level**:
 How a metronome beat plays: Accent, Normal, Soft or Off, set by tapping its beat block. Accent is the loudest, high click; Normal is the same high click, quieter, a lighter accent; Soft is exactly a subdivision click. A changed time signature resets them to beat 1 Accent and the rest Soft.
