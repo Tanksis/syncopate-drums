@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { Button, buttonClass } from '@/components/Button'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { DuplicateIcon, HelpIcon, MoreIcon, PencilIcon, PlusIcon, TrashIcon } from '@/components/icons'
+import { ChevronIcon, DuplicateIcon, HelpIcon, MoreIcon, PencilIcon, PlusIcon, TrashIcon } from '@/components/icons'
 import { Menu } from '@/components/Menu'
 import { NameInput } from '@/components/NameInput'
 import { PatternDialog } from '@/components/PatternDialog'
+import { selectButtonClass } from '@/components/SelectMenu'
 import { SidebarHeading } from '@/components/Sidebar'
 import { keepFocus } from '@/components/keepFocus'
 import type { Exercise, Folder, LibraryTab } from '@/core'
@@ -27,9 +28,6 @@ const listButtonClass = (open: boolean) =>
   `min-w-0 flex-1 cursor-pointer truncate rounded-md border-0 px-2 py-1 text-left ${
     open ? 'bg-accent/10 font-semibold text-accent' : 'bg-transparent hover:bg-hover'
   }`
-
-/** The Move to… menu's value for no folder, beside the folder ids (which are UUIDs). */
-const NO_FOLDER = 'no-folder'
 
 /** A drop target, outlined in the accent while an exercise is dragged over it; inset, as the list clips. */
 const dropTargetClass = (over: boolean) => `rounded-md ${over ? 'outline-2 -outline-offset-2 outline-accent' : ''}`
@@ -87,6 +85,14 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
   const view = libraryView({ library, folders, filter, collapsedIds })
   // Exercises discarded or deleted since they were ticked drop out here.
   const selected = library.filter((e) => selectedIds.has(e.id))
+  const moveSelected = (folderId: string | null) => {
+    moveToFolder(
+      selected.map((x) => x.id),
+      folderId,
+    )
+    // The menu gives the keyboard's focus back to its button; Space and Enter belong to the editor.
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+  }
 
   const toggleSelected = (id: string) =>
     setSelectedIds((ids) => {
@@ -282,35 +288,30 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
                   Clear
                 </Button>
               </div>
-              <select
-                aria-label="Move the selected exercises to a folder"
-                value=""
-                onChange={(e) => {
-                  moveToFolder(
-                    selected.map((x) => x.id),
-                    e.target.value === NO_FOLDER ? null : e.target.value,
-                  )
-                  // Space and Enter belong to the editor.
-                  e.target.blur()
-                }}
-                className="cursor-pointer rounded-md border border-edge bg-card px-1.5 py-1 font-semibold hover:border-accent"
-              >
-                <option value="" disabled hidden>
-                  Move to…
-                </option>
-                <option value={NO_FOLDER}>No folder</option>
-                {foldersByName(folders).map((folder) => (
-                  <option key={folder.id} value={folder.id}>
-                    {folder.name}
-                  </option>
-                ))}
-              </select>
+              <Menu
+                label="Move the selected exercises to a folder"
+                large={fullScreen}
+                align="left"
+                icon={
+                  <>
+                    <span className="truncate">Move to…</span>
+                    <span className="shrink-0 text-mute">
+                      <ChevronIcon />
+                    </span>
+                  </>
+                }
+                buttonClassName={selectButtonClass()}
+                items={[
+                  { label: 'No folder', onSelect: () => moveSelected(null) },
+                  ...foldersByName(folders).map((folder) => ({ label: folder.name, onSelect: () => moveSelected(folder.id) })),
+                ]}
+              />
               <div className="flex gap-1.5">
                 <Button title="Download the selected exercises as one file" onClick={() => downloadExport(selected, folders)} className="flex-1">
-                  Export selected
+                  Export
                 </Button>
                 <Button onClick={() => setToDelete(selected)} className="flex-1 text-danger! enabled:hover:border-danger!">
-                  Delete selected
+                  Delete
                 </Button>
               </div>
             </div>

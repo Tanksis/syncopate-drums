@@ -46,9 +46,13 @@ export function SelectMenu<T extends string>({
           </span>
         </>
       }
-      buttonClassName={`flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-1 rounded-md border border-edge bg-card text-left text-ink hover:border-accent aria-expanded:border-accent ${
-        large ? 'h-11 px-3 touch-manipulation' : 'px-2 py-0.5'
-      }`}
+      buttonClassName={`flex-1 ${selectButtonClass(large)}`}
     />
   )
 }
+
+/** A select menu's button: a bordered box with the text on the left and a `ChevronIcon` on the right. */
+export const selectButtonClass = (large = false) =>
+  `flex min-w-0 cursor-pointer items-center justify-between gap-1 rounded-md border border-edge bg-card text-left text-ink hover:border-accent aria-expanded:border-accent ${
+    large ? 'h-11 px-3 touch-manipulation' : 'px-2 py-0.5'
+  }`
