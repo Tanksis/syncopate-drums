@@ -8,7 +8,7 @@ import type { MenuItem } from '@/components/Menu'
 import { Menu } from '@/components/Menu'
 import { Segmented } from '@/components/Segmented'
 import type { BeatView, EditCommand, EditorState, GridPoint, Hand, PositionState, Row, RowView } from '@/core'
-import { ROWS, applyEdit, canTieOverBarline, editorBeatViews, inLoopRange, isExample, sticking, stickingNoteAt } from '@/core'
+import { ROWS, applyEdit, canTieOverBarline, editorBeatViews, inLoopRange, isExample, meter, sticking, stickingNoteAt } from '@/core'
 
 /** A press on a grid position, and (once it moves to another position) the hold end it drags to. */
 interface Press {
@@ -62,9 +62,9 @@ const ROW_LOOK: Record<Row, { name: string; disc: string; hold: string }> = {
   kick: { name: 'Kick', disc: 'bg-kick', hold: 'bg-kick/80' },
 }
 
-/** What each grid position of a beat is counted as: 1 e & a, or 1 trip let. */
-const countLabels = (beat: number, triplet: boolean) =>
-  triplet ? [`${beat + 1}`, 'trip', 'let'] : [`${beat + 1}`, 'e', '&', 'a']
+/** What each grid position of a beat is counted as: 1 e & a, 1 trip let, or in compound time's eighths 1 & a. */
+const countLabels = (beat: number, triplet: boolean, compound: boolean) =>
+  compound ? [`${beat + 1}`, '&', 'a'] : triplet ? [`${beat + 1}`, 'trip', 'let'] : [`${beat + 1}`, 'e', '&', 'a']
 
 /**
  * The bars and beats of the exercise, the main editor. It shows one bar at a time, the cursor's
@@ -89,6 +89,7 @@ export function BeatStrip({ phone, bar }: { phone?: PhoneOrientation; bar?: numb
   const { loopRange } = editor.exercise.practice
   const dispatch = useAppStore((s) => s.dispatch)
   const example = useAppStore((s) => isExample(s.editor.exercise.id))
+  const { compound } = meter(editor.exercise.timeSignature)
   const [press, setPress] = useState<Press | null>(null)
   // The press as the handlers last left it, which the next event sees even before it has rendered.
   const pressRef = useRef<Press | null>(null)
@@ -273,12 +274,18 @@ export function BeatStrip({ phone, bar }: { phone?: PhoneOrientation; bar?: numb
               >
                 <div className="flex items-center gap-1.5">
                   <span className="text-lg/none font-bold">{beat + 1}</span>
-                  <GridSwitch bar={b} beat={beat} triplet={view.triplet} disabled={example} onSwitch={switchGrid} />
-                  {!example && <Menu label={`Bar ${b + 1}, beat ${beat + 1} menu`} items={beatMenu(editor, b, beat, view, switchGrid, dispatch)} />}
+                  {/* In compound time a beat's grid is its three eighths, so it has no switch. */}
+                  {!compound && <GridSwitch bar={b} beat={beat} triplet={view.triplet} disabled={example} onSwitch={switchGrid} />}
+                  {!example && (
+                    <Menu
+                      label={`Bar ${b + 1}, beat ${beat + 1} menu`}
+                      items={beatMenu(editor, b, beat, view, compound ? null : switchGrid, dispatch)}
+                    />
+                  )}
                 </div>
                 {rowCells('snare', view.snare, b, beat)}
                 <div aria-hidden className="flex gap-1">
-                  {countLabels(beat, view.triplet).map((label, i) => (
+                  {countLabels(beat, view.triplet, compound).map((label, i) => (
                     <span key={i} className={`flex-1 text-center font-mono text-[11px] ${i === 0 ? 'font-bold text-ink' : 'text-mute'}`}>
                       {label}
                     </span>
@@ -295,20 +302,20 @@ export function BeatStrip({ phone, bar }: { phone?: PhoneOrientation; bar?: numb
 }
 
 /**
- * A beat card's ⋯ menu: the other grid, a rest in both rows, and, on a bar's first beat, a tie over
- * the barline for each row the core offers one in, ticked when tied.
+ * A beat card's ⋯ menu: the other grid (none in compound time), a rest in both rows, and, on a
+ * bar's first beat, a tie over the barline for each row the core offers one in, ticked when tied.
  */
 function beatMenu(
   editor: EditorState,
   bar: number,
   beat: number,
   view: BeatView,
-  switchGrid: () => void,
+  switchGrid: (() => void) | null,
   dispatch: (command: EditCommand) => void,
 ): MenuItem[] {
   const ties = beat === 0 ? ROWS.filter((row) => canTieOverBarline(editor, bar, row)) : []
   return [
-    { label: view.triplet ? 'Switch to sixteenths' : 'Switch to triplets', onSelect: switchGrid },
+    ...(switchGrid ? [{ label: view.triplet ? 'Switch to sixteenths' : 'Switch to triplets', onSelect: switchGrid }] : []),
     { label: 'Rest the beat', onSelect: () => dispatch({ type: 'restBeat', bar, beat }) },
     ...ties.map((row) => ({
       label: `Tie ${ROW_LOOK[row].name.toLowerCase()} over the barline`,

@@ -20,15 +20,16 @@ import { ClickToggle, CountInToggle } from '@/features/playback/TransportControl
 import type { ExerciseSettings, Hand, HihatFoot, Layer, StickingMode, Theme, TimeSignature, VolumeSetting } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
-  GROOVE_PRESETS,
   MAX_SWING,
   MAX_VOLUME,
   MIN_SWING,
   THEMES,
   TIME_SIGNATURES,
   TRIPLET_SWING,
+  grooveOptions,
   groovePreset,
   hihatFootOptions,
+  meter,
   overrideCount,
 } from '@/core'
 
@@ -265,10 +266,14 @@ function TimeSignatureChoice({ large = false }: { large?: boolean }) {
   const dispatch = useAppStore((s) => s.dispatch)
   return (
     <div className="flex flex-col gap-2" title="Cuts or pads every bar to the new beats; Ctrl+Z undoes it">
-      <span className={large ? 'font-semibold' : 'text-mute'}>Time signature</span>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className={large ? 'font-semibold' : 'text-mute'}>Time signature</span>
+        {meter(timeSignature).compound && <span className="text-xs text-mute">beats in threes</span>}
+      </div>
       <Segmented
         label="Time signature"
         fill
+        className={large ? '' : 'text-xs'}
         options={TIME_SIGNATURES.map((ts) => ({ value: ts, label: ts }))}
         value={timeSignature}
         onChange={(ts: TimeSignature) => dispatch({ type: 'setTimeSignature', timeSignature: ts })}
@@ -280,13 +285,14 @@ function TimeSignatureChoice({ large = false }: { large?: boolean }) {
 /** The groove layer played and drawn with the exercise, or none. */
 function GroovePicker({ large = false }: { large?: boolean }) {
   const groove = useAppStore((s) => s.editor.exercise.practice.groove)
+  const timeSignature = useAppStore((s) => s.editor.exercise.timeSignature)
   const setGroove = useAppStore((s) => s.setGroove)
   return (
     <Labelled label="Preset" stacked={large}>
       <SelectMenu
         label="Groove preset"
         large={large}
-        options={GROOVE_PRESETS.map((preset) => ({ value: preset.id, label: preset.name }))}
+        options={grooveOptions(timeSignature).map((preset) => ({ value: preset.id, label: preset.name }))}
         value={groovePreset(groove).id}
         onChange={setGroove}
       />
@@ -338,7 +344,16 @@ const swingFromPercent = (percent: number) =>
  */
 function Swing({ stacked = false }: { stacked?: boolean }) {
   const swing = useAppStore((s) => s.editor.exercise.practice.swing)
+  const timeSignature = useAppStore((s) => s.editor.exercise.timeSignature)
   const setSwing = useAppStore((s) => s.setSwing)
+  // Compound time's beats are already three eighths, so nothing is swung (ADR 0015).
+  if (meter(timeSignature).compound)
+    return (
+      <div className={stacked ? 'flex flex-col gap-2' : 'flex items-baseline gap-2'}>
+        <span className={stacked ? 'font-semibold' : 'text-mute'}>Swing</span>
+        <span className="text-xs text-mute">Not used in {timeSignature}: each beat is already three eighths.</span>
+      </div>
+    )
   const preset = SWING_PRESETS.find((p) => Math.abs(p.swing - swing) < 1e-6)
   const slider = (
     <Slider label="Swing" min={MIN_SWING} max={MAX_SWING} step={0.005} value={swing} reset={MIN_SWING} onChange={setSwing} className="flex-1" />

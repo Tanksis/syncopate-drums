@@ -7,17 +7,28 @@ import { TICKS_PER_BEAT, clampBpm } from './units'
 export { MAX_BPM, MAX_VOLUME, MIN_BPM, TICKS_PER_BEAT, clampBpm } from './units'
 
 /** An exercise's time signature, as written at the start of the staff. */
-export type TimeSignature = '4/4' | '3/4' | '2/4'
+export type TimeSignature = '4/4' | '3/4' | '2/4' | '6/8' | '12/8'
 
 /** The time signatures, in the order the Time group offers them. */
-export const TIME_SIGNATURES: readonly TimeSignature[] = ['4/4', '3/4', '2/4']
+export const TIME_SIGNATURES: readonly TimeSignature[] = ['4/4', '3/4', '2/4', '6/8', '12/8']
 
-/** What a time signature means for the bar: how many beats it has, each `TICKS_PER_BEAT` long. */
+/**
+ * What a time signature means for the bar: how many beats it has, each `TICKS_PER_BEAT` long, and
+ * whether it is compound time, where a beat is a dotted quarter of three eighths: the triplet
+ * grid's three positions, written as eighths (ADR 0015).
+ */
 export interface Meter {
   beats: number
+  compound: boolean
 }
 
-const METERS: Record<TimeSignature, Meter> = { '4/4': { beats: 4 }, '3/4': { beats: 3 }, '2/4': { beats: 2 } }
+const METERS: Record<TimeSignature, Meter> = {
+  '4/4': { beats: 4, compound: false },
+  '3/4': { beats: 3, compound: false },
+  '2/4': { beats: 2, compound: false },
+  '6/8': { beats: 2, compound: true },
+  '12/8': { beats: 4, compound: true },
+}
 
 /** The bar a time signature gives each bar of an exercise. */
 export function meter(timeSignature: TimeSignature): Meter {
@@ -328,21 +339,6 @@ export function clampSwing(swing: number): number {
 /** The exercise with a new swing amount, kept inside the supported range. */
 export function withSwing(exercise: Exercise, swing: number): Exercise {
   return { ...exercise, practice: { ...exercise.practice, swing: clampSwing(swing) } }
-}
-
-const JAZZ_GROOVES: readonly GroovePresetId[] = ['jazz', 'jazzFeathered']
-
-/**
- * The exercise with a groove preset, as it was if it already has that one. Moving from another
- * groove to a jazz one on a straight exercise also sets triplet swing, since a jazz ride is never
- * played straight (ADR 0007). Any other swing amount, or a straight feel chosen while already on a
- * jazz groove, is left as the drummer set it.
- */
-export function withGroove(exercise: Exercise, groove: GroovePresetId): Exercise {
-  const { practice } = exercise
-  if (groove === practice.groove) return exercise
-  const turnsSwingOn = JAZZ_GROOVES.includes(groove) && !JAZZ_GROOVES.includes(practice.groove) && !swingOn(practice)
-  return { ...exercise, practice: { ...practice, groove, swing: turnsSwingOn ? TRIPLET_SWING : practice.swing } }
 }
 
 /** The exercise with a hi-hat foot setting, as it was if it already has that one. */

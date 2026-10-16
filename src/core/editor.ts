@@ -2,8 +2,8 @@
 // turns a key press into a command, so the UI only dispatches.
 
 import { REST_FIGURE } from './figures'
-import { fittedHihatFoot } from './groove'
-import type { Bar, Exercise, HihatFoot, Hand, Item, LoopRange, Row, TimeSignature } from './model'
+import { fittedPractice } from './groove'
+import type { Bar, Exercise, GroovePresetId, HihatFoot, Hand, Item, LoopRange, Row, TimeSignature } from './model'
 import {
   ROWS,
   TICKS_PER_BEAT,
@@ -23,13 +23,13 @@ import type { BeatView, GridPoint, RowView } from './speller'
 import {
   beatViews,
   clearBeatToDownbeat,
+  fittedBars,
   kicksInGaps,
   setBeat,
   setHold,
   slotTicks,
   toggleHit,
   toggleTie,
-  withBeatsPerBar,
 } from './speller'
 import type { NoteSticking } from './sticking'
 import { overrideCount, sticking } from './sticking'
@@ -51,8 +51,8 @@ export interface EditorState {
   exercise: Exercise
   cursor: Cursor
   selection: BarSelection | null
-  /** Bars copied with Ctrl+C, kept for the session only. */
-  clipboard: Bar[] | null
+  /** Bars copied with Ctrl+C and the time signature they were in, kept for the session only. */
+  clipboard: { bars: Bar[]; timeSignature: TimeSignature } | null
   history: History
   /**
    * The pending grid: beats (bar × beats + beat) switched to the triplet grid whose notes read the same
@@ -71,7 +71,8 @@ const SETTING_KEYS: readonly (keyof ExerciseSettings)[] = ['sticking', 'leadHand
 interface Snapshot {
   bars: Bar[]
   timeSignature: TimeSignature
-  /** Taken back only with a change of time signature, which may have turned it off. */
+  /** Taken back only with a change of time signature, which may have turned them off. */
+  groove: GroovePresetId
   hihatFoot: HihatFoot
   settings: ExerciseSettings
   cursor: Cursor
@@ -140,8 +141,9 @@ export type EditCommand =
   | { type: 'setExerciseSettings'; settings: Partial<ExerciseSettings> }
   /**
    * The Time group's time signature: every bar keeps its first beats and is cut or padded with
-   * rests to the new bar's, as `withBeatsPerBar` does. A hi-hat foot the new time signature
-   * doesn't offer is turned off. The cursor stays in its bar.
+   * rests to the new bar's, as `withBeatsPerBar` does. Between simple and compound time, a beat
+   * not on the new time's grid keeps only its downbeat, as a grid switch does. A groove or hi-hat
+   * foot the new time signature doesn't offer is turned off. The cursor stays in its bar.
    */
   | { type: 'setTimeSignature'; timeSignature: TimeSignature }
   /**
@@ -217,7 +219,7 @@ function tiedOverBarline(bars: Bar[], bar: number, row: Row): Bar[] | null {
 
 /** Each bar's four beats as the editor shows them: beats on the pending grid read as triplets. */
 export function editorBeatViews(state: EditorState): BeatView[][] {
-  return beatViews(state.exercise.bars, state.pendingGrid)
+  return beatViews(state.exercise.bars, tripletGrid(state))
 }
 
 /**
@@ -310,7 +312,8 @@ function snapshot(state: EditorState): Snapshot {
   const settings = Object.fromEntries(SETTING_KEYS.map((k) => [k, exercise[k]])) as ExerciseSettings
   const { cursor, pendingGrid } = state
   const { bars, timeSignature, practice } = exercise
-  return { bars, timeSignature, hihatFoot: practice.hihatFoot, settings, cursor, pendingGrid, loopRange: practice.loopRange }
+  const { groove, hihatFoot, loopRange } = practice
+  return { bars, timeSignature, groove, hihatFoot, settings, cursor, pendingGrid, loopRange }
 }
 
 const sameSettings = (a: ExerciseSettings, b: ExerciseSettings) => SETTING_KEYS.every((k) => a[k] === b[k])
@@ -326,7 +329,8 @@ function travel(state: EditorState, direction: 'undo' | 'redo'): EditorState {
       : { undo: [...undo, snapshot(state)], redo: redo.slice(0, -1) }
   const { timeSignature } = target
   const retimed = timeSignature !== state.exercise.timeSignature
-  const practice = retimed ? { ...state.exercise.practice, hihatFoot: target.hihatFoot } : state.exercise.practice
+  const { groove, hihatFoot } = target
+  const practice = retimed ? { ...state.exercise.practice, groove, hihatFoot } : state.exercise.practice
   const exercise = { ...state.exercise, bars: target.bars, timeSignature, practice, ...target.settings }
   const resized = target.bars.length !== state.exercise.bars.length
   const { cursor, pendingGrid } = target
@@ -339,13 +343,15 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
       const moved = moveTo(state, command.bar, command.beat, command.row)
       const { bar, beat } = moved.cursor
       const index = beatIndex(bar, beat, beatsIn(state))
-      const pending = state.pendingGrid.includes(index)
+      const pending = tripletGrid(state).includes(index)
       const bars = toggleHit(state.exercise.bars, command.row, bar, beat, command.position, pending || undefined)
       if (bars === state.exercise.bars) return moved
       // A beat on the triplet grid stays there while it reads the same on either grid.
       return { ...withBars(moved, bars), pendingGrid: pendingGridAfter(state, bars, index, index) }
     }
     case 'setBeatGrid': {
+      // In compound time every beat is three eighths.
+      if (meter(state.exercise.timeSignature).compound) return state
       const moved = moveTo(state, command.bar, command.beat)
       const { bar, beat } = moved.cursor
       if (editorBeatViews(state)[bar][beat].triplet === command.triplet) return moved
@@ -355,7 +361,7 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
     }
     case 'setHold': {
       const moved = moveTo(state, command.from.bar, command.from.beat, command.from.row)
-      const bars = setHold(state.exercise.bars, command.from, command.to, state.pendingGrid)
+      const bars = setHold(state.exercise.bars, command.from, command.to, tripletGrid(state))
       if (bars === state.exercise.bars) return moved
       // As with a click: a beat on the triplet grid stays there while it reads the same on either.
       return { ...withBars(moved, bars), pendingGrid: pendingGridAfter(state, bars) }
@@ -391,14 +397,15 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
     }
     case 'copyBars': {
       const { first, last } = selectedBars(state)
-      return { ...state, clipboard: state.exercise.bars.slice(first, last + 1) }
+      const { bars, timeSignature } = state.exercise
+      return { ...state, clipboard: { bars: bars.slice(first, last + 1), timeSignature } }
     }
     case 'pasteBars': {
       if (!state.clipboard) return state
       const { bar } = state.cursor
-      const { bars } = state.exercise
-      // Bars copied before a change of time signature are cut or padded to the bar they now go in.
-      const clip = withBeatsPerBar(state.clipboard, beatsIn(state))
+      const { bars, timeSignature } = state.exercise
+      // Bars copied before a change of time signature are fitted to the one they now go in.
+      const clip = fittedBars(state.clipboard.bars, state.clipboard.timeSignature, timeSignature)
       const next = [...untieLast(bars.slice(0, bar)), ...untieLast(clip), ...bars.slice(bar + clip.length)]
       return moveTo(withBars(state, next), bar, 0)
     }
@@ -419,11 +426,10 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
     case 'setTimeSignature': {
       const { timeSignature } = command
       if (timeSignature === state.exercise.timeSignature) return state
-      const bars = withBeatsPerBar(state.exercise.bars, meter(timeSignature).beats)
+      const bars = fittedBars(state.exercise.bars, state.exercise.timeSignature, timeSignature)
       // The beats' indices across the exercise move, so the pending grid starts again.
-      const { practice } = state.exercise
-      const hihatFoot = fittedHihatFoot(practice.hihatFoot, timeSignature)
-      const exercise = { ...state.exercise, bars, timeSignature, practice: { ...practice, hihatFoot } }
+      const practice = fittedPractice(state.exercise.practice, timeSignature)
+      const exercise = { ...state.exercise, bars, timeSignature, practice }
       const changed = { ...state, exercise, pendingGrid: [] }
       return moveTo(changed, state.cursor.bar, state.cursor.beat)
     }
@@ -434,19 +440,21 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
     case 'fillPattern': {
       const moved = moveTo(state, command.bar, 0)
       const { bar } = moved.cursor
-      const { exercise } = withPattern(state.exercise, bar, command.pattern, command.grid)
+      // In compound time a pattern is laid on the eighths, the beat's only grid.
+      const grid = meter(state.exercise.timeSignature).compound ? 'triplets' : command.grid
+      const { exercise } = withPattern(state.exercise, bar, command.pattern, grid)
       // A triplet beat that reads the same on either grid stays on the triplet grid it was filled on.
       const beats = beatsOf(state, bar)
       const others = state.pendingGrid.filter((i) => !beats.includes(i))
       const views = beatViews(exercise.bars)[bar]
-      const pending = command.grid === 'triplets' ? beats.filter((_, beat) => !views[beat].triplet) : []
+      const pending = grid === 'triplets' ? beats.filter((_, beat) => !views[beat].triplet) : []
       return { ...moved, exercise, pendingGrid: [...others, ...pending] }
     }
     case 'kicksInGaps': {
       // Every bar leaves the cursor where it was.
       const moved = command.bar === 'all' ? state : moveTo(state, command.bar, 0)
       const targets = command.bar === 'all' ?state.exercise.bars.map((_, bar) => bar) : [moved.cursor.bar]
-      const bars = kicksInGaps(state.exercise.bars, targets.flatMap((bar) => beatsOf(state, bar)), state.pendingGrid)
+      const bars = kicksInGaps(state.exercise.bars, targets.flatMap((bar) => beatsOf(state, bar)), tripletGrid(state))
       return bars === state.exercise.bars ? moved : withBars(moved, bars)
     }
     case 'flipOverride': {
@@ -576,6 +584,15 @@ function deleteBars(state: EditorState, first: number, last: number): EditorStat
 function moveTo(state: EditorState, bar: number, beat: number, row = state.cursor.row): EditorState {
   const last = state.exercise.bars.length - 1
   return { ...state, cursor: { bar: clamp(bar, 0, last), beat: clamp(beat, 0, beatsIn(state) - 1), row } }
+}
+
+/**
+ * The beats the editor reads on the triplet grid whatever their notes say: in compound time every
+ * beat, its three eighths; otherwise the pending grid.
+ */
+function tripletGrid(state: EditorState): number[] {
+  if (!meter(state.exercise.timeSignature).compound) return state.pendingGrid
+  return Array.from({ length: state.exercise.bars.length * beatsIn(state) }, (_, index) => index)
 }
 
 /** How many beats each bar of the exercise has. */

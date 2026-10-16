@@ -8,8 +8,19 @@
 
 import type { StemmableNote } from 'vexflow/bravura'
 import { Beam, Dot, Formatter, Fraction, GhostNote, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
-import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, NoteSticking, PlayPosition, StaffEvent } from '@/core'
-import { NOTATION_LAYOUT, TICKS_PER_BEAT, inLoopRange, meter, minBarWidthFor, notationFit, staffParts, sticking, swingOn } from '@/core'
+import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, Meter, NoteSticking, PlayPosition, StaffEvent } from '@/core'
+import {
+  NOTATION_LAYOUT,
+  TICKS_PER_BEAT,
+  compoundValue,
+  inLoopRange,
+  meter,
+  minBarWidthFor,
+  notationFit,
+  staffParts,
+  sticking,
+  swingOn,
+} from '@/core'
 
 /** A design token from styles/index.css, read when the notation draws so it follows the look and mode. */
 const token = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(`--${name}`).trim()
@@ -62,9 +73,13 @@ interface DrawnEvent {
   note: StemmableNote
 }
 
-/** The VexFlow note for one event of a part. Chord keys go bottom to top, the order ties index. */
-function eventNote(event: StaffEvent, limb: Limb): StemmableNote {
-  const duration = VEX_DURATION[event.duration] + (event.dotted ? 'd' : '')
+/**
+ * The VexFlow note for one event of a part. Chord keys go bottom to top, the order ties index. In
+ * compound time a value is written half as long again, with no triplet "3" (ADR 0015).
+ */
+function eventNote(event: StaffEvent, limb: Limb, compound: boolean): StemmableNote {
+  const value = compound ? compoundValue(event) : event
+  const duration = VEX_DURATION[value.duration] + (value.dotted ? 'd' : '')
   if (event.kind === 'space') return new GhostNote({ duration })
   const note = new StaveNote({
     keys: event.kind === 'rest' ? [REST_KEY[limb]] : event.notes.map((n) => n.key + (n.notehead === 'x' ? '/x2' : '')).reverse(),
@@ -72,7 +87,7 @@ function eventNote(event: StaffEvent, limb: Limb): StemmableNote {
     stemDirection: STEM_DIRECTION[limb],
     clef: 'percussion',
   })
-  if (event.dotted) Dot.buildAndAttach([note], { all: true })
+  if (value.dotted) Dot.buildAndAttach([note], { all: true })
   return note
 }
 
@@ -101,15 +116,15 @@ interface PartDrawing {
 /**
  * Formats and draws one bar's (or one beat's) parts on a stave together, each beamed by the beat.
  * Each triplet group gets its tuplet "3" on the stem side, with a bracket when not all of its
- * notes are beamed.
+ * notes are beamed. In compound time a beat's three eighths are written plain, with no "3".
  */
-function drawParts(stave: Stave, parts: readonly PartDrawing[], beats: number, width: number) {
+function drawParts(stave: Stave, parts: readonly PartDrawing[], { beats, compound }: Meter, width: number) {
   const ctx = stave.getContext()
   const groups = parts.map((p) => ({ limb: p.limb, groups: byBeat(p.drawn) }))
   // Tuplets first: they scale their notes' ticks, which the beams and the formatter read.
   const tuplets = groups.flatMap(({ limb, groups: g }) =>
     g
-      .filter((group) => group.triplet)
+      .filter((group) => group.triplet && !compound)
       .map(
         (group) =>
           new Tuplet(group.notes, {
@@ -125,7 +140,7 @@ function drawParts(stave: Stave, parts: readonly PartDrawing[], beats: number, w
       const notes = group.notes.filter((n): n is StaveNote => n instanceof StaveNote)
       // A triplet group's beam runs over a rest in its middle, as a swung ride is written (ADR 0006).
       return Beam.generateBeams(notes, {
-        groups: [new Fraction(1, 4)],
+        groups: [compound ? new Fraction(3, 8) : new Fraction(1, 4)],
         stemDirection: STEM_DIRECTION[limb],
         beamRests: group.triplet,
         beamMiddleOnly: true,
@@ -133,8 +148,10 @@ function drawParts(stave: Stave, parts: readonly PartDrawing[], beats: number, w
     }),
   )
   tuplets.forEach((t) => t.setBracketed(t.getNotes().some((n) => !(n as StaveNote).hasBeam?.())))
+  // A compound bar is counted in eighths: 6/8, or 12/8.
+  const time = compound ? { numBeats: beats * 3, beatValue: 8 } : { numBeats: beats, beatValue: 4 }
   const voices = parts.map((p) =>
-    new Voice({ numBeats: beats, beatValue: 4 }).setStrict(false).addTickables(p.drawn.map((d) => d.note)),
+    new Voice(time).setStrict(false).addTickables(p.drawn.map((d) => d.note)),
   )
   new Formatter().joinVoices(voices).format(voices, width)
   voices.forEach((v) => v.draw(ctx, stave))
@@ -189,12 +206,19 @@ export interface NotationArea {
 export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor | null, area: NotationArea): Drawing {
   el.replaceChildren()
   const { bars } = exercise
-  const parts = staffParts(bars, exercise.practice.groove, { swung: swingOn(exercise.practice), hihatFoot: exercise.practice.hihatFoot })
+  const barMeter = meter(exercise.timeSignature)
+  const { compound } = barMeter
+  const parts = staffParts(bars, exercise.practice.groove, {
+    swung: swingOn(exercise.practice),
+    hihatFoot: exercise.practice.hihatFoot,
+    compound,
+  })
   /** A part is drawn when it has a note or a rest anywhere. */
   const drawnLimbs = (['hands', 'feet'] as const).filter((limb) =>
     parts.some((bar) => bar[limb].some((e) => e.kind !== 'space')),
   )
-  const feetTriplets = parts.some((bar) => bar.feet.some((e) => e.triplet))
+  // Compound time's eighths have no triplet "3"s to make room for.
+  const feetTriplets = !compound && parts.some((bar) => bar.feet.some((e) => e.triplet))
   const handRow = !drawnLimbs.includes('feet') ? HAND_ROW_HANDS : feetTriplets ? HAND_ROW_FEET_TRIPLETS : HAND_ROW_FEET
   const spaceAbove = SPACE_ABOVE_STAVE + (drawnLimbs.includes('hands') ? STEMS_UP_SPACE : 0)
   /** The bar number's line above the stave, clear of the hands part's stems. */
@@ -251,7 +275,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
 
     const drawings = drawnLimbs
       .filter((limb) => parts[b][limb].length)
-      .map((limb): PartDrawing => ({ limb, drawn: parts[b][limb].map((event) => ({ event, note: eventNote(event, limb) })) }))
+      .map((limb): PartDrawing => ({ limb, drawn: parts[b][limb].map((event) => ({ event, note: eventNote(event, limb, compound) })) }))
     // The cursor's beat is lit in both parts, which hold the snare row and the kick row.
     for (const { drawn } of drawings) {
       if (b !== cursor?.bar) continue
@@ -259,7 +283,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
         if (Math.floor(event.start / TICKS_PER_BEAT) === cursor.beat) note.setStyle({ fillStyle: colour.notationAccent, strokeStyle: colour.notationAccent })
       }
     }
-    drawParts(stave, drawings, meter(exercise.timeSignature).beats, Math.max(30, x + w - stave.getNoteStartX() - 18))
+    drawParts(stave, drawings, barMeter, Math.max(30, x + w - stave.getNoteStartX() - 18))
 
     const top = stave.getYForLine(-PLAYHEAD_OVERHANG)
     const bottom = stave.getYForLine(4 + PLAYHEAD_OVERHANG)

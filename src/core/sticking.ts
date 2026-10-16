@@ -45,7 +45,7 @@ const other = (hand: Hand): Hand => (hand === 'R' ? 'L' : 'R')
 export function sticking(exercise: Exercise): NoteSticking[] {
   const { leadHand, sticking: mode } = exercise
   const placed = placeItems(exercise.bars, 'snare')
-  const hands = mode === 'alternate' ? alternate(placed, leadHand) : natural(placed, leadHand, meter(exercise.timeSignature).beats)
+  const hands = mode === 'alternate' ? alternate(placed, leadHand) : natural(placed, leadHand, meter(exercise.timeSignature))
   const snare = placed.flatMap((p, i): HandSticking[] => {
     if (!isStruck(p)) return []
     // Hidden hands keep their overrides, so switching back brings them back.
@@ -80,9 +80,10 @@ function alternate(placed: readonly PlacedItem[], lead: Hand): Hand[] {
 
 /**
  * Ties each hand to a grid position: a straight beat's grid is its finest subdivision, starting
- * on the lead hand; a run of back-to-back triplet beats alternates on through every slot.
+ * on the lead hand; a run of back-to-back triplet beats alternates on through every slot. In
+ * compound time every beat is a triplet beat, even one written as a plain quarter.
  */
-function natural(placed: readonly PlacedItem[], lead: Hand, beats: number): Hand[] {
+function natural(placed: readonly PlacedItem[], lead: Hand, { beats, compound }: { beats: number; compound: boolean }): Hand[] {
   const beatOf = (p: PlacedItem) => p.bar * beats + Math.floor(p.start / TICKS_PER_BEAT)
   const byBeat = new Map<number, number[]>()
   placed.forEach((p, i) => {
@@ -96,7 +97,7 @@ function natural(placed: readonly PlacedItem[], lead: Hand, beats: number): Hand
   let previousBeat = -1
   for (const [beat, indexes] of byBeat) {
     const offsets = indexes.map((i) => placed[i].start % TICKS_PER_BEAT)
-    const triplet = indexes.some((i) => placed[i].item.kind === 'note' && placed[i].item.triplet)
+    const triplet = compound || indexes.some((i) => placed[i].item.kind === 'note' && placed[i].item.triplet)
     if (!triplet || beat !== previousBeat + 1) run = 0
     // Triplet slots are 4 ticks apart; a straight beat's grid is sixteenths, eighths or the quarter.
     const step = triplet ? 4 : offsets.some((o) => o % 6) ? 3 : offsets.some((o) => o % 12) ? 6 : 12
