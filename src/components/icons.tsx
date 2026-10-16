@@ -115,6 +115,14 @@ export const SpeakerMutedIcon = () => (
   </Icon>
 )
 
+/** A pencil: rename. */
+export const PencilIcon = () => (
+  <Icon>
+    <path d="M10.5 2.5l3 3L6 13H3v-3z" />
+    <path d="M9 4l3 3" />
+  </Icon>
+)
+
 /** A tick: done. */
 export const CheckIcon = () => (
   <Icon>

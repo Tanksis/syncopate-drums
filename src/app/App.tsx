@@ -31,7 +31,7 @@ import { Button } from '@/components/Button'
 import { keepFocus } from '@/components/keepFocus'
 import { useSlide } from '@/components/useSlide'
 import { useSwipe } from '@/components/useSwipe'
-import { MenuIcon, SettingsIcon } from '@/components/icons'
+import { MenuIcon, PencilIcon, SettingsIcon } from '@/components/icons'
 import { isExample } from '@/core'
 
 export function App() {
@@ -405,7 +405,7 @@ function SidebarSlot({ name, side, state, onOpen, onCollapse, children }: Sideba
   )
 }
 
-/** The open exercise's name; click it to rename it in place. An example's name is fixed. */
+/** The open exercise's name and a pencil; click either to rename it in place. An example's name is fixed, with no pencil. */
 function ExerciseName({ className = '' }: { className?: string }) {
   const { id, name } = useAppStore((s) => s.editor.exercise)
   const renameExercise = useAppStore((s) => s.renameExercise)
@@ -428,9 +428,12 @@ function ExerciseName({ className = '' }: { className?: string }) {
       title="Rename"
       onMouseDown={keepFocus}
       onClick={() => setRenaming(true)}
-      className={`cursor-text truncate rounded border border-transparent bg-transparent px-1 text-mute hover:border-edge ${className}`}
+      className={`group inline-flex min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded border border-transparent bg-transparent px-1 text-mute hover:border-edge hover:text-ink ${className}`}
     >
-      {name}
+      <span className="truncate">{name}</span>
+      <span className="flex shrink-0 group-hover:text-accent">
+        <PencilIcon />
+      </span>
     </button>
   )
 }

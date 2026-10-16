@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { Button, buttonClass } from '@/components/Button'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { DuplicateIcon, MoreIcon, PlusIcon, TrashIcon } from '@/components/icons'
+import { DuplicateIcon, MoreIcon, PencilIcon, PlusIcon, TrashIcon } from '@/components/icons'
 import { Menu } from '@/components/Menu'
 import { NameInput } from '@/components/NameInput'
 import { PatternDialog } from '@/components/PatternDialog'
@@ -105,7 +105,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
       // Not while renaming, so the name's text can be selected with the mouse.
       draggable={renamingId !== exercise.id}
       {...dragProps(exercise.id)}
-      className={`flex items-center gap-1 ${inFolder ? 'pl-5' : 'pl-1'}`}
+      className={`group flex items-center gap-1 ${inFolder ? 'pl-5' : 'pl-1'}`}
     >
       <input
         type="checkbox"
@@ -125,21 +125,24 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
           className="w-full flex-1 py-1"
         />
       ) : (
-        <button
-          type="button"
-          title="Click to open, double-click to rename"
-          aria-current={exercise.id === openId}
-          // Not keepFocus, whose mousedown preventDefault would stop the row being dragged: a mouse
-          // click lets the focus go afterwards instead (a keyboard one, detail 0, keeps it).
-          onClick={(e) => {
-            if (e.detail > 0) e.currentTarget.blur()
-            openExercise(exercise.id)
-          }}
-          onDoubleClick={() => setRenamingId(exercise.id)}
-          className={listButtonClass(exercise.id === openId)}
-        >
-          {exercise.name}
-        </button>
+        <>
+          <button
+            type="button"
+            title="Click to open, double-click to rename"
+            aria-current={exercise.id === openId}
+            // Not keepFocus, whose mousedown preventDefault would stop the row being dragged: a mouse
+            // click lets the focus go afterwards instead (a keyboard one, detail 0, keeps it).
+            onClick={(e) => {
+              if (e.detail > 0) e.currentTarget.blur()
+              openExercise(exercise.id)
+            }}
+            onDoubleClick={() => setRenamingId(exercise.id)}
+            className={listButtonClass(exercise.id === openId)}
+          >
+            {exercise.name}
+          </button>
+          <RenamePencil name={exercise.name} onClick={() => setRenamingId(exercise.id)} />
+        </>
       )}
     </li>
   )
@@ -338,13 +341,16 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
                       className="w-full flex-1 py-1 font-semibold"
                     />
                   ) : (
-                    <span
-                      title="Double-click to rename"
-                      onDoubleClick={() => setRenamingId(folder.id)}
-                      className="min-w-0 flex-1 cursor-default truncate py-1 font-semibold select-none"
-                    >
-                      {folder.name}
-                    </span>
+                    <>
+                      <span
+                        title="Double-click to rename"
+                        onDoubleClick={() => setRenamingId(folder.id)}
+                        className="min-w-0 flex-1 cursor-default truncate py-1 font-semibold select-none"
+                      >
+                        {folder.name}
+                      </span>
+                      <RenamePencil name={folder.name} onClick={() => setRenamingId(folder.id)} />
+                    </>
                   )}
                   <span title={exerciseCount(count)} className="shrink-0 px-1 text-xs text-mute">
                     {count}
@@ -449,5 +455,24 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
         </ConfirmDialog>
       )}
     </aside>
+  )
+}
+
+/**
+ * A row's pencil, shown on hover or focus, that starts the same rename as a double-click. Its
+ * keepFocus means a drag can't start from it, which a rename button can do without.
+ */
+function RenamePencil({ name, onClick }: { name: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label={`Rename ${name}`}
+      title="Rename"
+      onMouseDown={keepFocus}
+      onClick={onClick}
+      className="flex shrink-0 cursor-pointer border-0 bg-transparent p-0.5 text-mute opacity-0 group-hover:opacity-100 hover:text-accent focus:opacity-100"
+    >
+      <PencilIcon />
+    </button>
   )
 }
