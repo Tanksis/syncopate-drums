@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { Button, buttonClass } from '@/components/Button'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { ChevronIcon, DuplicateIcon, HelpIcon, MoreIcon, PencilIcon, PlusIcon, TrashIcon } from '@/components/icons'
+import { DuplicateIcon, HelpIcon, MoreIcon, PencilIcon, PlusIcon, TrashIcon } from '@/components/icons'
 import { Menu } from '@/components/Menu'
 import { NameInput } from '@/components/NameInput'
 import { PatternDialog } from '@/components/PatternDialog'
-import { selectButtonClass } from '@/components/SelectMenu'
+import { SelectButtonFace, selectButtonClass } from '@/components/SelectMenu'
 import { SidebarHeading } from '@/components/Sidebar'
 import { keepFocus } from '@/components/keepFocus'
 import type { Exercise, Folder, LibraryTab } from '@/core'
@@ -85,13 +85,15 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
   const view = libraryView({ library, folders, filter, collapsedIds })
   // Exercises discarded or deleted since they were ticked drop out here.
   const selected = library.filter((e) => selectedIds.has(e.id))
+  const moveMenu = useRef<HTMLDivElement>(null)
   const moveSelected = (folderId: string | null) => {
     moveToFolder(
       selected.map((x) => x.id),
       folderId,
     )
-    // The menu gives the keyboard's focus back to its button; Space and Enter belong to the editor.
-    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+    // Chosen from the keyboard, the menu gives the focus back to its button; Space and Enter belong to the editor.
+    const focused = document.activeElement
+    if (focused instanceof HTMLElement && moveMenu.current?.contains(focused)) focused.blur()
   }
 
   const toggleSelected = (id: string) =>
@@ -288,24 +290,19 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
                   Clear
                 </Button>
               </div>
-              <Menu
-                label="Move the selected exercises to a folder"
-                large={fullScreen}
-                align="left"
-                icon={
-                  <>
-                    <span className="truncate">Move to…</span>
-                    <span className="shrink-0 text-mute">
-                      <ChevronIcon />
-                    </span>
-                  </>
-                }
-                buttonClassName={selectButtonClass()}
-                items={[
-                  { label: 'No folder', onSelect: () => moveSelected(null) },
-                  ...foldersByName(folders).map((folder) => ({ label: folder.name, onSelect: () => moveSelected(folder.id) })),
-                ]}
-              />
+              <div ref={moveMenu} className="contents">
+                <Menu
+                  label="Move the selected exercises to a folder"
+                  large={fullScreen}
+                  align="left"
+                  icon={<SelectButtonFace text="Move to…" />}
+                  buttonClassName={selectButtonClass()}
+                  items={[
+                    { label: 'No folder', onSelect: () => moveSelected(null) },
+                    ...foldersByName(folders).map((folder) => ({ label: folder.name, onSelect: () => moveSelected(folder.id) })),
+                  ]}
+                />
+              </div>
               <div className="flex gap-1.5">
                 <Button title="Download the selected exercises as one file" onClick={() => downloadExport(selected, folders)} className="flex-1">
                   Export
