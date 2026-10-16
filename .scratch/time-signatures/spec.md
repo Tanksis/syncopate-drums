@@ -21,7 +21,7 @@ Every exercise is in 4/4. A drummer working on a waltz, a march in 2/4, or a 6/8
 - **Swing** moves into the Time group as chips: Straight, Triplet, Dotted, and Custom (which shows the slider and the %). It is hidden in 6/8 and 12/8, where each beat is already three eighths.
 - **Groove** becomes one **Pattern** picker: a list grouped by style, filtered by the time signature, each row with a short description and a strip of dots. Under it, a **Feet** sub-heading holds **Bass drum** (Off / Feathered) and **Hi-hat foot**. The hi-hat foot only offers what fits the meter.
 - Picking a pattern may also set its feet and its swing. When it does, a quiet line under the picker says what changed and offers **Undo**.
-- New patterns: **Bell** in 6/8 and **Shuffle** in 12/8.
+- New patterns: **Bell** in 6/8, and **Shuffle** and **Slow blues** in 12/8.
 
 ## User Stories
 
@@ -56,7 +56,7 @@ Every exercise is in 4/4. A drummer working on a waltz, a march in 2/4, or a 6/8
 18. As a drummer, the hi-hat foot offers only what fits the meter: everything in 4/4; no 2 & 4 in 3/4 or 2/4; and Off, 1 and Beats in 6/8 and 12/8.
 19. As a drummer, picking **Ride** on a straight exercise also sets Triplet swing, and sets the hi-hat foot to 2 & 4 if it was off (4/4 only). A line under the picker says so, with **Undo**, and it can be dismissed.
 20. As a drummer, changing the time signature turns off a pattern or a hi-hat foot that doesn't fit the new meter.
-21. As a drummer in 6/8, I can play along with the **Bell** pattern. In 12/8 I can play along with **Shuffle**.
+21. As a drummer in 6/8, I can play along with the **Bell** pattern. In 12/8 I can play along with **Shuffle**, or with **Slow blues**, the closed hi-hat on every eighth, and the Slow blues example plays over it.
 22. As a drummer, my exercises saved with the jazz ride, with or without the feathered bass drum, sound as they did.
 
 ### Examples
@@ -77,11 +77,12 @@ Every exercise is in 4/4. A drummer working on a waltz, a march in 2/4, or a 6/8
 - **Staff parts:** `staffParts(bars, groove, { … })` is unchanged in shape; the groove hits come for the meter (below). With `compound` set, `swung` is false. In compound time every beat is a triplet beat, so a groove's eighths are written on it.
 - **Transfer:** `SCHEMA_VERSION` becomes 5. The v4 → v5 step adds `timeSignature: '4/4'`. Import refuses an unknown time signature, and a bar whose rows don't add up to its meter's bar.
 - **Swing presets:** `SWING_PRESETS = [{ name: 'Straight', swing: 0.5 }, { name: 'Triplet', swing: 2/3 }, { name: 'Dotted', swing: 0.75 }]` live in the core, with `swingPreset(swing)`, which returns the matching preset (to within 1e-6) or undefined.
-- **Patterns** replace groove presets. `GroovePresetId` becomes `PatternId`: `'off' | 'ride' | 'hihatEighths' | 'bell68' | 'shuffle128'`. Each `Pattern` has a `family`, `name`, `description` and `strip` (one character per eighth, `x` a hit), and the meters it fits. `patternHits(id, meter)` builds the bar's hits for that many beats:
+- **Patterns** replace groove presets. `GroovePresetId` becomes `PatternId`: `'off' | 'ride' | 'hihatEighths' | 'bell68' | 'shuffle128' | 'slowBlues128'`. Each `Pattern` has a `family`, `name`, `description` and `strip` (one character per eighth, `x` a hit), and the meters it fits. `patternHits(id, meter)` builds the bar's hits for that many beats:
   - **Ride:** ride on every beat, plus the & of beats 2 and 4. In 3/4 that's the & of beat 2 only, and in 2/4 the & of beat 2. Louder on the backbeats. No hi-hat foot of its own.
   - **Hi-hat 8ths:** eighths on the closed hi-hat in any simple meter.
   - **Bell** (6/8 only): the 6/8 bell on the ride bell (`rideBell`), `x.xxx.` over the bar's six eighths (1, 3, 4, 5), as the prototype's strip has it. Drawn as an x on the ride's line.
   - **Shuffle** (12/8 only): ride on the first and third eighth of each beat: `x.xx.xx.xx.x`.
+  - **Slow blues** (12/8 only): the closed hi-hat on every eighth, `xxxxxxxxxxxx`, the downbeat of each beat louder. The Slow blues example (PR #143) plays over it.
   `patternsFor(timeSignature)` lists the families and their patterns that fit. None is always first.
 - **Feet.** `PracticeSettings.bassDrum: 'off' | 'feathered'` is added. A feathered bass drum plays softly on every beat with any pattern, or with none. ADR 0010's rule, that the hi-hat foot replaces a preset's own, goes: no pattern has a hi-hat foot now. The hi-hat foot is only the setting. `hihatFootOptions(timeSignature)` gives the options that fit: all five in 4/4; all but 2 & 4 in 3/4 and 2/4; Off, 1 and Beats in compound time. `HIHAT_FOOT_TICKS` is built for the meter. In compound time, Beats falls on the dotted quarters.
 - **Schema 6** (with the patterns): `groove` → `pattern`. `jazz` becomes `ride` with the hi-hat foot set to `twoAndFour` if it was off, so it sounds as before. `jazzFeathered` becomes the same plus `bassDrum: 'feathered'`. `hihatEighths` stays. Every exercise gets `bassDrum` (`'off'` unless it was migrated as feathered).
