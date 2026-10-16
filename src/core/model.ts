@@ -169,6 +169,8 @@ export interface DeviceSettings {
   screen: Screen
   /** The metronome's own settings, its BPM included: an exercise's tempo is never touched. */
   metronome: MetronomeSettings
+  /** The first visit's welcome card has been closed, so it never shows again. */
+  welcomeDismissed: boolean
 }
 
 /** The app's screens, switched in the header. */
@@ -193,13 +195,15 @@ export function drawnMode(theme: Theme, systemDark: boolean): 'light' | 'dark' {
 
 /**
  * Device settings as stored, over the defaults for any added since. A stored setting the app no
- * longer has (such as `vimKeys`, ADR 0009), or a theme, look or screen it doesn't have, is dropped.
+ * longer has (such as `vimKeys`, ADR 0009), a theme, look or screen it doesn't have, or a yes-or-no
+ * setting that isn't a boolean, is dropped.
  * The metronome is filled in setting by setting (see `metronomeSettingsFrom`).
  */
 export function deviceSettingsFrom(stored: Record<string, unknown> | undefined): DeviceSettings {
   const known = Object.entries(stored ?? {}).filter(
     ([key, value]) =>
       key in DEFAULT_DEVICE_SETTINGS &&
+      (typeof DEFAULT_DEVICE_SETTINGS[key as keyof DeviceSettings] !== 'boolean' || typeof value === 'boolean') &&
       (key !== 'theme' || THEMES.includes(value as Theme)) &&
       (key !== 'look' || LOOKS.includes(value as Look)) &&
       (key !== 'screen' || SCREENS.includes(value as Screen)),
@@ -229,6 +233,7 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   look: 'warm',
   screen: 'practice',
   metronome: DEFAULT_METRONOME_SETTINGS,
+  welcomeDismissed: false,
 }
 
 /** The device settings that are a playback layer's volume. */
