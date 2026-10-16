@@ -23,6 +23,10 @@ const VARIANTS = ['current', 'C'] as const
 type Variant = (typeof VARIANTS)[number]
 const NAMES: Record<Variant, string> = { current: 'Today', C: 'Pattern + feet' }
 
+const SIDEBARS = ['today', 'one'] as const
+type Sidebar = (typeof SIDEBARS)[number]
+const SIDEBAR_NAMES: Record<Sidebar, string> = { today: 'Today', one: 'One list' }
+
 const HEADINGS = ['current', 'rule', 'title', 'card'] as const
 type Heading = (typeof HEADINGS)[number]
 const HEADING_NAMES: Record<Heading, string> = { current: 'Today', rule: 'Rule', title: 'Title', card: 'Card' }
@@ -43,6 +47,7 @@ function readParam<T extends string>(name: string, options: readonly T[], fallba
 const useProto = create<{
   variant: Variant
   heading: Heading
+  sidebar: Sidebar
   timeSig: TimeSig
   /** A compound pattern, which has no sound yet; null plays the exercise's real groove. */
   silentPattern: Pattern | null
@@ -52,6 +57,7 @@ const useProto = create<{
 }>(() => ({
   variant: readParam('groove', VARIANTS, 'C'),
   heading: readParam('heading', HEADINGS, 'rule'),
+  sidebar: readParam('sidebar', SIDEBARS, 'one'),
   timeSig: '4/4',
   silentPattern: null,
   bass: 'off',
@@ -59,11 +65,25 @@ const useProto = create<{
   note: null,
 }))
 
-function setParam(name: 'groove' | 'heading', value: string) {
+type Param = 'groove' | 'heading' | 'sidebar'
+const KEYS: Record<Param, 'variant' | 'heading' | 'sidebar'> = { groove: 'variant', heading: 'heading', sidebar: 'sidebar' }
+
+function setParam(name: Param, value: string) {
   const url = new URL(location.href)
   url.searchParams.set(name, value)
   history.replaceState(history.state, '', url)
-  useProto.setState(name === 'groove' ? { variant: value as Variant } : { heading: value as Heading })
+  useProto.setState({ [KEYS[name]]: value })
+}
+
+export function useSidebarVariant() {
+  return useProto((s) => s.sidebar)
+}
+
+/** Where the screen's own settings end and the ones shared by both screens begin, in the one-list sidebar. */
+export function AllScreensLabel() {
+  return (
+    <p className="-mb-2 pt-3 text-xs text-mute">For both screens</p>
+  )
 }
 
 /** The real groove preset a pattern and bass drum stand for, or null when there's none yet. */
@@ -448,7 +468,7 @@ export function PrototypeGroove({ large = false, current }: { large?: boolean; c
   )
 }
 
-function Cycle<T extends string>({ name, options, value, names, param }: { name: string; options: readonly T[]; value: T; names: Record<T, string>; param: 'groove' | 'heading' }) {
+function Cycle<T extends string>({ name, options, value, names, param }: { name: string; options: readonly T[]; value: T; names: Record<T, string>; param: Param }) {
   const go = (step: number) => setParam(param, options[(options.indexOf(value) + step + options.length) % options.length])
   return (
     <span className="flex items-center">
@@ -465,6 +485,7 @@ function Cycle<T extends string>({ name, options, value, names, param }: { name:
 export function GrooveVariantSwitcher() {
   const variant = useProto((s) => s.variant)
   const heading = useProto((s) => s.heading)
+  const sidebar = useProto((s) => s.sidebar)
   const [hidden, setHidden] = useState(false)
   if (!import.meta.env.DEV || hidden) return null
   return (
@@ -472,6 +493,8 @@ export function GrooveVariantSwitcher() {
       <Cycle name="Groove" options={VARIANTS} value={variant} names={NAMES} param="groove" />
       <span className="text-white/30">|</span>
       <Cycle name="Headings" options={HEADINGS} value={heading} names={HEADING_NAMES} param="heading" />
+      <span className="text-white/30">|</span>
+      <Cycle name="Sidebar" options={SIDEBARS} value={sidebar} names={SIDEBAR_NAMES} param="sidebar" />
       <button type="button" className="cursor-pointer px-1.5 py-1 text-white/50" onClick={() => setHidden(true)} aria-label="Hide">✕</button>
     </div>
   )

@@ -101,22 +101,31 @@ export function SharedSettings() {
       </div>
       {open && (
         <div id={`${id}-groups`} className="-mx-3 flex min-h-0 flex-col gap-3.5 overflow-auto px-3">
-          <SettingGroup title="Mix">
-            <MixRow layer="click" />
-            <MixRow layer="exercise" />
-            <MixRow layer="groove" />
-          </SettingGroup>
-          <SettingGroup title="Metronome">
-            <MetronomeSound />
-            <MetronomeVolume row />
-          </SettingGroup>
-          <SettingGroup title="Appearance">
-            <LookChoice />
-            <ModeChoice />
-          </SettingGroup>
+          <SharedGroups />
         </div>
       )}
     </section>
+  )
+}
+
+/** PROTOTYPE: the groups that carry over between the screens, without their fold. */
+export function SharedGroups() {
+  return (
+    <>
+      <SettingGroup title="Mix">
+        <MixRow layer="click" />
+        <MixRow layer="exercise" />
+        <MixRow layer="groove" />
+      </SettingGroup>
+      <SettingGroup title="Metronome">
+        <MetronomeSound />
+        <MetronomeVolume row />
+      </SettingGroup>
+      <SettingGroup title="Appearance">
+        <LookChoice />
+        <ModeChoice />
+      </SettingGroup>
+    </>
   )
 }
 
