@@ -107,6 +107,11 @@ export function hihatFootOptions(timeSignature: TimeSignature): HihatFoot[] {
   return HIHAT_FOOT_SETTINGS.filter((foot) => foot !== 'twoAndFour' || timeSignature === '4/4')
 }
 
+/** A hi-hat foot setting as it plays in a time signature: off where the time signature doesn't offer it. */
+export function fittedHihatFoot(hihatFoot: HihatFoot, timeSignature: TimeSignature): HihatFoot {
+  return hihatFootOptions(timeSignature).includes(hihatFoot) ? hihatFoot : 'off'
+}
+
 /**
  * The groove layer's hits by the tick they are struck at, in tick order, in a bar of `beats`: the
  * preset's, and with the hi-hat foot setting on, its hits in place of the preset's own hi-hat foot.

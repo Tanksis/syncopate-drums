@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { EditorState, GrooveHit, ScheduledEvent, TimeSignature } from './index'
-import { DEFAULT_DEVICE_SETTINGS, applyEdit, beatCountAt, editorBeatViews, grooveHitsByTick, hihatFootOptions, migrateExercise, newEditorState, newExercise, parseImport, restBar, schedule, setBeat, staffParts, sticking, SCHEMA_VERSION } from './index'
+import { DEFAULT_DEVICE_SETTINGS, applyEdit, beatCountAt, editorBeatViews, grooveHitsByTick, hihatFootOptions, migrateExercise, newEditorState, newExercise, parseImport, restBar, rowBeats, schedule, setBeat, staffParts, sticking, SCHEMA_VERSION } from './index'
 
 const fresh = () => newEditorState(newExercise({ id: 'e1', now: 0 }))
 
@@ -189,5 +189,27 @@ describe('storing and importing the time signature', () => {
     const parsed = parseImport(file({ ...inThreeFour, bars: [restBar(4)] }))
     expect(parsed.ok).toBe(false)
     expect(!parsed.ok && parsed.reason).toContain('3/4')
+  })
+})
+
+describe('the time signature and the rest of the editor', () => {
+  it('pastes bars copied before a change of time signature cut to the new bar', () => {
+    const state = applyEdit(fresh(), { type: 'toggleGridPosition', row: 'snare', bar: 0, beat: 3, position: 0 })
+    const copied = applyEdit(applyEdit(state, { type: 'copyBars' }), { type: 'setTimeSignature', timeSignature: '3/4' })
+    const pasted = applyEdit(applyEdit(copied, { type: 'addBar' }), { type: 'pasteBars' })
+    expect(pasted.exercise.bars.map((bar) => rowBeats(bar.snare))).toEqual([3, 3])
+    expect(grid(pasted)).toEqual(['.... .... ....', '.... .... ....'])
+  })
+
+  it('cuts a note held from beat 3 into beat 4 at the new bar line', () => {
+    const state = applyEdit(fresh(), { type: 'toggleGridPosition', row: 'snare', bar: 0, beat: 2, position: 2 })
+    const held = applyEdit(state, {
+      type: 'setHold',
+      from: { row: 'snare', bar: 0, beat: 2, position: 2 },
+      to: { row: 'snare', bar: 0, beat: 3, position: 2 },
+    })
+    expect(editorBeatViews(held)[0][3].snare.tiedInto).toBe(true)
+    const changed = applyEdit(held, { type: 'setTimeSignature', timeSignature: '3/4' })
+    expect(grid(changed)).toEqual(['.... .... ..x.'])
   })
 })

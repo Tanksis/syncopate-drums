@@ -19,6 +19,7 @@ export interface Meter {
 
 const METERS: Record<TimeSignature, Meter> = { '4/4': { beats: 4 }, '3/4': { beats: 3 }, '2/4': { beats: 2 } }
 
+/** The bar a time signature gives each bar of an exercise. */
 export function meter(timeSignature: TimeSignature): Meter {
   return METERS[timeSignature]
 }

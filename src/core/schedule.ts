@@ -50,7 +50,7 @@ export interface ScheduleResult {
 
 /**
  * Every event from `from` up to `window` seconds later. `'start'` begins playback: with the
- * count-in on, one bar of clicks (of the exercise's time signature) comes before the loop range. Playback wraps from the end of the
+ * count-in on, one bar of clicks, in the exercise's time signature, comes before the loop range. Playback wraps from the end of the
  * loop range to its start, so a changed range applies at the next wrap, or at once from a
  * position already past its end.
  */

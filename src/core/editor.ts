@@ -2,7 +2,7 @@
 // turns a key press into a command, so the UI only dispatches.
 
 import { REST_FIGURE } from './figures'
-import { hihatFootOptions } from './groove'
+import { fittedHihatFoot } from './groove'
 import type { Bar, Exercise, HihatFoot, Hand, Item, LoopRange, Row, TimeSignature } from './model'
 import {
   ROWS,
@@ -397,7 +397,8 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
       if (!state.clipboard) return state
       const { bar } = state.cursor
       const { bars } = state.exercise
-      const clip = state.clipboard
+      // Bars copied before a change of time signature are cut or padded to the bar they now go in.
+      const clip = withBeatsPerBar(state.clipboard, beatsIn(state))
       const next = [...untieLast(bars.slice(0, bar)), ...untieLast(clip), ...bars.slice(bar + clip.length)]
       return moveTo(withBars(state, next), bar, 0)
     }
@@ -421,7 +422,7 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
       const bars = withBeatsPerBar(state.exercise.bars, meter(timeSignature).beats)
       // The beats' indices across the exercise move, so the pending grid starts again.
       const { practice } = state.exercise
-      const hihatFoot = hihatFootOptions(timeSignature).includes(practice.hihatFoot) ? practice.hihatFoot : 'off'
+      const hihatFoot = fittedHihatFoot(practice.hihatFoot, timeSignature)
       const exercise = { ...state.exercise, bars, timeSignature, practice: { ...practice, hihatFoot } }
       const changed = { ...state, exercise, pendingGrid: [] }
       return moveTo(changed, state.cursor.bar, state.cursor.beat)

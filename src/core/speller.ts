@@ -566,7 +566,7 @@ export function toggleCutShort(bars: Bar[], row: Row, bar: number, beat: number)
 
 /**
  * The bars with `beats` beats each, for a new time signature: each bar keeps its first beats and
- * is cut at the last one's end, or padded with rest beats. A note tied over the barline from a
+ * is cut at the last one's end, or padded with rest beats. A note tied over the bar line from a
  * beat that is cut is struck instead. With the same beats, the same bars are returned.
  */
 export function withBeatsPerBar(bars: Bar[], beats: number): Bar[] {
