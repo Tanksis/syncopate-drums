@@ -12,7 +12,7 @@ import { drawExercise, notationFontsReady } from './staff'
  * staff scrolls. Given `coveredBottom` (a CSS length: how much of the view the phone's editor sheet
  * covers), the staff gains that much room at its end, so its last lines can scroll up clear of the
  * sheet, and the cursor's line is kept above it; nothing is laid out again. Given `grow` (the
- * desktop, with Fit notation to the card on), a short exercise grows to fill the view, and the staff
+ * desktop, with Appearance's Notation on Fit), a short exercise grows to fill the view, and the staff
  * is centred in it top to bottom.
  */
 export function NotationView({ corner, coveredBottom, grow = false }: { corner?: ReactNode; coveredBottom?: string; grow?: boolean }) {
