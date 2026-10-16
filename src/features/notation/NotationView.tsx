@@ -16,8 +16,8 @@ import { drawExercise, notationFontsReady } from './staff'
  * sheet, and the cursor's line is kept above it; nothing is laid out again. Given `grow` (the
  * desktop, with Appearance's Notation on Fit), a short exercise grows to fill the view, and the staff
  * is centred in it top to bottom. While an exercise plays, the beat count shows in the top-right
- * corner. Unless it's switched off, the top padding holds room for it even when stopped, so the
- * staff neither covers it nor moves (or is laid out again) when Play starts.
+ * corner. The top padding always holds room for it, even when stopped or switched off, so the
+ * staff neither covers it nor moves (or is laid out again) when Play starts or the switch changes.
  */
 export function NotationView({ corner, coveredBottom, grow = false }: { corner?: ReactNode; coveredBottom?: string; grow?: boolean }) {
   const exercise = useAppStore((s) => s.editor.exercise)
@@ -86,7 +86,7 @@ export function NotationView({ corner, coveredBottom, grow = false }: { corner?:
       <section
         ref={scrollerRef}
         aria-label="Notation view"
-        className={`relative min-h-0 flex-1 overflow-auto bg-paper pr-4 pb-2.5 ${beatCountOn ? (phone ? 'pt-10' : 'pt-14') : 'pt-2.5'} ${corner ? 'pl-14' : 'pl-4'} ${grow ? 'flex flex-col' : ''}`}
+        className={`relative min-h-0 flex-1 overflow-auto bg-paper pr-4 pb-2.5 ${phone ? 'pt-10' : 'pt-14'} ${corner ? 'pl-14' : 'pl-4'} ${grow ? 'flex flex-col' : ''}`}
       >
         {/* Grown, the staff is centred in what height is left; a staff taller than the view starts at its top. */}
         <div className={`relative ${grow ? 'my-auto' : ''}`}>
