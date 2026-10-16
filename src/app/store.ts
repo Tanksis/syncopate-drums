@@ -201,12 +201,13 @@ export const useAppStore = create<AppState>()((set, get) => {
 
   /**
    * Leaves the open exercise and opens another, now, remembering it as the last one open. `remaining`
-   * is the library once the open exercise is gone, when it was deleted rather than left.
+   * is the library once the open exercise is gone, when it was deleted rather than left. Choosing an
+   * exercise is finding the way in, so the first visit's welcome closes for good.
    */
   function switchTo(next: Exercise, place: (library: Exercise[], next: Exercise) => Exercise[], remaining?: Exercise[]) {
     const { editor, library, device } = get()
     const opened = { ...next, lastOpened: Date.now() }
-    const deviceNow = { ...device, lastOpenedId: opened.id, libraryTab: tabListing(opened.id) }
+    const deviceNow = { ...device, lastOpenedId: opened.id, libraryTab: tabListing(opened.id), welcomeDismissed: true }
     set({
       editor: newEditorState(opened),
       library: place(remaining ?? leave(editor.exercise, library), opened),

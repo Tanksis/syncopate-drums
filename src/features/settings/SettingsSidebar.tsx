@@ -281,12 +281,13 @@ function TimeSignatureChoice({ large = false }: { large?: boolean }) {
   )
 }
 
-/** A time signature as a staff prints it, one number over the other. */
+/** A time signature as a fraction, one number over the other with a short line between, in the chip's text colour. */
 function StackedTimeSignature({ timeSignature }: { timeSignature: TimeSignature }) {
   const [top, bottom] = timeSignature.split('/')
   return (
-    <span className="flex flex-col items-center py-0.5 leading-none tabular-nums">
+    <span className="inline-flex flex-col items-center py-0.5 leading-none tabular-nums">
       <span>{top}</span>
+      <span aria-hidden className="my-0.5 h-px w-[calc(100%+4px)] bg-current" />
       <span>{bottom}</span>
     </span>
   )
