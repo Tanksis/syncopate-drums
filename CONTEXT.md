@@ -37,7 +37,7 @@ The span of bars within an exercise that repeats during practice; the whole exer
 How an exercise is practiced rather than what it contains: BPM, loop range, groove preset, swing amount and hi-hat foot. Remembered per exercise.
 
 **Device settings**:
-How the app is set up on this computer rather than how an exercise is practiced: volumes and mutes (the Mix), the count-in toggle, the theme and mode, which exercise was last open, which sidebar tab is showing, which folders are collapsed, whether the grid editor is collapsed, which screen is showing, and the metronome's settings. Kept per device and never exported.
+How the app is set up on this computer rather than how an exercise is practiced: volumes and mutes (the Mix), the count-in toggle, the theme and mode, the notation's fit and the beat count, which exercise was last open, which sidebar tab is showing, which folders are collapsed, whether the grid editor is collapsed, which screen is showing, and the metronome's settings. Kept per device and never exported.
 
 **Mix**:
 How loud each playback layer (click, exercise, groove) plays on this device, and which are muted, set in General's Mix group. A muted layer plays nothing, so the drummer can practise against any combination; a muted click still plays the count-in. The click's mute is also in the Practice screen's transport.
@@ -98,6 +98,9 @@ _Avoid_: Beep, tick
 
 **Count-in**:
 One bar of click played before an exercise starts.
+
+**Beat count**:
+The large count of the bar's beats (1 2 3 4) in the notation view's top-right corner while an exercise plays: the beat being heard is enlarged, beat 1 is in the accent colour, and **count-in** shows beside it during the count-in. On unless switched off in Appearance, on this device.
 
 ### Metronome
 

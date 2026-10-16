@@ -7,6 +7,7 @@ import { PanelHeading } from '@/components/PanelHeading'
 import { Segmented, type SegmentedOption } from '@/components/Segmented'
 import { SelectMenu } from '@/components/SelectMenu'
 import { SettingGroup } from '@/components/SettingGroup'
+import { Switch } from '@/components/Switch'
 import { FullScreenHeading, chevronButtonClass } from '@/components/Sidebar'
 import { Slider } from '@/components/Slider'
 import { ChevronIcon, SpeakerIcon, SpeakerMutedIcon } from '@/components/icons'
@@ -110,6 +111,7 @@ export function GeneralSettings() {
             <LookChoice />
             <ModeChoice />
             <FitNotationChoice />
+            <BeatCountSwitch />
           </SettingGroup>
         </div>
       )}
@@ -177,6 +179,7 @@ export function PhoneSettings({ onDone }: { onDone: () => void }) {
           <>
             <LookChoice large />
             <ModeChoice stacked />
+            <BeatCountSwitch large />
           </>
         )}
       </div>
@@ -485,6 +488,18 @@ function FitNotationChoice() {
         value={fitNotation}
         onChange={(fit) => setDeviceSettings({ fitNotation: fit })}
       />
+    </div>
+  )
+}
+
+/** Whether the notation card counts the beats while an exercise plays, on this device. */
+function BeatCountSwitch({ large = false }: { large?: boolean }) {
+  const beatCount = useAppStore((s) => s.device.beatCount)
+  const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
+  return (
+    <div className="flex items-center justify-between gap-2" title="While an exercise plays, count the beats in the notation's corner">
+      <span className={large ? 'font-semibold' : 'text-mute'}>Beat count</span>
+      <Switch label="Beat count" labelHidden checked={beatCount} onChange={(on) => setDeviceSettings({ beatCount: on })} />
     </div>
   )
 }

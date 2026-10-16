@@ -1,7 +1,7 @@
 // The playback timeline: what the engine has scheduled, on the audio clock, so the notation can
 // place the playhead on the hit the drummer is hearing and the header can show where playback is.
 
-import { TICKS_PER_BEAT } from './model'
+import { BEATS_PER_BAR, TICKS_PER_BEAT } from './model'
 import type { PlayPosition, ScheduledEvent } from './schedule'
 
 /** One scheduled event: when it sounds, where it is and whether it's a hit on the staff. */
@@ -66,6 +66,18 @@ export function resumePosition(timeline: readonly TimelineEntry[], time: number)
 export function positionLabel({ bar, tick }: PlayPosition): string {
   const beat = Math.floor(tick / TICKS_PER_BEAT) + 1
   return `${bar < 0 ? 'count-in' : bar + 1} · ${beat}`
+}
+
+/** The beat the beat count shows at a position: the beat (counted from 0) of a bar of `beats`, and whether it's the count-in. */
+export interface CountedBeat {
+  countIn: boolean
+  beat: number
+  beats: number
+}
+
+/** The beat count at a playback position: the beat the position falls in, of the bar's beats. */
+export function beatCountAt({ bar, tick }: PlayPosition): CountedBeat {
+  return { countIn: bar < 0, beat: Math.floor(tick / TICKS_PER_BEAT), beats: BEATS_PER_BAR }
 }
 
 /**
