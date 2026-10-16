@@ -20,13 +20,13 @@ import { ClickToggle, CountInToggle } from '@/features/playback/TransportControl
 import type { ExerciseSettings, Hand, HihatFoot, Layer, StickingMode, Theme, TimeSignature, VolumeSetting } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
-  GROOVE_PRESETS,
   MAX_SWING,
   MAX_VOLUME,
   MIN_SWING,
   THEMES,
   TIME_SIGNATURES,
   TRIPLET_SWING,
+  grooveOptions,
   groovePreset,
   hihatFootOptions,
   meter,
@@ -285,13 +285,14 @@ function TimeSignatureChoice({ large = false }: { large?: boolean }) {
 /** The groove layer played and drawn with the exercise, or none. */
 function GroovePicker({ large = false }: { large?: boolean }) {
   const groove = useAppStore((s) => s.editor.exercise.practice.groove)
+  const timeSignature = useAppStore((s) => s.editor.exercise.timeSignature)
   const setGroove = useAppStore((s) => s.setGroove)
   return (
     <Labelled label="Preset" stacked={large}>
       <SelectMenu
         label="Groove preset"
         large={large}
-        options={GROOVE_PRESETS.map((preset) => ({ value: preset.id, label: preset.name }))}
+        options={grooveOptions(timeSignature).map((preset) => ({ value: preset.id, label: preset.name }))}
         value={groovePreset(groove).id}
         onChange={setGroove}
       />

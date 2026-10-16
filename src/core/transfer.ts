@@ -1,7 +1,7 @@
 // Export and import: the JSON file that moves exercises between computers.
 
 import { inKnownFolder } from './folders'
-import { GROOVE_PRESETS } from './groove'
+import { GROOVE_PRESETS, fittedPractice } from './groove'
 import { migrateExercise } from './migrate'
 import type { Duration, Exercise, Folder, Hand, Item, StickingMode, TimeSignature } from './model'
 import {
@@ -17,6 +17,7 @@ import {
   itemTicks,
   meter,
 } from './model'
+import { fittedBars } from './speller'
 
 /** Marks a file as an exercise export. Chosen before the app was named, and kept. */
 export const EXPORT_FORMAT = 'drum-app-exercises'
@@ -66,7 +67,7 @@ export type ParsedImport = { ok: true; exercises: Exercise[]; folders: Folder[] 
  * chain as the database, and the folders they're in. One whose folder the file doesn't list is in
  * no folder; a file from before folders has none. A file from a newer version of the app, a
  * malformed one, or one that isn't an exercise export is refused whole, with a reason to show the
- * drummer.
+ * drummer. Each exercise is fitted to its time signature.
  */
 export function parseImport(json: string, appVersion: number = SCHEMA_VERSION): ParsedImport {
   const file = parseJson(json)
@@ -95,9 +96,19 @@ export function parseImport(json: string, appVersion: number = SCHEMA_VERSION): 
     const problem = exerciseProblem(exercise)
     if (problem) return refuse(damaged(`${which}${named(exercise)} ${problem}`))
     if (read.some((e) => e.id === exercise.id)) return refuse(damaged(`${which}${named(exercise)} has the same id as another`))
-    read.push(inKnownFolder(exercise, folders))
+    read.push(inKnownFolder(fitted(exercise), folders))
   }
   return { ok: true, exercises: read, folders }
+}
+
+/**
+ * An imported exercise as the app could have written it: in compound time a straight beat keeps
+ * only its downbeat, and a groove or hi-hat foot its time signature doesn't offer is turned off,
+ * as a change to that time signature does. A hand-edited file is fitted rather than refused.
+ */
+function fitted(exercise: Exercise): Exercise {
+  const { bars, timeSignature, practice } = exercise
+  return { ...exercise, bars: fittedBars(bars, timeSignature, timeSignature), practice: fittedPractice(practice, timeSignature) }
 }
 
 /** How many of the imported exercises the library already holds, matched by id only. */

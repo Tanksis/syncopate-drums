@@ -6,13 +6,17 @@ import {
   applyEdit,
   compoundValue,
   editorBeatViews,
+  grooveOptions,
   hihatFootOptions,
   newEditorState,
   newExercise,
+  parseImport,
   placeItems,
   schedule,
   setBeat,
   staffParts,
+  sticking,
+  withGroove,
 } from './index'
 
 const fresh = () => newEditorState(newExercise({ id: 'e1', now: 0 }))
@@ -21,6 +25,12 @@ const inTime = (timeSignature: TimeSignature, state = fresh()) => applyEdit(stat
 /** Each bar's beats as the editor shows them, one hits string per beat, joined by spaces. */
 const grid = (state: EditorState, row: 'snare' | 'kick' = 'snare') =>
   editorBeatViews(state).map((bar) => bar.map((beat) => beat[row].hits).join(' '))
+
+/** The ticks the snare row's notes are struck at, as stored. */
+const struckAt = (state: EditorState) =>
+  placeItems(state.exercise.bars, 'snare')
+    .filter((p) => p.item.kind === 'note' && !p.continuation)
+    .map((p) => p.start)
 
 describe('compound time in the editor', () => {
   it('gives a bar of 6/8 two beats of three eighths, and 12/8 four', () => {
@@ -78,9 +88,64 @@ describe('moving between simple and compound time', () => {
     expect(applyEdit(changed, { type: 'undo' }).exercise.practice).toMatchObject({ groove: 'jazz', hihatFoot: 'ands' })
   })
 
+  it('keeps triplet beats between two simple time signatures', () => {
+    expect(grid(inTime('3/4', written('xxx', 'x.x.')))).toEqual(['xxx x.x. ....'])
+  })
+
+  it('pastes a bar copied in 4/4 into 6/8 on the triplet grid, keeping only its downbeats', () => {
+    const copied = applyEdit(written('xxxx', '.x.x'), { type: 'copyBars' })
+    const pasted = applyEdit(inTime('6/8', copied), { type: 'pasteBars' })
+    expect(grid(pasted)).toEqual(['x.. ...'])
+    expect(struckAt(pasted)).toEqual([0])
+  })
+
+  it('pastes a bar copied in 6/8 into 4/4 keeping only its downbeats, and one copied in 3/4 as it is', () => {
+    const in68 = inTime('6/8')
+    const bars = setBeat(setBeat(in68.exercise.bars, 'snare', 0, 0, 'xxx'), 'snare', 0, 1, '.x.')
+    const copied = applyEdit({ ...in68, exercise: { ...in68.exercise, bars } }, { type: 'copyBars' })
+    expect(grid(applyEdit(inTime('4/4', copied), { type: 'pasteBars' }))).toEqual(['x... .... .... ....'])
+    const copied34 = applyEdit(inTime('3/4', written('xxx')), { type: 'copyBars' })
+    expect(grid(applyEdit(inTime('4/4', copied34), { type: 'pasteBars' }))).toEqual(['xxx .... .... ....'])
+  })
+
+  it('offers no groove in compound time, and turning one on there is no change', () => {
+    expect(grooveOptions('6/8').map((p) => p.id)).toEqual(['off'])
+    expect(grooveOptions('3/4').map((p) => p.id)).toContain('hihatEighths')
+    const { exercise } = inTime('12/8')
+    expect(withGroove(exercise, 'hihatEighths')).toBe(exercise)
+  })
+
   it('offers the hi-hat foot on 1 and on the beats in compound time', () => {
     expect(hihatFootOptions('6/8')).toEqual(['off', 'one', 'quarters'])
     expect(hihatFootOptions('12/8')).toEqual(['off', 'one', 'quarters'])
+  })
+})
+
+describe('sticking in compound time', () => {
+  it('runs the eighths on hand to hand through a beat with only its downbeat', () => {
+    // Clicked on, a beat with only its downbeat is written as a plain quarter.
+    const state = applyEdit(inTime('6/8'), { type: 'toggleGridPosition', row: 'snare', bar: 0, beat: 0, position: 0 })
+    const bars = setBeat(state.exercise.bars, 'snare', 0, 1, 'xxx')
+    const hands = sticking({ ...state.exercise, bars, sticking: 'natural', leadHand: 'R' }).map((n) => n.shown)
+    expect(hands).toEqual(['R', 'L', 'R', 'L'])
+  })
+})
+
+describe('importing compound time', () => {
+  /** An export file of one exercise in 6/8, changed. */
+  const file = (change: (exercise: EditorState['exercise']) => object) =>
+    JSON.stringify({ format: 'drum-app-exercises', version: 5, folders: [], exercises: [change(inTime('6/8').exercise)] })
+
+  it('keeps only the downbeat of a straight beat in a 6/8 bar', () => {
+    const parsed = parseImport(file((e) => ({ ...e, bars: setBeat(e.bars, 'snare', 0, 0, 'xxxx') })))
+    if (!parsed.ok) throw new Error(parsed.reason)
+    expect(struckAt(newEditorState(parsed.exercises[0]))).toEqual([0])
+  })
+
+  it('turns off a groove and a hi-hat foot that 6/8 has no place for', () => {
+    const parsed = parseImport(file((e) => ({ ...e, practice: { ...e.practice, groove: 'jazz', hihatFoot: 'ands' } })))
+    if (!parsed.ok) throw new Error(parsed.reason)
+    expect(parsed.exercises[0].practice).toMatchObject({ groove: 'off', hihatFoot: 'off' })
   })
 })
 

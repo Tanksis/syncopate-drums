@@ -4,8 +4,8 @@
 
 import type { Figure } from './figures'
 import { figureOfHits, isTripletHits } from './figures'
-import type { Bar, Hand, Item, Row } from './model'
-import { ROWS, TICKS_PER_BEAT, barBeats, barTicks, beatIndex, itemTicks, rowBeats } from './model'
+import type { Bar, Hand, Item, Row, TimeSignature } from './model'
+import { ROWS, TICKS_PER_BEAT, barBeats, barTicks, beatIndex, itemTicks, meter, rowBeats } from './model'
 
 /** What the grid editor shows for one beat: its grid, shared by both rows, and each row on it. */
 export type BeatView = {
@@ -569,6 +569,22 @@ export function toggleCutShort(bars: Bar[], row: Row, bar: number, beat: number)
   // Rung on to its end again, a beat that reads the same on either grid is written as a plain beat.
   if (readsOnEitherGrid(timeline, index)) timeline.triplet[index] = false
   return withRow(bars, row, fromTimeline(timeline))
+}
+
+/**
+ * Bars written in one time signature, fitted to another: cut or padded to its beats, as
+ * `withBeatsPerBar` does. Compound time's beats are on the triplet grid and simple time's on the
+ * sixteenth grid, so a beat not on the new time's grid keeps only its downbeat, as a grid switch
+ * does: in compound time every straight beat, and coming from compound time every triplet one.
+ * Between two simple time signatures the drummer's triplet beats are kept.
+ */
+export function fittedBars(bars: Bar[], from: TimeSignature, to: TimeSignature): Bar[] {
+  const { beats, compound } = meter(to)
+  const cut = withBeatsPerBar(bars, beats)
+  if (!compound && !meter(from).compound) return cut
+  return beatViews(cut)
+    .flatMap((views, bar) => views.flatMap((view, beat) => (view.triplet === compound ? [] : [{ bar, beat }])))
+    .reduce((written, { bar, beat }) => clearBeatToDownbeat(written, bar, beat), cut)
 }
 
 /**

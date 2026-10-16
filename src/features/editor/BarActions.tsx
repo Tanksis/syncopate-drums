@@ -25,7 +25,7 @@ export function BarActions({ large = false, dots }: { large?: boolean; dots?: Re
   const cursorBar = `bar ${bar + 1}`
   const bars = barRange(first, last)
   // A paste writes the whole clipboard from the cursor bar on, up to the end of the exercise.
-  const pasted = barRange(bar, Math.min(bar + (editor.clipboard?.length ?? 1), editor.exercise.bars.length) - 1)
+  const pasted = barRange(bar, Math.min(bar + (editor.clipboard?.bars.length ?? 1), editor.exercise.bars.length) - 1)
   const deleteBars = { label: `Delete ${bars}`, disabled: editor.exercise.bars.length === 1, onSelect: () => dispatch({ type: 'deleteBar' }) }
   return (
     <div className={`flex items-center ${large ? 'min-w-0 flex-1' : 'gap-1'}`}>

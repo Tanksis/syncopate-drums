@@ -1,8 +1,8 @@
 // The groove presets: predefined groove layers played and drawn above the exercise, the same in
 // every bar, and the hi-hat foot setting layered with them (ADR 0010).
 
-import type { GroovePresetId, HihatFoot, TimeSignature } from './model'
-import { HIHAT_FOOT_SETTINGS, TICKS_PER_BEAT, meter } from './model'
+import type { Exercise, GroovePresetId, HihatFoot, PracticeSettings, TimeSignature } from './model'
+import { HIHAT_FOOT_SETTINGS, TICKS_PER_BEAT, TRIPLET_SWING, meter, swingOn } from './model'
 import type { Instrument } from './schedule'
 
 /** Where a groove hit is drawn on the percussion staff: the key VexFlow places it at, and its notehead. */
@@ -111,14 +111,41 @@ export function hihatFootOptions(timeSignature: TimeSignature): HihatFoot[] {
   return HIHAT_FOOT_SETTINGS.filter((foot) => foot !== 'twoAndFour' || timeSignature === '4/4')
 }
 
-/** A groove preset as it plays in a time signature: off in compound time, which none of them fit. */
+/** The groove presets that fit a time signature: in compound time none do, so only Off. */
+export function grooveOptions(timeSignature: TimeSignature): readonly GroovePreset[] {
+  return meter(timeSignature).compound ? [GROOVE_PRESETS[0]] : GROOVE_PRESETS
+}
+
+/** A groove preset as it plays in a time signature: off where the time signature doesn't offer it. */
 export function fittedGroove(groove: GroovePresetId, timeSignature: TimeSignature): GroovePresetId {
-  return meter(timeSignature).compound ? 'off' : groove
+  return grooveOptions(timeSignature).some((p) => p.id === groove) ? groove : 'off'
 }
 
 /** A hi-hat foot setting as it plays in a time signature: off where the time signature doesn't offer it. */
 export function fittedHihatFoot(hihatFoot: HihatFoot, timeSignature: TimeSignature): HihatFoot {
   return hihatFootOptions(timeSignature).includes(hihatFoot) ? hihatFoot : 'off'
+}
+
+/** Practice settings fitted to a time signature: a groove or hi-hat foot it doesn't offer is turned off. */
+export function fittedPractice(practice: PracticeSettings, timeSignature: TimeSignature): PracticeSettings {
+  const groove = fittedGroove(practice.groove, timeSignature)
+  const hihatFoot = fittedHihatFoot(practice.hihatFoot, timeSignature)
+  return groove === practice.groove && hihatFoot === practice.hihatFoot ? practice : { ...practice, groove, hihatFoot }
+}
+
+const JAZZ_GROOVES: readonly GroovePresetId[] = ['jazz', 'jazzFeathered']
+
+/**
+ * The exercise with a groove preset, as it was if it already has that one. Moving from another
+ * groove to a jazz one on a straight exercise also sets triplet swing, since a jazz ride is never
+ * played straight (ADR 0007). Any other swing amount, or a straight feel chosen while already on a
+ * jazz groove, is left as the drummer set it. A groove the time signature doesn't offer is no change.
+ */
+export function withGroove(exercise: Exercise, groove: GroovePresetId): Exercise {
+  const { practice } = exercise
+  if (groove === practice.groove || fittedGroove(groove, exercise.timeSignature) !== groove) return exercise
+  const turnsSwingOn = JAZZ_GROOVES.includes(groove) && !JAZZ_GROOVES.includes(practice.groove) && !swingOn(practice)
+  return { ...exercise, practice: { ...practice, groove, swing: turnsSwingOn ? TRIPLET_SWING : practice.swing } }
 }
 
 /**

@@ -2,7 +2,7 @@
 // turns a key press into a command, so the UI only dispatches.
 
 import { REST_FIGURE } from './figures'
-import { fittedGroove, fittedHihatFoot } from './groove'
+import { fittedPractice } from './groove'
 import type { Bar, Exercise, GroovePresetId, HihatFoot, Hand, Item, LoopRange, Row, TimeSignature } from './model'
 import {
   ROWS,
@@ -23,13 +23,13 @@ import type { BeatView, GridPoint, RowView } from './speller'
 import {
   beatViews,
   clearBeatToDownbeat,
+  fittedBars,
   kicksInGaps,
   setBeat,
   setHold,
   slotTicks,
   toggleHit,
   toggleTie,
-  withBeatsPerBar,
 } from './speller'
 import type { NoteSticking } from './sticking'
 import { overrideCount, sticking } from './sticking'
@@ -51,8 +51,8 @@ export interface EditorState {
   exercise: Exercise
   cursor: Cursor
   selection: BarSelection | null
-  /** Bars copied with Ctrl+C, kept for the session only. */
-  clipboard: Bar[] | null
+  /** Bars copied with Ctrl+C and the time signature they were in, kept for the session only. */
+  clipboard: { bars: Bar[]; timeSignature: TimeSignature } | null
   history: History
   /**
    * The pending grid: beats (bar × beats + beat) switched to the triplet grid whose notes read the same
@@ -397,14 +397,15 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
     }
     case 'copyBars': {
       const { first, last } = selectedBars(state)
-      return { ...state, clipboard: state.exercise.bars.slice(first, last + 1) }
+      const { bars, timeSignature } = state.exercise
+      return { ...state, clipboard: { bars: bars.slice(first, last + 1), timeSignature } }
     }
     case 'pasteBars': {
       if (!state.clipboard) return state
       const { bar } = state.cursor
-      const { bars } = state.exercise
-      // Bars copied before a change of time signature are cut or padded to the bar they now go in.
-      const clip = withBeatsPerBar(state.clipboard, beatsIn(state))
+      const { bars, timeSignature } = state.exercise
+      // Bars copied before a change of time signature are fitted to the one they now go in.
+      const clip = fittedBars(state.clipboard.bars, state.clipboard.timeSignature, timeSignature)
       const next = [...untieLast(bars.slice(0, bar)), ...untieLast(clip), ...bars.slice(bar + clip.length)]
       return moveTo(withBars(state, next), bar, 0)
     }
@@ -425,20 +426,10 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
     case 'setTimeSignature': {
       const { timeSignature } = command
       if (timeSignature === state.exercise.timeSignature) return state
-      const { beats, compound } = meter(timeSignature)
-      const cut = withBeatsPerBar(state.exercise.bars, beats)
-      // A compound beat is on the triplet grid and a simple one isn't, unless it reads the same on either.
-      const bars = beatViews(cut)
-        .flatMap((views, bar) => views.flatMap((view, beat) => (view.triplet === compound ? [] : [{ bar, beat }])))
-        .reduce((written, { bar, beat }) => clearBeatToDownbeat(written, bar, beat), cut)
+      const bars = fittedBars(state.exercise.bars, state.exercise.timeSignature, timeSignature)
       // The beats' indices across the exercise move, so the pending grid starts again.
-      const { practice } = state.exercise
-      const fitted = {
-        ...practice,
-        groove: fittedGroove(practice.groove, timeSignature),
-        hihatFoot: fittedHihatFoot(practice.hihatFoot, timeSignature),
-      }
-      const exercise = { ...state.exercise, bars, timeSignature, practice: fitted }
+      const practice = fittedPractice(state.exercise.practice, timeSignature)
+      const exercise = { ...state.exercise, bars, timeSignature, practice }
       const changed = { ...state, exercise, pendingGrid: [] }
       return moveTo(changed, state.cursor.bar, state.cursor.beat)
     }

@@ -341,21 +341,6 @@ export function withSwing(exercise: Exercise, swing: number): Exercise {
   return { ...exercise, practice: { ...exercise.practice, swing: clampSwing(swing) } }
 }
 
-const JAZZ_GROOVES: readonly GroovePresetId[] = ['jazz', 'jazzFeathered']
-
-/**
- * The exercise with a groove preset, as it was if it already has that one. Moving from another
- * groove to a jazz one on a straight exercise also sets triplet swing, since a jazz ride is never
- * played straight (ADR 0007). Any other swing amount, or a straight feel chosen while already on a
- * jazz groove, is left as the drummer set it.
- */
-export function withGroove(exercise: Exercise, groove: GroovePresetId): Exercise {
-  const { practice } = exercise
-  if (groove === practice.groove) return exercise
-  const turnsSwingOn = JAZZ_GROOVES.includes(groove) && !JAZZ_GROOVES.includes(practice.groove) && !swingOn(practice)
-  return { ...exercise, practice: { ...practice, groove, swing: turnsSwingOn ? TRIPLET_SWING : practice.swing } }
-}
-
 /** The exercise with a hi-hat foot setting, as it was if it already has that one. */
 export function withHihatFoot(exercise: Exercise, hihatFoot: HihatFoot): Exercise {
   if (hihatFoot === exercise.practice.hihatFoot) return exercise
