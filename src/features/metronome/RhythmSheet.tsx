@@ -95,7 +95,7 @@ function Stepper({ label, more, fewer, compact }: { label: string; more: Step; f
 export function SubdivisionGrid({ compact = false }: { compact?: boolean }) {
   const subdivision = useAppStore((s) => s.device.metronome.subdivision)
   const setMetronome = useAppStore((s) => s.setMetronome)
-  const name = <span className={`text-mute ${compact ? 'text-xs' : 'text-[13px]'}`}>{subdivisionOf(subdivision).name}</span>
+  const subdivisionName = <span className={`text-mute ${compact ? 'text-xs' : 'text-[13px]'}`}>{subdivisionOf(subdivision).name}</span>
   const grid = (
     <div className="grid grid-cols-4 gap-1.5">
       {SUBDIVISIONS.map(({ id }) => (
@@ -114,7 +114,7 @@ export function SubdivisionGrid({ compact = false }: { compact?: boolean }) {
   )
   if (compact)
     return (
-      <SettingGroup title="Subdivision" aside={name}>
+      <SettingGroup title="Subdivision" aside={subdivisionName}>
         {grid}
       </SettingGroup>
     )
@@ -122,7 +122,7 @@ export function SubdivisionGrid({ compact = false }: { compact?: boolean }) {
     <div className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between gap-2">
         <span className="font-semibold">Subdivision</span>
-        {name}
+        {subdivisionName}
       </div>
       {grid}
     </div>

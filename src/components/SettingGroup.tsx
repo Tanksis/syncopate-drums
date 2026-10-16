@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { headingFace } from './PanelHeading'
 
 /**
  * A settings group: a hairline over its heading and its rows, which the first group in its section
@@ -24,7 +25,7 @@ export function SettingGroup({ title, aside, children }: { title: string; aside?
 /** A settings group's heading, in the ink colour and larger than `PanelHeading`'s section labels. */
 function GroupHeading({ children }: { children: ReactNode }) {
   return (
-    <h3 className="mb-1 font-display text-[13px] font-bold tracking-wider [font-variant-caps:var(--heading-caps)] [text-transform:var(--heading-case)] text-ink">
+    <h3 className={`mb-1 ${headingFace} text-[13px] text-ink`}>
       {children}
     </h3>
   )
