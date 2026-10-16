@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { Button, buttonClass } from '@/components/Button'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { DuplicateIcon, MoreIcon, PlusIcon, TrashIcon } from '@/components/icons'
+import { DuplicateIcon, MoreIcon, PencilIcon, PlusIcon, TrashIcon } from '@/components/icons'
 import { Menu } from '@/components/Menu'
 import { NameInput } from '@/components/NameInput'
 import { PatternDialog } from '@/components/PatternDialog'
@@ -105,7 +105,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
       // Not while renaming, so the name's text can be selected with the mouse.
       draggable={renamingId !== exercise.id}
       {...dragProps(exercise.id)}
-      className={`flex items-center gap-1 ${inFolder ? 'pl-5' : 'pl-1'}`}
+      className={`group flex items-center gap-1 ${inFolder ? 'pl-5' : 'pl-1'}`}
     >
       <input
         type="checkbox"
@@ -141,6 +141,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
           {exercise.name}
         </button>
       )}
+      {renamingId !== exercise.id && <RenamePencil name={exercise.name} onClick={() => setRenamingId(exercise.id)} />}
     </li>
   )
 
@@ -346,6 +347,9 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
                       {folder.name}
                     </span>
                   )}
+                  {renamingId !== folder.id && (
+                    <RenamePencil name={folder.name} onClick={() => setRenamingId(folder.id)} />
+                  )}
                   <span title={exerciseCount(count)} className="shrink-0 px-1 text-xs text-mute">
                     {count}
                   </span>
@@ -449,5 +453,21 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
         </ConfirmDialog>
       )}
     </aside>
+  )
+}
+
+/** A row's pencil, shown on hover or focus, that starts the same rename as a double-click. */
+function RenamePencil({ name, onClick }: { name: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label={`Rename ${name}`}
+      title="Rename"
+      onMouseDown={keepFocus}
+      onClick={onClick}
+      className="flex shrink-0 cursor-pointer border-0 bg-transparent p-0.5 text-mute opacity-0 group-hover:opacity-100 hover:text-accent focus:opacity-100"
+    >
+      <PencilIcon />
+    </button>
   )
 }
