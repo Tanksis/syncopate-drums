@@ -14,3 +14,4 @@
 ## Comments
 
 - Done. Keys are left off the phone's Help, which has no keyboard. In the same change, Appearance's "Fit notation to the card" switch became **Notation: Fit | Normal**, at the user's request.
+- After review the user trimmed About to its first sentence, without the Ted Reed example, and the ? icon lost its ring and was drawn thinner.

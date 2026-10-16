@@ -48,18 +48,9 @@ const WORDS: [word: string, meaning: string][] = [
   ['Count-in', 'One bar of click before the exercise starts, turned on and off with the Count-in chip.'],
 ]
 
-/** The runtime dependencies in `package.json`, with their licences. */
-const CREDITS: [name: string, does: string, license: string][] = [
-  ['VexFlow', 'draws the notation', 'MIT'],
-  ['React', 'the interface', 'MIT'],
-  ['Zustand', 'the app’s state', 'MIT'],
-  ['idb', 'storage on this device', 'ISC'],
-  ['Fraunces, DM Sans, Geist and Geist Mono', 'the fonts, via Fontsource', 'SIL Open Font License'],
-]
-
 /**
  * Help and About: a quick start, the keys (not on a phone, which has none), the app's words, and
- * what the app is, where the exercises are kept, and the credits. A dialog-sized panel on the
+ * what the app is. A dialog-sized panel on the
  * desktop, which Escape, ✕ or a click outside closes; on a phone it fills the screen, closed by its tick.
  */
 export function HelpPage({ onClose }: { onClose: () => void }) {
@@ -122,24 +113,7 @@ export function HelpPage({ onClose }: { onClose: () => void }) {
           </Section>
 
           <Section title="About">
-            <div className="flex flex-col gap-2">
-              <p className="m-0">
-                Syncopate! is a drum practice tool: write rhythm exercises, such as the lines of Ted Reed’s <i>Syncopation</i>, see the sticking under them,
-                add a groove, and play along with a click.
-              </p>
-              <p className="m-0 text-mute">
-                Your exercises stay on this device, in this browser; nothing is sent anywhere. To keep a copy or move them to another device, choose Export
-                all from the Library’s ⋯ menu, and Import… there to bring them back.
-              </p>
-              <p className="m-0 text-mute">Made with these open-source parts:</p>
-              <ul className="m-0 flex flex-col gap-0.5 pl-5 text-mute">
-                {CREDITS.map(([name, does, license]) => (
-                  <li key={name}>
-                    <span className="text-ink">{name}</span>, {does} ({license})
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <p className="m-0">Syncopate! is a drum practice tool: write rhythm exercises, see the sticking under them, add a groove, and play along with a click.</p>
           </Section>
         </div>
       </div>

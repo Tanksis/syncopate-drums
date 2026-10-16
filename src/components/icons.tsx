@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 /** A 16 × 16 line icon, stroked in the text colour so it follows hover, disabled and the theme. */
-function Icon({ children }: { children: ReactNode }) {
+function Icon({ strokeWidth = 1.5, children }: { strokeWidth?: number; children: ReactNode }) {
   return (
     <svg
       aria-hidden
@@ -10,7 +10,7 @@ function Icon({ children }: { children: ReactNode }) {
       height="16"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.5"
+      strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
     >
@@ -92,12 +92,11 @@ export const MenuIcon = () => (
   </Icon>
 )
 
-/** A question mark in a ring: help. */
+/** A question mark, drawn thinner than the other icons: help. */
 export const HelpIcon = () => (
-  <Icon>
-    <circle cx="8" cy="8" r="6.25" />
-    <path d="M6.2 6.2a1.9 1.9 0 1 1 2.6 1.75c-.5.22-.8.6-.8 1.15v.4" />
-    <circle cx="8" cy="11.6" r=".4" fill="currentColor" />
+  <Icon strokeWidth={1.25}>
+    <path d="M5 5.25a3 3 0 1 1 4.3 2.7C8.5 8.33 8 8.95 8 9.8v.7" />
+    <circle cx="8" cy="13.25" r=".55" fill="currentColor" stroke="none" />
   </Icon>
 )
 
