@@ -149,4 +149,7 @@ describe('notationFit growing a short exercise to fill a tall area', () => {
     expect(notationFit({ bars: 4, width: 1000, height: 450, lineHeight: LINE })).toEqual({ scale: 1.15, barsPerLine: 4, barWidth: 194 })
     expect(notationFit({ bars: 1, width: 860, height: 800, lineHeight: LINE }).scale).toBe(1.6)
   })
+  it('balances the lines only when it grows: five bars too tall to grow keep 4 + 1, as today', () => {
+    expect(notationFit({ bars: 5, width: 1000, height: 310, lineHeight: LINE, grow: true })).toEqual({ scale: 1, barsPerLine: 4, barWidth: 227 })
+  })
 })

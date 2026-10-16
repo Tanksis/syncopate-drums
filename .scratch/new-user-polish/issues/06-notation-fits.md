@@ -10,16 +10,17 @@ The phone is unchanged. See [spec](../spec.md), stories 10–11.
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The hint in the editor in both looks, on desktop and in the phone's edit sheet; gone after the first hit; none on an example
-- [ ] `notationFit` grows past 1.6 and onto more, balanced lines only when asked to, on desktop, never past 2.4 (unit-tested)
-- [ ] The staff is centred vertically in the card
-- [ ] `DeviceSettings.fitNotation` (default on), validated, with tests; the switch in General › Appearance
-- [ ] Playback following, bar-number clicks and hand clicks still land on the scaled staff (real mouse)
-- [ ] Checked with 1, 2, 4 and 8 bars at 1280, 1440 and 1920, and unchanged on a phone
+- [x] The hint in the editor in both looks, on desktop and in the phone's edit sheet; gone after the first hit; none on an example
+- [x] `notationFit` grows past 1.6 and onto more, balanced lines only when asked to, on desktop, never past 2.4 (unit-tested)
+- [x] The staff is centred vertically in the card
+- [x] `DeviceSettings.fitNotation` (default on), validated, with tests; the switch in General › Appearance
+- [x] Playback following, bar-number clicks and hand clicks still land on the scaled staff (real mouse)
+- [x] Checked with 1, 2, 4 and 8 bars at 1280, 1440 and 1920, and unchanged on a phone
 
 ## Comments
 
 - 2026-10-16: The user wants to see this mocked or prototyped before agreeing to it. It waits for the `prototype/new-user-polish` verdict.
 - 2026-10-16: Prototype verdict (`prototype/new-user-polish`, commit 53472b9): the hint in the editor (over above the staff), and growing plus centring (over the card hugging the staff). The user wondered about a zoom option, or growing being optional but on by default; this ticket takes the second, as a switch.
+- 2026-10-16: Built (`feature/06-notation-fits`). Lines are balanced only when the exercise actually grows, so a long one keeps today's lines with the switch on. With the editor collapsed, an empty exercise shows no hint, since the hint lives in the editor. Light/dark checked headlessly in Warm; Studio uses the same `accent-tint` token, not separately screenshotted.

@@ -460,10 +460,11 @@ function ModeChoice({ stacked = false }: { stacked?: boolean }) {
 function FitNotationChoice() {
   const fitNotation = useAppStore((s) => s.device.fitNotation)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
+  const label = 'Fit notation to the card'
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="text-mute">Fit notation to the card</span>
-      <Switch label="Fit notation to the card" labelHidden checked={fitNotation} onChange={(on) => setDeviceSettings({ fitNotation: on })} />
+      <span className="text-mute">{label}</span>
+      <Switch label={label} labelHidden checked={fitNotation} onChange={(on) => setDeviceSettings({ fitNotation: on })} />
     </div>
   )
 }

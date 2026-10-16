@@ -77,7 +77,7 @@ export function minBarWidthFor(parts: readonly StaffBar[]): number {
  * The scale (0.8 to 1.6, in steps of 0.05) and bars a line to draw an exercise of `bars` bars at,
  * in an area `width` by `height`, given one line's height at scale 1 and the narrowest a bar may be
  * (`minBarWidth`, 190 unless the music is busy). The largest scale that needs no more lines than
- * scale 1 (any number, up to 2.4, given `grow`, with the bars shared evenly between the lines),
+ * scale 1 (any number, up to 2.4, given `grow`, with the bars then shared evenly between the lines),
  * fits the height and leaves a bar 80% of `minBarWidth`; 1 if even scale 1 overflows the height; below 1, the largest scale
  * at which one bar a line is `minBarWidth` wide (no lower than 0.8), if it isn't at 1. Also the
  * width of a bar in the drawing's units (before scaling), past the first bar's clef: an exercise on
@@ -121,8 +121,8 @@ export function notationFit({
   }
   const scale = hundredths / 100
   const most = barsPerLineAt(width, scale, minBarWidth)
-  // Grown, the lines are balanced: 4 bars as 2 + 2, not 3 + 1.
-  const barsPerLine = grow ? Math.ceil(bars / Math.ceil(bars / most)) : most
+  // Grown, the lines are balanced: 4 bars as 2 + 2, not 3 + 1. One that didn't grow keeps today's lines.
+  const barsPerLine = grow && scale > 1 ? Math.ceil(bars / Math.ceil(bars / most)) : most
   const available = availableAt(width, scale)
   // On one line the bars share it; over more, every bar gets a share of a full line so they line up.
   const barWidth = Math.floor(
