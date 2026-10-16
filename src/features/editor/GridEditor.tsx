@@ -13,6 +13,7 @@ import { BarActions } from './BarActions'
 import { BarDots, BarTabs } from './BarTabs'
 import { BeatStrip } from './BeatStrip'
 import { CheatSheet } from './CheatSheet'
+import { EditorHint } from './EditorHint'
 import { useEditorKeys } from './useEditorKeys'
 
 /**
@@ -86,6 +87,9 @@ function EditorSheet({
         {/* The beat cards, centred between the ‹ and ›. While going to another bar, the bar left
             behind is drawn beside them, and the two slide across together. */}
         <div ref={cards} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-6 pb-2">
+          <div className="mb-2 empty:hidden">
+            <EditorHint tap />
+          </div>
           <div
             className={`flex items-start ${slide && slide.running ? slideTransition : ''} ${slide?.forward ? 'flex-row-reverse' : ''}`}
             style={{ gap: SLIDE_GAP, transform: slide ? `translateX(${slide.offset})` : undefined }}
@@ -230,6 +234,7 @@ export function GridEditor({
       {!collapsed && (
         <>
           {helpOpen && !touch && <CheatSheet onClose={toggleHelp} />}
+          <EditorHint tap={touch} />
           <BeatStrip />
         </>
       )}

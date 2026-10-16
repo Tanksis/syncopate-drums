@@ -2,7 +2,6 @@ import type { ReactNode } from 'react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { useResolvedTheme } from '@/app/theme'
-import { hasHits } from '@/core'
 import { followPlayback, scrollLineIntoView } from './followPlayback'
 import type { Drawing, NotationArea } from './staff'
 import { drawExercise, notationFontsReady } from './staff'
@@ -12,9 +11,11 @@ import { drawExercise, notationFontsReady } from './staff'
  * at the top left, in a gutter of its own so it never covers bar 1's number, and stays put as the
  * staff scrolls. Given `coveredBottom` (a CSS length: how much of the view the phone's editor sheet
  * covers), the staff gains that much room at its end, so its last lines can scroll up clear of the
- * sheet, and the cursor's line is kept above it; nothing is laid out again.
+ * sheet, and the cursor's line is kept above it; nothing is laid out again. Given `grow` (the
+ * desktop, with Fit notation to the card on), a short exercise grows to fill the view, and the staff
+ * is centred in it top to bottom.
  */
-export function NotationView({ corner, coveredBottom }: { corner?: ReactNode; coveredBottom?: string }) {
+export function NotationView({ corner, coveredBottom, grow = false }: { corner?: ReactNode; coveredBottom?: string; grow?: boolean }) {
   const exercise = useAppStore((s) => s.editor.exercise)
   const cursor = useAppStore((s) => s.editor.cursor)
   const dispatch = useAppStore((s) => s.dispatch)
@@ -32,8 +33,6 @@ export function NotationView({ corner, coveredBottom }: { corner?: ReactNode; co
   /** Counts the web fonts loaded, so the notation is measured again in a look's font once it arrives. */
   const [fontsLoaded, setFontsLoaded] = useState(0)
   const drawingRef = useRef<Drawing>(undefined)
-  /** Where the empty-exercise hint goes: over the first line's staff, once it's drawn. */
-  const [hintBox, setHintBox] = useState<Drawing['firstStaff']>()
 
   useEffect(() => {
     let live = true
@@ -66,14 +65,10 @@ export function NotationView({ corner, coveredBottom }: { corner?: ReactNode; co
     if (!fontsReady || area.width === 0) return
     // While playing, the cursor isn't drawn, so only the playhead line marks the music, and the view
     // follows the playback rather than the cursor.
-    const drawing = (drawingRef.current = drawExercise(staffRef.current!, exercise, playing ? null : cursor, area))
-    const box = drawing.firstStaff
-    setHintBox((old) =>
-      old && old.left === box.left && old.top === box.top && old.width === box.width && old.height === box.height ? old : box,
-    )
+    const drawing = (drawingRef.current = drawExercise(staffRef.current!, exercise, playing ? null : cursor, { ...area, grow }))
     // Keep the cursor's line in view as typing runs past the bottom.
     if (!playing) scrollLineIntoView(scrollerRef.current!, staffRef.current!, drawing.line(cursor.bar), coverRef.current?.offsetHeight)
-  }, [exercise, cursor, area, fontsReady, fontsLoaded, playing, theme, look])
+  }, [exercise, cursor, area, grow, fontsReady, fontsLoaded, playing, theme, look])
 
   useEffect(() => {
     if (playing) return followPlayback(scrollerRef.current!, staffRef.current!, () => drawingRef.current)
@@ -84,17 +79,10 @@ export function NotationView({ corner, coveredBottom }: { corner?: ReactNode; co
       <section
         ref={scrollerRef}
         aria-label="Notation view"
-        className={`relative min-h-0 flex-1 overflow-auto bg-paper py-2.5 pr-4 ${corner ? 'pl-14' : 'pl-4'}`}
+        className={`relative min-h-0 flex-1 overflow-auto bg-paper py-2.5 pr-4 ${corner ? 'pl-14' : 'pl-4'} ${grow ? 'flex flex-col' : ''}`}
       >
-        <div className="relative">
-          {!hasHits(exercise) && hintBox && (
-            // Centred over the staff, which it leaves to take the clicks.
-            <p style={hintBox} className="pointer-events-none absolute z-10 m-0 flex items-center justify-center text-center">
-              <span className="rounded-md bg-paper/90 px-3 py-1 text-mute">
-                Tap or click a grid position below to add hits.
-              </span>
-            </p>
-          )}
+        {/* Grown, the staff is centred in what height is left; a staff taller than the view starts at its top. */}
+        <div className={`relative ${grow ? 'my-auto' : ''}`}>
           <div
             ref={staffRef}
             // Shift+click on a bar number would otherwise select text.
