@@ -112,6 +112,15 @@ describe('stored device settings', () => {
     expect(deviceSettingsFrom({ clickMuted: true, grooveMuted: true })).toMatchObject({ clickMuted: true, grooveMuted: true })
   })
 
+  it('show the welcome until it is dismissed', () => {
+    expect(deviceSettingsFrom(undefined).welcomeDismissed).toBe(false)
+    expect(deviceSettingsFrom({ welcomeDismissed: true }).welcomeDismissed).toBe(true)
+  })
+
+  it('drop a stored welcome setting that is not a yes or no', () => {
+    expect(deviceSettingsFrom({ welcomeDismissed: 'yes', countIn: false })).toEqual({ ...DEFAULT_DEVICE_SETTINGS, countIn: false })
+  })
+
   it('drop a stored theme the app does not have', () => {
     expect(deviceSettingsFrom({ theme: 'sepia', countIn: false })).toEqual({ ...DEFAULT_DEVICE_SETTINGS, countIn: false })
   })

@@ -379,11 +379,30 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
             ) : (
               view.loose.map((e) => exerciseRow(e, false))
             )}
-            {view.folders.length === 0 && view.loose.length === 0 && (
-              <li className="px-2 py-1 text-mute">
-                {library.length === 0 && folders.length === 0 ? 'No exercises yet.' : 'No exercises match.'}
-              </li>
-            )}
+            {view.folders.length === 0 && view.loose.length === 0 &&
+              (library.length === 0 && folders.length === 0 ? (
+                // An empty Library offers the two ways to fill it.
+                <li className="flex flex-col gap-2 px-2 py-1">
+                  <span className="text-mute">No exercises yet.</span>
+                  <Button variant="primary" size={toolSize(fullScreen)} onClick={createExercise}>
+                    New exercise
+                  </Button>
+                  <span className="text-xs text-mute">
+                    Or copy one from{' '}
+                    <button
+                      type="button"
+                      onMouseDown={keepFocus}
+                      onClick={() => setDeviceSettings({ libraryTab: 'examples' })}
+                      className="cursor-pointer border-0 bg-transparent p-0 text-accent underline"
+                    >
+                      Examples
+                    </button>
+                    .
+                  </span>
+                </li>
+              ) : (
+                <li className="px-2 py-1 text-mute">No exercises match.</li>
+              ))}
           </ul>
         </>
       )}

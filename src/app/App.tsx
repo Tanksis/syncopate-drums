@@ -11,6 +11,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { EDITOR_SHEET_HEIGHT, GridEditor } from '@/features/editor/GridEditor'
 import { ExampleNotice } from '@/features/library/ExampleNotice'
 import { LibrarySidebar } from '@/features/library/LibrarySidebar'
+import { WelcomeCard } from '@/features/library/WelcomeCard'
 import { MetronomePage } from '@/features/metronome/MetronomePage'
 import { MetronomeScreen } from '@/features/metronome/MetronomeScreen'
 import { ScreenTabs } from '@/features/metronome/ScreenTabs'
@@ -71,8 +72,9 @@ export function App() {
             <ExampleNotice />
             {/* The music on a card, which takes the height the editor leaves, all of it when that's collapsed. */}
             <div className="flex min-h-0 flex-1 flex-col p-3">
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-card border-(length:--border-card) border-line bg-paper shadow-card">
+              <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-card border-(length:--border-card) border-line bg-paper shadow-card">
                 <NotationView corner={<StaffPlayButton />} />
+                <WelcomeCard onBrowse={showSidebar(sidebars.library)} />
               </div>
             </div>
             <GridEditor />
@@ -182,7 +184,10 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
           {onMetronome ? (
             <MetronomeScreen landscape={landscape} />
           ) : (
-            <NotationView coveredBottom={editing ? underSheet : undefined} />
+            <>
+              <NotationView coveredBottom={editing ? underSheet : undefined} />
+              <WelcomeCard onBrowse={showSidebar(library)} />
+            </>
           )}
         </div>
         {/* Under the sheet while it is up, so out of reach. */}
@@ -367,6 +372,13 @@ function useSidebars(): Record<SidebarId, SidebarControl> {
           onCollapse: () => setDeviceSettings({ [STORED_OPEN[id]]: false }),
         }
   return { library: control('library'), settings: control('settings') }
+}
+
+/** Shows a sidebar, open or over the screen, leaving it be if it already shows (its open toggles an overlay). */
+function showSidebar({ state, onOpen }: SidebarControl): () => void {
+  return () => {
+    if (state === 'rail') onOpen()
+  }
 }
 
 /** A sidebar's grid column: the sidebar itself, or its rail, with the sidebar over the notation as an overlay. */
