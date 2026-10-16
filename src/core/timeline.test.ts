@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Exercise, GroovePresetId, TimelineEntry } from './index'
-import { DEFAULT_DEVICE_SETTINGS, newExercise, playheadAt, positionLabel, recordEvents, resumePosition, schedule, trimTimeline } from './index'
+import { DEFAULT_DEVICE_SETTINGS, beatCountAt, newExercise, playheadAt, positionLabel, recordEvents, resumePosition, schedule, trimTimeline } from './index'
 
 /** Count-in beat 4 at 0, then bar 1: a note with the click at 1, a click at 1.5, a note at 1.75. */
 const timeline: TimelineEntry[] = [
@@ -90,6 +90,33 @@ describe('the position shown in the header', () => {
   it('shows bar · beat, counting from 1', () => {
     expect(positionLabel({ bar: 0, tick: 0 })).toBe('1 · 1')
     expect(positionLabel({ bar: 6, tick: 30 })).toBe('7 · 3')
+  })
+})
+
+describe('the beat count', () => {
+  it('counts the count-in, saying so', () => {
+    expect(beatCountAt({ bar: -1, tick: 24 })).toEqual({ countIn: true, beat: 2, beats: 4 })
+  })
+
+  it('counts each beat of a bar, from 0', () => {
+    expect([0, 12, 24, 36].map((tick) => beatCountAt({ bar: 2, tick }))).toEqual([
+      { countIn: false, beat: 0, beats: 4 },
+      { countIn: false, beat: 1, beats: 4 },
+      { countIn: false, beat: 2, beats: 4 },
+      { countIn: false, beat: 3, beats: 4 },
+    ])
+  })
+
+  it('holds the beat between beats: the & of 2 is still beat 2', () => {
+    expect(beatCountAt({ bar: 0, tick: 18 }).beat).toBe(1)
+  })
+
+  it('counts the last beat before the loop wraps, then 1 again, not the count-in', () => {
+    // A one-bar exercise: a bar of count-in (4 s), the bar from 4 s, and the loop back to it at 8 s.
+    const timeline = played(resting('off'), 9)
+    const countAt = (time: number) => beatCountAt(playheadAt(timeline, time)!.position)
+    expect(countAt(7.5)).toEqual({ countIn: false, beat: 3, beats: 4 })
+    expect(countAt(8.1)).toEqual({ countIn: false, beat: 0, beats: 4 })
   })
 })
 

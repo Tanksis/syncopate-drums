@@ -173,6 +173,8 @@ export interface DeviceSettings {
   welcomeDismissed: boolean
   /** On a desktop, a short exercise grows, onto more lines if need be, to fill the notation card, centred in it. */
   fitNotation: boolean
+  /** While an exercise plays, the notation card's corner counts the beats of the bar. */
+  beatCount: boolean
 }
 
 /** The app's screens, switched in the header. */
@@ -237,6 +239,7 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   metronome: DEFAULT_METRONOME_SETTINGS,
   welcomeDismissed: false,
   fitNotation: true,
+  beatCount: true,
 }
 
 /** The device settings that are a playback layer's volume. */

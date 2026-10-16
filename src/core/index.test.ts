@@ -127,6 +127,12 @@ describe('stored device settings', () => {
     expect(deviceSettingsFrom({ fitNotation: 'no' }).fitNotation).toBe(true)
   })
 
+  it('show the beat count unless that is switched off, and drop a stored one that is not a yes or no', () => {
+    expect(deviceSettingsFrom(undefined).beatCount).toBe(true)
+    expect(deviceSettingsFrom({ beatCount: false }).beatCount).toBe(false)
+    expect(deviceSettingsFrom({ beatCount: 1 }).beatCount).toBe(true)
+  })
+
   it('drop any stored yes-or-no setting that is not a boolean', () => {
     expect(deviceSettingsFrom({ countIn: 0, clickMuted: 'true' })).toEqual(DEFAULT_DEVICE_SETTINGS)
   })
