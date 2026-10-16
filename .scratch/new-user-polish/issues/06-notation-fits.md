@@ -4,9 +4,13 @@
 
 **Blocked by:** none
 
-**Status:** ready-for-agent
+**Status:** needs-info
 
 - [ ] The hint sits above the staff, still pointer-transparent, in both looks
 - [ ] `notationFit` scales above 1 only on desktop, only when everything fits, and never past 1.4 (unit-tested)
 - [ ] Playback following, bar-number clicks and hand clicks still land on the scaled staff (real mouse)
 - [ ] Checked with 1, 2, 4 and 8 bars at 1280 and 1440, and unchanged on a phone
+
+## Comments
+
+- 2026-10-16: The user wants to see this mocked or prototyped before agreeing to it. It waits for the `prototype/new-user-polish` verdict.

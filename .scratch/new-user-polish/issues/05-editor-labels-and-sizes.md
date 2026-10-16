@@ -4,9 +4,13 @@
 
 **Blocked by:** none
 
-**Status:** ready-for-agent
+**Status:** needs-info
 
 - [ ] Row labels on both rows, in desktop and the phone sheet; the kick label in the kick colour
 - [ ] The beat cards still fit four per bar at 1280 with both sidebars open
 - [ ] Desktop hit areas ≥ 32 px high for the switch, the ⋯ and undo/redo; phone sizes unchanged
 - [ ] Checked in light and dark, Warm and Studio
+
+## Comments
+
+- 2026-10-16: The user wants to see this mocked or prototyped before agreeing to it. It waits for the `prototype/new-user-polish` verdict.

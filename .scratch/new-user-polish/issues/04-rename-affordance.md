@@ -4,9 +4,13 @@
 
 **Blocked by:** none
 
-**Status:** ready-for-agent
+**Status:** needs-info
 
 - [ ] Pencil beside an ordinary exercise's name; none on an example
 - [ ] Rename in the menu of every exercise row and folder, starting the same in-place rename as the double-click
 - [ ] Keyboard: the menu item works from the keyboard, and Escape cancels the rename
 - [ ] Checked at 390 × 844 and 1280 with real mouse events
+
+## Comments
+
+- 2026-10-16: The user wants to see this mocked or prototyped before agreeing to it. It waits for the `prototype/new-user-polish` verdict.
