@@ -6,6 +6,7 @@ import { FullScreenHeading } from '@/components/Sidebar'
 import { useModalDialog } from '@/components/useModalDialog'
 import type { KeyHelpGroup } from '@/features/editor/keyHelp'
 import { KEY_HELP } from '@/features/editor/keyHelp'
+import { KeyGroups } from '@/features/editor/CheatSheet'
 import { METRONOME_KEY_HELP } from '@/features/metronome/useMetronomeKeys'
 
 /** Every key, the editor's and the Metronome page's. */
@@ -15,8 +16,8 @@ const KEYS: KeyHelpGroup[] = [...KEY_HELP, METRONOME_KEY_HELP]
 const QUICK_START: { title: string; desktop: string; phone: string }[] = [
   {
     title: 'Make an exercise',
-    desktop: 'In Exercises, on the left, press + and choose New.',
-    phone: 'Open ☰, press + and choose New.',
+    desktop: 'In Exercises, on the left, open the Library tab, press + and choose New.',
+    phone: 'Open ☰, then the Library tab, press + and choose New.',
   },
   {
     title: 'Enter the hits',
@@ -103,20 +104,8 @@ export function HelpPage({ onClose }: { onClose: () => void }) {
 
           {!phone && (
             <Section title="Keys">
-              <div className="columns-[17rem] gap-6 text-xs">
-                {KEYS.map((group) => (
-                  <div key={group.title} className="mb-3 break-inside-avoid">
-                    <h4 className="m-0 mb-1 font-semibold">{group.title}</h4>
-                    <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
-                      {group.keys.map(([keys, does]) => (
-                        <div key={keys} className="contents">
-                          <dt className="font-mono whitespace-nowrap text-ink">{keys}</dt>
-                          <dd className="m-0 text-mute">{does}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </div>
-                ))}
+              <div className="text-xs">
+                <KeyGroups groups={KEYS} />
               </div>
             </Section>
           )}
