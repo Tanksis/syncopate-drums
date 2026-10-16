@@ -40,7 +40,7 @@ How an exercise is practiced rather than what it contains: BPM, loop range, groo
 How the app is set up on this computer rather than how an exercise is practiced: volumes and mutes (the Mix), the count-in toggle, the theme and mode, which exercise was last open, which sidebar tab is showing, which folders are collapsed, whether the grid editor is collapsed, which screen is showing, and the metronome's settings. Kept per device and never exported.
 
 **Mix**:
-How loud each playback layer (click, exercise, groove) plays on this device, and which are muted, set in the Mix section of Settings. A muted layer plays nothing, so the drummer can practise against any combination; a muted click still plays the count-in. The click's mute is also in the Practice screen's transport.
+How loud each playback layer (click, exercise, groove) plays on this device, and which are muted, set in General's Mix group. A muted layer plays nothing, so the drummer can practise against any combination; a muted click still plays the count-in. The click's mute is also in the Practice screen's transport.
 _Avoid_: Volume (for the section)
 
 **Theme**:

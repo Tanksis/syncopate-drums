@@ -65,21 +65,21 @@ export function PracticeSettings({ playbackGroup = false }: { playbackGroup?: bo
 }
 
 /**
- * The settings that carry over between the screens, at the foot of the desktop's settings sidebar:
+ * General: the settings that carry over between the screens, at the foot of the desktop's settings sidebar:
  * the mix, the metronome's sound and volume, and the theme. Its chevron, pointing down, folds it to
  * its heading, remembered on this device, which leaves the screen's own settings above it the room.
  */
-export function SharedSettings() {
+export function GeneralSettings() {
   const open = useAppStore((s) => s.device.settingsSectionOpen)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   const id = useId()
-  const label = open ? 'Fold the settings' : 'Open the settings'
+  const label = open ? 'Fold General' : 'Open General'
   return (
     // At most a little over half the sidebar, scrolling past that, so a short window leaves the screen's own settings room.
     <section aria-labelledby={`${id}-heading`} className="flex max-h-[55%] shrink-0 flex-col gap-3.5 border-t border-line p-3">
       <div className="flex items-start justify-between gap-2">
         <PanelHeading id={`${id}-heading`} className={open ? '' : 'mb-0'}>
-          Settings
+          General
         </PanelHeading>
         <button
           type="button"
