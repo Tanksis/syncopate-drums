@@ -4,7 +4,7 @@
 
 import type { DeviceSettings, Exercise, LoopRange, PracticeSettings, Row } from './model'
 import type { BeatLevel } from './metronome'
-import { ROWS, TICKS_PER_BEAT, barTicks, loopBars, meter, noteId } from './model'
+import { MIN_SWING, ROWS, TICKS_PER_BEAT, barTicks, loopBars, meter, noteId } from './model'
 import { grooveHitsByTick } from './groove'
 import { placeItems } from './speller'
 
@@ -62,7 +62,8 @@ export function schedule(
   window: number,
 ): ScheduleResult {
   const secondsPerTick = 60 / practice.bpm / TICKS_PER_BEAT
-  const swing = effectiveSwing(practice.swing, practice.bpm)
+  // In compound time each beat is already three eighths, so nothing is swung (ADR 0015).
+  const swing = meter(exercise.timeSignature).compound ? MIN_SWING : effectiveSwing(practice.swing, practice.bpm)
   const struck = ROWS.map((row) => ({ row, ticks: struckTicks(exercise, row) }))
   const { beats } = meter(exercise.timeSignature)
   const groove = grooveHitsByTick(practice.groove, practice.hihatFoot, beats)

@@ -112,7 +112,11 @@ _Avoid_: Mode (that is light or dark)
 The screen that plays a click on its own, with its own BPM, time signature, subdivision, beat levels and sound, remembered on the device. Not part of any exercise.
 
 **Time signature**:
-An exercise's beats per bar, written at the start of its staff: 4/4, 3/4 or 2/4, and 4/4 for a new exercise. It is part of the exercise, not a practice setting: changing it cuts each bar to its first beats or pads it with rest beats, and can be undone. The metronome has its own, any of 1–16 over 2, 4, 8 or 16, its BPM counting that note value.
+An exercise's beats per bar, written at the start of its staff: 4/4, 3/4, 2/4, 6/8 or 12/8, and 4/4 for a new exercise. It is part of the exercise, not a practice setting: changing it cuts each bar to its first beats or pads it with rest beats, and can be undone. The metronome has its own, any of 1–16 over 2, 4, 8 or 16, its BPM counting that note value.
+
+**Compound time**:
+6/8 and 12/8: two or four beats to the bar, each a dotted quarter of three eighths. The BPM, the click and the beat count follow the dotted quarter. Each beat's eighths are the triplet grid's positions, written without the "3", and nothing is swung (ADR 0015).
+_Avoid_: Triple time
 
 **Beat level**:
 How a metronome beat plays: Accent, Normal, Soft or Off, set by tapping its beat block. Accent is the loudest, high click; Normal is the same high click, quieter, a lighter accent; Soft is exactly a subdivision click. A changed time signature resets them to beat 1 Accent and the rest Soft.

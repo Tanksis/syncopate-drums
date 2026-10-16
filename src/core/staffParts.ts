@@ -4,7 +4,7 @@
 // feet only ever play with the hands in a bar, or never do (a linear fill, ADR 0011): then the bar
 // is one voice and the feet hang on the hands' stems. Hits at the same tick share a stem.
 
-import type { Bar, Duration, GroovePresetId, HihatFoot, Limb, Row } from './model'
+import type { Bar, Duration, GroovePresetId, HihatFoot, Item, Limb, Row } from './model'
 import { ROWS, TICKS_PER_BEAT, barBeats, barTicks, itemTicks, noteId } from './model'
 import type { GrooveHit, GrooveNotation } from './groove'
 import { grooveHitsByTick } from './groove'
@@ -145,11 +145,16 @@ interface Sound {
  *   triplet position, but a note on its downbeat holds one triplet position when its part strikes
  *   on the let, as Groove Scribe writes it (ride, rest, ride). Each part writes it as a triplet
  *   group only if it has a note there off the downbeat.
+ * - In `compound` time nothing is swung: each beat is already three eighths (ADR 0015).
  */
 export function staffParts(
   bars: readonly Bar[],
   groove: GroovePresetId,
-  { swung = false, hihatFoot = 'off' }: { swung?: boolean; hihatFoot?: HihatFoot } = {},
+  {
+    swung = false,
+    hihatFoot = 'off',
+    compound = false,
+  }: { swung?: boolean; hihatFoot?: HihatFoot; compound?: boolean } = {},
 ): StaffBar[] {
   const beatsPerBar = barBeats(bars)
   const ticksPerBar = barTicks(beatsPerBar)
@@ -191,7 +196,7 @@ export function staffParts(
   const replaceFoot = (sounds: Sound[], foot: Sound[]) => (foot.length ? [...sounds.filter((s) => s.drum !== 'hihatFoot'), ...foot] : sounds)
 
   const lines = [...snare.sounds, ...kick.sounds]
-  const swungBeat = swung ? swungBeats([...lines, ...replaceFoot(preset, settingHits)], triplet) : triplet.map(() => false)
+  const swungBeat = swung && !compound ? swungBeats([...lines, ...replaceFoot(preset, settingHits)], triplet) : triplet.map(() => false)
   const exercise = lines.map((s) => respell(s, swungBeat))
   const presetSounds = preset.map((s) => respell(s, swungBeat))
   const grooveSounds = replaceFoot(presetSounds, settingHits.map((s) => respell(s, swungBeat)))
@@ -249,8 +254,8 @@ export function staffParts(
   /** The part that rests wherever it is silent, in a bar of two voices. */
   const holdsExercise: Limb = snare.sounds.length === 0 && kick.sounds.length > 0 ? 'feet' : 'hands'
   const parts = [
-    writePart(hands.sounds, hands.beats, bars.map((_, b) => hands.inBar(b) || holdsExercise === 'hands'), total, ticksPerBar),
-    writePart(feet.sounds, feet.beats, bars.map((_, b) => feet.inBar(b) || holdsExercise === 'feet'), total, ticksPerBar),
+    writePart(hands.sounds, hands.beats, bars.map((_, b) => hands.inBar(b) || holdsExercise === 'hands'), total, ticksPerBar, compound),
+    writePart(feet.sounds, feet.beats, bars.map((_, b) => feet.inBar(b) || holdsExercise === 'feet'), total, ticksPerBar, compound),
   ]
 
   return bars.map((_, b) => {
@@ -302,11 +307,12 @@ function writePart(
   rests: readonly boolean[],
   total: number,
   ticksPerBar: number,
+  compound: boolean,
 ): StaffEvent[] {
   const events: StaffEvent[] = []
   const starts = [...new Set(sounds.map((s) => s.start))].sort((a, b) => a - b)
   const silence = (from: number, to: number) => {
-    for (const { start, value } of spellSpan(from, to, false, triplet, ticksPerBar)) {
+    for (const { start, value } of spellSpan(from, to, false, triplet, ticksPerBar, compound)) {
       events.push({ kind: rests[Math.floor(start / ticksPerBar)] ? 'rest' : 'space', start, ...value })
     }
   }
@@ -319,7 +325,7 @@ function writePart(
     // A note held past the part's next chord ends there: it is not tied on through that chord.
     const chord = [...struck.values()]
     const end = Math.min(starts[i + 1] ?? total, Math.max(...chord.map((s) => s.end)))
-    spellSpan(start, end, true, triplet, ticksPerBar).forEach(({ start: at, value }, piece) => {
+    spellSpan(start, end, true, triplet, ticksPerBar, compound).forEach(({ start: at, value }, piece) => {
       const notes = chord
         .filter((s) => piece === 0 || s.end > at)
         .sort((a, b) => DRUM_ORDER.indexOf(a.drum) - DRUM_ORDER.indexOf(b.drum))
@@ -338,4 +344,22 @@ function writePart(
   })
   if (t < total) silence(t, total)
   return events
+}
+
+/** The written values by their length in ticks, as a simple-time beat of 12 ticks counts them. */
+const WRITTEN: Record<number, Pick<Item, 'duration' | 'dotted'>> = {
+  3: { duration: 'sixteenth', dotted: false },
+  6: { duration: 'eighth', dotted: false },
+  9: { duration: 'eighth', dotted: true },
+  12: { duration: 'quarter', dotted: false },
+  18: { duration: 'quarter', dotted: true },
+}
+
+/**
+ * How a value spelled on the triplet grid is written in compound time, where a beat is a dotted
+ * quarter: half as long again, with no triplet "3". A triplet eighth is an eighth, a triplet
+ * quarter a quarter, and a whole beat a dotted quarter (ADR 0015).
+ */
+export function compoundValue(value: Pick<Item, 'duration' | 'dotted' | 'triplet'>): Pick<Item, 'duration' | 'dotted'> {
+  return WRITTEN[itemTicks(value) * 1.5] ?? value
 }

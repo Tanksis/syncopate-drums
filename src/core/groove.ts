@@ -2,7 +2,7 @@
 // every bar, and the hi-hat foot setting layered with them (ADR 0010).
 
 import type { GroovePresetId, HihatFoot, TimeSignature } from './model'
-import { HIHAT_FOOT_SETTINGS, TICKS_PER_BEAT } from './model'
+import { HIHAT_FOOT_SETTINGS, TICKS_PER_BEAT, meter } from './model'
 import type { Instrument } from './schedule'
 
 /** Where a groove hit is drawn on the percussion staff: the key VexFlow places it at, and its notehead. */
@@ -102,9 +102,18 @@ function hihatFootTicks(hihatFoot: HihatFoot, beats: number): number[] {
   }
 }
 
-/** The hi-hat foot settings that fit a time signature: 2 & 4 only in 4/4. */
+/**
+ * The hi-hat foot settings that fit a time signature: 2 & 4 only in 4/4, and in compound time only
+ * on 1 or on the beats, whose eighths have no &.
+ */
 export function hihatFootOptions(timeSignature: TimeSignature): HihatFoot[] {
+  if (meter(timeSignature).compound) return ['off', 'one', 'quarters']
   return HIHAT_FOOT_SETTINGS.filter((foot) => foot !== 'twoAndFour' || timeSignature === '4/4')
+}
+
+/** A groove preset as it plays in a time signature: off in compound time, which none of them fit. */
+export function fittedGroove(groove: GroovePresetId, timeSignature: TimeSignature): GroovePresetId {
+  return meter(timeSignature).compound ? 'off' : groove
 }
 
 /** A hi-hat foot setting as it plays in a time signature: off where the time signature doesn't offer it. */

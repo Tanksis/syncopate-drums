@@ -189,13 +189,20 @@ export interface SpelledPiece {
  * Spells one note held (or one silence) from `start` to `end`, ticks of the whole exercise, as
  * the values written one after another, tied for a note. A note is cut at bar lines (and tied
  * across) and at a triplet group's edges, where this beat or the one before it is a triplet group;
- * a rest at every beat. `triplet` says which beats of the exercise are triplet groups, and
- * `ticksPerBar` where the bar lines fall.
+ * a rest at every beat, and with `everyBeat` (compound time) a note too. `triplet` says which beats
+ * of the exercise are triplet groups, and `ticksPerBar` where the bar lines fall.
  */
-export function spellSpan(start: number, end: number, note: boolean, triplet: readonly boolean[], ticksPerBar: number): SpelledPiece[] {
+export function spellSpan(
+  start: number,
+  end: number,
+  note: boolean,
+  triplet: readonly boolean[],
+  ticksPerBar: number,
+  everyBeat = false,
+): SpelledPiece[] {
   const tripletAt = (tick: number) => triplet[Math.floor(tick / TICKS_PER_BEAT)] ?? false
   const cutsAt = (beatStart: number) =>
-    !note || beatStart % ticksPerBar === 0 || tripletAt(beatStart) || tripletAt(beatStart - TICKS_PER_BEAT)
+    !note || everyBeat || beatStart % ticksPerBar === 0 || tripletAt(beatStart) || tripletAt(beatStart - TICKS_PER_BEAT)
   const cuts = [start]
   for (let t = (Math.floor(start / TICKS_PER_BEAT) + 1) * TICKS_PER_BEAT; t < end; t += TICKS_PER_BEAT) {
     if (cutsAt(t)) cuts.push(t)
