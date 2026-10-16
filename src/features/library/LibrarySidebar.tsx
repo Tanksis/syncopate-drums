@@ -9,7 +9,7 @@ import { PatternDialog } from '@/components/PatternDialog'
 import { SidebarHeading } from '@/components/Sidebar'
 import { keepFocus } from '@/components/keepFocus'
 import type { Exercise, Folder, LibraryTab } from '@/core'
-import { exampleExercises, foldersByName, isExample, libraryView, tabListing } from '@/core'
+import { exampleExercises, exampleTitle, foldersByName, isExample, libraryView, tabListing } from '@/core'
 import { downloadExport } from './download'
 import { exerciseCount } from './exerciseCount'
 import { ImportFile } from './ImportFile'
@@ -191,7 +191,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
                   onClick={() => openExercise(example.id)}
                   className={listButtonClass(example.id === openId)}
                 >
-                  {example.name}
+                  {exampleTitle(example)}
                 </button>
               </li>
             ))}

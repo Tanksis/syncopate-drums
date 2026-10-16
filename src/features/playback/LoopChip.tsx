@@ -3,6 +3,9 @@ import { keepFocus } from '@/components/keepFocus'
 import { LoopIcon } from '@/components/icons'
 import { loopLabel } from '@/core'
 
+/** How to set a loop, shown on the chip whether or not one is set. */
+const LOOP_HINT = 'Click a bar number to loop it, Shift+click to extend'
+
 const chipClass = 'inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-edge bg-card px-2.5 whitespace-nowrap'
 
 /**
@@ -23,14 +26,14 @@ export function LoopChip() {
   )
   if (!loopRange)
     return (
-      <span className={`${chipClass} text-mute`} title="Click a bar number to loop it, Shift+click to extend">
+      <span className={`${chipClass} text-mute`} title={LOOP_HINT}>
         {content}
       </span>
     )
   return (
     <button
       type="button"
-      title="Clear the loop, to play all bars"
+      title={`Clear the loop, to play all bars. ${LOOP_HINT}`}
       onMouseDown={keepFocus}
       onClick={loopAll}
       className={`${chipClass} cursor-pointer border-loop-line bg-loop text-loop-ink hover:border-loop-ink`}
