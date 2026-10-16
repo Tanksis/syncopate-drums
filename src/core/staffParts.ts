@@ -347,7 +347,7 @@ function writePart(
 }
 
 /** The written values by their length in ticks, as a simple-time beat of 12 ticks counts them. */
-const WRITTEN: Record<number, Pick<Item, 'duration' | 'dotted'>> = {
+const VALUE_BY_TICKS: Record<number, Pick<Item, 'duration' | 'dotted'>> = {
   3: { duration: 'sixteenth', dotted: false },
   6: { duration: 'eighth', dotted: false },
   9: { duration: 'eighth', dotted: true },
@@ -361,5 +361,5 @@ const WRITTEN: Record<number, Pick<Item, 'duration' | 'dotted'>> = {
  * quarter a quarter, and a whole beat a dotted quarter (ADR 0015).
  */
 export function compoundValue(value: Pick<Item, 'duration' | 'dotted' | 'triplet'>): Pick<Item, 'duration' | 'dotted'> {
-  return WRITTEN[itemTicks(value) * 1.5] ?? value
+  return VALUE_BY_TICKS[itemTicks(value) * 1.5] ?? value
 }

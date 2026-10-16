@@ -148,8 +148,10 @@ function drawParts(stave: Stave, parts: readonly PartDrawing[], { beats, compoun
     }),
   )
   tuplets.forEach((t) => t.setBracketed(t.getNotes().some((n) => !(n as StaveNote).hasBeam?.())))
+  // A compound bar is counted in eighths: 6/8, or 12/8.
+  const time = compound ? { numBeats: beats * 3, beatValue: 8 } : { numBeats: beats, beatValue: 4 }
   const voices = parts.map((p) =>
-    new Voice(compound ? { numBeats: beats * 3, beatValue: 8 } : { numBeats: beats, beatValue: 4 }).setStrict(false).addTickables(p.drawn.map((d) => d.note)),
+    new Voice(time).setStrict(false).addTickables(p.drawn.map((d) => d.note)),
   )
   new Formatter().joinVoices(voices).format(voices, width)
   voices.forEach((v) => v.draw(ctx, stave))

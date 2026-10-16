@@ -302,8 +302,8 @@ export function BeatStrip({ phone, bar }: { phone?: PhoneOrientation; bar?: numb
 }
 
 /**
- * A beat card's ⋯ menu: the other grid (none in compound time), a rest in both rows, and, on a bar's first beat, a tie over
- * the barline for each row the core offers one in, ticked when tied.
+ * A beat card's ⋯ menu: the other grid (none in compound time), a rest in both rows, and, on a
+ * bar's first beat, a tie over the barline for each row the core offers one in, ticked when tied.
  */
 function beatMenu(
   editor: EditorState,
