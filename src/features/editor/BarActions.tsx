@@ -6,6 +6,7 @@ import { Menu } from '@/components/Menu'
 import { PatternDialog } from '@/components/PatternDialog'
 import { RedoIcon, TrashIcon, UndoIcon } from '@/components/icons'
 import { barRange, isExample } from '@/core'
+import { useAnswer } from '@/features/library/NewUserPolishPrototype'
 
 /**
  * Undo, redo and the bar menu, for editing without the keyboard. The menu's items are the bar keys'
@@ -94,10 +95,11 @@ function HistoryButton({
   onClick: () => void
   children: ReactNode
 }) {
+  const bigger = useAnswer('size') === 'large'
   return (
     <Button
       variant="ghost"
-      size={large ? 'lg' : 'sm'}
+      size={large ? 'lg' : bigger ? 'md' : 'sm'}
       icon
       aria-label={label}
       title={label}
@@ -106,7 +108,7 @@ function HistoryButton({
       onClick={onClick}
       className={large ? NARROW : ''}
     >
-      <span aria-hidden className={`flex ${large ? '[&>svg]:size-5' : '[&>svg]:size-3.5'}`}>
+      <span aria-hidden className={`flex ${large ? '[&>svg]:size-5' : bigger ? '[&>svg]:size-4.5' : '[&>svg]:size-3.5'}`}>
         {children}
       </span>
     </Button>

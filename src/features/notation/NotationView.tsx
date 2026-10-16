@@ -6,6 +6,7 @@ import { hasHits } from '@/core'
 import { followPlayback, scrollLineIntoView } from './followPlayback'
 import type { Drawing, NotationArea } from './staff'
 import { drawExercise, notationFontsReady } from './staff'
+import { useAnswer } from '@/features/library/NewUserPolishPrototype'
 
 /**
  * The notation, scrolling in its own area. Given `corner` (the desktop play button), that's pinned
@@ -23,6 +24,8 @@ export function NotationView({ corner, coveredBottom }: { corner?: ReactNode; co
   // The notation reads the look's tokens as it draws, so it redraws when the look or mode changes.
   const theme = useResolvedTheme()
   const look = useAppStore((s) => s.device.look)
+  const hint = useAnswer('hint')
+  const fit = useAnswer('fit')
   const scrollerRef = useRef<HTMLElement>(null)
   const staffRef = useRef<HTMLDivElement>(null)
   const coverRef = useRef<HTMLDivElement>(null)
@@ -56,24 +59,29 @@ export function NotationView({ corner, coveredBottom }: { corner?: ReactNode; co
       const height = Math.floor(scroller.clientHeight - parseFloat(paddingTop) - parseFloat(paddingBottom)) - 1
       setArea((old) => (old.width === width && old.height === height ? old : { width, height }))
     }
-    const observer = new ResizeObserver(measure)
+    const measureHug = () => {
+      const width = Math.floor(staff.getBoundingClientRect().width)
+      const height = Math.floor(window.innerHeight * 0.45)
+      setArea((old) => (old.width === width && old.height === height ? old : { width, height }))
+    }
+    const observer = new ResizeObserver(fit === 'hug' ? measureHug : measure)
     observer.observe(scroller)
     observer.observe(staff)
     return () => observer.disconnect()
-  }, [])
+  }, [fit])
 
   useLayoutEffect(() => {
     if (!fontsReady || area.width === 0) return
     // While playing, the cursor isn't drawn, so only the playhead line marks the music, and the view
     // follows the playback rather than the cursor.
-    const drawing = (drawingRef.current = drawExercise(staffRef.current!, exercise, playing ? null : cursor, area))
+    const drawing = (drawingRef.current = drawExercise(staffRef.current!, exercise, playing ? null : cursor, { ...area, grow: fit === 'grow' }))
     const box = drawing.firstStaff
     setHintBox((old) =>
       old && old.left === box.left && old.top === box.top && old.width === box.width && old.height === box.height ? old : box,
     )
     // Keep the cursor's line in view as typing runs past the bottom.
     if (!playing) scrollLineIntoView(scrollerRef.current!, staffRef.current!, drawing.line(cursor.bar), coverRef.current?.offsetHeight)
-  }, [exercise, cursor, area, fontsReady, fontsLoaded, playing, theme, look])
+  }, [exercise, cursor, area, fontsReady, fontsLoaded, playing, theme, look, fit])
 
   useEffect(() => {
     if (playing) return followPlayback(scrollerRef.current!, staffRef.current!, () => drawingRef.current)
@@ -84,12 +92,12 @@ export function NotationView({ corner, coveredBottom }: { corner?: ReactNode; co
       <section
         ref={scrollerRef}
         aria-label="Notation view"
-        className={`relative min-h-0 flex-1 overflow-auto bg-paper py-2.5 pr-4 ${corner ? 'pl-14' : 'pl-4'}`}
+        className={`relative min-h-0 overflow-auto bg-paper py-2.5 pr-4 ${corner ? 'pl-14' : 'pl-4'} ${fit === 'hug' ? 'flex-[0_1_auto]' : 'flex-1'} ${fit === 'centre' ? 'flex flex-col' : ''}`}
       >
-        <div className="relative">
-          {!hasHits(exercise) && hintBox && (
+        <div className={`relative ${fit === 'centre' ? 'my-auto' : ''}`}>
+          {!hasHits(exercise) && hintBox && hint !== 'editor' && (
             // Centred over the staff, which it leaves to take the clicks.
-            <p style={hintBox} className="pointer-events-none absolute z-10 m-0 flex items-center justify-center text-center">
+            <p style={hint === 'above' ? { left: hintBox.left, width: hintBox.width, top: Math.max(0, hintBox.top - 34), height: 28 } : hintBox} className="pointer-events-none absolute z-10 m-0 flex items-center justify-center text-center">
               <span className="rounded-md bg-paper/90 px-3 py-1 text-mute">
                 Tap or click a grid position below to add hits.
               </span>

@@ -6,6 +6,7 @@ import { BpmStep } from './BpmStep'
 import { BpmInput, ClickTile } from './TransportControls'
 import { togglePause } from './transport'
 import { usePlaybackKeys } from './usePlaybackKeys'
+import { useCopyLabel } from '@/features/library/NewUserPolishPrototype'
 
 /** Play: a round button, big enough for a thumb, that a long press doesn't select or call out. */
 const roundButtonClass =
@@ -23,6 +24,7 @@ const stepClass = 'rounded-full border-edge bg-panel text-xl/none font-semibold 
  */
 export function TransportBar({ onEdit, onCopy, slim = false }: { onEdit?: () => void; onCopy?: () => void; slim?: boolean }) {
   usePlaybackKeys()
+  const copyLabel = useCopyLabel()
   const step = `${stepClass} ${slim ? 'size-9' : 'size-11'}`
   return (
     <div
@@ -49,7 +51,7 @@ export function TransportBar({ onEdit, onCopy, slim = false }: { onEdit?: () => 
       <ClickTile slim={slim} />
       {onCopy ? (
         <SlotButton aria-label="Copy to Library" onClick={onCopy}>
-          Copy
+          {copyLabel}
         </SlotButton>
       ) : (
         onEdit && <SlotButton onClick={onEdit}>Edit</SlotButton>

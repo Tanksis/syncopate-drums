@@ -86,7 +86,9 @@ export function notationFit({
   height,
   lineHeight,
   minBarWidth = NOTATION_LAYOUT.minBarWidth,
+  grow = false,
 }: {
+  grow?: boolean
   bars: number
   width: number
   height: number
@@ -106,14 +108,17 @@ export function notationFit({
     do hundredths -= SCALE_STEP
     while (hundredths > MIN_NOTATION_SCALE * 100 && availableAt(width, hundredths / 100) < minBarWidth)
   } else if (heightAt(1) <= height) {
-    for (let h = 100 + SCALE_STEP; h <= MAX_NOTATION_SCALE * 100; h += SCALE_STEP) {
+    // PROTOTYPE: `grow` may break onto more lines, up to 2.4, to fill the height.
+    for (let h = 100 + SCALE_STEP; h <= (grow ? 240 : MAX_NOTATION_SCALE * 100); h += SCALE_STEP) {
       const scale = h / 100
       const roomy = availableAt(width, scale) >= minBarWidth * SCALE_UP_SQUEEZE
-      if (roomy && linesAt(scale) <= lines && heightAt(scale) <= height) hundredths = h
+      if (roomy && (grow || linesAt(scale) <= lines) && heightAt(scale) <= height) hundredths = h
     }
   }
   const scale = hundredths / 100
-  const barsPerLine = barsPerLineAt(width, scale, minBarWidth)
+  const most = barsPerLineAt(width, scale, minBarWidth)
+  // PROTOTYPE: `grow` balances the lines (4 bars as 2 + 2, not 3 + 1).
+  const barsPerLine = grow ? Math.ceil(bars / Math.ceil(bars / most)) : most
   const available = availableAt(width, scale)
   // On one line the bars share it; over more, every bar gets a share of a full line so they line up.
   const barWidth = Math.floor(

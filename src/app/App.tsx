@@ -32,15 +32,28 @@ import { useSlide } from '@/components/useSlide'
 import { useSwipe } from '@/components/useSwipe'
 import { MenuIcon, SettingsIcon } from '@/components/icons'
 import { isExample } from '@/core'
+import { BarCount, CornerCount, PencilIcon, PolishSwitcher, StartPage, StripCount, WelcomeBanner, WelcomeCard, useAnswer, useBannerShown, useStartPageShown } from '@/features/library/NewUserPolishPrototype'
+import { Menu } from '@/components/Menu'
 
 export function App() {
   const sidebars = useSidebars()
   const phone = usePhoneWindow()
   const [barRef, room] = useExerciseBarRoom()
   const onMetronome = useAppStore((s) => s.device.screen === 'metronome')
-  if (phone) return <PhoneLayout sidebars={sidebars} />
+  const startPage = useStartPageShown()
+  const banner = useBannerShown()
+  const fit = useAnswer('fit')
+  const browse = sidebars.library.state === 'open' ? () => {} : sidebars.library.onOpen
+  if (phone)
+    return (
+      <>
+        <PhoneLayout sidebars={sidebars} />
+        <PolishSwitcher />
+      </>
+    )
   return (
     <div className="flex h-dvh flex-col">
+      <PolishSwitcher />
       {/* The same header on both screens, the switch in its middle, so nothing in it moves when the screen does. */}
       <header className={`${headerClass} grid grid-cols-[1fr_auto_1fr]`}>
         <Wordmark />
@@ -59,23 +72,31 @@ export function App() {
 
         {onMetronome ? (
           <MetronomePage />
+        ) : startPage ? (
+          <StartPage />
         ) : (
           <main className="flex min-h-0 min-w-0 flex-col">
             {/* The exercise's bar: its name, which takes the room the transport leaves and always shows about 12 letters. */}
             <div ref={barRef} className="flex items-center gap-3 border-b border-line px-4 py-2">
               <div className="flex min-w-[10ch] flex-1">
-                <ExerciseName />
+                <BarCount>
+                  <ExerciseName />
+                </BarCount>
               </div>
               <TransportControls room={room} />
             </div>
-            <ExampleNotice />
+            <WelcomeBanner onBrowse={browse} />
+            {!banner && <ExampleNotice />}
             {/* The music on a card, which takes the height the editor leaves, all of it when that's collapsed. */}
-            <div className="flex min-h-0 flex-1 flex-col p-3">
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-card border-(length:--border-card) border-line bg-paper shadow-card">
+            <div className={`flex min-h-0 flex-col p-3 ${fit === 'hug' ? 'flex-[0_1_auto]' : 'flex-1'}`}>
+              <div className={`relative flex min-h-0 flex-col overflow-hidden rounded-card border-(length:--border-card) border-line bg-paper shadow-card ${fit === 'hug' ? 'flex-[0_1_auto]' : 'flex-1'}`}>
+                <StripCount />
                 <NotationView corner={<StaffPlayButton />} />
+                <CornerCount />
+                <WelcomeCard onBrowse={browse} />
               </div>
             </div>
-            <GridEditor />
+            <GridEditor grow={fit === 'hug'} />
           </main>
         )}
 
@@ -119,6 +140,7 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
   const example = useAppStore((s) => isExample(s.editor.exercise.id))
   const copyToLibrary = useAppStore((s) => s.duplicateOpenExercise)
   const onMetronome = useAppStore((s) => s.device.screen === 'metronome')
+  const startPage = useStartPageShown()
   const orientation = usePhoneOrientation()
   const landscape = orientation === 'landscape'
   const [editOpen, setEditOpen] = useState(false)
@@ -162,7 +184,9 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
               {onMetronome ? (
                 <h1 className="m-0 font-display text-lg font-semibold">Metronome</h1>
               ) : (
-                <ExerciseName className="w-full text-center" />
+                <BarCount>
+                  <ExerciseName className="w-full text-center" />
+                </BarCount>
               )}
             </div>
             <PhoneHeaderButton label="Open settings" expanded={settings.state === 'overlay'} onClick={settings.onOpen}>
@@ -181,8 +205,16 @@ function PhoneLayout({ sidebars }: { sidebars: Record<SidebarId, SidebarControl>
         <div {...screenSwipe.props} className="relative flex min-h-0 flex-1 touch-pan-y flex-col">
           {onMetronome ? (
             <MetronomeScreen landscape={landscape} />
+          ) : startPage ? (
+            <StartPage phone />
           ) : (
-            <NotationView coveredBottom={editing ? underSheet : undefined} />
+            <>
+              <WelcomeBanner phone onBrowse={library.onOpen} />
+              <StripCount />
+              <NotationView coveredBottom={editing ? underSheet : undefined} />
+              <CornerCount phone />
+              <WelcomeCard onBrowse={library.onOpen} />
+            </>
           )}
         </div>
         {/* Under the sheet while it is up, so out of reach. */}
@@ -396,6 +428,8 @@ function SidebarSlot({ name, side, state, onOpen, onCollapse, children }: Sideba
 /** The open exercise's name; click it to rename it in place. An example's name is fixed. */
 function ExerciseName({ className = '' }: { className?: string }) {
   const { id, name } = useAppStore((s) => s.editor.exercise)
+  const rename = useAnswer('rename')
+  const duplicate = useAppStore((s) => s.duplicateOpenExercise)
   const renameExercise = useAppStore((s) => s.renameExercise)
   const [renaming, setRenaming] = useState(false)
   if (isExample(id)) return <span className={`truncate px-1 text-mute ${className}`}>{name}</span>
@@ -409,6 +443,28 @@ function ExerciseName({ className = '' }: { className?: string }) {
         }}
         className={className || 'w-56 max-w-full'}
       />
+    )
+  if (rename === 'pencil')
+    return (
+      <button type="button" title="Rename" onMouseDown={keepFocus} onClick={() => setRenaming(true)}
+        className={`group inline-flex min-w-0 cursor-pointer items-center gap-1.5 rounded border border-transparent bg-transparent px-1 text-mute hover:border-edge hover:text-ink ${className} ${className ? 'justify-center' : ''}`}>
+        <span className="truncate">{name}</span>
+        <span className="text-mute group-hover:text-accent"><PencilIcon /></span>
+      </button>
+    )
+  if (rename === 'field')
+    return (
+      <button type="button" title="Click to rename" onMouseDown={keepFocus} onClick={() => setRenaming(true)}
+        className={`cursor-text truncate rounded-t border-0 border-b border-dashed border-edge bg-bg/60 px-1.5 py-0.5 text-ink hover:border-accent ${className}`}>
+        {name}
+      </button>
+    )
+  if (rename === 'menu')
+    return (
+      <span className={`flex min-w-0 items-center gap-1 ${className} ${className ? 'justify-center' : ''}`}>
+        <span className="truncate px-1 text-mute">{name}</span>
+        <Menu label="Exercise menu" items={[{ label: 'Rename', onSelect: () => setRenaming(true) }, { label: 'Duplicate', onSelect: duplicate }]} />
+      </span>
     )
   return (
     <button

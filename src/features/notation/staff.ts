@@ -177,6 +177,8 @@ const noteCentre = (note: StaveNote) => (note.getNoteHeadBeginX() + note.getNote
 export interface NotationArea {
   width: number
   height: number
+  /** PROTOTYPE: more lines and a larger scale, to fill a tall card. */
+  grow?: boolean
 }
 
 /**

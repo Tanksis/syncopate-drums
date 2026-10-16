@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import type { PhoneOrientation } from '@/app/useMediaQuery'
 import { keepFocus } from '@/components/keepFocus'
-import { Button } from '@/components/Button'
+import { Button, buttonClass } from '@/components/Button'
+import { RowLegend, useAnswer } from '@/features/library/NewUserPolishPrototype'
 import type { MenuItem } from '@/components/Menu'
 import { Menu } from '@/components/Menu'
 import { Segmented } from '@/components/Segmented'
@@ -221,6 +222,25 @@ export function BeatStrip({ phone, bar }: { phone?: PhoneOrientation; bar?: numb
   const beats = views[b]
   const selected = selection !== null && b >= selection.first && b <= selection.last
   const looped = inLoopRange(loopRange, b)
+  // PROTOTYPE: how the rows are named, and the controls' size.
+  const rowsAnswer = useAnswer('rows')
+  const larger = useAnswer('size') === 'large' && !phone
+  const column = rowsAnswer === 'column' && phone !== 'portrait'
+  const inline = rowsAnswer === 'inline' || (rowsAnswer === 'column' && phone === 'portrait')
+  const letter = (row: Row) => (
+    <span className={`w-3 shrink-0 text-center text-[11px] font-bold ${row === 'kick' ? 'text-kick' : 'text-ink'}`} title={ROW_LOOK[row].name}>
+      {ROW_LOOK[row].name[0]}
+    </span>
+  )
+  const labelled = (row: Row, cells: ReturnType<typeof rowCells>) =>
+    inline ? (
+      <div className="flex items-center gap-1">
+        {letter(row)}
+        <div className="min-w-0 flex-1">{cells}</div>
+      </div>
+    ) : (
+      cells
+    )
   return (
     <div aria-label="Beat strip" data-beat-strip className="flex flex-col gap-2">
       <div
@@ -254,7 +274,19 @@ export function BeatStrip({ phone, bar }: { phone?: PhoneOrientation; bar?: numb
             )}
           </div>
         )}
-        <div className={`grid gap-2 ${phone === 'portrait' ? 'grid-cols-2' : 'grid-cols-4'}`}>
+        {rowsAnswer === 'legend' && <RowLegend />}
+        <div className={`grid gap-2 ${phone === 'portrait' ? 'grid-cols-2' : column ? 'grid-cols-[auto_repeat(4,minmax(0,1fr))]' : 'grid-cols-4'}`}>
+          {column && (
+            <div aria-hidden className="flex flex-col gap-1 border border-transparent py-2 pr-0.5">
+              <div className="invisible flex items-center">
+                <span className="text-lg/none font-bold">1</span>
+                <Segmented label="" small={!larger} tabbable={false} options={[{ value: true, label: 'x' }]} value={true} onChange={() => {}} />
+              </div>
+              <span className={`flex items-center justify-end text-xs font-bold text-ink ${phone ? 'h-11' : 'h-10'}`}>Snare</span>
+              <span className="invisible font-mono text-[11px]">1</span>
+              <span className={`flex items-center justify-end text-xs font-bold text-kick ${phone ? 'h-11' : 'h-10'}`}>Kick</span>
+            </div>
+          )}
           {beats.map((view, beat) => {
             const current = cursor.bar === b && cursor.beat === beat
             const switchGrid = () => dispatch({ type: 'setBeatGrid', bar: b, beat, triplet: !view.triplet })
@@ -273,18 +305,25 @@ export function BeatStrip({ phone, bar }: { phone?: PhoneOrientation; bar?: numb
               >
                 <div className="flex items-center gap-1.5">
                   <span className="text-lg/none font-bold">{beat + 1}</span>
-                  <GridSwitch bar={b} beat={beat} triplet={view.triplet} disabled={example} onSwitch={switchGrid} />
-                  {!example && <Menu label={`Bar ${b + 1}, beat ${beat + 1} menu`} items={beatMenu(editor, b, beat, view, switchGrid, dispatch)} />}
+                  <GridSwitch bar={b} beat={beat} triplet={view.triplet} disabled={example} onSwitch={switchGrid} larger={larger} />
+                  {!example && (
+                    <Menu
+                      label={`Bar ${b + 1}, beat ${beat + 1} menu`}
+                      items={beatMenu(editor, b, beat, view, switchGrid, dispatch)}
+                      buttonClassName={larger ? buttonClass({ variant: 'ghost', size: 'md', icon: true }) : undefined}
+                    />
+                  )}
                 </div>
-                {rowCells('snare', view.snare, b, beat)}
+                {labelled('snare', rowCells('snare', view.snare, b, beat))}
                 <div aria-hidden className="flex gap-1">
+                  {inline && <span className="w-3 shrink-0" />}
                   {countLabels(beat, view.triplet).map((label, i) => (
                     <span key={i} className={`flex-1 text-center font-mono text-[11px] ${i === 0 ? 'font-bold text-ink' : 'text-mute'}`}>
                       {label}
                     </span>
                   ))}
                 </div>
-                {rowCells('kick', view.kick, b, beat)}
+                {labelled('kick', rowCells('kick', view.kick, b, beat))}
               </div>
             )
           })}
@@ -328,7 +367,9 @@ function GridSwitch({
   triplet,
   disabled,
   onSwitch,
+  larger = false,
 }: {
+  larger?: boolean
   bar: number
   beat: number
   triplet: boolean
@@ -344,7 +385,7 @@ function GridSwitch({
   return (
     <Segmented
       label={`Bar ${bar + 1}, beat ${beat + 1} grid`}
-      small
+      small={!larger}
       tabbable={false}
       options={[option('sixteenth', '16ths'), option('triplet', 'trip')]}
       value={triplet}

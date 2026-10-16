@@ -4,6 +4,7 @@ import { Button, buttonClass } from '@/components/Button'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { DuplicateIcon, MoreIcon, PlusIcon, TrashIcon } from '@/components/icons'
 import { Menu } from '@/components/Menu'
+import { EmptyLibrary, PencilIcon, useAnswer } from '@/features/library/NewUserPolishPrototype'
 import { NameInput } from '@/components/NameInput'
 import { PatternDialog } from '@/components/PatternDialog'
 import { SidebarHeading } from '@/components/Sidebar'
@@ -77,6 +78,9 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set())
   /** The exercises waiting on the delete confirm, if it's showing. */
   const [toDelete, setToDelete] = useState<Exercise[] | null>(null)
+  // PROTOTYPE: ticket 03's empty state and 04's rename.
+  const renameAnswer = useAnswer('rename')
+  const emptyAnswer = useAnswer('empty')
   /** Whether New from pattern's dialog is showing. */
   const [newFromPatternOpen, setNewFromPatternOpen] = useState(false)
   /** The folder waiting on the delete confirm, if it's showing. */
@@ -100,12 +104,12 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
   )
 
   const exerciseRow = (exercise: Exercise, inFolder: boolean) => (
-    <li
+    <li data-proto-row
       key={exercise.id}
       // Not while renaming, so the name's text can be selected with the mouse.
       draggable={renamingId !== exercise.id}
       {...dragProps(exercise.id)}
-      className={`flex items-center gap-1 ${inFolder ? 'pl-5' : 'pl-1'}`}
+      className={`group/row flex items-center gap-1 ${inFolder ? 'pl-5' : 'pl-1'}`}
     >
       <input
         type="checkbox"
@@ -140,6 +144,29 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
         >
           {exercise.name}
         </button>
+      )}
+      {renamingId !== exercise.id && renameAnswer === 'pencil' && (
+        <button
+          type="button"
+          aria-label={`Rename ${exercise.name}`}
+          title="Rename"
+          onMouseDown={keepFocus}
+          onClick={() => setRenamingId(exercise.id)}
+          className="flex shrink-0 cursor-pointer border-0 bg-transparent p-1 text-mute opacity-0 group-hover/row:opacity-100 hover:text-accent focus-visible:opacity-100"
+        >
+          <PencilIcon />
+        </button>
+      )}
+      {renamingId !== exercise.id && renameAnswer === 'menu' && (
+        <span className="opacity-0 group-hover/row:opacity-100 has-[[aria-expanded=true]]:opacity-100">
+          <Menu
+            label={`${exercise.name} menu`}
+            items={[
+              { label: 'Rename', onSelect: () => setRenamingId(exercise.id) },
+              { label: 'Delete…', onSelect: () => setToDelete([exercise]) },
+            ]}
+          />
+        </span>
       )}
     </li>
   )
@@ -311,6 +338,9 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
               </div>
             </div>
           )}
+          {emptyAnswer !== 'today' ? (
+            <EmptyLibrary onNew={createExercise} onPattern={() => setNewFromPatternOpen(true)} />
+          ) : (
           <ul className="m-0 flex min-h-0 list-none flex-col overflow-auto p-0">
             {view.folders.map(({ folder, count, expanded, exercises }) => (
               <li key={folder.id} {...dropProps(folder.id)} className={`flex flex-col ${dropTargetClass(dropTarget === folder.id)}`}>
@@ -385,6 +415,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false }: { onCollapse:
               </li>
             )}
           </ul>
+          )}
         </>
       )}
       {folderToDelete && (
