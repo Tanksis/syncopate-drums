@@ -157,7 +157,7 @@ export interface DeviceSettings {
   librarySidebarOpen: boolean
   /** The settings sidebar is open, not a rail, in a wide window. */
   settingsSidebarOpen: boolean
-  /** The Settings section at the foot of the desktop's settings sidebar is open, not folded to its heading. */
+  /** The General section at the foot of the desktop's settings sidebar is open, not folded to its heading. */
   settingsSectionOpen: boolean
   /** The grid editor is collapsed to its header, giving the notation the room. */
   editorCollapsed: boolean
