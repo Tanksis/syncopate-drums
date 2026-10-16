@@ -15,7 +15,7 @@ import { MetronomeVolume } from '@/features/metronome/MetronomeVolume'
 import { SOUND_OPTIONS, pickSound } from '@/features/metronome/SoundSheet'
 import { LoopChip } from '@/features/playback/LoopChip'
 import { ClickToggle, CountInToggle } from '@/features/playback/TransportControls'
-import { PrototypeGroove } from './GrooveSettingsPrototype'
+import { PrototypeGroove, ProtoGroup } from './GrooveSettingsPrototype'
 import type { ExerciseSettings, HihatFoot, Layer, Theme, VolumeSetting } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
@@ -245,12 +245,7 @@ function Labelled({ label, stacked, children }: { label: string; stacked: boolea
 }
 
 function SettingGroup({ title, children }: { title: string; children?: ReactNode }) {
-  return (
-    <section className="flex flex-col gap-1.5">
-      <PanelHeading>{title}</PanelHeading>
-      {children}
-    </section>
-  )
+  return <ProtoGroup title={title}>{children}</ProtoGroup>
 }
 
 /** The groove layer played and drawn with the exercise, or none. */

@@ -1,11 +1,13 @@
-// PROTOTYPE, throwaway (branch prototype/groove-settings): the Groove settings redesign, with a Time
-// group (time signature, swing) above a Groove group. Switch with ?groove=current|A|B or the floating
-// bar at the bottom.
-//   A: one row of chips per limb (Cymbal, Bass drum, Hi-hat foot).
-//   B: named groove cards with a one-line description and a mini pattern strip.
-// The time signature is visual only: the notation and audio stay 4/4, and the compound grooves are silent.
+// PROTOTYPE, throwaway (branch prototype/groove-settings): the Groove settings redesign, round 2.
+// Variant C won round 1 (A, limb rows, and B, groove cards, are in this branch's history):
+//   a Time group (time signature, swing) over a Groove group: one Pattern picker, grouped by style and
+//   filtered by the time signature, then the feet as their own pill rows.
+// Second question: how the settings groups are headed, switched with ?heading=current|rule|title|card.
+// Switch with ?groove=current|C&heading=… or the floating bar at the bottom.
+// The time signature is visual only: the notation and audio stay 4/4, and the compound patterns are silent.
 // Not for main.
 
+import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { create } from 'zustand'
 import { useAppStore } from '@/app/store'
@@ -15,81 +17,89 @@ import { Segmented } from '@/components/Segmented'
 import { Slider } from '@/components/Slider'
 import { ValueField } from '@/components/ValueField'
 import type { GroovePresetId, HihatFoot } from '@/core'
-import { MAX_SWING, MIN_SWING, TICKS_PER_BEAT, TRIPLET_SWING, grooveHitsByTick } from '@/core'
+import { MAX_SWING, MIN_SWING, TRIPLET_SWING } from '@/core'
 
-const VARIANTS = ['current', 'A', 'B', 'C'] as const
+const VARIANTS = ['current', 'C'] as const
 type Variant = (typeof VARIANTS)[number]
-const NAMES: Record<Variant, string> = { current: 'Current (today)', A: 'Limb rows', B: 'Groove cards', C: 'Pattern picker + feet' }
+const NAMES: Record<Variant, string> = { current: 'Today', C: 'Pattern + feet' }
+
+const HEADINGS = ['current', 'rule', 'title', 'card'] as const
+type Heading = (typeof HEADINGS)[number]
+const HEADING_NAMES: Record<Heading, string> = { current: 'Today', rule: 'Rule', title: 'Title', card: 'Card' }
 
 type TimeSig = '4/4' | '3/4' | '2/4' | '6/8' | '12/8'
 const TIME_SIGS: TimeSig[] = ['4/4', '3/4', '2/4', '6/8', '12/8']
 const compound = (ts: TimeSig) => ts === '6/8' || ts === '12/8'
 
-type Cymbal = 'off' | 'jazz' | 'hihat8' | 'bell68' | 'shuffle128'
+type Pattern = 'off' | 'jazz' | 'hihat8' | 'bell68' | 'shuffle128'
 type Bass = 'off' | 'feathered'
 
-function readVariant(): Variant {
-  const v = new URLSearchParams(location.search).get('groove')
-  return (VARIANTS as readonly string[]).includes(v ?? '') ? (v as Variant) : 'A'
+function readParam<T extends string>(name: string, options: readonly T[], fallback: T): T {
+  const v = new URLSearchParams(location.search).get(name)
+  return (options as readonly string[]).includes(v ?? '') ? (v as T) : fallback
 }
 
-/** The prototype's own state: the variant, the (visual-only) time signature and the silent compound grooves. */
+/** The prototype's own state: the variants, the (visual-only) time signature and the silent compound patterns. */
 const useProto = create<{
   variant: Variant
+  heading: Heading
   timeSig: TimeSig
-  /** A compound groove, which has no sound yet; null plays the exercise's real groove. */
-  silentCymbal: Cymbal | null
+  /** A compound pattern, which has no sound yet; null plays the exercise's real groove. */
+  silentPattern: Pattern | null
   bass: Bass
   customSwing: boolean
   note: { text: string; undo: () => void } | null
-}>(() => ({ variant: readVariant(), timeSig: '4/4', silentCymbal: null, bass: 'off', customSwing: false, note: null }))
+}>(() => ({
+  variant: readParam('groove', VARIANTS, 'C'),
+  heading: readParam('heading', HEADINGS, 'rule'),
+  timeSig: '4/4',
+  silentPattern: null,
+  bass: 'off',
+  customSwing: false,
+  note: null,
+}))
 
-function setVariant(variant: Variant) {
+function setParam(name: 'groove' | 'heading', value: string) {
   const url = new URL(location.href)
-  url.searchParams.set('groove', variant)
+  url.searchParams.set(name, value)
   history.replaceState(history.state, '', url)
-  useProto.setState({ variant })
+  useProto.setState(name === 'groove' ? { variant: value as Variant } : { heading: value as Heading })
 }
 
-export function useGrooveVariant() {
-  return useProto((s) => s.variant)
-}
-
-/** The real groove preset a cymbal and bass drum stand for, or null when there's none yet. */
-function presetFor(cymbal: Cymbal, bass: Bass): GroovePresetId | null {
-  if (cymbal === 'off') return 'off'
-  if (cymbal === 'jazz') return bass === 'feathered' ? 'jazzFeathered' : 'jazz'
-  if (cymbal === 'hihat8') return 'hihatEighths'
+/** The real groove preset a pattern and bass drum stand for, or null when there's none yet. */
+function presetFor(pattern: Pattern, bass: Bass): GroovePresetId | null {
+  if (pattern === 'off') return 'off'
+  if (pattern === 'jazz') return bass === 'feathered' ? 'jazzFeathered' : 'jazz'
+  if (pattern === 'hihat8') return 'hihatEighths'
   return null
 }
 
-function cymbalOf(groove: GroovePresetId): Cymbal {
+function patternOf(groove: GroovePresetId): Pattern {
   return groove === 'jazz' || groove === 'jazzFeathered' ? 'jazz' : groove === 'hihatEighths' ? 'hihat8' : 'off'
 }
 
-/** Picks a cymbal and bass drum: the real groove where there is one, with the Q1/Q2 behaviours made visible. */
+/** Picks a pattern and bass drum: the real groove where there is one; a pattern's suggested feet and swing are said, with an undo. */
 function usePickGroove() {
   const setGroove = useAppStore((s) => s.setGroove)
   const setSwing = useAppStore((s) => s.setSwing)
   const setHihatFoot = useAppStore((s) => s.setHihatFoot)
-  return (cymbal: Cymbal, bass: Bass) => {
+  return (pattern: Pattern, bass: Bass) => {
     const before = useAppStore.getState().editor.exercise.practice
-    const preset = presetFor(cymbal, bass)
-    useProto.setState({ bass, silentCymbal: preset ? null : cymbal })
+    const preset = presetFor(pattern, bass)
+    useProto.setState({ bass, silentPattern: preset ? null : pattern })
     setGroove(preset ?? 'off')
     const notes: string[] = []
-    // Q1: the jazz ride brings the hi-hat foot on 2 & 4 with it, shown in its own row.
-    if (cymbal === 'jazz' && before.hihatFoot === 'off' && cymbalOf(before.groove) !== 'jazz') {
+    // The ride suggests the hi-hat foot on 2 & 4, shown in its own row. The bass drum is left alone.
+    if (pattern === 'jazz' && before.hihatFoot === 'off' && patternOf(before.groove) !== 'jazz') {
       setHihatFoot('twoAndFour')
-      notes.push('hi-hat foot on 2 & 4')
+      notes.push('hi-hat foot to 2 & 4')
     }
     const after = useAppStore.getState().editor.exercise.practice
-    // Q2: the swing it turns on is said, with an undo.
     if (after.swing !== before.swing) notes.push('swing to Triplet')
     if (notes.length === 0) return
     useProto.setState({
       note: {
-        text: `Jazz ride: set ${notes.join(' and ')}.`,
+        text: `Set the ${notes.join(' and the ')}.`,
         undo: () => {
           setSwing(before.swing)
           setHihatFoot(before.hihatFoot)
@@ -100,15 +110,68 @@ function usePickGroove() {
   }
 }
 
-function useCurrentCymbal(): Cymbal {
+function useCurrentPattern(): Pattern {
   const groove = useAppStore((s) => s.editor.exercise.practice.groove)
-  const silent = useProto((s) => s.silentCymbal)
-  return silent ?? cymbalOf(groove)
+  const silent = useProto((s) => s.silentPattern)
+  return silent ?? patternOf(groove)
 }
 
-// ——— shared bits ———
+// ——— group headings, used by every settings group on both screens ———
 
-function Row({ label, large, hint, children }: { label: string; large: boolean; hint?: string; children: React.ReactNode }) {
+/** A settings group's heading alone, for groups that lay out their own body (the Metronome's). */
+export function ProtoGroupTitle({ children }: { children: ReactNode }) {
+  const heading = useProto((s) => s.heading)
+  if (heading === 'current') return <PanelHeading>{children}</PanelHeading>
+  if (heading === 'title') return <h3 className="mb-1 font-display text-[15px] font-semibold text-ink normal-case">{children}</h3>
+  return (
+    <h3 className="mb-1 font-display text-[13px] font-bold tracking-wider text-ink [font-variant-caps:var(--heading-caps)] [text-transform:var(--heading-case)]">
+      {children}
+    </h3>
+  )
+}
+
+/** A settings group's frame, separating it from the groups around it as the heading variant says. */
+export function ProtoFrame({ children }: { children?: ReactNode }) {
+  const heading = useProto((s) => s.heading)
+  const frame: Record<Heading, string> = {
+    current: '',
+    rule: 'border-t border-line pt-3',
+    title: 'pt-1.5',
+    card: 'rounded-lg border border-line bg-card p-2.5',
+  }
+  return <section className={frame[heading]}>{children}</section>
+}
+
+/** A settings group: its heading and its rows, separated from the groups around it as the heading variant says. */
+export function ProtoGroup({ title, children }: { title: string; children?: ReactNode }) {
+  const heading = useProto((s) => s.heading)
+  const frame: Record<Heading, string> = {
+    current: 'flex flex-col gap-1.5',
+    rule: 'flex flex-col gap-2 border-t border-line pt-3',
+    title: 'flex flex-col gap-2 pt-1.5',
+    card: 'flex flex-col gap-2 rounded-lg border border-line bg-card p-2.5',
+  }
+  return (
+    <section className={frame[heading]}>
+      <ProtoGroupTitle>{title}</ProtoGroupTitle>
+      {children}
+    </section>
+  )
+}
+
+/** A sub-heading inside a group (Feet): the small upper-case label, a level under the group's. */
+function SubHeading({ children }: { children: ReactNode }) {
+  return (
+    <h4 className="mt-1 flex items-center gap-2 text-xs font-normal text-mute">
+      {children}
+      <span className="h-px flex-1 bg-line" />
+    </h4>
+  )
+}
+
+// ——— rows ———
+
+function Row({ label, large, hint, children }: { label: string; large: boolean; hint?: ReactNode; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-baseline justify-between gap-2">
@@ -120,32 +183,35 @@ function Row({ label, large, hint, children }: { label: string; large: boolean; 
   )
 }
 
+/** What picking a pattern also changed, in a quiet line with an undo. */
 function Note() {
   const note = useProto((s) => s.note)
   if (!note) return null
   return (
-    <div className="flex items-center justify-between gap-2 rounded border border-line bg-paper px-2 py-1.5 text-xs">
-      <span>{note.text}</span>
-      <span className="flex shrink-0 gap-2">
-        <button type="button" className="cursor-pointer font-semibold text-accent" onClick={note.undo}>Undo</button>
-        <button type="button" className="cursor-pointer text-mute" aria-label="Dismiss" onClick={() => useProto.setState({ note: null })}>✕</button>
-      </span>
-    </div>
+    <p className="flex items-baseline gap-2 text-xs text-mute">
+      <span className="flex-1">{note.text}</span>
+      <button type="button" className="cursor-pointer border-0 bg-transparent p-0 font-semibold text-accent" onClick={note.undo}>
+        Undo
+      </button>
+      <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-mute" aria-label="Dismiss" onClick={() => useProto.setState({ note: null })}>
+        ✕
+      </button>
+    </p>
   )
 }
 
 function TimeSignature({ large }: { large: boolean }) {
   const timeSig = useProto((s) => s.timeSig)
   const pick = usePickGroove()
-  const cymbal = useCurrentCymbal()
+  const pattern = useCurrentPattern()
   const bass = useProto((s) => s.bass)
   const hihatFoot = useAppStore((s) => s.editor.exercise.practice.hihatFoot)
   const setHihatFoot = useAppStore((s) => s.setHihatFoot)
   const change = (ts: TimeSig) => {
     useProto.setState({ timeSig: ts, note: null })
     if (!footOptions(ts).some((o) => o.value === hihatFoot)) setHihatFoot('off')
-    // A groove that doesn't fit the new meter is turned off.
-    if (!cymbalsFor(ts).includes(cymbal)) pick('off', bass)
+    // A pattern that doesn't fit the new meter is turned off.
+    if (!patternsFor(ts).some((g) => g.patterns.some((p) => p.id === pattern))) pick('off', bass)
   }
   return (
     <Row label="Time signature" large={large} hint={compound(timeSig) ? 'beats in threes' : undefined}>
@@ -156,14 +222,12 @@ function TimeSignature({ large }: { large: boolean }) {
 
 const SWING_PRESETS = [
   { name: 'Straight', swing: MIN_SWING },
-  { name: 'Light', swing: 0.58 },
-  { name: 'Medium', swing: 0.62 },
   { name: 'Triplet', swing: TRIPLET_SWING },
   { name: 'Dotted', swing: 0.75 },
 ]
 
-/** Q4: chips, with Custom showing the slider and percent. Hidden in compound time. */
-function SwingChips({ large }: { large: boolean }) {
+/** Straight, Triplet, Dotted, and Custom for anything between, which shows the slider and percent. Hidden in compound time. */
+function Swing({ large }: { large: boolean }) {
   const swing = useAppStore((s) => s.editor.exercise.practice.swing)
   const setSwing = useAppStore((s) => s.setSwing)
   const timeSig = useProto((s) => s.timeSig)
@@ -176,35 +240,15 @@ function SwingChips({ large }: { large: boolean }) {
     )
   const preset = SWING_PRESETS.find((p) => Math.abs(p.swing - swing) < 1e-6)
   const showCustom = custom || !preset
-  // On the phone Custom is a sixth chip; in the narrow desktop sidebar it's a link by the percent.
-  const options = [...SWING_PRESETS.map((p) => ({ value: String(p.swing), label: p.name })), ...(large ? [{ value: 'custom', label: 'Custom' }] : [])]
   const percent = `${(swing * 100).toFixed(1).replace('.0', '')}%`
-  const hint = large ? (showCustom ? undefined : percent) : undefined
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className={large ? 'font-semibold' : 'text-mute'}>Swing</span>
-        {hint && <span className="text-xs text-mute">{hint}</span>}
-        {!large && (
-          <span className="flex shrink-0 items-center gap-1.5">
-            {!showCustom && <span className="text-xs text-mute tabular-nums">{percent}</span>}
-            <button
-              type="button"
-              aria-pressed={showCustom}
-              className="cursor-pointer rounded-full border border-line bg-transparent px-2 py-px text-xs hover:border-accent aria-pressed:border-accent aria-pressed:text-accent"
-              onClick={() => useProto.setState({ customSwing: !showCustom })}
-            >
-              {showCustom ? 'Done' : 'Custom'}
-            </button>
-          </span>
-        )}
-      </div>
+    <Row label="Swing" large={large} hint={showCustom ? undefined : percent}>
       <Segmented
         label="Swing"
         fill
-        className={large ? 'text-sm' : 'text-xs'}
-        options={options}
-        value={showCustom && large ? 'custom' : preset ? String(preset.swing) : null}
+        className={large ? '' : 'text-xs'}
+        options={[...SWING_PRESETS.map((p) => ({ value: String(p.swing), label: p.name })), { value: 'custom', label: 'Custom' }]}
+        value={showCustom ? 'custom' : String(preset.swing)}
         onChange={(v) => {
           if (v === 'custom') return useProto.setState({ customSwing: true })
           useProto.setState({ customSwing: false })
@@ -217,27 +261,9 @@ function SwingChips({ large }: { large: boolean }) {
           <ValueField label="Swing %" value={swing * 100} unit="%" min={50} max={75} decimals={1} onChange={(p) => setSwing(p / 100)} className="w-16 sm:w-14" />
         </div>
       )}
-    </div>
+    </Row>
   )
 }
-
-function TimeGroup({ large }: { large: boolean }) {
-  return (
-    <>
-      <TimeSignature large={large} />
-      <SwingChips large={large} />
-      {!large && <p className="text-xs text-mute italic">Prototype: the time signature is visual only.</p>}
-    </>
-  )
-}
-
-function cymbalsFor(ts: TimeSig): Cymbal[] {
-  if (ts === '6/8') return ['off', 'bell68']
-  if (ts === '12/8') return ['off', 'shuffle128']
-  return ['off', 'jazz', 'hihat8']
-}
-
-const CYMBAL_NAMES: Record<Cymbal, string> = { off: 'Off', jazz: 'Jazz ride', hihat8: 'Hi-hat 8ths', bell68: 'Bell', shuffle128: 'Shuffle ride' }
 
 /** The hi-hat foot, with only the options that make sense in the meter. */
 function footOptions(ts: TimeSig): { value: HihatFoot; label: string; title: string }[] {
@@ -264,189 +290,33 @@ function HihatFootRow({ large }: { large: boolean }) {
   )
 }
 
-// ——— Variant A: one row per limb ———
+// ——— the Pattern picker ———
 
-function VariantA({ large }: { large: boolean }) {
-  const timeSig = useProto((s) => s.timeSig)
-  const cymbal = useCurrentCymbal()
-  const bass = useProto((s) => s.bass)
-  const groove = useAppStore((s) => s.editor.exercise.practice.groove)
-  const pick = usePickGroove()
-  // The real bass drum, where the exercise's groove has one.
-  const shownBass: Bass = groove === 'jazzFeathered' ? 'feathered' : cymbal === 'jazz' ? 'off' : bass
-  return (
-    <>
-      <Row label="Cymbal" large={large} hint={cymbal === 'bell68' || cymbal === 'shuffle128' ? 'silent in the prototype' : undefined}>
-        <Segmented
-          label="Cymbal"
-          fill
-          className={large ? '' : 'text-xs'}
-          options={cymbalsFor(timeSig).map((c) => ({ value: c, label: CYMBAL_NAMES[c] }))}
-          value={cymbal}
-          onChange={(c) => pick(c, shownBass)}
-        />
-      </Row>
-      <Row label="Bass drum" large={large} hint={cymbal !== 'jazz' && shownBass === 'feathered' ? 'heard with Jazz ride only, for now' : undefined}>
-        <Segmented
-          label="Bass drum"
-          fill
-          className={large ? '' : 'text-xs'}
-          options={[
-            { value: 'off' as const, label: 'Off' },
-            { value: 'feathered' as const, label: 'Feathered', title: 'Softly on every beat' },
-          ]}
-          value={shownBass}
-          onChange={(b) => pick(cymbal, b)}
-        />
-      </Row>
-      <HihatFootRow large={large} />
-    </>
-  )
-}
-
-// ——— Variant B: groove cards ———
-
-interface Card {
-  id: string
-  cymbal: Cymbal
-  bass: Bass
+interface PatternInfo {
+  id: Pattern
   name: string
   description: string
-  /** Lanes of the mini strip: one string per lane, x a hit, . a rest, one character per eighth. */
-  strip?: { cymbal: string; foot: string; bass: string }
-}
-
-/** The mini strip of a real preset, read from its hits: one cell per eighth in a 4/4 bar. */
-function stripOf(id: GroovePresetId) {
-  const lanes = { cymbal: '', foot: '', bass: '' }
-  const hits = grooveHitsByTick(id)
-  for (let i = 0; i < 8; i++) {
-    const at = hits.get((i * TICKS_PER_BEAT) / 2) ?? []
-    lanes.cymbal += at.some((h) => h.instrument === 'ride' || h.instrument === 'hihatClosed') ? 'x' : '.'
-    lanes.foot += at.some((h) => h.instrument === 'hihatPedal') ? 'x' : '.'
-    lanes.bass += at.some((h) => h.instrument === 'kickFeathered') ? 'x' : '.'
-  }
-  return lanes
-}
-
-function cardsFor(ts: TimeSig): Card[] {
-  const off: Card = { id: 'off', cymbal: 'off', bass: 'off', name: 'None', description: 'Just the click and your exercise.' }
-  if (ts === '6/8')
-    return [off, { id: 'bell68', cymbal: 'bell68', bass: 'off', name: '6/8 bell', description: 'Afro-Cuban bell pattern.', strip: { cymbal: 'x.xxx.', foot: '......', bass: '......' } }]
-  if (ts === '12/8')
-    return [off, { id: 'shuffle128', cymbal: 'shuffle128', bass: 'off', name: '12/8 shuffle', description: 'Shuffle ride, the middle triplet left out.', strip: { cymbal: 'x.xx.xx.xx.x', foot: '...x.....x..', bass: '' } }]
-  return [
-    off,
-    { id: 'jazz', cymbal: 'jazz', bass: 'off', name: 'Jazz', description: 'Ride “spang-a-lang”, hi-hat foot on 2 & 4.', strip: stripOf('jazz') },
-    { id: 'jazzFeathered', cymbal: 'jazz', bass: 'feathered', name: 'Jazz, feathered', description: 'Jazz, plus a soft bass drum on every beat.', strip: stripOf('jazzFeathered') },
-    { id: 'hihat8', cymbal: 'hihat8', bass: 'off', name: 'Rock 8ths', description: 'Straight eighths on the closed hi-hat.', strip: stripOf('hihatEighths') },
-  ]
-}
-
-function Strip({ strip }: { strip: NonNullable<Card['strip']> }) {
-  const lanes = [strip.cymbal, strip.foot, strip.bass].filter((l) => l && l.includes('x'))
-  return (
-    <div className="flex flex-col gap-0.5" aria-hidden>
-      {lanes.map((lane, i) => (
-        <div key={i} className="flex gap-0.5">
-          {[...lane].map((c, j) => (
-            <span key={j} className={`h-1.5 w-2.5 rounded-sm ${c === 'x' ? 'bg-accent' : 'bg-line'}`} />
-          ))}
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function VariantB({ large }: { large: boolean }) {
-  const timeSig = useProto((s) => s.timeSig)
-  const groove = useAppStore((s) => s.editor.exercise.practice.groove)
-  const silent = useProto((s) => s.silentCymbal)
-  const pick = usePickGroove()
-  const chosen = silent ?? (groove === 'hihatEighths' ? 'hihat8' : groove)
-  return (
-    <>
-      <div role="radiogroup" aria-label="Groove" className="flex flex-col gap-1.5">
-        {cardsFor(timeSig).map((card) => {
-          const on = card.id === chosen
-          return (
-            <button
-              key={card.id}
-              type="button"
-              role="radio"
-              aria-checked={on}
-              onClick={() => pick(card.cymbal, card.bass)}
-              className={`flex cursor-pointer items-center gap-2 rounded border px-2.5 text-left ${large ? 'py-2.5' : 'py-1.5'} ${on ? 'border-accent bg-paper' : 'border-line bg-transparent'}`}
-            >
-              <span className={`size-3 shrink-0 rounded-full border-2 ${on ? 'border-accent bg-accent' : 'border-line'}`} />
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="font-semibold">{card.name}</span>
-                <span className="text-xs text-mute">{card.description}</span>
-                {card.strip && <span className="pt-1"><Strip strip={card.strip} /></span>}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-      <HihatFootRow large={large} />
-    </>
-  )
-}
-
-// ——— Variant C: one pattern picker (grouped, scalable), then the feet as their own pill rows ———
-// The pattern is the hands' time-keeping only. The feet are separate settings, always shown: a pattern
-// suggests its feet when picked (jazz: hi-hat foot 2 & 4), said in the note, and nothing hides them.
-
-interface Style {
-  id: string
-  cymbal: Cymbal | null
-  name: string
-  description: string
+  /** x a hit, . a rest, one character per eighth. */
   strip?: string
-  /** Not built yet: shown to judge how the list grows. */
-  later?: boolean
 }
 
-function stylesFor(ts: TimeSig): { family: string; styles: Style[] }[] {
-  const none = { family: '', styles: [{ id: 'off', cymbal: 'off' as Cymbal, name: 'None', description: 'Just the click and your exercise.' }] }
-  if (ts === '6/8')
-    return [none, { family: 'Afro-Cuban', styles: [{ id: 'bell68', cymbal: 'bell68', name: '6/8 bell', description: 'The short bell pattern, on cowbell or ride bell.', strip: 'x.xxx.' }] }]
-  if (ts === '12/8')
-    return [
-      none,
-      { family: 'Blues', styles: [{ id: 'shuffle128', cymbal: 'shuffle128', name: 'Shuffle', description: 'Ride on the 1st and 3rd of each triplet.', strip: 'x.xx.xx.xx.x' }] },
-      { family: 'Afro-Cuban', styles: [{ id: 'bell128', cymbal: null, name: '12/8 bell', description: 'The long (bembé) bell pattern.', strip: 'x.x.xx.x.x.x', later: true }] },
-    ]
-  if (ts === '3/4')
-    return [none, { family: 'Jazz', styles: [{ id: 'waltz', cymbal: null, name: 'Jazz waltz', description: 'The ride pattern in three.', strip: 'x.xx.x', later: true }] }]
+/** The patterns that fit a time signature, grouped by style; only those that exist. */
+function patternsFor(ts: TimeSig): { family: string; patterns: PatternInfo[] }[] {
+  const none = { family: '', patterns: [{ id: 'off' as const, name: 'None', description: 'Just the click and your exercise.' }] }
+  if (ts === '6/8') return [none, { family: 'Afro-Cuban', patterns: [{ id: 'bell68', name: 'Bell', description: 'The 6/8 bell, on cowbell or ride bell.', strip: 'x.xxx.' }] }]
+  if (ts === '12/8') return [none, { family: 'Blues', patterns: [{ id: 'shuffle128', name: 'Shuffle', description: 'Ride on the 1st and 3rd of each triplet.', strip: 'x.xx.xx.xx.x' }] }]
   return [
     none,
-    {
-      family: 'Jazz',
-      styles: [
-        { id: 'jazz', cymbal: 'jazz', name: 'Ride', description: 'The swing ride pattern: 1, 2 &, 3, 4 &.', strip: 'x.xxx.xx' },
-        { id: 'twofeel', cymbal: null, name: 'Two feel', description: 'Ride on 1 and 3, for ballads.', strip: 'x...x...', later: true },
-      ],
-    },
-    {
-      family: 'Rock & pop',
-      styles: [
-        { id: 'hihat8', cymbal: 'hihat8', name: 'Hi-hat 8ths', description: 'Straight eighths on the closed hi-hat.', strip: 'xxxxxxxx' },
-        { id: 'hihat16', cymbal: null, name: 'Hi-hat 16ths', description: 'Funk sixteenths, one hand.', strip: 'xxxxxxxx', later: true },
-      ],
-    },
-    {
-      family: 'Latin',
-      styles: [{ id: 'bossa', cymbal: null, name: 'Bossa nova', description: 'Eighths on the ride over a cross-stick clave.', strip: 'xxxxxxxx', later: true }],
-    },
+    { family: 'Jazz', patterns: [{ id: 'jazz', name: 'Ride', description: 'The swing ride: 1, 2 &, 3, 4 &.', strip: 'x.xxx.xx' }] },
+    { family: 'Rock & pop', patterns: [{ id: 'hihat8', name: 'Hi-hat 8ths', description: 'Eighths on the closed hi-hat.', strip: 'xxxxxxxx' }] },
   ]
 }
 
-function MiniStrip({ strip }: { strip: string }) {
+function Strip({ strip }: { strip: string }) {
   return (
-    <span className="flex gap-0.5" aria-hidden>
+    <span className="flex shrink-0 gap-[3px]" aria-hidden>
       {[...strip].map((c, i) => (
-        <span key={i} className={`h-1.5 w-2 rounded-sm ${c === 'x' ? 'bg-accent' : 'bg-line'}`} />
+        <span key={i} className={`size-[5px] rounded-full ${c === 'x' ? 'bg-ink/70' : 'bg-line'}`} />
       ))}
     </span>
   )
@@ -454,93 +324,84 @@ function MiniStrip({ strip }: { strip: string }) {
 
 function PatternPicker({ large }: { large: boolean }) {
   const timeSig = useProto((s) => s.timeSig)
-  const cymbal = useCurrentCymbal()
+  const pattern = useCurrentPattern()
   const bass = useProto((s) => s.bass)
   const groove = useAppStore((s) => s.editor.exercise.practice.groove)
   const pick = usePickGroove()
   const [open, setOpen] = useState(false)
-  const groups = stylesFor(timeSig)
-  const current = groups.flatMap((g) => g.styles).find((s) => s.cymbal === cymbal) ?? groups[0].styles[0]
-  const family = groups.find((g) => g.styles.includes(current))?.family
+  const groups = patternsFor(timeSig)
+  const current = groups.flatMap((g) => g.patterns).find((p) => p.id === pattern) ?? groups[0].patterns[0]
+  const family = groups.find((g) => g.patterns.includes(current))?.family
   const keepBass: Bass = groove === 'jazzFeathered' ? 'feathered' : bass
   return (
-    <div className="relative flex flex-col gap-1">
-      <span className={large ? 'font-semibold' : 'text-mute'}>Pattern</span>
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-        className={`flex cursor-pointer items-center gap-2 rounded border border-line bg-paper px-2.5 text-left hover:border-accent ${large ? 'py-2.5' : 'py-1.5'}`}
-      >
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span className="font-semibold">
-            {family && <span className="font-normal text-mute">{family} · </span>}
+    <Row label="Pattern" large={large}>
+      <div className="relative flex">
+        <button
+          type="button"
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+          className={`flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-md border border-edge bg-card text-left text-ink hover:border-accent aria-expanded:border-accent ${large ? 'h-11 px-3' : 'px-2 py-0.5'}`}
+        >
+          <span className="truncate">
             {current.name}
+            {family && <span className="text-mute"> · {family}</span>}
           </span>
-          {current.strip && (
-            <span className="pt-1">
-              <MiniStrip strip={current.strip} />
-            </span>
-          )}
-        </span>
-        <span className={`text-mute ${open ? 'rotate-180' : ''}`}>
-          <ChevronIcon />
-        </span>
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div role="listbox" aria-label="Pattern" className="absolute top-full right-0 left-0 z-50 mt-1 flex max-h-96 flex-col overflow-auto rounded border border-line bg-panel py-1 shadow-lg">
-            {groups.map((g) => (
-              <div key={g.family || 'none'} className="flex flex-col">
-                {g.family && <span className="px-2.5 pt-2 pb-0.5 text-xs font-semibold tracking-wide text-mute uppercase">{g.family}</span>}
-                {g.styles.map((st) => {
-                  const on = st === current
-                  return (
-                    <button
-                      key={st.id}
-                      type="button"
-                      role="option"
-                      aria-selected={on}
-                      disabled={st.later}
-                      onClick={() => {
-                        if (!st.cymbal) return
-                        pick(st.cymbal, keepBass)
-                        setOpen(false)
-                      }}
-                      className={`flex cursor-pointer flex-col gap-0.5 border-0 px-2.5 py-1.5 text-left disabled:cursor-default disabled:opacity-45 ${on ? 'bg-paper' : 'bg-transparent hover:bg-paper'}`}
-                    >
-                      <span className="flex items-center justify-between gap-2">
-                        <span className={on ? 'font-semibold text-accent' : 'font-semibold'}>
-                          {st.name}
-                          {st.later && <span className="font-normal text-mute"> · later</span>}
-                        </span>
-                        {st.strip && <MiniStrip strip={st.strip} />}
-                      </span>
-                      <span className="text-xs text-mute">{st.description}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
+          <span className="shrink-0 text-mute">
+            <ChevronIcon />
+          </span>
+        </button>
+        {open && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+            <div role="listbox" aria-label="Pattern" className="absolute top-full right-0 left-0 z-50 mt-1 flex max-h-96 flex-col overflow-auto rounded-md border border-edge bg-card py-1 shadow-lg">
+              {groups.map((g, i) => (
+                <div key={g.family || 'none'} className={`flex flex-col ${i > 0 ? 'mt-1 border-t border-line pt-1' : ''}`}>
+                  {g.family && <span className="px-3 pt-1 text-[11px] text-mute">{g.family}</span>}
+                  {g.patterns.map((p) => {
+                    const on = p === current
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        role="option"
+                        aria-selected={on}
+                        onClick={() => {
+                          pick(p.id, keepBass)
+                          setOpen(false)
+                        }}
+                        className={`grid cursor-pointer grid-cols-[1rem_1fr_auto] items-center gap-x-1.5 border-0 bg-transparent px-2 text-left text-ink hover:bg-paper ${large ? 'py-2.5' : 'py-1.5'}`}
+                      >
+                        <span className="text-accent">{on ? '✓' : ''}</span>
+                        <span>{p.name}</span>
+                        {p.strip ? <Strip strip={p.strip} /> : <span />}
+                        <span />
+                        <span className="col-span-2 text-xs text-mute">{p.description}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </Row>
   )
 }
 
-function VariantC({ large }: { large: boolean }) {
-  const cymbal = useCurrentCymbal()
+function GrooveRows({ large }: { large: boolean }) {
+  const pattern = useCurrentPattern()
   const bass = useProto((s) => s.bass)
   const groove = useAppStore((s) => s.editor.exercise.practice.groove)
   const pick = usePickGroove()
-  const shownBass: Bass = groove === 'jazzFeathered' ? 'feathered' : cymbal === 'jazz' ? 'off' : bass
+  const shownBass: Bass = groove === 'jazzFeathered' ? 'feathered' : pattern === 'jazz' ? 'off' : bass
   return (
     <>
       <PatternPicker large={large} />
-      <span className="pt-1 text-xs font-semibold tracking-wide text-mute uppercase">Feet</span>
-      <Row label="Bass drum" large={large} hint={cymbal !== 'jazz' && shownBass === 'feathered' ? 'heard with Jazz ride only, for now' : undefined}>
+      <Note />
+      <SubHeading>Feet</SubHeading>
+      <Row label="Bass drum" large={large} hint={pattern !== 'jazz' && shownBass === 'feathered' ? 'heard with Ride only, for now' : undefined}>
         <Segmented
           label="Bass drum"
           fill
@@ -550,7 +411,7 @@ function VariantC({ large }: { large: boolean }) {
             { value: 'feathered' as const, label: 'Feathered', title: 'Softly on every beat' },
           ]}
           value={shownBass}
-          onChange={(b) => pick(cymbal, b)}
+          onChange={(b) => pick(pattern, b)}
         />
       </Row>
       <HihatFootRow large={large} />
@@ -559,48 +420,58 @@ function VariantC({ large }: { large: boolean }) {
 }
 
 /**
- * The Time and Groove groups for the variant being tried. `large` on the phone; `Group` wraps each
- * group in the desktop sidebar's heading.
+ * The Time and Groove groups for the variant being tried. `large` on the phone, where the tab is the
+ * group; `current` is today's Groove group.
  */
-export function PrototypeGroove({ large = false, current }: { large?: boolean; current: React.ReactNode }) {
-  const variant = useGrooveVariant()
+export function PrototypeGroove({ large = false, current }: { large?: boolean; current: ReactNode }) {
+  const variant = useProto((s) => s.variant)
   if (variant === 'current') return <>{current}</>
-  const groove = variant === 'A' ? <VariantA large={large} /> : variant === 'B' ? <VariantB large={large} /> : <VariantC large={large} />
   if (large)
     return (
       <>
-        <TimeGroup large />
-        <hr className="border-line" />
-        {groove}
-        <Note />
+        <TimeSignature large />
+        <Swing large />
+        <hr className="w-full border-0 border-t border-line" />
+        <GrooveRows large />
       </>
     )
   return (
     <>
-      <section className="flex flex-col gap-2.5">
-        <PanelHeading>Time</PanelHeading>
-        <TimeGroup large={false} />
-      </section>
-      <section className="flex flex-col gap-2.5">
-        <PanelHeading>Groove</PanelHeading>
-        {groove}
-        <Note />
-      </section>
+      <ProtoGroup title="Time">
+        <TimeSignature large={false} />
+        <Swing large={false} />
+      </ProtoGroup>
+      <ProtoGroup title="Groove">
+        <GrooveRows large={false} />
+      </ProtoGroup>
     </>
   )
 }
 
-/** The floating bar that switches the variant; dev builds only. */
+function Cycle<T extends string>({ name, options, value, names, param }: { name: string; options: readonly T[]; value: T; names: Record<T, string>; param: 'groove' | 'heading' }) {
+  const go = (step: number) => setParam(param, options[(options.indexOf(value) + step + options.length) % options.length])
+  return (
+    <span className="flex items-center">
+      <button type="button" className="cursor-pointer px-2 py-1" onClick={() => go(-1)} aria-label={`Previous ${name}`}>‹</button>
+      <span className="min-w-36 text-center">
+        <span className="text-white/60">{name}</span> {names[value]}
+      </span>
+      <button type="button" className="cursor-pointer px-2 py-1" onClick={() => go(1)} aria-label={`Next ${name}`}>›</button>
+    </span>
+  )
+}
+
+/** The floating bar that switches the variants; dev builds only. */
 export function GrooveVariantSwitcher() {
-  const variant = useGrooveVariant()
+  const variant = useProto((s) => s.variant)
+  const heading = useProto((s) => s.heading)
   const [hidden, setHidden] = useState(false)
   if (!import.meta.env.DEV || hidden) return null
-  const go = (step: number) => setVariant(VARIANTS[(VARIANTS.indexOf(variant) + step + VARIANTS.length) % VARIANTS.length])
   return (
-    <div className="fixed bottom-40 left-1/2 z-[60] flex -translate-x-1/2 items-center gap-1 rounded-full bg-black px-2 py-1 text-sm text-white shadow-lg sm:bottom-4">
-      <button type="button" className="cursor-pointer px-2 py-1" onClick={() => go(-1)} aria-label="Previous variant">‹</button>
-      <span className="min-w-44 text-center">Groove {variant === 'current' ? '' : `${variant} · `}{NAMES[variant]}</span>
-      <button type="button" className="cursor-pointer px-2 py-1" onClick={() => go(1)} aria-label="Next variant">›</button>
+    <div className="fixed bottom-4 left-1/2 z-[60] flex -translate-x-1/2 items-center gap-1 rounded-full bg-black px-2 py-1 text-sm whitespace-nowrap text-white shadow-lg">
+      <Cycle name="Groove" options={VARIANTS} value={variant} names={NAMES} param="groove" />
+      <span className="text-white/30">|</span>
+      <Cycle name="Headings" options={HEADINGS} value={heading} names={HEADING_NAMES} param="heading" />
       <button type="button" className="cursor-pointer px-1.5 py-1 text-white/50" onClick={() => setHidden(true)} aria-label="Hide">✕</button>
     </div>
   )

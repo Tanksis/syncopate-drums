@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useAppStore } from '@/app/store'
 import { Button } from '@/components/Button'
-import { PanelHeading } from '@/components/PanelHeading'
+import { ProtoGroupTitle } from '@/features/settings/GrooveSettingsPrototype'
 import { Sheet } from '@/components/Sheet'
 import { keepFocus } from '@/components/keepFocus'
 import { MAX_BEATS, NOTE_VALUES, SUBDIVISIONS, subdivisionOf, withTimeSignature } from '@/core'
@@ -32,7 +32,7 @@ export function TimeSignature({ compact = false }: { compact?: boolean }) {
   const change = (nextBeats: number, nextNoteValue = noteValue) => setMetronome(withTimeSignature(metronome, nextBeats, nextNoteValue))
   return (
     <div className={`flex flex-col ${compact ? '' : 'gap-2'}`}>
-      {compact ? <PanelHeading>Time signature</PanelHeading> : <span className="font-semibold">Time signature</span>}
+      {compact ? <ProtoGroupTitle>Time signature</ProtoGroupTitle> : <span className="font-semibold">Time signature</span>}
       <div className={`grid grid-cols-3 items-center rounded-2xl border border-line bg-card ${compact ? 'p-2' : 'p-3'}`}>
         <Stepper
           compact={compact}
@@ -94,7 +94,7 @@ export function SubdivisionGrid({ compact = false }: { compact?: boolean }) {
   return (
     <div className={`flex flex-col ${compact ? '' : 'gap-2'}`}>
       <div className="flex items-baseline justify-between gap-2">
-        {compact ? <PanelHeading>Subdivision</PanelHeading> : <span className="font-semibold">Subdivision</span>}
+        {compact ? <ProtoGroupTitle>Subdivision</ProtoGroupTitle> : <span className="font-semibold">Subdivision</span>}
         <span className={`text-mute ${compact ? 'text-xs' : 'text-[13px]'}`}>{subdivisionOf(subdivision).name}</span>
       </div>
       <div className="grid grid-cols-4 gap-1.5">

@@ -1,3 +1,4 @@
+import { ProtoFrame } from '@/features/settings/GrooveSettingsPrototype'
 import { useAppStore } from '@/app/store'
 import { BpmStep } from '@/features/playback/BpmStep'
 import { BeatBlocks, blockColumns } from './BeatBlocks'
@@ -59,8 +60,12 @@ export function MetronomePage() {
 export function MetronomeRhythm() {
   return (
     <>
-      <TimeSignature compact />
-      <SubdivisionGrid compact />
+      <ProtoFrame>
+        <TimeSignature compact />
+      </ProtoFrame>
+      <ProtoFrame>
+        <SubdivisionGrid compact />
+      </ProtoFrame>
     </>
   )
 }
