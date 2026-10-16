@@ -1,7 +1,7 @@
 import { useAppStore } from '@/app/store'
 import { SidebarHeading } from '@/components/Sidebar'
 import { MetronomeRhythm } from '@/features/metronome/MetronomePage'
-import { PracticeSettings, SharedSettings } from '@/features/settings/SettingsSidebar'
+import { PracticeSettings, GeneralSettings } from '@/features/settings/SettingsSidebar'
 
 /**
  * The desktop's settings sidebar, at the same width and in the same state on both screens. Its top
@@ -18,7 +18,7 @@ export function SettingsSidebar({ onCollapse, playbackGroup }: { onCollapse: () 
         <SidebarHeading name={onMetronome ? 'Metronome settings' : 'Practice settings'} sidebarName="Settings" side="right" onCollapse={onCollapse} />
         {onMetronome ? <MetronomeRhythm /> : <PracticeSettings playbackGroup={playbackGroup} />}
       </div>
-      <SharedSettings />
+      <GeneralSettings />
     </aside>
   )
 }

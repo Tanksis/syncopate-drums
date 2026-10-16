@@ -69,7 +69,7 @@ export function PracticeSettings({ playbackGroup = false }: { playbackGroup?: bo
  * the mix, the metronome's sound and volume, and the theme. Its chevron, pointing down, folds it to
  * its heading, remembered on this device, which leaves the screen's own settings above it the room.
  */
-export function SharedSettings() {
+export function GeneralSettings() {
   const open = useAppStore((s) => s.device.settingsSectionOpen)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   const id = useId()
