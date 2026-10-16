@@ -4,9 +4,13 @@
 
 **Blocked by:** none
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] One shared group component (or a `GroupHeading`) is used by `SettingGroup` and the Metronome's compact `TimeSignature` / `SubdivisionGrid`
-- [ ] A hairline above each group, none on a section's first group
-- [ ] The headings follow both themes' heading caps and case
-- [ ] Checked at 1280 and 1440, light and dark, Warm and Studio, on both screens
+- [x] One shared group component (or a `GroupHeading`) is used by `SettingGroup` and the Metronome's compact `TimeSignature` / `SubdivisionGrid`
+- [x] A hairline above each group, none on a section's first group
+- [x] The headings follow both themes' heading caps and case
+- [x] Checked at 1280 and 1440, light and dark, Warm and Studio, on both screens
+
+## Comments
+
+- 2026-10-16: Built as one `SettingGroup` in `src/components/SettingGroup.tsx`. The hairline drops through `first-of-type`, so whichever group comes first in a section (Playback when it shows, otherwise Groove; Time signature; Mix) goes without one. The heading's gap follows the prototype (`gap-2`, `mb-1`). Checked headless at 1280 and 1440 in Warm and Studio, light and dark, on both screens.
