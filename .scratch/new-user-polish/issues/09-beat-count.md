@@ -16,3 +16,4 @@
 ## Comments
 
 - 2026-10-16: The user wants to see this mocked or prototyped before agreeing to it. It waits for the `prototype/new-user-polish` verdict.
+- 2026-10-16: Prototype verdict (`prototype/new-user-polish`, commit 53472b9): the user is torn between the corner count and the strip of beat blocks across the top of the card, and dislikes that the strip pushes the page down when Play starts. `?count=fixed` (the strip always there, dim when stopped) and `?count=over` (the strip floats over the card's top while playing) were added to settle it. Still needs-info.

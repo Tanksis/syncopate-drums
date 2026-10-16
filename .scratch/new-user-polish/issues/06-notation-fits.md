@@ -1,16 +1,25 @@
-# 06: The empty-staff hint off the lines, and short exercises drawn larger
+# 06: The empty-exercise hint in the editor, and short exercises drawn larger
 
-**What to build:** Findings 6 and 10. The empty-staff hint moves into the paper's space above the first staff instead of over its lines. On desktop, when every line fits the card with room to spare, `notationFit` scales the staff up, capped at 1.4, so a one- or two-bar exercise isn't a thin strip in a big card. See [spec](../spec.md), stories 10–11.
+**What to build:** Findings 6 and 10, as `?hint=editor` and `?fit=grow` with `?fit=centre` on `prototype/new-user-polish`.
 
-**Blocked by:** none
+- **Hint:** the empty-staff hint leaves the staff. While an ordinary exercise has no hits, a tinted line at the top of the grid editor reads "↓ Click a square to add a hit: the top row is the snare, the bottom row the kick." (on a phone, "Tap"). It goes once there's a hit, and never shows on an example.
+- **Fit:** on desktop, a short exercise grows to fill the notation card. `notationFit` may scale above today's 1.6 cap, up to 2.4, and break onto more lines to do it, balancing them (4 bars as 2 + 2, not 3 + 1). Whatever room is left, the staff is centred in the card, top to bottom.
+- **Switch:** a **Fit notation to the card** switch in General › Appearance (on by default, on this device) turns the growing off, back to today's sizes. A zoom control is not part of this ticket.
 
-**Status:** needs-info
+The phone is unchanged. See [spec](../spec.md), stories 10–11.
 
-- [ ] The hint sits above the staff, still pointer-transparent, in both looks
-- [ ] `notationFit` scales above 1 only on desktop, only when everything fits, and never past 1.4 (unit-tested)
+**Blocked by:** 02
+
+**Status:** ready-for-agent
+
+- [ ] The hint in the editor in both looks, on desktop and in the phone's edit sheet; gone after the first hit; none on an example
+- [ ] `notationFit` grows past 1.6 and onto more, balanced lines only when asked to, on desktop, never past 2.4 (unit-tested)
+- [ ] The staff is centred vertically in the card
+- [ ] `DeviceSettings.fitNotation` (default on), validated, with tests; the switch in General › Appearance
 - [ ] Playback following, bar-number clicks and hand clicks still land on the scaled staff (real mouse)
-- [ ] Checked with 1, 2, 4 and 8 bars at 1280 and 1440, and unchanged on a phone
+- [ ] Checked with 1, 2, 4 and 8 bars at 1280, 1440 and 1920, and unchanged on a phone
 
 ## Comments
 
 - 2026-10-16: The user wants to see this mocked or prototyped before agreeing to it. It waits for the `prototype/new-user-polish` verdict.
+- 2026-10-16: Prototype verdict (`prototype/new-user-polish`, commit 53472b9): the hint in the editor (over above the staff), and growing plus centring (over the card hugging the staff). The user wondered about a zoom option, or growing being optional but on by default; this ticket takes the second, as a switch.

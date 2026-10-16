@@ -1,6 +1,6 @@
 # Spec: New-user polish
 
-Status: ready-for-agent for tickets 01, 02, 08 and 10. Tickets 03–06 and 09 are needs-info: the user wants to see them mocked or prototyped first. Ticket 07 (the sticking tip) is wontfix (2026-10-16).
+Status: ready-for-agent for tickets 01–04, 06, 08, 10 and 11. Ticket 09 is needs-info until the user picks the corner count or a strip on `prototype/new-user-polish`. Tickets 05 (row labels, bigger controls) and 07 (the sticking tip) are wontfix. Prototype verdict 2026-10-16.
 
 Source: the user's goal on 2026-10-16: before accounts, sync, a public library or iOS, the app should be easy to understand for a new user, and polished and complete. Inputs:
 - A walk-through of the app as a first-time user on desktop (Chrome) and an emulated iPhone 13 (WebKit) found ten problems, numbered 1–10 below. The user confirmed all ten.
@@ -15,8 +15,8 @@ A drummer who opens Syncopate! for the first time lands on an example, with no w
 
 ## Solution
 
-- **A welcome and a way in:** the first visit opens the first example with a short welcome card that offers **New exercise** and **Browse examples**. The phone's **Copy** becomes **Edit a copy**, and the Library's empty state gets a button.
-- **Visible affordances:** a pencil beside the exercise's name and **Rename** in the Library's menus; **Snare** and **Kick** labels on the editor's rows, so the kick's colour explains itself; bigger grid chips, beat menus and undo/redo on desktop.
+- **A welcome and a way in:** the first visit opens the first example with a short welcome card that offers **New exercise** and **Browse examples**. The Library's empty state gets a button.
+- **Visible affordances:** a pencil beside the exercise's name and on the Library's rows; an empty exercise's hint in the editor; short exercises drawn larger, filling the card.
 - **Notation that fits:** the empty-staff hint moves off the staff lines, and a short exercise is drawn larger on a roomy desktop card.
 - **Wording and tooltips:** no "Example:" in the Examples tab, sticking modes capitalised, and tooltips on Hi-hat foot, the Loop chip and the Exercise volume.
 - **Settings sidebar:** rule-style group headings everywhere, and the sections named **Practice settings** / **Metronome settings** over a folding **General**.
@@ -30,17 +30,17 @@ A drummer who opens Syncopate! for the first time lands on an example, with no w
 1. As a new user, the first time I open the app I see the first example with a short welcome that says what the app does, and a **New exercise** and a **Browse examples** button.
 2. As a new user, **New exercise** gives me an empty exercise in my Library, open and ready to edit, on the phone and the desktop.
 3. As a new user, I can dismiss the welcome, and it doesn't come back.
-4. As a phone user on an example, the button that makes it mine says **Edit a copy**, not Copy.
+4. *(Dropped: "Edit a copy"; the phone's Copy stays.)*
 5. As a user with an empty Library, the Library says so and offers **New exercise**, with a hint that the examples can be copied.
 
 ### Finding things
 
 6. As a user, a pencil beside the open exercise's name tells me I can rename it, and clicking either renames it.
-7. As a user, every exercise and folder in the Library has **Rename** in its menu, as well as the double-click.
-8. As a user, the grid editor's rows say **Snare** and **Kick**, and the label of the kick row has the kick's colour.
-9. As a desktop user, a beat's **16ths / trip** switch, its ⋯ menu and the editor's undo and redo are big enough to hit easily.
-10. As a user with an empty exercise, the hint "Tap or click a grid position below to add hits." sits above the staff, not over its lines.
-11. As a desktop user with a short exercise, the staff is drawn larger, so it fills more of the card.
+7. As a user, every exercise and folder in the Library shows a pencil on hover that renames it, as well as the double-click.
+8. *(Dropped: row labels, ticket 05, wontfix.)*
+9. *(Dropped: bigger editor controls, ticket 05, wontfix.)*
+10. As a user with an empty exercise, a hint at the top of the grid editor tells me to click a square to add a hit, instead of a hint over the staff's lines.
+11. As a desktop user with a short exercise, the staff is drawn larger, over more lines if that helps, and centred in the card; I can turn this off in General › Appearance.
 12. *(Dropped: the sticking tip, ticket 07, wontfix.)*
 
 ### Wording
@@ -74,21 +74,20 @@ A drummer who opens Syncopate! for the first time lands on an example, with no w
 
 - `DeviceSettings` gains:
   - `welcomeDismissed: boolean` (default false);
-  - `beatCount: boolean` (default true).
-  `deviceSettingsFrom` validates both. Device settings are never exported, so no schema bump.
+  - `beatCount: boolean` (default true);
+  - `fitNotation: boolean` (default true).
+  `deviceSettingsFrom` validates all three. Device settings are never exported, so no schema bump.
 - A pure `beatCountAt(position)` (in `src/core/`, beside the timeline) maps a playback position to `{ countIn: boolean, beat: number, beats: number }`. `beats` comes from the bar, which is `BEATS_PER_BAR` today, so the time-signatures work only changes it there.
 - The examples' list shows `exampleTitle(example)`, the name without its `Example: ` prefix. The stored name and Copy to Library keep their present behaviour.
 
 ### App
 
 - **Welcome:** a card over the notation view's paper, shown while `welcomeDismissed` is false and an example is open. It has a title, one sentence, **New exercise** (primary), **Browse examples** (opens the Examples tab, or the phone's Library sheet on it) and ✕. Either button or ✕ sets `welcomeDismissed`. The store's existing new-exercise action does New exercise.
-- **Phone:** `TransportBar`'s Copy reads **Edit a copy**. Measure the bar at 390 px in both looks; if it doesn't fit, shorten it to **Edit copy**.
-- **Library empty state:** "No exercises yet." stays, followed by a **New exercise** button and the line "Or copy one from Examples."
-- **Rename:** `ExerciseName` gets a small pencil icon after the name, mute until hover, part of the same button. The Library's exercise row menu and folder menu get **Rename**. Add a row ⋯ menu if a row has none; reuse `Menu`.
-- **Editor rows:** `BeatStrip` draws a row label column (**Snare**, **Kick**), the kick label in `text-kick`. On a phone the labels are a single letter (S, K) if the full words cost a beat card's width.
-- **Desktop sizes:** the 16ths/trip switch, the beat ⋯ button and undo/redo go from their present size to at least 32 px high hit areas at `sm` and up; the phone sizes stay.
-- **Empty-staff hint:** placed in the paper's space above the first staff, not centred over it.
-- **Short exercises:** `notationFit` may scale the staff above 1 when every line fits with room to spare, capped at 1.4, on desktop only.
+- **Library empty state:** "No exercises yet." stays, followed by a **New exercise** button and the line "Or copy one from Examples.", Examples a link to that tab.
+- **Selection bar** (ticket 11): Export and Delete in place of Export selected and Delete selected; Move to… as a `SelectMenu`-styled button opening a `Menu`, not a native `<select>`.
+- **Rename:** `ExerciseName` gets a small pencil icon after the name, mute until hover, part of the same button. The Library's exercise rows and folders show the same pencil on hover and focus, starting the in-place rename.
+- **Empty-exercise hint:** leaves the staff for a tinted line at the top of the grid editor: "↓ Click a square to add a hit: the top row is the snare, the bottom row the kick." ("Tap" on a phone). Not on examples.
+- **Short exercises:** today `notationFit` already scales up to 1.6 without adding lines. With `fitNotation` on, on desktop, it may go up to 2.4 and break onto more lines, balanced (4 bars as 2 + 2), and the staff is centred vertically in the card. The switch is a row in General › Appearance. A zoom control is out of scope.
 - **Wording:** `Choice` labels the sticking modes Natural / Alternate / Off (the values stay lowercase). Tooltips:
   - Hi-hat foot: "The hi-hat pedal played under every bar".
   - The Loop chip (all bars): "Click a bar number to loop it, Shift+click to extend". It has this already when idle, so check it shows in every state.
@@ -106,7 +105,8 @@ A drummer who opens Syncopate! for the first time lands on an example, with no w
 
 - Unit tests:
   - `beatCountAt`: a count-in position, each beat of a bar, a position that falls between beats, and the last beat before the loop wraps.
-  - `deviceSettingsFrom` for the two new fields (valid, missing, junk).
+  - `deviceSettingsFrom` for the three new fields (valid, missing, junk).
+  - `notationFit` growing: the cap, the balanced lines, and no growth when off.
   - `exampleTitle`.
 - Every screen is checked in the browser at 390 × 844, at 1280 with both sidebars open and at 1440, in light and dark, Warm and Studio, with real mouse events (see the memory on real-mouse checks).
 - First-visit checks start from a cleared IndexedDB.
@@ -115,6 +115,7 @@ A drummer who opens Syncopate! for the first time lands on an example, with no w
 ## Out of Scope
 
 - The Groove/Time redesign: the Pattern picker, Feet, the time signature, the swing chips (which also fixes finding 9's cramped swing presets) and the jazz pattern's visible swing change with Undo (finding 7). These are in the `time-signatures` spec.
+- Snare/Kick row labels and bigger editor controls (ticket 05; the user kept today's on 2026-10-16).
 - Changing new exercises to start with sticking on (the user kept #50's choice), and any tip about sticking being off (ticket 07; the user declined it on 2026-10-16).
 - A guided tour or tooltips that walk through the app.
 - A speed trainer, share-by-link, gap click, print/PDF, a practice log.
@@ -123,4 +124,5 @@ A drummer who opens Syncopate! for the first time lands on an example, with no w
 ## Further Notes
 
 - The first new-user test didn't cover audio by ear on a real iPhone, the 1280 px desktop layout or editing in the phone sheet. Cover the last two in this spec's browser checks.
-- The welcome's wording, the tip's wording and the Help page's text are drafts; the user may rewrite them in review.
+- The welcome's wording, the hint's wording and the Help page's text are drafts; the user may rewrite them in review.
+- The prototype that settled tickets 03–06 is on the `prototype/new-user-polish` branch (never merged); its verdict commit is 53472b9.

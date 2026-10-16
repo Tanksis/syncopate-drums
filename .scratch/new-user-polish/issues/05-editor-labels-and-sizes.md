@@ -4,7 +4,7 @@
 
 **Blocked by:** none
 
-**Status:** needs-info
+**Status:** wontfix
 
 - [ ] Row labels on both rows, in desktop and the phone sheet; the kick label in the kick colour
 - [ ] The beat cards still fit four per bar at 1280 with both sidebars open
@@ -14,3 +14,4 @@
 ## Comments
 
 - 2026-10-16: The user wants to see this mocked or prototyped before agreeing to it. It waits for the `prototype/new-user-polish` verdict.
+- 2026-10-16: Prototype verdict (`prototype/new-user-polish`, commit 53472b9): keep today's rows with no Snare/Kick labels (over a label column, a legend and inline S/K), and today's control sizes. Nothing to build.
