@@ -1,5 +1,6 @@
 // How big to draw the notation: short exercises are scaled up to fill the notation area, never
-// past MAX_NOTATION_SCALE and never onto more lines than at the usual size. Busy music needs wider
+// past MAX_NOTATION_SCALE and never onto more lines than at the usual size, unless asked to grow,
+// when they may go up to MAX_GROWN_NOTATION_SCALE over more lines. Busy music needs wider
 // bars, and where even one bar a line is too narrow for it, the notation is drawn smaller.
 
 import { TICKS_PER_BEAT } from './model'
@@ -26,6 +27,8 @@ export const NOTATION_LAYOUT = {
 } as const
 
 export const MAX_NOTATION_SCALE = 1.6
+/** Asked to grow (a roomy desktop card), a short exercise may be drawn up to this scale. */
+export const MAX_GROWN_NOTATION_SCALE = 2.4
 /** Where one bar a line is narrower than its minimum, the notation is drawn smaller, but no smaller than this. */
 export const MIN_NOTATION_SCALE = 0.8
 /**
@@ -74,7 +77,8 @@ export function minBarWidthFor(parts: readonly StaffBar[]): number {
  * The scale (0.8 to 1.6, in steps of 0.05) and bars a line to draw an exercise of `bars` bars at,
  * in an area `width` by `height`, given one line's height at scale 1 and the narrowest a bar may be
  * (`minBarWidth`, 190 unless the music is busy). The largest scale that needs no more lines than
- * scale 1, fits the height and leaves a bar 80% of `minBarWidth`; 1 if even scale 1 overflows the height; below 1, the largest scale
+ * scale 1 (any number, up to 2.4, given `grow`, with the bars shared evenly between the lines),
+ * fits the height and leaves a bar 80% of `minBarWidth`; 1 if even scale 1 overflows the height; below 1, the largest scale
  * at which one bar a line is `minBarWidth` wide (no lower than 0.8), if it isn't at 1. Also the
  * width of a bar in the drawing's units (before scaling), past the first bar's clef: an exercise on
  * one line shares the line (up to `maxBarWidth` a bar); a longer one gets a share of a full line a
@@ -86,12 +90,14 @@ export function notationFit({
   height,
   lineHeight,
   minBarWidth = NOTATION_LAYOUT.minBarWidth,
+  grow = false,
 }: {
   bars: number
   width: number
   height: number
   lineHeight: number
   minBarWidth?: number
+  grow?: boolean
 }): {
   scale: number
   barsPerLine: number
@@ -106,14 +112,17 @@ export function notationFit({
     do hundredths -= SCALE_STEP
     while (hundredths > MIN_NOTATION_SCALE * 100 && availableAt(width, hundredths / 100) < minBarWidth)
   } else if (heightAt(1) <= height) {
-    for (let h = 100 + SCALE_STEP; h <= MAX_NOTATION_SCALE * 100; h += SCALE_STEP) {
+    const largest = (grow ? MAX_GROWN_NOTATION_SCALE : MAX_NOTATION_SCALE) * 100
+    for (let h = 100 + SCALE_STEP; h <= largest; h += SCALE_STEP) {
       const scale = h / 100
       const roomy = availableAt(width, scale) >= minBarWidth * SCALE_UP_SQUEEZE
-      if (roomy && linesAt(scale) <= lines && heightAt(scale) <= height) hundredths = h
+      if (roomy && (grow || linesAt(scale) <= lines) && heightAt(scale) <= height) hundredths = h
     }
   }
   const scale = hundredths / 100
-  const barsPerLine = barsPerLineAt(width, scale, minBarWidth)
+  const most = barsPerLineAt(width, scale, minBarWidth)
+  // Grown, the lines are balanced: 4 bars as 2 + 2, not 3 + 1.
+  const barsPerLine = grow ? Math.ceil(bars / Math.ceil(bars / most)) : most
   const available = availableAt(width, scale)
   // On one line the bars share it; over more, every bar gets a share of a full line so they line up.
   const barWidth = Math.floor(

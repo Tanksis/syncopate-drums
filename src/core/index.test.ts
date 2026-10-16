@@ -121,6 +121,12 @@ describe('stored device settings', () => {
     expect(deviceSettingsFrom({ welcomeDismissed: 'yes', countIn: false })).toEqual({ ...DEFAULT_DEVICE_SETTINGS, countIn: false })
   })
 
+  it('fit the notation to the card unless that is switched off, and drop a stored fit that is not a yes or no', () => {
+    expect(deviceSettingsFrom(undefined).fitNotation).toBe(true)
+    expect(deviceSettingsFrom({ fitNotation: false }).fitNotation).toBe(false)
+    expect(deviceSettingsFrom({ fitNotation: 'no' }).fitNotation).toBe(true)
+  })
+
   it('drop any stored yes-or-no setting that is not a boolean', () => {
     expect(deviceSettingsFrom({ countIn: 0, clickMuted: 'true' })).toEqual(DEFAULT_DEVICE_SETTINGS)
   })

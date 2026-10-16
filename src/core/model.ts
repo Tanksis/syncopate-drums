@@ -171,6 +171,8 @@ export interface DeviceSettings {
   metronome: MetronomeSettings
   /** The first visit's welcome card has been closed, so it never shows again. */
   welcomeDismissed: boolean
+  /** On a desktop, a short exercise grows, onto more lines if need be, to fill the notation card, centred in it. */
+  fitNotation: boolean
 }
 
 /** The app's screens, switched in the header. */
@@ -234,6 +236,7 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   screen: 'practice',
   metronome: DEFAULT_METRONOME_SETTINGS,
   welcomeDismissed: false,
+  fitNotation: true,
 }
 
 /** The device settings that are a playback layer's volume. */

@@ -130,3 +130,23 @@ describe('notationFit with a busy minimum bar width', () => {
     })
   })
 })
+
+describe('notationFit growing a short exercise to fill a tall area', () => {
+  it('draws one bar in a roomy area up to 2.4 times, past the usual 1.6, and no further', () => {
+    expect(notationFit({ bars: 1, width: 860, height: 800, lineHeight: LINE, grow: true }).scale).toBe(2.4)
+    expect(notationFit({ bars: 1, width: 3000, height: 3000, lineHeight: LINE, grow: true }).scale).toBe(2.4)
+  })
+  it('breaks onto more lines to grow, balancing them: four bars as 2 + 2, not 3 + 1', () => {
+    // 1000 / 1.45 = 689.7, less 2 × 10 margin and the 70 clef: 599.7, room for 3 bars a line; two
+    // lines of 150 and the 10 above are 449.5 at 1.45, and 1.5 would be too tall.
+    expect(notationFit({ bars: 4, width: 1000, height: 450, lineHeight: LINE, grow: true })).toEqual({
+      scale: 1.45,
+      barsPerLine: 2,
+      barWidth: 299,
+    })
+  })
+  it('does not grow unless asked: the same four bars stay on one line, no larger than 1.6', () => {
+    expect(notationFit({ bars: 4, width: 1000, height: 450, lineHeight: LINE })).toEqual({ scale: 1.15, barsPerLine: 4, barWidth: 194 })
+    expect(notationFit({ bars: 1, width: 860, height: 800, lineHeight: LINE }).scale).toBe(1.6)
+  })
+})

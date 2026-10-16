@@ -39,6 +39,7 @@ export function App() {
   const phone = usePhoneWindow()
   const [barRef, room] = useExerciseBarRoom()
   const onMetronome = useAppStore((s) => s.device.screen === 'metronome')
+  const fitNotation = useAppStore((s) => s.device.fitNotation)
   if (phone) return <PhoneLayout sidebars={sidebars} />
   return (
     <div className="flex h-dvh flex-col">
@@ -73,7 +74,7 @@ export function App() {
             {/* The music on a card, which takes the height the editor leaves, all of it when that's collapsed. */}
             <div className="flex min-h-0 flex-1 flex-col p-3">
               <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-card border-(length:--border-card) border-line bg-paper shadow-card">
-                <NotationView corner={<StaffPlayButton />} />
+                <NotationView corner={<StaffPlayButton />} grow={fitNotation} />
                 <WelcomeCard onBrowse={sidebarShower(sidebars.library)} />
               </div>
             </div>

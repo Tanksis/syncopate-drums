@@ -163,8 +163,6 @@ export interface Drawing {
   svg: SVGSVGElement | null
   line: (bar: number) => DrawnLine
   playheadMark: (position: PlayPosition) => PlayheadMark | undefined
-  /** The first line's five stave lines, in the page's pixels from the SVG's top left. */
-  firstStaff: { left: number; top: number; width: number; height: number }
 }
 
 /** Stave lines the playhead line reaches above the top line and below the bottom line. */
@@ -177,6 +175,8 @@ const noteCentre = (note: StaveNote) => (note.getNoteHeadBeginX() + note.getNote
 export interface NotationArea {
   width: number
   height: number
+  /** A short exercise grows, onto more lines if need be, to fill the area (see `notationFit`). */
+  grow?: boolean
 }
 
 /**
@@ -221,7 +221,6 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   const ties: StaveTie[] = []
   /** Where the playhead line goes for each struck position, by `bar:tick`. */
   const marks = new Map<string, PlayheadMark>()
-  const firstStaff = { left: 0, top: 0, width: 0, height: 0 }
 
   bars.forEach((_, b) => {
     const line = Math.floor(b / barsPerLine)
@@ -248,10 +247,6 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
       ctx.restore()
     }
     stave.setContext(ctx).draw()
-    if (line === 0) {
-      const top = stave.getYForLine(0)
-      Object.assign(firstStaff, { left: MARGIN * scale, top: top * scale, width: (x + w - MARGIN) * scale, height: (stave.getYForLine(4) - top) * scale })
-    }
     drawBarNumber(stave, b, exercise.practice.loopRange, barNumberLine, colour.loopInk, font)
 
     const drawings = drawnLimbs
@@ -297,7 +292,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
     return { top, bottom: top + (height + STAVE_TOP) * scale }
   }
   const playheadMark = ({ bar, tick }: PlayPosition) => marks.get(`${bar}:${tick}`)
-  return { svg: el.querySelector('svg'), line, playheadMark, firstStaff }
+  return { svg: el.querySelector('svg'), line, playheadMark }
 }
 
 /** A notehead a tie can run from or to: its note, its index in the chord, and its line of staves. */

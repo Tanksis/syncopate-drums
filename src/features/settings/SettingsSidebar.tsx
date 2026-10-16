@@ -9,6 +9,7 @@ import { SelectMenu } from '@/components/SelectMenu'
 import { SettingGroup } from '@/components/SettingGroup'
 import { FullScreenHeading, chevronButtonClass } from '@/components/Sidebar'
 import { Slider } from '@/components/Slider'
+import { Switch } from '@/components/Switch'
 import { ChevronIcon, SpeakerIcon, SpeakerMutedIcon } from '@/components/icons'
 import { ValueField } from '@/components/ValueField'
 import { keepFocus } from '@/components/keepFocus'
@@ -109,6 +110,7 @@ export function GeneralSettings() {
           <SettingGroup title="Appearance">
             <LookChoice />
             <ModeChoice />
+            <FitNotationChoice />
           </SettingGroup>
         </div>
       )}
@@ -450,6 +452,18 @@ function ModeChoice({ stacked = false }: { stacked?: boolean }) {
         value={theme}
         onChange={(option) => setDeviceSettings({ theme: option })}
       />
+    </div>
+  )
+}
+
+/** Whether a short exercise grows to fill the desktop's notation card, on this device. */
+function FitNotationChoice() {
+  const fitNotation = useAppStore((s) => s.device.fitNotation)
+  const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-mute">Fit notation to the card</span>
+      <Switch label="Fit notation to the card" labelHidden checked={fitNotation} onChange={(on) => setDeviceSettings({ fitNotation: on })} />
     </div>
   )
 }
