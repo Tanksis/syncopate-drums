@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { EditorState, GrooveHit, ScheduledEvent, TimeSignature } from './index'
-import { DEFAULT_DEVICE_SETTINGS, applyEdit, beatCountAt, editorBeatViews, grooveHitsByTick, hihatFootOptions, migrateExercise, newEditorState, newExercise, parseImport, restBar, rowBeats, schedule, setBeat, staffParts, sticking, SCHEMA_VERSION } from './index'
+import { DEFAULT_DEVICE_SETTINGS, applyEdit, beatCountAt, editorBeatViews, grooveHitsByTick, meter, hihatFootOptions, migrateExercise, newEditorState, newExercise, parseImport, restBar, rowBeats, schedule, setBeat, staffParts, sticking, SCHEMA_VERSION } from './index'
 
 const fresh = () => newEditorState(newExercise({ id: 'e1', now: 0 }))
 
@@ -107,16 +107,16 @@ describe('the groove in a time signature', () => {
     [...byTick].flatMap(([tick, hits]) => (hits.some((h) => h.instrument === instrument) ? [tick] : []))
 
   it('plays the jazz ride over a bar of 3/4: beats 1, 2, the & of 2, and 3', () => {
-    expect(ticks(grooveHitsByTick('jazz', 'off', 3), 'ride')).toEqual([0, 12, 18, 24])
+    expect(ticks(grooveHitsByTick({ pattern: 'ride', bassDrum: 'off', hihatFoot: 'off' }, meter('3/4')), 'ride')).toEqual([0, 12, 18, 24])
   })
 
   it('plays eighths on the hi-hat over a bar of 2/4', () => {
-    expect(ticks(grooveHitsByTick('hihatEighths', 'off', 2), 'hihatClosed')).toEqual([0, 6, 12, 18])
+    expect(ticks(grooveHitsByTick({ pattern: 'hihatEighths', bassDrum: 'off', hihatFoot: 'off' }, meter('2/4')), 'hihatClosed')).toEqual([0, 6, 12, 18])
   })
 
   it('plays the hi-hat foot on each beat, or each &, of the bar', () => {
-    expect(ticks(grooveHitsByTick('off', 'quarters', 3), 'hihatPedal')).toEqual([0, 12, 24])
-    expect(ticks(grooveHitsByTick('off', 'ands', 2), 'hihatPedal')).toEqual([6, 18])
+    expect(ticks(grooveHitsByTick({ pattern: 'off', bassDrum: 'off', hihatFoot: 'quarters' }, meter('3/4')), 'hihatPedal')).toEqual([0, 12, 24])
+    expect(ticks(grooveHitsByTick({ pattern: 'off', bassDrum: 'off', hihatFoot: 'ands' }, meter('2/4')), 'hihatPedal')).toEqual([6, 18])
   })
 
   it('offers 2 & 4 for the hi-hat foot only in 4/4', () => {

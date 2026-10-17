@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Exercise, GroovePresetId, TimelineEntry } from './index'
+import type { Exercise, PatternId, TimelineEntry } from './index'
 import { DEFAULT_DEVICE_SETTINGS, beatCountAt, newExercise, playheadAt, positionLabel, recordEvents, resumePosition, schedule, trimTimeline } from './index'
 
 /** Count-in beat 4 at 0, then bar 1: a note with the click at 1, a click at 1.5, a note at 1.75. */
@@ -11,10 +11,10 @@ const timeline: TimelineEntry[] = [
   { time: 1.75, staffHit: true, position: { bar: 0, tick: 18 } },
 ]
 
-/** A blank exercise (the line rests throughout) at 60 BPM, a beat a second, over a groove. */
-const resting = (groove: GroovePresetId): Exercise => {
+/** A blank exercise (the line rests throughout) at 60 BPM, a beat a second, over a pattern. */
+const resting = (pattern: PatternId): Exercise => {
   const ex = newExercise({ id: 'e1', now: 0 })
-  return { ...ex, practice: { ...ex.practice, bpm: 60, swing: 0.5, groove } }
+  return { ...ex, practice: { ...ex.practice, bpm: 60, swing: 0.5, pattern } }
 }
 
 /** What the engine records for the first `seconds` of playback from the count-in, starting at time 0. */
@@ -41,17 +41,17 @@ describe('the playhead', () => {
 
   it('follows the groove while the line rests: at the ride on the & of 2 it is at bar 1, tick 18', () => {
     // A bar of count-in (4 s), then bar 1: the & of 2 sounds at 5.5 s.
-    expect(playheadAt(played(resting('jazz'), 8), 5.6)?.hit).toEqual({ bar: 0, tick: 18 })
+    expect(playheadAt(played(resting('ride'), 8), 5.6)?.hit).toEqual({ bar: 0, tick: 18 })
   })
 
   it("doesn't move on the count-in's clicks", () => {
-    expect(playheadAt(played(resting('jazz'), 8), 3.5)).toEqual({ position: { bar: -1, tick: 36 } })
+    expect(playheadAt(played(resting('ride'), 8), 3.5)).toEqual({ position: { bar: -1, tick: 36 } })
   })
 })
 
 describe('recording the timeline', () => {
   it('records exercise and groove hits as staff hits, and clicks as not', () => {
-    const ex = resting('jazz')
+    const ex = resting('ride')
     const { events } = schedule(ex, ex.practice, DEFAULT_DEVICE_SETTINGS, { bar: 0, tick: 0 }, 1)
     expect(recordEvents([], events, 10)).toEqual([
       { time: 10, position: { bar: 0, tick: 0 } },

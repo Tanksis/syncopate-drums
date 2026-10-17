@@ -111,7 +111,7 @@ describe('duplicating an exercise', () => {
     ...applyEdit(newEditorState(newExercise({ id: 'orig', now: 100 })), { type: 'toggleGridPosition', row: 'snare', bar: 0, beat: 0, position: 0 }).exercise,
     name: 'p.37 #4',
     sticking: 'alternate' as const,
-    practice: { bpm: 132, loopRange: { first: 0, last: 0 }, groove: 'off' as const, hihatFoot: 'one' as const, swing: 0.58 },
+    practice: { bpm: 132, loopRange: { first: 0, last: 0 }, pattern: 'off' as const, bassDrum: 'feathered' as const, hihatFoot: 'one' as const, swing: 0.58 },
   }
   const copy = duplicateExercise(original, { id: 'copy', now: 900 })
 
@@ -124,7 +124,7 @@ describe('duplicating an exercise', () => {
   it('keeps the content and practice settings', () => {
     expect(copy.bars).toEqual(original.bars)
     expect(copy.sticking).toBe('alternate')
-    expect(copy.practice).toEqual({ bpm: 132, loopRange: { first: 0, last: 0 }, groove: 'off', hihatFoot: 'one', swing: 0.58 })
+    expect(copy.practice).toEqual({ bpm: 132, loopRange: { first: 0, last: 0 }, pattern: 'off', bassDrum: 'feathered', hihatFoot: 'one', swing: 0.58 })
   })
 
   it('puts the copy in its original’s folder', () => {

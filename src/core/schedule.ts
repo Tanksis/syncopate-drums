@@ -65,8 +65,9 @@ export function schedule(
   // In compound time each beat is already three eighths, so nothing is swung (ADR 0015).
   const swing = meter(exercise.timeSignature).compound ? MIN_SWING : effectiveSwing(practice.swing, practice.bpm)
   const struck = ROWS.map((row) => ({ row, ticks: struckTicks(exercise, row) }))
-  const { beats } = meter(exercise.timeSignature)
-  const groove = grooveHitsByTick(practice.groove, practice.hihatFoot, beats)
+  const m = meter(exercise.timeSignature)
+  const { beats } = m
+  const groove = grooveHitsByTick(practice, m)
   const loop = loopBars(practice.loopRange, exercise.bars.length)
   const ticksPerBar = barTicks(beats)
   let position: PlayPosition

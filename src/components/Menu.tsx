@@ -1,5 +1,5 @@
 import type { KeyboardEvent, ReactNode } from 'react'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { buttonClass } from './Button'
 import { keepFocus } from './keepFocus'
@@ -13,6 +13,12 @@ export interface MenuItem {
   checked?: boolean
   /** Shown greyed out, and does nothing when chosen. */
   disabled?: boolean
+  /** The group it is listed under: an item starting a new group gets a hairline and the group's name over it. */
+  group?: string
+  /** A quieter line under the label, saying more than a hint can. */
+  detail?: string
+  /** Shown at the item's right, in place of a hint, such as a small picture of it. */
+  aside?: ReactNode
   onSelect: () => void
 }
 
@@ -173,26 +179,32 @@ export function Menu({
           >
             {/* By place, as two items may share a label (two folders of one name). */}
             {items.map((item, index) => (
-              <button
-                key={index}
-                type="button"
-                role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
-                aria-checked={item.checked}
-                disabled={item.disabled}
-                tabIndex={-1}
-                onMouseDown={keepFocus}
-                onClick={() => {
-                  close()
-                  item.onSelect()
-                }}
-                className={`flex cursor-pointer items-center gap-2 rounded px-2 text-left whitespace-nowrap ${large ? 'py-3 text-base' : 'py-1.5'} enabled:hover:bg-select focus-visible:bg-select focus-visible:-outline-offset-2 disabled:cursor-default disabled:opacity-40`}
-              >
-                <span aria-hidden className="w-3 text-accent">
-                  {item.checked ? '✓' : ''}
-                </span>
-                {item.label}
-                {item.hint && <span className="ml-auto pl-3 text-mute">{item.hint}</span>}
-              </button>
+              <Fragment key={index}>
+                {index > 0 && item.group !== items[index - 1].group && (
+                  <div className="mt-1 border-t border-line px-2 pt-1.5 pb-0.5 text-xs text-mute">{item.group}</div>
+                )}
+                <button
+                  type="button"
+                  role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
+                  aria-checked={item.checked}
+                  disabled={item.disabled}
+                  tabIndex={-1}
+                  onMouseDown={keepFocus}
+                  onClick={() => {
+                    close()
+                    item.onSelect()
+                  }}
+                  className={`flex cursor-pointer flex-wrap items-center gap-x-2 rounded px-2 text-left whitespace-nowrap ${large ? 'py-3 text-base' : 'py-1.5'} enabled:hover:bg-select focus-visible:bg-select focus-visible:-outline-offset-2 disabled:cursor-default disabled:opacity-40`}
+                >
+                  <span aria-hidden className="w-3 text-accent">
+                    {item.checked ? '✓' : ''}
+                  </span>
+                  {item.label}
+                  {item.hint && <span className="ml-auto pl-3 text-mute">{item.hint}</span>}
+                  {item.aside && <span className="ml-auto pl-3">{item.aside}</span>}
+                  {item.detail && <span className="basis-full pl-5 text-xs text-mute">{item.detail}</span>}
+                </button>
+              </Fragment>
             ))}
           </div>,
           // A dialog is drawn over the body, so a menu in one stays in it.

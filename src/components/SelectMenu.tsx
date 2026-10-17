@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { ChevronIcon } from './icons'
 import { Menu } from './Menu'
 
@@ -45,7 +46,7 @@ export function SelectMenu<T extends string>({
 }
 
 /** What a select menu's button shows: its text, cut short if long, and a `ChevronIcon` on the right. */
-export function SelectButtonFace({ text }: { text?: string }) {
+export function SelectButtonFace({ text }: { text?: ReactNode }) {
   return (
     <>
       <span className="truncate">{text}</span>

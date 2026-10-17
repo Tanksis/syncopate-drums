@@ -5,7 +5,8 @@ import { useAppStore } from '@/app/store'
 import { Button } from '@/components/Button'
 import { PanelHeading } from '@/components/PanelHeading'
 import { Segmented, type SegmentedOption } from '@/components/Segmented'
-import { SelectMenu } from '@/components/SelectMenu'
+import { Menu } from '@/components/Menu'
+import { SelectButtonFace, SelectMenu, selectButtonClass } from '@/components/SelectMenu'
 import { SettingGroup } from '@/components/SettingGroup'
 import { Switch } from '@/components/Switch'
 import { FullScreenHeading, chevronButtonClass } from '@/components/Sidebar'
@@ -17,7 +18,7 @@ import { MetronomeVolume } from '@/features/metronome/MetronomeVolume'
 import { SOUND_OPTIONS, pickSound } from '@/features/metronome/SoundSheet'
 import { LoopChip } from '@/features/playback/LoopChip'
 import { ClickToggle, CountInToggle } from '@/features/playback/TransportControls'
-import type { ExerciseSettings, Hand, HihatFoot, Layer, StickingMode, Theme, TimeSignature, VolumeSetting } from '@/core'
+import type { BassDrum, ExerciseSettings, Hand, HihatFoot, Layer, PatternSuggestion, StickingMode, Theme, TimeSignature, VolumeSetting } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
   MAX_SWING,
@@ -26,11 +27,11 @@ import {
   SWING_PRESETS,
   THEMES,
   TIME_SIGNATURES,
-  grooveOptions,
-  groovePreset,
   hihatFootOptions,
   meter,
   overrideCount,
+  pattern,
+  patternsFor,
   swingPreset,
 } from '@/core'
 
@@ -59,8 +60,7 @@ export function PracticeSettings({ playbackGroup = false }: { playbackGroup?: bo
         <Swing />
       </SettingGroup>
       <SettingGroup title="Groove">
-        <GroovePicker />
-        <HihatFootChoice />
+        <GrooveRows />
       </SettingGroup>
       <SettingGroup title="Sticking">
         <Choice label="Mode" setting="sticking" options={STICKING_MODES} />
@@ -165,8 +165,7 @@ export function PhoneSettings({ onDone }: { onDone: () => void }) {
             <TimeSignatureChoice large />
             <Swing large />
             <hr className="w-full border-0 border-t border-line" />
-            <GroovePicker large />
-            <HihatFootChoice large />
+            <GrooveRows large />
           </>
         )}
         {tab === 'sticking' && (
@@ -294,47 +293,168 @@ function StackedTimeSignature({ timeSignature }: { timeSignature: TimeSignature 
   )
 }
 
-/** The groove layer played and drawn with the exercise, or none. */
-function GroovePicker({ large = false }: { large?: boolean }) {
-  const groove = useAppStore((s) => s.editor.exercise.practice.groove)
-  const timeSignature = useAppStore((s) => s.editor.exercise.timeSignature)
-  const setGroove = useAppStore((s) => s.setGroove)
+/** A setting's name over its control, as in the Time group; `large`, on a phone, the name is bold. */
+function Stacked({ label, large, title, children }: { label: string; large: boolean; title?: string; children: ReactNode }) {
   return (
-    <Labelled label="Preset" stacked={large}>
-      <SelectMenu
-        label="Groove preset"
-        large={large}
-        options={grooveOptions(timeSignature).map((preset) => ({ value: preset.id, label: preset.name }))}
-        value={groovePreset(groove).id}
-        onChange={setGroove}
-      />
-    </Labelled>
+    <div className="flex flex-col gap-2" title={title}>
+      <span className={large ? 'font-semibold' : 'text-mute'}>{label}</span>
+      {children}
+    </div>
   )
 }
 
-const HIHAT_FOOT_OPTIONS: Record<HihatFoot, { label: string; hint?: string }> = {
-  off: { label: 'Off' },
-  one: { label: 'On 1', hint: 'beat 1' },
-  quarters: { label: 'Quarters', hint: 'every beat' },
-  twoAndFour: { label: '2 & 4', hint: 'backbeat' },
-  ands: { label: 'Off-beats', hint: 'the &s' },
+/**
+ * The pattern played and drawn with the exercise, or none: a select whose menu lists the patterns
+ * that fit the time signature, grouped by style, each with a line saying what it plays and a strip
+ * of dots, one per eighth. The quiet note under it says what the pick also changed.
+ */
+function PatternPicker({ large = false }: { large?: boolean }) {
+  const current = useAppStore((s) => s.editor.exercise.practice.pattern)
+  const timeSignature = useAppStore((s) => s.editor.exercise.timeSignature)
+  const setPattern = useAppStore((s) => s.setPattern)
+  const picked = pattern(current)
+  return (
+    <Stacked label="Pattern" large={large}>
+      <div className="flex">
+        <Menu
+          label={`Pattern: ${picked.name}`}
+          large={large}
+          items={patternsFor(timeSignature).flatMap(({ family, patterns }) =>
+            patterns.map((p) => ({
+              label: p.name,
+              detail: p.description,
+              aside: p.strip && <PatternStrip strip={p.strip} />,
+              group: family ?? undefined,
+              checked: p.id === current,
+              onSelect: () => setPattern(p.id),
+            })),
+          )}
+          icon={
+            <SelectButtonFace
+              text={
+                <>
+                  {picked.name}
+                  {picked.family && <span className="text-mute"> · {picked.family}</span>}
+                </>
+              }
+            />
+          }
+          buttonClassName={`flex-1 ${selectButtonClass(large)}`}
+        />
+      </div>
+      <PatternNoteLine />
+    </Stacked>
+  )
 }
 
-/** The hi-hat foot played in every bar, with any groove or none, in place of the groove's own (ADR 0010). */
+/** A pattern's bar as dots, one per eighth: a hit dark, a silent eighth faint. */
+function PatternStrip({ strip }: { strip: string }) {
+  return (
+    <span aria-hidden className="flex gap-[3px]">
+      {[...strip].map((c, i) => (
+        <span key={i} className={`size-[5px] rounded-full ${c === 'x' ? 'bg-ink/70' : 'bg-line'}`} />
+      ))}
+    </span>
+  )
+}
+
+/** How the pattern note names each setting it changed, as it is now. */
+const SUGGESTION_NAMES: Record<PatternSuggestion, (practice: { swing: number; hihatFoot: HihatFoot }) => string> = {
+  swing: ({ swing }) => `the swing to ${swingPreset(swing)?.name ?? 'Custom'}`,
+  hihatFoot: ({ hihatFoot }) => `the hi-hat foot to ${HIHAT_FOOT_OPTIONS[hihatFoot].label}`,
+}
+
+/** What picking the pattern also changed, in a quiet line, with Undo (putting it back) and ✕. */
+function PatternNoteLine() {
+  const note = useAppStore((s) => s.patternNote)
+  const practice = useAppStore((s) => s.editor.exercise.practice)
+  const exerciseId = useAppStore((s) => s.editor.exercise.id)
+  const undo = useAppStore((s) => s.undoPatternNote)
+  const dismiss = useAppStore((s) => s.dismissPatternNote)
+  // Gone once the pattern changes another way, such as with the time signature.
+  if (!note || note.exerciseId !== exerciseId || note.pattern !== practice.pattern) return null
+  const changes = note.suggested.map((setting) => SUGGESTION_NAMES[setting](practice))
+  return (
+    <p role="status" className="flex items-baseline gap-2 text-xs text-mute">
+      <span className="flex-1">Set {changes.join(' and ')}.</span>
+      <button type="button" onMouseDown={keepFocus} onClick={undo} className="cursor-pointer border-0 bg-transparent p-0 font-semibold text-accent">
+        Undo
+      </button>
+      <button
+        type="button"
+        aria-label="Dismiss"
+        title="Dismiss"
+        onMouseDown={keepFocus}
+        onClick={dismiss}
+        className="cursor-pointer border-0 bg-transparent p-0 text-mute"
+      >
+        ✕
+      </button>
+    </p>
+  )
+}
+
+/** The Feet sub-heading in the Groove group: small and quiet, with a hairline to its right. */
+function FeetHeading() {
+  return (
+    <h4 className="mt-1 flex items-center gap-2 text-xs font-normal text-mute">
+      Feet
+      <span aria-hidden className="h-px flex-1 bg-line" />
+    </h4>
+  )
+}
+
+const BASS_DRUM_OPTIONS: SegmentedOption<BassDrum>[] = [
+  { value: 'off', label: 'Off' },
+  { value: 'feathered', label: 'Feathered', title: 'Softly on every beat' },
+]
+
+/** The bass drum under every bar, with any pattern or none: off, or feathered, softly on every beat. */
+function BassDrumChoice({ large = false }: { large?: boolean }) {
+  const bassDrum = useAppStore((s) => s.editor.exercise.practice.bassDrum)
+  const setBassDrum = useAppStore((s) => s.setBassDrum)
+  return (
+    <Stacked label="Bass drum" large={large}>
+      <Segmented label="Bass drum" fill options={BASS_DRUM_OPTIONS} value={bassDrum} onChange={setBassDrum} />
+    </Stacked>
+  )
+}
+
+const HIHAT_FOOT_OPTIONS: Record<HihatFoot, { label: string; title: string }> = {
+  off: { label: 'Off', title: 'No hi-hat foot' },
+  one: { label: '1', title: 'On beat 1' },
+  quarters: { label: 'Beats', title: 'On every beat' },
+  twoAndFour: { label: '2 & 4', title: 'The backbeat' },
+  ands: { label: '&s', title: 'The off-beats' },
+}
+
+/** The hi-hat foot played in every bar, with any pattern or none, offering only what fits the meter (ADR 0010). */
 function HihatFootChoice({ large = false }: { large?: boolean }) {
   const hihatFoot = useAppStore((s) => s.editor.exercise.practice.hihatFoot)
   const timeSignature = useAppStore((s) => s.editor.exercise.timeSignature)
   const setHihatFoot = useAppStore((s) => s.setHihatFoot)
   return (
-    <Labelled label="Hi-hat foot" title="The hi-hat pedal played under every bar" stacked={large}>
-      <SelectMenu
+    <Stacked label="Hi-hat foot" large={large} title="The hi-hat pedal played under every bar">
+      <Segmented
         label="Hi-hat foot"
-        large={large}
+        fill
         options={hihatFootOptions(timeSignature).map((option) => ({ value: option, ...HIHAT_FOOT_OPTIONS[option] }))}
         value={hihatFoot}
         onChange={setHihatFoot}
       />
-    </Labelled>
+    </Stacked>
+  )
+}
+
+/** The Groove group's rows: the pattern, then the feet under their sub-heading. */
+function GrooveRows({ large = false }: { large?: boolean }) {
+  return (
+    <>
+      <PatternPicker large={large} />
+      <FeetHeading />
+      <BassDrumChoice large={large} />
+      <HihatFootChoice large={large} />
+    </>
   )
 }
 

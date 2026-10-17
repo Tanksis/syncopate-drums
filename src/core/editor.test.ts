@@ -19,7 +19,7 @@ import {
   toggleCutShort,
   toggleTie,
   withBpm,
-  withGroove,
+  withPattern,
   withLoopRange,
   swingPreset,
   withSwing,
@@ -93,7 +93,7 @@ describe('a new exercise', () => {
       name: 'Untitled',
       sticking: 'off',
       leadHand: 'R',
-      practice: { bpm: 80, loopRange: null, groove: 'off', swing: 0.5 },
+      practice: { bpm: 80, loopRange: null, pattern: 'off', bassDrum: 'off', hihatFoot: 'off', swing: 0.5 },
       lastOpened: 1234,
     })
     expect(ex.bars).toHaveLength(1)
@@ -141,34 +141,33 @@ describe('the tempo', () => {
     expect(withBpm(ex, 99.6).practice.bpm).toBe(100)
     expect(withBpm(ex, 12).practice.bpm).toBe(30)
     expect(withBpm(ex, 400).practice.bpm).toBe(300)
-    expect(withBpm(ex, 144).practice).toMatchObject({ loopRange: null, groove: 'off' })
+    expect(withBpm(ex, 144).practice).toMatchObject({ loopRange: null, pattern: 'off' })
   })
 })
 
-describe('the groove preset', () => {
+describe('the pattern', () => {
   it('is set on the exercise, leaving the other practice settings alone', () => {
     const ex = withSwing(newExercise({ id: 'e1', now: 0 }), 0.58)
-    expect(withGroove(ex, 'jazzFeathered').practice).toEqual({ ...ex.practice, groove: 'jazzFeathered' })
-    expect(withGroove(ex, 'off')).toBe(ex)
+    expect(withPattern(ex, 'hihatEighths').exercise.practice).toEqual({ ...ex.practice, pattern: 'hihatEighths' })
+    expect(withPattern(ex, 'off').exercise).toBe(ex)
   })
 
-  it('turns swing to triplet when a jazz groove is picked on a straight exercise', () => {
+  it('turns swing to triplet when Ride is picked on a straight exercise', () => {
     const straight = newExercise({ id: 'e1', now: 0 })
-    expect(withGroove(straight, 'jazz').practice).toEqual({ ...straight.practice, groove: 'jazz', swing: 2 / 3 })
-    expect(withGroove(straight, 'jazzFeathered').practice.swing).toBe(2 / 3)
-    const overHihat = withGroove(straight, 'hihatEighths')
-    expect(withGroove(overHihat, 'jazz').practice.swing).toBe(2 / 3)
+    expect(withPattern(straight, 'ride').exercise.practice.swing).toBe(2 / 3)
+    const overHihat = withPattern(straight, 'hihatEighths').exercise
+    expect(withPattern(overHihat, 'ride').exercise.practice.swing).toBe(2 / 3)
   })
 
-  it('leaves swing alone for any other swing amount, groove or change', () => {
+  it('leaves swing alone for any other swing amount, pattern or change', () => {
     const straight = newExercise({ id: 'e1', now: 0 })
-    expect(withGroove(withSwing(straight, 0.58), 'jazz').practice.swing).toBe(0.58)
-    expect(withGroove(withSwing(straight, 0.75), 'jazzFeathered').practice.swing).toBe(0.75)
-    expect(withGroove(straight, 'hihatEighths').practice.swing).toBe(0.5)
-    const jazzStraightened = withSwing(withGroove(straight, 'jazz'), 0.5)
-    expect(withGroove(jazzStraightened, 'jazzFeathered').practice.swing).toBe(0.5)
-    expect(withGroove(jazzStraightened, 'off').practice.swing).toBe(0.5)
-    expect(withGroove(withGroove(straight, 'jazz'), 'off').practice.swing).toBe(2 / 3)
+    expect(withPattern(withSwing(straight, 0.58), 'ride').exercise.practice.swing).toBe(0.58)
+    expect(withPattern(straight, 'hihatEighths').exercise.practice.swing).toBe(0.5)
+    const ride = withPattern(straight, 'ride').exercise
+    const rideStraightened = withSwing(ride, 0.5)
+    expect(withPattern(rideStraightened, 'ride').exercise.practice.swing).toBe(0.5)
+    expect(withPattern(rideStraightened, 'off').exercise.practice.swing).toBe(0.5)
+    expect(withPattern(ride, 'off').exercise.practice.swing).toBe(2 / 3)
   })
 })
 
@@ -179,7 +178,7 @@ describe('the swing amount', () => {
     expect(withSwing(ex, 0.4).practice.swing).toBe(0.5)
     expect(withSwing(ex, 0.8).practice.swing).toBe(0.75)
     expect(withSwing(ex, NaN).practice.swing).toBe(0.5)
-    expect(withSwing(ex, 0.62).practice).toMatchObject({ bpm: 80, loopRange: null, groove: 'off' })
+    expect(withSwing(ex, 0.62).practice).toMatchObject({ bpm: 80, loopRange: null, pattern: 'off' })
   })
 
   it('reads as Straight, Triplet or Dotted, and any other amount as none of them (Custom)', () => {

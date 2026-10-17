@@ -1,10 +1,11 @@
 // Export and import: the JSON file that moves exercises between computers.
 
 import { inKnownFolder } from './folders'
-import { GROOVE_PRESETS, fittedPractice } from './groove'
+import { PATTERN_IDS, fittedPractice } from './groove'
 import { migrateExercise } from './migrate'
 import type { Duration, Exercise, Folder, Hand, Item, StickingMode, TimeSignature } from './model'
 import {
+  BASS_DRUM_SETTINGS,
   HIHAT_FOOT_SETTINGS,
   MAX_BPM,
   MAX_SWING,
@@ -103,7 +104,7 @@ export function parseImport(json: string, appVersion: number = SCHEMA_VERSION): 
 
 /**
  * An imported exercise as the app could have written it: in compound time a straight beat keeps
- * only its downbeat, and a groove or hi-hat foot its time signature doesn't offer is turned off,
+ * only its downbeat, and a pattern or hi-hat foot its time signature doesn't offer is turned off,
  * as a change to that time signature does. A hand-edited file is fitted rather than refused.
  */
 function fitted(exercise: Exercise): Exercise {
@@ -181,10 +182,11 @@ function exerciseProblem(exercise: Exercise): string | null {
 
 function practiceProblem(practice: unknown, barCount: number): string | null {
   if (!isRecord(practice)) return 'has no practice settings'
-  const { bpm, swing, groove, hihatFoot, loopRange } = practice
+  const { bpm, swing, pattern, bassDrum, hihatFoot, loopRange } = practice
   if (!isFiniteNumber(bpm) || bpm < MIN_BPM || bpm > MAX_BPM) return 'has a BPM out of range'
   if (!isFiniteNumber(swing) || swing < MIN_SWING || swing > MAX_SWING) return 'has a swing amount out of range'
-  if (!oneOf(groove, GROOVE_PRESETS.map((p) => p.id))) return 'has an unknown groove'
+  if (!oneOf(pattern, PATTERN_IDS)) return 'has an unknown pattern'
+  if (!oneOf(bassDrum, BASS_DRUM_SETTINGS)) return 'has an unknown bass drum setting'
   if (!oneOf(hihatFoot, HIHAT_FOOT_SETTINGS)) return 'has an unknown hi-hat foot setting'
   if (loopRange === null) return null
   if (

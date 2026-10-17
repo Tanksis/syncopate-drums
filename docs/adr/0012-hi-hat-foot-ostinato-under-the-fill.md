@@ -2,7 +2,7 @@
 
 Date: 2026-10-13
 
-Status: accepted (refines [ADR 0004](0004-one-voice-when-feet-play-with-hands.md) and [ADR 0011](0011-linear-fills-in-one-voice.md))
+Status: accepted (refines [ADR 0004](0004-one-voice-when-feet-play-with-hands.md) and [ADR 0011](0011-linear-fills-in-one-voice.md)), narrowed 2026-10-17: once patterns lost their own hi-hat foot ([ADR 0010](0010-hi-hat-foot-is-a-practice-setting.md)'s note), the jazz ride's 2 & 4 became the setting. So that a jazz groove keeps the voicing it had, the setting is an ostinato kept out of the voicing only with no pattern on. Under a pattern it counts like the groove's other hits, as the jazz preset's own foot did.
 
 The hi-hat foot setting ([ADR 0010](0010-hi-hat-foot-is-a-practice-setting.md)) shipped with its hits counted like any other foot hit when a bar picks its voicing. Under a linear fill such as `RLRK` that turned every bar from one voice into two. The kicks dropped into the feet part beside the hi-hat foot and read as dotted-eighth-and-sixteenth rhythms, so the drummer read two rhythms where they play one fill. The user found it much harder to read. Under a groove the foot looked right, because it lands on the ride or hi-hat's stems.
 

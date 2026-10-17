@@ -65,6 +65,40 @@ describe('version 1 to 2: the snare row and the kick row (ADR 0005)', () => {
   })
 })
 
+describe('version 5 to 6: groove presets become patterns and feet', () => {
+  /** An exercise as stored at version 5, with a groove preset and a hi-hat foot setting. */
+  const v5 = (groove: string, hihatFoot = 'off') => {
+    const { pattern: _, bassDrum: __, ...practice } = newExercise({ id: 'e1', now: 5 }).practice
+    return { ...newExercise({ id: 'e1', now: 5 }), schemaVersion: 5, practice: { ...practice, groove, hihatFoot } }
+  }
+  const feet = (stored: object) => {
+    const { pattern, bassDrum, hihatFoot } = migrateExercise(stored).practice
+    return { pattern, bassDrum, hihatFoot }
+  }
+
+  it('turns the jazz ride into Ride with the hi-hat foot on 2 & 4, so it sounds as it did', () => {
+    expect(feet(v5('jazz'))).toEqual({ pattern: 'ride', bassDrum: 'off', hihatFoot: 'twoAndFour' })
+    expect(migrateExercise(v5('jazz')).practice).not.toHaveProperty('groove')
+  })
+
+  it('turns the feathered jazz ride into Ride with the bass drum feathered', () => {
+    expect(feet(v5('jazzFeathered'))).toEqual({ pattern: 'ride', bassDrum: 'feathered', hihatFoot: 'twoAndFour' })
+  })
+
+  it("keeps a hi-hat foot setting, which already played in place of the ride's own", () => {
+    expect(feet(v5('jazz', 'quarters'))).toEqual({ pattern: 'ride', bassDrum: 'off', hihatFoot: 'quarters' })
+  })
+
+  it('keeps hi-hat eighths and no groove as they were, with the bass drum off', () => {
+    expect(feet(v5('hihatEighths', 'one'))).toEqual({ pattern: 'hihatEighths', bassDrum: 'off', hihatFoot: 'one' })
+    expect(feet(v5('off'))).toEqual({ pattern: 'off', bassDrum: 'off', hihatFoot: 'off' })
+  })
+
+  it('leaves an unknown groove for import to refuse', () => {
+    expect(feet(v5('polka')).pattern).toBe('polka')
+  })
+})
+
 describe('version 2 to 3: folders', () => {
   it('puts a version-2 exercise in no folder', () => {
     const { folderId: _, ...v2 } = { ...newExercise({ id: 'e1', now: 5 }), schemaVersion: 2 }

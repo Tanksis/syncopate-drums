@@ -6,7 +6,7 @@ import {
   applyEdit,
   compoundValue,
   editorBeatViews,
-  grooveOptions,
+  patternsFor,
   hihatFootOptions,
   newEditorState,
   newExercise,
@@ -16,7 +16,7 @@ import {
   setBeat,
   staffParts,
   sticking,
-  withGroove,
+  withPattern,
 } from './index'
 
 const fresh = () => newEditorState(newExercise({ id: 'e1', now: 0 }))
@@ -80,12 +80,12 @@ describe('moving between simple and compound time', () => {
     expect(grid(changed)).toEqual(['x... .... .... ....'])
   })
 
-  it('turns off a groove and a hi-hat foot that compound time has no place for, and undo brings them back', () => {
+  it('turns off a pattern and a hi-hat foot that compound time has no place for, and undo brings them back', () => {
     const state = fresh()
-    const practice = { ...state.exercise.practice, groove: 'jazz' as const, hihatFoot: 'ands' as const }
+    const practice = { ...state.exercise.practice, pattern: 'ride' as const, hihatFoot: 'ands' as const }
     const changed = inTime('6/8', { ...state, exercise: { ...state.exercise, practice } })
-    expect(changed.exercise.practice).toMatchObject({ groove: 'off', hihatFoot: 'off' })
-    expect(applyEdit(changed, { type: 'undo' }).exercise.practice).toMatchObject({ groove: 'jazz', hihatFoot: 'ands' })
+    expect(changed.exercise.practice).toMatchObject({ pattern: 'off', hihatFoot: 'off' })
+    expect(applyEdit(changed, { type: 'undo' }).exercise.practice).toMatchObject({ pattern: 'ride', hihatFoot: 'ands' })
   })
 
   it('keeps triplet beats between two simple time signatures', () => {
@@ -108,11 +108,12 @@ describe('moving between simple and compound time', () => {
     expect(grid(applyEdit(inTime('4/4', copied34), { type: 'pasteBars' }))).toEqual(['xxx .... .... ....'])
   })
 
-  it('offers no groove in compound time, and turning one on there is no change', () => {
-    expect(grooveOptions('6/8').map((p) => p.id)).toEqual(['off'])
-    expect(grooveOptions('3/4').map((p) => p.id)).toContain('hihatEighths')
+  it('offers no simple-time pattern in compound time, and picking one there is no change', () => {
+    const ids = (ts: '6/8' | '3/4') => patternsFor(ts).flatMap((g) => g.patterns.map((p) => p.id))
+    expect(ids('6/8')).not.toContain('hihatEighths')
+    expect(ids('3/4')).toContain('hihatEighths')
     const { exercise } = inTime('12/8')
-    expect(withGroove(exercise, 'hihatEighths')).toBe(exercise)
+    expect(withPattern(exercise, 'hihatEighths').exercise).toBe(exercise)
   })
 
   it('offers the hi-hat foot on 1 and on the beats in compound time', () => {
@@ -142,10 +143,10 @@ describe('importing compound time', () => {
     expect(struckAt(newEditorState(parsed.exercises[0]))).toEqual([0])
   })
 
-  it('turns off a groove and a hi-hat foot that 6/8 has no place for', () => {
-    const parsed = parseImport(file((e) => ({ ...e, practice: { ...e.practice, groove: 'jazz', hihatFoot: 'ands' } })))
+  it('turns off a pattern and a hi-hat foot that 6/8 has no place for', () => {
+    const parsed = parseImport(file((e) => ({ ...e, practice: { ...e.practice, pattern: 'ride', hihatFoot: 'ands' } })))
     if (!parsed.ok) throw new Error(parsed.reason)
-    expect(parsed.exercises[0].practice).toMatchObject({ groove: 'off', hihatFoot: 'off' })
+    expect(parsed.exercises[0].practice).toMatchObject({ pattern: 'off', hihatFoot: 'off' })
   })
 })
 

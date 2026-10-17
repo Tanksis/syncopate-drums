@@ -3,7 +3,7 @@
 
 import { REST_FIGURE } from './figures'
 import { fittedPractice } from './groove'
-import type { Bar, Exercise, GroovePresetId, HihatFoot, Hand, Item, LoopRange, Row, TimeSignature } from './model'
+import type { Bar, Exercise, PatternId, HihatFoot, Hand, Item, LoopRange, Row, TimeSignature } from './model'
 import {
   ROWS,
   TICKS_PER_BEAT,
@@ -18,7 +18,7 @@ import {
   withLoopRangeInBars,
 } from './model'
 import type { PatternGrid, PatternStep } from './pattern'
-import { withPattern } from './pattern'
+import { withPatternFill } from './pattern'
 import type { BeatView, GridPoint, RowView } from './speller'
 import {
   beatViews,
@@ -72,7 +72,7 @@ interface Snapshot {
   bars: Bar[]
   timeSignature: TimeSignature
   /** Taken back only with a change of time signature, which may have turned them off. */
-  groove: GroovePresetId
+  pattern: PatternId
   hihatFoot: HihatFoot
   settings: ExerciseSettings
   cursor: Cursor
@@ -142,13 +142,13 @@ export type EditCommand =
   /**
    * The Time group's time signature: every bar keeps its first beats and is cut or padded with
    * rests to the new bar's, as `withBeatsPerBar` does. Between simple and compound time, a beat
-   * not on the new time's grid keeps only its downbeat, as a grid switch does. A groove or hi-hat
+   * not on the new time's grid keeps only its downbeat, as a grid switch does. A pattern or hi-hat
    * foot the new time signature doesn't offer is turned off. The cursor stays in its bar.
    */
   | { type: 'setTimeSignature'; timeSignature: TimeSignature }
   /**
    * The bar ⋯ menu's "Fill with pattern…": replaces both rows of a bar with a sticking pattern on
-   * the grid given, as `withPattern` lays it, and moves the cursor to the bar's first beat.
+   * the grid given, as `withPatternFill` lays it, and moves the cursor to the bar's first beat.
    */
   | { type: 'fillPattern'; bar: number; pattern: PatternStep[]; grid: PatternGrid }
   /**
@@ -312,8 +312,8 @@ function snapshot(state: EditorState): Snapshot {
   const settings = Object.fromEntries(SETTING_KEYS.map((k) => [k, exercise[k]])) as ExerciseSettings
   const { cursor, pendingGrid } = state
   const { bars, timeSignature, practice } = exercise
-  const { groove, hihatFoot, loopRange } = practice
-  return { bars, timeSignature, groove, hihatFoot, settings, cursor, pendingGrid, loopRange }
+  const { pattern, hihatFoot, loopRange } = practice
+  return { bars, timeSignature, pattern, hihatFoot, settings, cursor, pendingGrid, loopRange }
 }
 
 const sameSettings = (a: ExerciseSettings, b: ExerciseSettings) => SETTING_KEYS.every((k) => a[k] === b[k])
@@ -329,8 +329,8 @@ function travel(state: EditorState, direction: 'undo' | 'redo'): EditorState {
       : { undo: [...undo, snapshot(state)], redo: redo.slice(0, -1) }
   const { timeSignature } = target
   const retimed = timeSignature !== state.exercise.timeSignature
-  const { groove, hihatFoot } = target
-  const practice = retimed ? { ...state.exercise.practice, groove, hihatFoot } : state.exercise.practice
+  const { pattern, hihatFoot } = target
+  const practice = retimed ? { ...state.exercise.practice, pattern, hihatFoot } : state.exercise.practice
   const exercise = { ...state.exercise, bars: target.bars, timeSignature, practice, ...target.settings }
   const resized = target.bars.length !== state.exercise.bars.length
   const { cursor, pendingGrid } = target
@@ -442,7 +442,7 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
       const { bar } = moved.cursor
       // In compound time a pattern is laid on the eighths, the beat's only grid.
       const grid = meter(state.exercise.timeSignature).compound ? 'triplets' : command.grid
-      const { exercise } = withPattern(state.exercise, bar, command.pattern, grid)
+      const { exercise } = withPatternFill(state.exercise, bar, command.pattern, grid)
       // A triplet beat that reads the same on either grid stays on the triplet grid it was filled on.
       const beats = beatsOf(state, bar)
       const others = state.pendingGrid.filter((i) => !beats.includes(i))
