@@ -7,8 +7,8 @@
 // voice stems up (ADRs 0002, 0004).
 
 import type { StemmableNote } from 'vexflow/bravura'
-import { Beam, Dot, Formatter, Fraction, GhostNote, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
-import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, Meter, NoteSticking, PlayPosition, StaffEvent } from '@/core'
+import { Beam, Dot, Formatter, Fraction, GhostNote, Renderer, Stave, StaveConnector, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
+import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, Meter, NoteSticking, PlayPosition, StaffBar, StaffEvent } from '@/core'
 import {
   NOTATION_LAYOUT,
   TICKS_PER_BEAT,
@@ -194,6 +194,8 @@ export interface NotationArea {
   height: number
   /** A short exercise grows, onto more lines if need be, to fill the area (see `notationFit`). */
   grow?: boolean
+  /** PROTOTYPE (as written / as played): which staves to draw; 'both' pairs them on each line. */
+  view?: 'played' | 'written' | 'both'
 }
 
 /**
@@ -208,24 +210,44 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   const { bars } = exercise
   const barMeter = meter(exercise.timeSignature)
   const { compound } = barMeter
-  const parts = staffParts(bars, exercise.practice.pattern, {
+  const view = area.view ?? 'played'
+  const played = staffParts(bars, exercise.practice.pattern, {
     swung: swingOn(exercise.practice),
     hihatFoot: exercise.practice.hihatFoot,
     bassDrum: exercise.practice.bassDrum,
     compound,
   })
-  /** A part is drawn when it has a note or a rest anywhere. */
-  const drawnLimbs = (['hands', 'feet'] as const).filter((limb) =>
-    parts.some((bar) => bar[limb].some((e) => e.kind !== 'space')),
-  )
-  // Compound time's eighths have no triplet "3"s to make room for.
-  const feetTriplets = !compound && parts.some((bar) => bar.feet.some((e) => e.triplet))
-  const handRow = !drawnLimbs.includes('feet') ? HAND_ROW_HANDS : feetTriplets ? HAND_ROW_FEET_TRIPLETS : HAND_ROW_FEET
-  const spaceAbove = SPACE_ABOVE_STAVE + (drawnLimbs.includes('hands') ? STEMS_UP_SPACE : 0)
-  /** The bar number's line above the stave, clear of the hands part's stems. */
-  const barNumberLine = drawnLimbs.includes('hands') ? STEMS_UP_SPACE : 0
-  const height = (spaceAbove + handRow + 1) * STAVE_LINE_GAP
-  const { scale, barsPerLine, barWidth } = notationFit({ bars: bars.length, ...area, lineHeight: height, minBarWidth: minBarWidthFor(parts) })
+  // PROTOTYPE: as written is the exercise alone, straight, with no pattern or feet.
+  const written = staffParts(bars, 'off', { compound })
+  const sources: { parts: StaffBar[]; label: string }[] =
+    view === 'both'
+      ? [
+          { parts: written, label: 'Written' },
+          { parts: played, label: 'Played' },
+        ]
+      : [{ parts: view === 'written' ? written : played, label: '' }]
+  let offset = 0
+  const systems = sources.map(({ parts, label }) => {
+    /** A part is drawn when it has a note or a rest anywhere. */
+    const drawnLimbs = (['hands', 'feet'] as const).filter((limb) =>
+      parts.some((bar) => bar[limb].some((e) => e.kind !== 'space')),
+    )
+    // Compound time's eighths have no triplet "3"s to make room for.
+    const feetTriplets = !compound && parts.some((bar) => bar.feet.some((e) => e.triplet))
+    const handRow = !drawnLimbs.includes('feet') ? HAND_ROW_HANDS : feetTriplets ? HAND_ROW_FEET_TRIPLETS : HAND_ROW_FEET
+    const spaceAbove = SPACE_ABOVE_STAVE + (drawnLimbs.includes('hands') ? STEMS_UP_SPACE : 0)
+    /** The bar number's line above the stave, clear of the hands part's stems. */
+    const barNumberLine = drawnLimbs.includes('hands') ? STEMS_UP_SPACE : 0
+    // The paired played staff prints no sticking (the written one does), so it needs less room under it.
+    const printsSticking = label !== 'Played'
+    const below = printsSticking ? handRow : feetTriplets ? 8 : drawnLimbs.includes('feet') ? 6 : 4
+    const system = { parts, label, drawnLimbs, handRow, spaceAbove, barNumberLine, offset, printsSticking, playhead: label !== 'Written' }
+    offset += (spaceAbove + below + 1) * STAVE_LINE_GAP
+    return system
+  })
+  const height = offset + (view === 'both' ? 2 * STAVE_LINE_GAP : 0)
+  const minBarWidth = Math.max(...sources.map((s) => minBarWidthFor(s.parts)))
+  const { scale, barsPerLine, barWidth } = notationFit({ bars: bars.length, ...area, lineHeight: height, minBarWidth })
   const lines = Math.ceil(bars.length / barsPerLine)
 
   const renderer = new Renderer(el as HTMLDivElement, Renderer.Backends.SVG)
@@ -234,6 +256,7 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   ctx.scale(scale, scale)
   const colour = {
     ink: token('color-ink'),
+    mute: token('color-mute'),
     notationAccent: token('color-notation-accent'),
     currentBar: token('color-accent-tint'),
     loopInk: token('color-loop-ink'),
@@ -241,74 +264,95 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   }
   const font = token('font-numbers')
   const stickings = new Map(sticking(exercise).map((n) => [n.noteId, n]))
-  /** The last drawn note of each drum, with its line, to tie the next one to. */
-  const lastOf = new Map<string, TieEnd>()
+  /** The last drawn note of each drum, with its line, to tie the next one to; one map per staff. */
+  const lastOfs = systems.map(() => new Map<string, TieEnd>())
   const ties: StaveTie[] = []
   /** Where the playhead line goes for each struck position, by `bar:tick`. */
   const marks = new Map<string, PlayheadMark>()
+  const labels: { x: number; y: number; text: string }[] = []
 
   bars.forEach((_, b) => {
     const line = Math.floor(b / barsPerLine)
     const column = b % barsPerLine
     const x = MARGIN + (column === 0 ? 0 : CLEF_WIDTH + column * barWidth)
     const w = barWidth + (column === 0 ? CLEF_WIDTH : 0)
-    const y = STAVE_TOP + line * height
+    const staves: Stave[] = []
 
-    const stave = new Stave(x, y, w, { spaceAboveStaffLn: spaceAbove })
-    if (column === 0) stave.addClef('percussion')
-    if (b === 0) stave.addTimeSignature(exercise.timeSignature)
-    if (b === cursor?.bar) {
-      ctx.save()
-      ctx.setFillStyle(colour.currentBar)
-      ctx.fillRect(x, stave.getYForLine(-1), w, stave.getYForLine(5) - stave.getYForLine(-1))
-      ctx.restore()
-    }
-    if (inLoopRange(exercise.practice.loopRange, b)) {
-      // A band across the top of each looped bar, behind its number, so the range reads as one strip.
-      const bandTop = stave.getYForTopText(barNumberLine) + 3 - LOOP_BAND_HEIGHT + 2
-      ctx.save()
-      ctx.setFillStyle(colour.loop)
-      ctx.fillRect(x, bandTop, w, LOOP_BAND_HEIGHT)
-      ctx.restore()
-    }
-    stave.setContext(ctx).draw()
-    drawBarNumber(stave, b, exercise.practice.loopRange, barNumberLine, colour.loopInk, font)
-
-    const drawings = drawnLimbs
-      .filter((limb) => parts[b][limb].length)
-      .map((limb): PartDrawing => ({ limb, drawn: parts[b][limb].map((event) => ({ event, note: eventNote(event, limb, compound) })) }))
-    // The cursor's beat is lit in both parts, which hold the snare row and the kick row.
-    for (const { drawn } of drawings) {
-      if (b !== cursor?.bar) continue
-      for (const { event, note } of drawn) {
-        if (Math.floor(event.start / TICKS_PER_BEAT) === cursor.beat) note.setStyle({ fillStyle: colour.notationAccent, strokeStyle: colour.notationAccent })
+    systems.forEach((sys, si) => {
+      const { parts, drawnLimbs, handRow, spaceAbove, barNumberLine } = sys
+      const y = STAVE_TOP + line * height + sys.offset
+      const stave = new Stave(x, y, w, { spaceAboveStaffLn: spaceAbove })
+      staves.push(stave)
+      if (column === 0) stave.addClef('percussion')
+      if (b === 0) stave.addTimeSignature(exercise.timeSignature)
+      if (b === cursor?.bar) {
+        ctx.save()
+        ctx.setFillStyle(colour.currentBar)
+        ctx.fillRect(x, stave.getYForLine(-1), w, stave.getYForLine(5) - stave.getYForLine(-1))
+        ctx.restore()
       }
-    }
-    drawParts(stave, drawings, barMeter, Math.max(30, x + w - stave.getNoteStartX() - 18))
+      if (si === 0 && inLoopRange(exercise.practice.loopRange, b)) {
+        // A band across the top of each looped bar, behind its number, so the range reads as one strip.
+        const bandTop = stave.getYForTopText(barNumberLine) + 3 - LOOP_BAND_HEIGHT + 2
+        ctx.save()
+        ctx.setFillStyle(colour.loop)
+        ctx.fillRect(x, bandTop, w, LOOP_BAND_HEIGHT)
+        ctx.restore()
+      }
+      stave.setContext(ctx).draw()
+      if (si === 0) drawBarNumber(stave, b, exercise.practice.loopRange, barNumberLine, colour.loopInk, font)
+      if (column === 0 && sys.label) labels.push({ x: x + 16, y: stave.getYForLine(-1.5), text: sys.label })
 
-    const top = stave.getYForLine(-PLAYHEAD_OVERHANG)
-    const bottom = stave.getYForLine(4 + PLAYHEAD_OVERHANG)
-    for (const { drawn } of drawings) {
-      for (const { event, note } of drawn) {
-        if (event.kind !== 'chord' || !(note instanceof StaveNote)) continue
-        for (const tick of event.strikes) marks.set(`${b}:${tick}`, { x: noteCentre(note), top, bottom })
-        // Tagged with its beat, so a click on it can move the cursor there.
-        const svg = note.getSVGElement()
-        svg?.setAttribute('data-bar', String(b))
-        svg?.setAttribute('data-beat', String(Math.floor(event.start / TICKS_PER_BEAT)))
-        svg?.classList.add('cursor-pointer')
-        for (const n of event.notes) {
-          const index = keyIndex(event, n.drum)
-          const previous = lastOf.get(n.drum)
-          if (n.tied && previous) ties.push(...tie(previous, { note, index, line }))
-          lastOf.set(n.drum, { note, index, line })
-          const noteSticking = n.noteId && !n.tied ? stickings.get(n.noteId) : undefined
-          if (noteSticking) drawSticking(stave, note, noteSticking, handRow, colour.notationAccent, font)
+      const drawings = drawnLimbs
+        .filter((limb) => parts[b][limb].length)
+        .map((limb): PartDrawing => ({ limb, drawn: parts[b][limb].map((event) => ({ event, note: eventNote(event, limb, compound) })) }))
+      // The cursor's beat is lit in both parts, which hold the snare row and the kick row.
+      for (const { drawn } of drawings) {
+        if (b !== cursor?.bar) continue
+        for (const { event, note } of drawn) {
+          if (Math.floor(event.start / TICKS_PER_BEAT) === cursor.beat) note.setStyle({ fillStyle: colour.notationAccent, strokeStyle: colour.notationAccent })
         }
       }
+      drawParts(stave, drawings, barMeter, Math.max(30, x + w - stave.getNoteStartX() - 18))
+
+      const top = stave.getYForLine(-PLAYHEAD_OVERHANG)
+      const bottom = stave.getYForLine(4 + PLAYHEAD_OVERHANG)
+      for (const { drawn } of drawings) {
+        for (const { event, note } of drawn) {
+          if (event.kind !== 'chord' || !(note instanceof StaveNote)) continue
+          if (sys.playhead) for (const tick of event.strikes) marks.set(`${b}:${tick}`, { x: noteCentre(note), top, bottom })
+          // Tagged with its beat, so a click on it can move the cursor there.
+          const svg = note.getSVGElement()
+          svg?.setAttribute('data-bar', String(b))
+          svg?.setAttribute('data-beat', String(Math.floor(event.start / TICKS_PER_BEAT)))
+          svg?.classList.add('cursor-pointer')
+          for (const n of event.notes) {
+            const index = keyIndex(event, n.drum)
+            const previous = lastOfs[si].get(n.drum)
+            if (n.tied && previous) ties.push(...tie(previous, { note, index, line }))
+            lastOfs[si].set(n.drum, { note, index, line })
+            const noteSticking = sys.printsSticking && n.noteId && !n.tied ? stickings.get(n.noteId) : undefined
+            if (noteSticking) drawSticking(stave, note, noteSticking, handRow, colour.notationAccent, font)
+          }
+        }
+      }
+    })
+    // A paired line's staves share their barlines, with a bracket at the line's start, as a score's system does.
+    if (staves.length > 1) {
+      const [first, last] = [staves[0], staves.at(-1)!]
+      if (column === 0) new StaveConnector(first, last).setType('bracket').setContext(ctx).draw()
+      new StaveConnector(first, last).setType('singleLeft').setContext(ctx).draw()
+      new StaveConnector(first, last).setType('singleRight').setContext(ctx).draw()
     }
   })
   ties.forEach((t) => t.setContext(ctx).draw())
+  for (const { x, y, text } of labels) {
+    ctx.save()
+    ctx.setFont(font, 9, 'bold')
+    ctx.setFillStyle(colour.mute)
+    ctx.fillText(text.toUpperCase(), x, y)
+    ctx.restore()
+  }
   recolour(el, colour.ink)
 
   // In the page's pixels, so scaled.

@@ -3,10 +3,17 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { useResolvedTheme } from '@/app/theme'
 import { usePhoneWindow } from '@/app/useMediaQuery'
+import { Segmented } from '@/components/Segmented'
+import { PrototypeSwitcher, useVariant } from '@/components/PrototypeSwitcher'
+import { swingOn } from '@/core'
 import { BeatCount, useBeatCount } from './BeatCount'
 import { followPlayback, scrollLineIntoView } from './followPlayback'
 import type { Drawing, NotationArea } from './staff'
 import { drawExercise, notationFontsReady } from './staff'
+
+// PROTOTYPE (as written / as played): three ways to show the line as written beside the line as played.
+const VARIANTS = { A: 'Automatic: both staves', B: 'Toggle: As written adds a staff', C: 'Switch: Written | Played' }
+const VARIANT_KEYS = Object.keys(VARIANTS)
 
 /**
  * The notation, scrolling in its own area. Given `corner` (the desktop play button), that's pinned
@@ -40,6 +47,13 @@ export function NotationView({ corner, coveredBottom, grow = false }: { corner?:
   /** Counts the web fonts loaded, so the notation is measured again in a look's font once it arrives. */
   const [fontsLoaded, setFontsLoaded] = useState(0)
   const drawingRef = useRef<Drawing>(undefined)
+  const variant = useVariant(VARIANT_KEYS)
+  const [showWritten, setShowWritten] = useState(false)
+  const [which, setWhich] = useState<'written' | 'played'>('played')
+  const { practice } = exercise
+  /** The line is played differently from how it's written: a swing, a pattern or the feet. */
+  const differs = swingOn(practice) || practice.pattern !== 'off' || practice.hihatFoot !== 'off' || practice.bassDrum !== 'off'
+  const view = !differs ? 'played' : variant === 'A' ? 'both' : variant === 'B' ? (showWritten ? 'both' : 'played') : which
 
   useEffect(() => {
     let live = true
@@ -72,10 +86,10 @@ export function NotationView({ corner, coveredBottom, grow = false }: { corner?:
     if (!fontsReady || area.width === 0) return
     // While playing, the cursor isn't drawn, so only the playhead line marks the music, and the view
     // follows the playback rather than the cursor.
-    const drawing = (drawingRef.current = drawExercise(staffRef.current!, exercise, playing ? null : cursor, { ...area, grow }))
+    const drawing = (drawingRef.current = drawExercise(staffRef.current!, exercise, playing ? null : cursor, { ...area, grow, view }))
     // Keep the cursor's line in view as typing runs past the bottom.
     if (!playing) scrollLineIntoView(scrollerRef.current!, staffRef.current!, drawing.line(cursor.bar), coverRef.current?.offsetHeight)
-  }, [exercise, cursor, area, grow, fontsReady, fontsLoaded, playing, theme, look])
+  }, [exercise, cursor, area, grow, fontsReady, fontsLoaded, playing, theme, look, view])
 
   useEffect(() => {
     if (playing) return followPlayback(scrollerRef.current!, staffRef.current!, () => drawingRef.current)
@@ -110,6 +124,27 @@ export function NotationView({ corner, coveredBottom, grow = false }: { corner?:
       </section>
       {corner && <div className="absolute top-2.5 left-2.5 z-10">{corner}</div>}
       {beatCount && <BeatCount count={beatCount} small={phone} />}
+      {differs && variant === 'B' && (
+        <label className={`absolute top-3 z-10 flex cursor-pointer items-center gap-1.5 rounded-full border border-line bg-panel px-2.5 py-1 text-xs text-mute select-none ${corner ? 'left-16' : 'left-4'}`}>
+          <input type="checkbox" checked={showWritten} onChange={(e) => setShowWritten(e.target.checked)} className="accent-current" />
+          As written
+        </label>
+      )}
+      {differs && variant === 'C' && (
+        <div className={`absolute top-2.5 z-10 ${corner ? 'left-16' : 'left-4'}`}>
+          <Segmented
+            label="Show the line"
+            options={[
+              { value: 'written', label: 'Written' },
+              { value: 'played', label: 'Played' },
+            ]}
+            value={which}
+            onChange={setWhich}
+            small
+          />
+        </div>
+      )}
+      <PrototypeSwitcher variants={VARIANTS} />
     </div>
   )
 }
