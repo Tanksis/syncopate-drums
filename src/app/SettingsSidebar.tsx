@@ -1,14 +1,14 @@
 import { useAppStore } from '@/app/store'
 import { SidebarHeading } from '@/components/Sidebar'
 import { MetronomeRhythm } from '@/features/metronome/MetronomePage'
-import { MetronomeSoundSettings, PracticeSettings } from '@/features/settings/SettingsSidebar'
+import { PracticeSettings } from '@/features/settings/SettingsSidebar'
 
 /**
  * The desktop's settings sidebar, at the same width and in the same state on both screens: the
  * screen's own settings, headed Practice settings or Metronome settings: Practice's time, groove and
- * sticking, or the Metronome's time signature, subdivision and sound. It scrolls when it must. The
- * mix and the appearance are in the header's Mix and Preferences. `playbackGroup` as for
- * `PracticeSettings`.
+ * sticking, or the Metronome's time signature and subdivision. It scrolls when it must. The screen's
+ * sound (the mix, or the metronome's click and volume) and the appearance are in the header's speaker
+ * and Preferences. `playbackGroup` as for `PracticeSettings`.
  */
 export function SettingsSidebar({ onCollapse, playbackGroup }: { onCollapse: () => void; playbackGroup: boolean }) {
   const onMetronome = useAppStore((s) => s.device.screen === 'metronome')
@@ -18,14 +18,7 @@ export function SettingsSidebar({ onCollapse, playbackGroup }: { onCollapse: () 
           padding beside it is less, so the rows sit nearly centred without it. */}
       <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-auto p-3 pr-1.5 [scrollbar-gutter:stable]">
         <SidebarHeading name={onMetronome ? 'Metronome settings' : 'Practice settings'} sidebarName="Settings" side="right" onCollapse={onCollapse} />
-        {onMetronome ? (
-          <>
-            <MetronomeRhythm />
-            <MetronomeSoundSettings />
-          </>
-        ) : (
-          <PracticeSettings playbackGroup={playbackGroup} />
-        )}
+        {onMetronome ? <MetronomeRhythm /> : <PracticeSettings playbackGroup={playbackGroup} />}
       </div>
     </aside>
   )

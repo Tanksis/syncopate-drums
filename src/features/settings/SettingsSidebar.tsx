@@ -82,10 +82,10 @@ export function MixSettings() {
   )
 }
 
-/** The Metronome screen's sound and volume, under its rhythm in the desktop's settings sidebar. */
+/** The Metronome screen's click sound and volume, in the panel the desktop header's speaker opens there. */
 export function MetronomeSoundSettings() {
   return (
-    <SettingGroup title="Sound">
+    <SettingGroup title="Metronome sound">
       <MetronomeSound />
       <MetronomeVolume row />
     </SettingGroup>
