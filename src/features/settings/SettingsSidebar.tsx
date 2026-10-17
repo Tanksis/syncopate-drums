@@ -16,7 +16,7 @@ import { keepFocus } from '@/components/keepFocus'
 import { MetronomeVolume } from '@/features/metronome/MetronomeVolume'
 import { SOUND_OPTIONS, pickSound } from '@/features/metronome/SoundSheet'
 import { LoopChip } from '@/features/playback/LoopChip'
-import { ClickToggle, CountInToggle } from '@/features/playback/TransportControls'
+import { CountInToggle } from '@/features/playback/TransportControls'
 import type { BassDrum, ExerciseSettings, Hand, HihatFoot, Layer, PatternSuggestion, StickingMode, Theme, TimeSignature, VolumeSetting } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
@@ -35,25 +35,12 @@ import {
 } from '@/core'
 
 /**
- * The Practice screen's own settings, at the top of the desktop's settings sidebar: the time (and
- * swing), the groove and the sticking. `playbackGroup` adds the Click and Count-in chips and the loop chip, for when the exercise's bar has no
- * room for them.
+ * The Practice screen's own settings, in the desktop's settings sidebar: the time (and swing), the
+ * groove and the sticking.
  */
-export function PracticeSettings({ playbackGroup = false }: { playbackGroup?: boolean }) {
+export function PracticeSettings() {
   return (
     <>
-      {playbackGroup && (
-        <SettingGroup title="Playback">
-          {/* Wrapping, since the two together are a little wider than the sidebar. */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <LoopChip />
-            <div className="flex items-center gap-2">
-              <ClickToggle />
-              <CountInToggle />
-            </div>
-          </div>
-        </SettingGroup>
-      )}
       <SettingGroup title="Time">
         <TimeSignatureChoice />
         <Swing />
