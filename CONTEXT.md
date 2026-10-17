@@ -34,7 +34,7 @@ _Avoid_: Hit, stroke, event
 The span of bars within an exercise that repeats during practice; the whole exercise by default.
 
 **Practice settings**:
-How an exercise is practiced rather than what it contains: BPM, loop range, groove preset, swing amount and hi-hat foot. Remembered per exercise.
+How an exercise is practiced rather than what it contains: BPM, loop range, pattern, bass drum, hi-hat foot and swing amount. Remembered per exercise.
 
 **Device settings**:
 How the app is set up on this computer rather than how an exercise is practiced: volumes and mutes (the Mix), the count-in toggle, the theme and mode, the notation's fit and the beat count, which exercise was last open, which sidebar tab is showing, which folders are collapsed, whether the grid editor is collapsed, which screen is showing, and the metronome's settings. Kept per device and never exported.
@@ -159,11 +159,16 @@ A hand the user has set manually on one note, replacing the computed sticking; a
 Extra drum-set instruments (e.g. jazz ride pattern and hi-hat on 2 & 4) written on the same staff as an exercise's notes, in the hands part or the feet part, and played back with it.
 _Avoid_: Overlay, accompaniment, backing
 
-**Groove preset**:
-A named, predefined groove layer the user picks from (e.g. "Jazz ride + hi-hat 2 & 4").
+**Pattern**:
+The part of the groove layer played on the hands, the same in every bar, picked by name from a list grouped by style (Jazz, Rock & pop…) that shows only the patterns fitting the time signature: **Ride** (the jazz ride) and **Hi-hat 8ths**, or none. A pattern has no feet of its own. Picking Ride on a straight exercise also sets Triplet swing, and the hi-hat foot to 2 & 4 if it was off (in 4/4); the picker says so, with an Undo.
+_Avoid_: Groove preset (its old name, which also held the feet)
+
+**Bass drum**:
+A practice setting under the Groove group's **Feet**: off, or **feathered**, played softly on every beat (each dotted quarter in compound time), with any pattern or none. The kick row's notes are the exercise's own bass drum; this is the groove's.
+_Avoid_: Kick (the kick row)
 
 **Hi-hat foot**:
-A practice setting that plays the hi-hat pedal as an ostinato in every bar (on 1, quarters, 2 & 4 or off-beats, the &s), alongside any groove preset and replacing the preset's own hi-hat foot (ADR 0010).
+A practice setting under the Groove group's **Feet** that plays the hi-hat pedal in every bar (on 1, on the beats, 2 & 4 or the &s), with any pattern or none (ADR 0010). Only what fits the meter is offered: 2 & 4 only in 4/4, and 1 or the beats in compound time. Under a pattern it is written as part of the groove; with none, as an ostinato under the line (ADR 0012).
 _Avoid_: Hi-hat row, chick
 
 **Swing feel**:
@@ -171,4 +176,4 @@ Playback where off-beat eighths are delayed into a long-short (triplet-like) fee
 _Avoid_: Shuffle
 
 **Swing amount**:
-How long the first eighth of each beat is, as a share of the beat: 50% is straight (where a new exercise starts), 66.7% is triplet swing (set when a jazz groove is picked on a straight exercise). It is the amount at slow and medium tempos; playback eases it toward straight as the tempo rises. Notated triplets are never swung. It is picked from three presets, **Straight** (50%), **Triplet** (66.7%) and **Dotted** (75%), or as a **Custom** amount anywhere from 50% to 75%; an amount that isn't one of the three is a custom one.
+How long the first eighth of each beat is, as a share of the beat: 50% is straight (where a new exercise starts), 66.7% is triplet swing (set when Ride is picked on a straight exercise). It is the amount at slow and medium tempos; playback eases it toward straight as the tempo rises. Notated triplets are never swung. It is picked from three presets, **Straight** (50%), **Triplet** (66.7%) and **Dotted** (75%), or as a **Custom** amount anywhere from 50% to 75%; an amount that isn't one of the three is a custom one.

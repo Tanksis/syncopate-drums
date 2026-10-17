@@ -1,7 +1,7 @@
-// The groove presets: predefined groove layers played and drawn above the exercise, the same in
-// every bar, and the hi-hat foot setting layered with them (ADR 0010).
+// The groove layer: a pattern played and drawn above the exercise, the same in every bar, and the
+// feet under it, the bass drum and the hi-hat foot, each a setting of its own (ADR 0010).
 
-import type { Exercise, GroovePresetId, HihatFoot, PracticeSettings, TimeSignature } from './model'
+import type { BassDrum, Exercise, HihatFoot, Meter, PatternId, PracticeSettings, TimeSignature } from './model'
 import { HIHAT_FOOT_SETTINGS, TICKS_PER_BEAT, TRIPLET_SWING, meter, swingOn } from './model'
 import type { Instrument } from './schedule'
 
@@ -11,7 +11,7 @@ export interface GrooveNotation {
   notehead: 'x' | 'normal'
 }
 
-/** One hit of a groove preset, at a tick in the bar. */
+/** One hit of the groove layer, at a tick in the bar. */
 export interface GrooveHit {
   tick: number
   instrument: Instrument
@@ -20,9 +20,20 @@ export interface GrooveHit {
   notation: GrooveNotation
 }
 
-export interface GroovePreset {
-  id: GroovePresetId
+/** The styles the Pattern picker groups the patterns by. */
+export type PatternFamily = 'Jazz' | 'Rock & pop' | 'Afro-Cuban' | 'Blues'
+
+export interface Pattern {
+  id: PatternId
+  /** None has no family. */
+  family: PatternFamily | null
   name: string
+  /** One line saying what it plays. */
+  description: string
+  /** What it plays over a bar, one character per eighth: `x` a hit, `.` none; empty for None. */
+  strip: string
+  /** Whether it has a place in a bar of this meter. */
+  fits: (meter: Meter) => boolean
   /** Every bar's hits, in tick order, in a bar of this many beats. */
   hits: (beats: number) => GrooveHit[]
 }
@@ -35,29 +46,14 @@ const BASS_DRUM: GrooveNotation = { key: 'f/4', notehead: 'normal' }
 /** The tick of a beat, or of the & of it. */
 const at = (beat: number, eighth = 0) => beat * TICKS_PER_BEAT + eighth * (TICKS_PER_BEAT / 2)
 
-const hihatFootHit = (tick: number): GrooveHit => ({ tick, instrument: 'hihatPedal', velocity: 1, notation: HIHAT_FOOT })
-
 /** The bar's beats, from 0. */
 const beatsOfBar = (beats: number) => Array.from({ length: beats }, (_, beat) => beat)
 
-/**
- * The jazz ride pattern, louder on 2 and 4, with the hi-hat foot on 2 and 4, and optionally a
- * feathered bass drum on every beat. Beats 2 and 4 have the & (in 3/4 and 2/4, beat 2 only).
- */
-function jazzRide(beats: number, { feathered }: { feathered: boolean }): GrooveHit[] {
+/** The jazz ride pattern, louder on 2 and 4. Beats 2 and 4 have the & (in 3/4 and 2/4, beat 2 only). */
+function ride(beats: number): GrooveHit[] {
   return beatsOfBar(beats).flatMap((beat): GrooveHit[] => {
-    const ride = (eighth: number, velocity: number): GrooveHit =>
-      ({ tick: at(beat, eighth), instrument: 'ride', velocity, notation: RIDE })
-    const feather: GrooveHit[] = feathered
-      ? [{ tick: at(beat), instrument: 'kickFeathered', velocity: 1, notation: BASS_DRUM }]
-      : []
-    if (beat % 2 === 0) return [ride(0, 0.85), ...feather]
-    return [
-      ride(0, 1),
-      hihatFootHit(at(beat)),
-      ...feather,
-      ride(1, 0.7),
-    ]
+    const hit = (eighth: number, velocity: number): GrooveHit => ({ tick: at(beat, eighth), instrument: 'ride', velocity, notation: RIDE })
+    return beat % 2 === 0 ? [hit(0, 0.85)] : [hit(0, 1), hit(1, 0.7)]
   })
 }
 
@@ -69,20 +65,51 @@ function hihatEighths(beats: number): GrooveHit[] {
   ])
 }
 
-export const GROOVE_PRESETS: readonly GroovePreset[] = [
-  { id: 'off', name: 'Off', hits: () => [] },
-  { id: 'jazz', name: 'Jazz ride + hi-hat 2 & 4', hits: (beats) => jazzRide(beats, { feathered: false }) },
+const simple = (m: Meter) => !m.compound
+
+const PATTERNS: readonly Pattern[] = [
+  { id: 'off', family: null, name: 'None', description: 'Just the click and your exercise.', strip: '', fits: () => true, hits: () => [] },
+  { id: 'ride', family: 'Jazz', name: 'Ride', description: 'The swing ride: 1, 2 &, 3, 4 &.', strip: 'x.xxx.xx', fits: simple, hits: ride },
   {
-    id: 'jazzFeathered',
-    name: 'Jazz ride + hi-hat 2 & 4 + feathered bass drum',
-    hits: (beats) => jazzRide(beats, { feathered: true }),
+    id: 'hihatEighths',
+    family: 'Rock & pop',
+    name: 'Hi-hat 8ths',
+    description: 'Eighths on the closed hi-hat.',
+    strip: 'xxxxxxxx',
+    fits: simple,
+    hits: hihatEighths,
   },
-  { id: 'hihatEighths', name: 'Straight eighths on hi-hat', hits: hihatEighths },
 ]
 
-/** The preset with this id; an id this version of the app doesn't know plays no groove. */
-export function groovePreset(id: GroovePresetId): GroovePreset {
-  return GROOVE_PRESETS.find((p) => p.id === id) ?? GROOVE_PRESETS[0]
+/** The pattern with this id; an id this version of the app doesn't know plays none. */
+export function patternById(id: PatternId): Pattern {
+  return PATTERNS.find((p) => p.id === id) ?? PATTERNS[0]
+}
+
+export const PATTERN_IDS: readonly PatternId[] = PATTERNS.map((p) => p.id)
+
+/** The patterns that fit a time signature, grouped by family in picker order: None, on its own, first. */
+export function patternsFor(timeSignature: TimeSignature): { family: PatternFamily | null; patterns: Pattern[] }[] {
+  const m = meter(timeSignature)
+  const groups: { family: PatternFamily | null; patterns: Pattern[] }[] = []
+  for (const p of PATTERNS.filter((p) => p.fits(m))) {
+    const group = groups.find((g) => g.family === p.family)
+    if (group) group.patterns.push(p)
+    else groups.push({ family: p.family, patterns: [p] })
+  }
+  return groups
+}
+
+/** A pattern's hits in every bar of a meter, in tick order; none where it doesn't fit. */
+export function patternHits(id: PatternId, m: Meter): GrooveHit[] {
+  const p = patternById(id)
+  return p.fits(m) ? p.hits(m.beats) : []
+}
+
+/** The feathered bass drum: softly on every beat, a dotted quarter in compound time. */
+export function bassDrumHits(bassDrum: BassDrum, beats: number): GrooveHit[] {
+  if (bassDrum === 'off') return []
+  return beatsOfBar(beats).map((beat) => ({ tick: at(beat), instrument: 'kickFeathered', velocity: 1, notation: BASS_DRUM }))
 }
 
 /** The ticks each hi-hat foot setting plays on, in every bar of this many beats. */
@@ -102,6 +129,11 @@ function hihatFootTicks(hihatFoot: HihatFoot, beats: number): number[] {
   }
 }
 
+/** The hi-hat foot setting's hits in every bar of this many beats. */
+export function hihatFootHits(hihatFoot: HihatFoot, beats: number): GrooveHit[] {
+  return hihatFootTicks(hihatFoot, beats).map((tick) => ({ tick, instrument: 'hihatPedal', velocity: 1, notation: HIHAT_FOOT }))
+}
+
 /**
  * The hi-hat foot settings that fit a time signature: 2 & 4 only in 4/4, and in compound time only
  * on 1 or on the beats, whose eighths have no &.
@@ -111,14 +143,10 @@ export function hihatFootOptions(timeSignature: TimeSignature): HihatFoot[] {
   return HIHAT_FOOT_SETTINGS.filter((foot) => foot !== 'twoAndFour' || timeSignature === '4/4')
 }
 
-/** The groove presets that fit a time signature: in compound time none do, so only Off. */
-export function grooveOptions(timeSignature: TimeSignature): readonly GroovePreset[] {
-  return meter(timeSignature).compound ? [GROOVE_PRESETS[0]] : GROOVE_PRESETS
-}
-
-/** A groove preset as it plays in a time signature: off where the time signature doesn't offer it. */
-export function fittedGroove(groove: GroovePresetId, timeSignature: TimeSignature): GroovePresetId {
-  return grooveOptions(timeSignature).some((p) => p.id === groove) ? groove : 'off'
+/** A pattern as it plays in a time signature: none where the time signature doesn't offer it. */
+export function fittedPattern(id: PatternId, timeSignature: TimeSignature): PatternId {
+  const p = patternById(id)
+  return p.id === id && p.fits(meter(timeSignature)) ? id : 'off'
 }
 
 /** A hi-hat foot setting as it plays in a time signature: off where the time signature doesn't offer it. */
@@ -126,36 +154,54 @@ export function fittedHihatFoot(hihatFoot: HihatFoot, timeSignature: TimeSignatu
   return hihatFootOptions(timeSignature).includes(hihatFoot) ? hihatFoot : 'off'
 }
 
-/** Practice settings fitted to a time signature: a groove or hi-hat foot it doesn't offer is turned off. */
+/** Practice settings fitted to a time signature: a pattern or hi-hat foot it doesn't offer is turned off. */
 export function fittedPractice(practice: PracticeSettings, timeSignature: TimeSignature): PracticeSettings {
-  const groove = fittedGroove(practice.groove, timeSignature)
+  const fitted = fittedPattern(practice.pattern, timeSignature)
   const hihatFoot = fittedHihatFoot(practice.hihatFoot, timeSignature)
-  return groove === practice.groove && hihatFoot === practice.hihatFoot ? practice : { ...practice, groove, hihatFoot }
+  return fitted === practice.pattern && hihatFoot === practice.hihatFoot ? practice : { ...practice, pattern: fitted, hihatFoot }
 }
 
-const JAZZ_GROOVES: readonly GroovePresetId[] = ['jazz', 'jazzFeathered']
+/** A setting picking a pattern may also change, so the picker can say so and offer to undo it. */
+export type PatternSuggestion = 'swing' | 'hihatFoot'
 
 /**
- * The exercise with a groove preset, as it was if it already has that one. Moving from another
- * groove to a jazz one on a straight exercise also sets triplet swing, since a jazz ride is never
- * played straight (ADR 0007). Any other swing amount, or a straight feel chosen while already on a
- * jazz groove, is left as the drummer set it. A groove the time signature doesn't offer is no change.
+ * The exercise with a pattern, and what else the pick changed. Ride on a straight exercise also
+ * sets triplet swing, since a jazz ride is never played straight (ADR 0007), and sets the hi-hat
+ * foot to 2 & 4 when it is off and the meter offers 2 & 4. Any other swing amount or hi-hat foot is
+ * left as the drummer set it, and the bass drum is never changed. The same pattern, or one the
+ * time signature doesn't offer, is no change.
  */
-export function withGroove(exercise: Exercise, groove: GroovePresetId): Exercise {
-  const { practice } = exercise
-  if (groove === practice.groove || fittedGroove(groove, exercise.timeSignature) !== groove) return exercise
-  const turnsSwingOn = JAZZ_GROOVES.includes(groove) && !JAZZ_GROOVES.includes(practice.groove) && !swingOn(practice)
-  return { ...exercise, practice: { ...practice, groove, swing: turnsSwingOn ? TRIPLET_SWING : practice.swing } }
+export function withPattern(exercise: Exercise, id: PatternId): { exercise: Exercise; suggested: PatternSuggestion[] } {
+  const { practice, timeSignature } = exercise
+  if (id === practice.pattern || fittedPattern(id, timeSignature) !== id) return { exercise, suggested: [] }
+  const suggested: PatternSuggestion[] = []
+  let { swing, hihatFoot } = practice
+  if (id === 'ride') {
+    if (!swingOn(practice)) {
+      swing = TRIPLET_SWING
+      suggested.push('swing')
+    }
+    if (hihatFoot === 'off' && hihatFootOptions(timeSignature).includes('twoAndFour')) {
+      hihatFoot = 'twoAndFour'
+      suggested.push('hihatFoot')
+    }
+  }
+  return { exercise: { ...exercise, practice: { ...practice, pattern: id, swing, hihatFoot } }, suggested }
 }
 
+/** The settings that make up the groove layer. */
+export type GrooveSettings = Pick<PracticeSettings, 'pattern' | 'bassDrum' | 'hihatFoot'>
+
 /**
- * The groove layer's hits by the tick they are struck at, in tick order, in a bar of `beats`: the
- * preset's, and with the hi-hat foot setting on, its hits in place of the preset's own hi-hat foot.
+ * The groove layer's hits by the tick they are struck at, in tick order, in every bar of a meter:
+ * the pattern's, the bass drum's and the hi-hat foot's.
  */
-export function grooveHitsByTick(id: GroovePresetId, hihatFoot: HihatFoot = 'off', beats = 4): Map<number, GrooveHit[]> {
-  const preset = groovePreset(id).hits(beats)
-  const foot = hihatFootTicks(hihatFoot, beats).map(hihatFootHit)
-  const hits = hihatFoot === 'off' ? preset : [...preset.filter((hit) => hit.instrument !== 'hihatPedal'), ...foot]
+export function grooveHitsByTick({ pattern: id, bassDrum, hihatFoot }: GrooveSettings, m: Meter): Map<number, GrooveHit[]> {
+  return hitsByTick([...patternHits(id, m), ...bassDrumHits(bassDrum, m.beats), ...hihatFootHits(hihatFoot, m.beats)])
+}
+
+/** Hits by the tick they are struck at, in tick order. */
+export function hitsByTick(hits: readonly GrooveHit[]): Map<number, GrooveHit[]> {
   const byTick = new Map<number, GrooveHit[]>()
   for (const hit of [...hits].sort((a, b) => a.tick - b.tick)) byTick.set(hit.tick, [...(byTick.get(hit.tick) ?? []), hit])
   return byTick

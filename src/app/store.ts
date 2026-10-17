@@ -2,7 +2,7 @@
 // change, unless it is an example, which is never stored (ADR 0008).
 
 import { create } from 'zustand'
-import type { DeviceSettings, EditCommand, MetronomeSettings, EditorState, Exercise, Folder, GroovePresetId, HihatFoot, ImportChoice, PatternGrid, PlayPosition } from '@/core'
+import type { BassDrum, DeviceSettings, EditCommand, MetronomeSettings, EditorState, Exercise, Folder, HihatFoot, ImportChoice, PatternGrid, PatternId, PatternSuggestion, PlayPosition, PracticeSettings } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
   addedOnTop,
@@ -31,13 +31,23 @@ import {
   tabListing,
   updatedInPlace,
   withBpm,
-  withGroove,
+  withBassDrum,
   withHihatFoot,
   withLoopRange,
+  withPattern,
   withSwing,
 } from '@/core'
 import type { AppStorage } from './repository'
 import { openStorage } from './repository'
+
+/** What picking a pattern also changed, said under the picker with an Undo, until another exercise opens or the pattern changes. */
+export interface PatternNote {
+  exerciseId: string
+  pattern: PatternId
+  suggested: PatternSuggestion[]
+  /** The suggested settings as they were, which Undo puts back. */
+  before: Partial<Pick<PracticeSettings, PatternSuggestion>>
+}
 
 /** A paused playback: the exercise it was paused in and where it resumes. */
 export interface PausedAt {
@@ -67,9 +77,16 @@ interface AppState {
   setBpm: (bpm: number, options?: { dragging?: boolean }) => void
   /** The swing amount, 0.5 (straight) to 0.75; `dragging` as for `setBpm`. */
   setSwing: (swing: number, options?: { dragging?: boolean }) => void
-  /** The groove layer played and drawn with the exercise. */
-  setGroove: (groove: GroovePresetId) => void
-  /** The hi-hat foot played and drawn in every bar, in place of the groove's own. */
+  /** The pattern played and drawn with the exercise; what it also changed is kept in `patternNote`. */
+  setPattern: (pattern: PatternId) => void
+  /** What the last pattern picked also changed, or null. */
+  patternNote: PatternNote | null
+  /** Puts back the settings the pattern note says were changed, and closes it. */
+  undoPatternNote: () => void
+  dismissPatternNote: () => void
+  /** The bass drum played and drawn in every bar, with any pattern or none. */
+  setBassDrum: (bassDrum: BassDrum) => void
+  /** The hi-hat foot played and drawn in every bar, with any pattern or none. */
   setHihatFoot: (hihatFoot: HihatFoot) => void
   setPlaying: (playing: boolean) => void
   setMetronomePlaying: (metronomePlaying: boolean) => void
@@ -212,6 +229,7 @@ export const useAppStore = create<AppState>()((set, get) => {
       editor: newEditorState(opened),
       library: place(remaining ?? leave(editor.exercise, library), opened),
       device: deviceNow,
+      patternNote: null,
     })
     // A new exercise isn't stored until it is first changed.
     if (!isUnchangedNew(opened)) autosave(opened)
@@ -269,9 +287,27 @@ export const useAppStore = create<AppState>()((set, get) => {
       const exercise = withSwing(editor.exercise, swing)
       change(exercise, { ...editor, exercise }, { debounced: dragging })
     },
-    setGroove: (groove) => {
+    setPattern: (pattern) => {
       const { editor } = get()
-      const exercise = withGroove(editor.exercise, groove)
+      const { exercise, suggested } = withPattern(editor.exercise, pattern)
+      if (exercise === editor.exercise) return
+      const before = Object.fromEntries(suggested.map((setting) => [setting, editor.exercise.practice[setting]]))
+      const patternNote = suggested.length ? { exerciseId: exercise.id, pattern, suggested, before } : null
+      set({ patternNote })
+      change(exercise, { ...editor, exercise })
+    },
+    patternNote: null,
+    undoPatternNote: () => {
+      const { editor, patternNote } = get()
+      if (!patternNote) return
+      set({ patternNote: null })
+      const exercise = { ...editor.exercise, practice: { ...editor.exercise.practice, ...patternNote.before } }
+      change(exercise, { ...editor, exercise })
+    },
+    dismissPatternNote: () => set({ patternNote: null }),
+    setBassDrum: (bassDrum) => {
+      const { editor } = get()
+      const exercise = withBassDrum(editor.exercise, bassDrum)
       if (exercise !== editor.exercise) change(exercise, { ...editor, exercise })
     },
     setHihatFoot: (hihatFoot) => {
@@ -393,7 +429,7 @@ export const useAppStore = create<AppState>()((set, get) => {
         library: [...added, ...library.map((e) => replaced.get(e.id) ?? e)],
         folders: [...folders, ...created],
         device,
-        ...(open && { editor: newEditorState(open) }),
+        ...(open && { editor: newEditorState(open), patternNote: null }),
       })
       return stored.length
     },

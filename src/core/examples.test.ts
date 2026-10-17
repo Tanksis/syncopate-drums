@@ -83,20 +83,20 @@ describe('what each example shows', () => {
     events.map((e) => `${e.start} ${e.kind === 'chord' ? e.notes.map((n) => n.drum).join('+') : e.kind}`)
 
   it('syncopated eighths: a snare line, straight, with natural sticking from the right hand', () => {
-    expect(eighths.practice).toMatchObject({ groove: 'off', swing: 0.5 })
+    expect(eighths.practice).toMatchObject({ pattern: 'off', swing: 0.5 })
     expect(sticking(eighths).slice(0, 6).map((n) => n.shown)).toEqual(['R', 'R', 'L', 'R', 'R', 'L'])
   })
 
   it("jazz comping: swung over the jazz ride, the snare's & of 2 in bar 1 written on the let", () => {
-    expect(comping.practice).toMatchObject({ groove: 'jazz', swing: TRIPLET_SWING })
+    expect(comping.practice).toMatchObject({ pattern: 'ride', hihatFoot: 'twoAndFour', swing: TRIPLET_SWING })
     expect(comping.sticking).toBe('off')
-    const hands = staffParts(comping.bars, 'jazz', { swung: true })[0].hands
+    const hands = staffParts(comping.bars, 'ride', { swung: true, hihatFoot: 'twoAndFour' })[0].hands
     expect(hands.find((e) => e.start === 20)).toMatchObject({ triplet: true, strikes: [18] })
     expect(show(hands)).toContain('20 ride+snare')
   })
 
   it('rock beat: kicks on the hi-hat stems in bar 1, and the feet part in bar 2 for the kick off the hi-hat', () => {
-    expect(rock.practice).toMatchObject({ groove: 'hihatEighths', swing: 0.5 })
+    expect(rock.practice).toMatchObject({ pattern: 'hihatEighths', swing: 0.5 })
     const [bar1, bar2] = staffParts(rock.bars, 'hihatEighths')
     expect(show(bar1.hands)).toEqual([
       '0 hihat+bass',

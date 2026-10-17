@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { DeviceSettings, Exercise, GroovePresetId, HihatFoot, PlayPosition, ScheduledEvent } from './index'
+import type { DeviceSettings, Exercise, GrooveSettings, HihatFoot, PatternId, PlayPosition, ScheduledEvent } from './index'
 import { DEFAULT_DEVICE_SETTINGS, newExercise, schedule, setBeat, setHold, toggleTie } from './index'
 
 const device: DeviceSettings = DEFAULT_DEVICE_SETTINGS
@@ -251,16 +251,18 @@ describe('swing', () => {
 })
 
 describe('the groove layer', () => {
-  /** A blank exercise at 60 BPM (a beat a second) with a groove preset, played straight unless swung. */
-  const grooved = (groove: GroovePresetId, swing = 0.5): Exercise => {
+  /** A blank exercise at 60 BPM (a beat a second) with a groove layer, played straight unless swung. */
+  const grooved = (groove: Partial<GrooveSettings>, swing = 0.5): Exercise => {
     const ex = blank(60)
-    return { ...ex, practice: { ...ex.practice, groove, swing } }
+    return { ...ex, practice: { ...ex.practice, ...groove, swing } }
   }
+  const jazz = { pattern: 'ride', hihatFoot: 'twoAndFour' } as const
+  const jazzFeathered = { ...jazz, bassDrum: 'feathered' } as const
   const grooveHits = (ex: Exercise, from: PlayPosition | 'start' = { bar: 0, tick: 0 }, window = 4) =>
     show(schedule(ex, ex.practice, device, from, window).events.filter((e) => e.kind === 'groove'))
 
   it('plays the jazz ride pattern with the hi-hat foot on 2 and 4', () => {
-    expect(grooveHits(grooved('jazz'))).toEqual([
+    expect(grooveHits(grooved(jazz))).toEqual([
       '0.000 groove ride',
       '1.000 groove ride',
       '1.000 groove hihatPedal',
@@ -272,43 +274,43 @@ describe('the groove layer', () => {
     ])
   })
 
-  it('adds the feathered bass drum on all four beats to the jazz pattern', () => {
-    expect(grooveHits(grooved('jazzFeathered'))).toEqual([
+  it('adds the feathered bass drum on all four beats under the jazz ride', () => {
+    expect(grooveHits(grooved(jazzFeathered))).toEqual([
       '0.000 groove ride',
       '0.000 groove kickFeathered',
       '1.000 groove ride',
-      '1.000 groove hihatPedal',
       '1.000 groove kickFeathered',
+      '1.000 groove hihatPedal',
       '1.500 groove ride',
       '2.000 groove ride',
       '2.000 groove kickFeathered',
       '3.000 groove ride',
-      '3.000 groove hihatPedal',
       '3.000 groove kickFeathered',
+      '3.000 groove hihatPedal',
       '3.500 groove ride',
     ])
   })
 
   it('plays straight eighths on the closed hi-hat', () => {
-    expect(grooveHits(grooved('hihatEighths'))).toEqual(
+    expect(grooveHits(grooved({ pattern: 'hihatEighths' }))).toEqual(
       [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5].map((t) => `${t.toFixed(3)} groove hihatClosed`),
     )
   })
 
   it('plays nothing when off', () => {
-    expect(grooveHits(grooved('off'))).toEqual([])
+    expect(grooveHits(grooved({}))).toEqual([])
   })
 
   it('swings with the exercise', () => {
-    expect(grooveHits(grooved('jazz', 2 / 3))).toContain('1.667 groove ride')
-    expect(grooveHits(grooved('hihatEighths', 0.75)).slice(0, 2)).toEqual([
+    expect(grooveHits(grooved(jazz, 2 / 3))).toContain('1.667 groove ride')
+    expect(grooveHits(grooved({ pattern: 'hihatEighths' }, 0.75)).slice(0, 2)).toEqual([
       '0.000 groove hihatClosed',
       '0.750 groove hihatClosed',
     ])
   })
 
   it('plays in every bar of every pass round the loop, but not in the count-in', () => {
-    const ex = grooved('hihatEighths')
+    const ex = grooved({ pattern: 'hihatEighths' })
     const { events } = schedule(ex, ex.practice, device, 'start', 12)
     const bars = events.filter((e) => e.kind === 'groove').map((e) => e.position.bar)
     expect(bars).toEqual([...Array(8).fill(0), ...Array(8).fill(0)])
@@ -316,7 +318,7 @@ describe('the groove layer', () => {
   })
 
   it('keeps the events in time order when a swung & lands after a triplet', () => {
-    const ex = { ...line(['....', 'xxx', '....', '....'], 60), practice: { ...grooved('hihatEighths', 0.75).practice } }
+    const ex = { ...line(['....', 'xxx', '....', '....'], 60), practice: { ...grooved({ pattern: 'hihatEighths' }, 0.75).practice } }
     const { events } = schedule(ex, ex.practice, device, { bar: 0, tick: 0 }, 4)
     const times = events.map((e) => e.time)
     expect(times).toEqual([...times].sort((a, b) => a - b))
@@ -330,7 +332,7 @@ describe('the groove layer', () => {
 
   it('plays one bass drum where the kick row and the feathered bass drum strike together', () => {
     const ex = withKicks(line(['x...', 'x...'], 60), ['x...', '..x.'])
-    const feathered = { ...ex, practice: { ...ex.practice, groove: 'jazzFeathered' as const } }
+    const feathered = { ...ex, practice: { ...ex.practice, ...jazzFeathered } }
     const { events } = schedule(feathered, feathered.practice, device, { bar: 0, tick: 0 }, 2)
     const bassDrums = show(events.filter((e) => e.instrument === 'kick' || e.instrument === 'kickFeathered'))
     expect(bassDrums).toEqual(['0.000 exercise kick kick:0:0', '1.000 groove kickFeathered', '1.500 exercise kick kick:0:18'])
@@ -338,7 +340,7 @@ describe('the groove layer', () => {
 
   it('keeps the feathered bass drum under a snare line', () => {
     const ex = line(['x...'], 60)
-    const feathered = { ...ex, practice: { ...ex.practice, groove: 'jazzFeathered' as const } }
+    const feathered = { ...ex, practice: { ...ex.practice, ...jazzFeathered } }
     const { events } = schedule(feathered, feathered.practice, device, { bar: 0, tick: 0 }, 0.1)
     expect(show(events)).toEqual([
       '0.000 click click accent',
@@ -360,22 +362,22 @@ describe('holds', () => {
 })
 
 describe('the hi-hat foot setting', () => {
-  /** A blank exercise at 60 BPM (a beat a second) with a hi-hat foot setting and a groove preset. */
-  const footed = (hihatFoot: HihatFoot, groove: GroovePresetId = 'off'): Exercise => {
+  /** A blank exercise at 60 BPM (a beat a second) with a hi-hat foot setting and a pattern. */
+  const footed = (hihatFoot: HihatFoot, pattern: PatternId = 'off'): Exercise => {
     const ex = blank(60)
-    return { ...ex, practice: { ...ex.practice, groove, hihatFoot } }
+    return { ...ex, practice: { ...ex.practice, pattern, hihatFoot } }
   }
   const pedalTimes = (ex: Exercise, window = 4) =>
     schedule(ex, ex.practice, device, { bar: 0, tick: 0 }, window)
       .events.filter((e) => e.instrument === 'hihatPedal')
       .map((e) => `${e.time.toFixed(3)} ${e.kind} ${e.velocity}`)
 
-  it('with On 1 and the jazz groove, plays one hi-hat foot hit per bar, on 1', () => {
-    expect(pedalTimes(footed('one', 'jazz'), 8)).toEqual(['0.000 groove 1', '4.000 groove 1'])
+  it('with On 1 and the Ride pattern, plays one hi-hat foot hit per bar, on 1', () => {
+    expect(pedalTimes(footed('one', 'ride'), 8)).toEqual(['0.000 groove 1', '4.000 groove 1'])
   })
 
-  it('keeps the rest of the jazz groove', () => {
-    const ex = footed('one', 'jazz')
+  it('keeps the rest of the Ride pattern', () => {
+    const ex = footed('one', 'ride')
     const rides = schedule(ex, ex.practice, device, { bar: 0, tick: 0 }, 4).events.filter((e) => e.instrument === 'ride')
     expect(rides).toHaveLength(6)
   })
@@ -388,8 +390,8 @@ describe('the hi-hat foot setting', () => {
     expect(pedalTimes(footed(setting))).toEqual(times.map((t) => `${t} groove 1`))
   })
 
-  it("leaves the jazz groove's own hi-hat foot on 2 and 4 when off", () => {
-    expect(pedalTimes(footed('off', 'jazz'))).toEqual(['1.000 groove 1', '3.000 groove 1'])
+  it('plays no hi-hat foot with the Ride pattern when off: the pattern has none of its own', () => {
+    expect(pedalTimes(footed('off', 'ride'))).toEqual([])
   })
 
   it('swings the &s with the exercise', () => {

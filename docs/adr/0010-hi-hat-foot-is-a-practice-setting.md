@@ -2,7 +2,7 @@
 
 Date: 2026-10-12
 
-Status: accepted
+Status: accepted, superseded in part (2026-10-17): groove presets became **patterns**, which have no hi-hat foot of their own, so the setting no longer replaces anything. The jazz presets became Ride with the setting on 2 & 4, and the feathered one also the **bass drum** setting, feathered (schema 6). See the [time-signatures spec](../../.scratch/time-signatures/spec.md).
 
 The user wants the hi-hat foot keeping time (on 1, on quarters) while practising kick fills, and with any exercise. Today the hi-hat foot only plays inside the jazz groove presets, and only one preset is on at a time. Two ways were considered:
 

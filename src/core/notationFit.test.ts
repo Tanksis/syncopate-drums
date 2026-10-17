@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Bar, GroovePresetId } from './index'
+import type { Bar, PatternId } from './index'
 import { minBarWidthFor, notationFit, restBar, setBeat, staffParts } from './index'
 
 /** One line of staff at scale 1, about what the renderer draws with both parts. */
@@ -56,7 +56,7 @@ function bars(count: number, hits: string): Bar[] {
     Array.from({ length: count }, () => restBar()),
   )
 }
-const widthOf = (count: number, hits: string, groove: GroovePresetId = 'off') => minBarWidthFor(staffParts(bars(count, hits), groove))
+const widthOf = (count: number, hits: string, groove: PatternId = 'off') => minBarWidthFor(staffParts(bars(count, hits), groove))
 
 describe('minBarWidthFor', () => {
   it('keeps 190 for quarters and eighths', () => {

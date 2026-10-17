@@ -35,7 +35,7 @@ export function parsePattern(text: string): { steps: PatternStep[] } | { error: 
  * an override, so the typed hands are the ones shown. `next` is the step the following bar would
  * start on, to carry the pattern on across barlines.
  */
-export function withPattern(
+export function withPatternFill(
   exercise: Exercise,
   bar: number,
   pattern: readonly PatternStep[],
@@ -101,7 +101,7 @@ export function exerciseFromPattern({
   }
   let step = 0
   for (let bar = 0; bar < bars; bar++) {
-    const filled = withPattern(exercise, bar, parsed.steps, grid, step)
+    const filled = withPatternFill(exercise, bar, parsed.steps, grid, step)
     exercise = filled.exercise
     step = filled.next
   }

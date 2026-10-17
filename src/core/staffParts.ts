@@ -4,10 +4,10 @@
 // feet only ever play with the hands in a bar, or never do (a linear fill, ADR 0011): then the bar
 // is one voice and the feet hang on the hands' stems. Hits at the same tick share a stem.
 
-import type { Bar, Duration, GroovePresetId, HihatFoot, Item, Limb, Row } from './model'
+import type { Bar, BassDrum, Duration, HihatFoot, Item, Limb, PatternId, Row } from './model'
 import { ROWS, TICKS_PER_BEAT, barBeats, barTicks, itemTicks, noteId } from './model'
 import type { GrooveHit, GrooveNotation } from './groove'
-import { grooveHitsByTick } from './groove'
+import { bassDrumHits, hihatFootHits, hitsByTick, patternHits } from './groove'
 import type { Instrument } from './schedule'
 import { placeItems, spellSpan } from './speller'
 
@@ -114,17 +114,18 @@ interface Sound {
 }
 
 /**
- * The exercise and its groove preset as the notation writes them, bar by bar: a hands part (stems
+ * The exercise and its groove layer as the notation writes them, bar by bar: a hands part (stems
  * up) and a feet part (stems down) of chords, rests and space. The snare row is in the hands part
- * and the kick row in the feet part. A `hihatFoot` setting other than off is part of the groove, in
- * place of the preset's own hi-hat foot (ADR 0010).
+ * and the kick row in the feet part. The groove layer is the pattern, the `bassDrum` setting and
+ * the `hihatFoot` setting (ADR 0010).
  *
  * - A bar where the hands and the feet (the kick row or the groove) both play, and the feet either
  *   only ever play together with the hands or never do (a linear fill such as RLKK), is one voice:
  *   the feet's notes join the hands' chords and the feet part is empty. Otherwise the bar is two
  *   voices.
- * - The hi-hat foot setting's hits don't count in that choice, which is made as with the setting off
- *   (ADR 0012). In a bar of one voice, or of the hands alone, they join the hands' chords if every
+ * - Under a pattern the hi-hat foot is part of the groove, and counts like any other foot hit.
+ *   With no pattern it is an ostinato under the line, and doesn't count in that choice, which is
+ *   made as with the setting off (ADR 0012). In a bar of one voice, or of the hands alone, they join the hands' chords if every
  *   one lands on a struck chord; otherwise they are a feet part of their own under the hands (the
  *   rows staying as they were), or, in a bar of two voices, join the feet part.
  * - Hits at the same tick in a part share a chord. A chord holds until the part's next chord, or
@@ -149,12 +150,13 @@ interface Sound {
  */
 export function staffParts(
   bars: readonly Bar[],
-  groove: GroovePresetId,
+  pattern: PatternId,
   {
     swung = false,
     hihatFoot = 'off',
+    bassDrum = 'off',
     compound = false,
-  }: { swung?: boolean; hihatFoot?: HihatFoot; compound?: boolean } = {},
+  }: { swung?: boolean; hihatFoot?: HihatFoot; bassDrum?: BassDrum; compound?: boolean } = {},
 ): StaffBar[] {
   const beatsPerBar = barBeats(bars)
   const ticksPerBar = barTicks(beatsPerBar)
@@ -189,22 +191,25 @@ export function staffParts(
         }),
       ),
     )
-  // The preset as it is with the setting off, and the setting's hits alone (the 'off' preset has none).
-  const preset = grooveStruck(grooveHitsByTick(groove, 'off', beatsPerBar), false)
-  const settingHits = hihatFoot === 'off' ? [] : grooveStruck(grooveHitsByTick('off', hihatFoot, beatsPerBar), true)
-  /** The sounds with the hi-hat foot setting's hits, if any, in place of their own hi-hat foot. */
-  const replaceFoot = (sounds: Sound[], foot: Sound[]) => (foot.length ? [...sounds.filter((s) => s.drum !== 'hihatFoot'), ...foot] : sounds)
+  // The pattern and the bass drum, and the hi-hat foot: with a pattern, part of its groove; with
+  // none, an ostinato under the line, kept apart (ADR 0012).
+  const barMeter = { beats: beatsPerBar, compound }
+  const foot = hihatFootHits(hihatFoot, beatsPerBar)
+  const ostinato = pattern === 'off'
+  const layer = [...patternHits(pattern, barMeter), ...bassDrumHits(bassDrum, beatsPerBar), ...(ostinato ? [] : foot)]
+  const layerHits = grooveStruck(hitsByTick(layer), false)
+  const settingHits = ostinato ? grooveStruck(hitsByTick(foot), true) : []
 
   const lines = [...snare.sounds, ...kick.sounds]
-  const swungBeat = swung && !compound ? swungBeats([...lines, ...replaceFoot(preset, settingHits)], triplet) : triplet.map(() => false)
+  const swungBeat = swung && !compound ? swungBeats([...lines, ...layerHits, ...settingHits], triplet) : triplet.map(() => false)
   const exercise = lines.map((s) => respell(s, swungBeat))
-  const presetSounds = preset.map((s) => respell(s, swungBeat))
-  const grooveSounds = replaceFoot(presetSounds, settingHits.map((s) => respell(s, swungBeat)))
+  const layerSounds = layerHits.map((s) => respell(s, swungBeat))
+  const grooveSounds = [...layerSounds, ...settingHits.map((s) => respell(s, swungBeat))]
 
   const barOf = (s: Sound) => Math.floor(s.start / ticksPerBar)
   // Each bar's voicing, chosen as if the setting were off (ADR 0012), from every sound on the grid of
   // the hands part as it would be in a bar of one voice, which holds the exercise.
-  const asIfOff = [...exercise, ...presetSounds.map((s) => onGrid(s, triplet))]
+  const asIfOff = [...exercise, ...layerSounds.map((s) => onGrid(s, triplet))]
   const drawn = [...exercise, ...grooveSounds.map((s) => onGrid(s, triplet))]
   const voicing = bars.map((_, b) => {
     const inBar = asIfOff.filter((s) => barOf(s) === b)

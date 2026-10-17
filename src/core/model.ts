@@ -63,7 +63,7 @@ export const MAX_SWING = 0.75
 export const TRIPLET_SWING = 2 / 3
 
 /** Bumped whenever the stored shape changes; storage and import migrate through it. */
-export const SCHEMA_VERSION = 5
+export const SCHEMA_VERSION = 6
 
 export type Hand = 'R' | 'L'
 
@@ -85,10 +85,15 @@ export function noteId(row: Row, bar: number, tick: number): string {
 export type StickingMode = 'natural' | 'alternate' | 'off'
 export type Duration = 'quarter' | 'eighth' | 'sixteenth'
 
-/** The groove layer under the exercise, or none; the presets themselves are in `groove.ts`. */
-export type GroovePresetId = 'off' | 'jazz' | 'jazzFeathered' | 'hihatEighths'
+/** The pattern played on the hands above the exercise, or none; the patterns themselves are in `groove.ts`. */
+export type PatternId = 'off' | 'ride' | 'hihatEighths'
 
-/** The hi-hat foot ostinato played in every bar, or none; with any but off, it replaces a groove's own hi-hat foot (ADR 0010). */
+/** The bass drum under the exercise: none, or feathered, softly on every beat. */
+export type BassDrum = 'off' | 'feathered'
+
+export const BASS_DRUM_SETTINGS: readonly BassDrum[] = ['off', 'feathered']
+
+/** The hi-hat foot ostinato played in every bar, or none (ADR 0010). */
 export type HihatFoot = 'off' | 'one' | 'quarters' | 'twoAndFour' | 'ands'
 
 export const HIHAT_FOOT_SETTINGS: readonly HihatFoot[] = ['off', 'one', 'quarters', 'twoAndFour', 'ands']
@@ -146,7 +151,8 @@ export function loopLabel(range: LoopRange | null, barCount: number): string {
 export interface PracticeSettings {
   bpm: number
   loopRange: LoopRange | null
-  groove: GroovePresetId
+  pattern: PatternId
+  bassDrum: BassDrum
   hihatFoot: HihatFoot
   /** The first eighth's share of the beat: 0.5 is straight, 2/3 is triplet swing. */
   swing: number
@@ -314,7 +320,7 @@ export function newExercise({ id, now, folderId = null }: { id: string; now: num
     timeSignature: '4/4',
     sticking: 'off',
     leadHand: 'R',
-    practice: { bpm: 80, loopRange: null, groove: 'off', hihatFoot: 'off', swing: MIN_SWING },
+    practice: { bpm: 80, loopRange: null, pattern: 'off', bassDrum: 'off', hihatFoot: 'off', swing: MIN_SWING },
     lastOpened: now,
     folderId,
   }
@@ -353,6 +359,12 @@ export type SwingPreset = (typeof SWING_PRESETS)[number]
 /** The preset a swing amount is (to within a millionth, so a stored 2/3 is still Triplet), or undefined for a custom amount. */
 export function swingPreset(swing: number): SwingPreset | undefined {
   return SWING_PRESETS.find((preset) => Math.abs(preset.swing - swing) < 1e-6)
+}
+
+/** The exercise with a bass drum setting, as it was if it already has that one. */
+export function withBassDrum(exercise: Exercise, bassDrum: BassDrum): Exercise {
+  if (bassDrum === exercise.practice.bassDrum) return exercise
+  return { ...exercise, practice: { ...exercise.practice, bassDrum } }
 }
 
 /** The exercise with a hi-hat foot setting, as it was if it already has that one. */

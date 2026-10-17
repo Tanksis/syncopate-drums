@@ -1,6 +1,23 @@
 import { describe, expect, it } from 'vitest'
-import type { Bar, GroovePresetId, StaffEvent } from './index'
-import { FIGURES, barTicks, itemTicks, restBar, restItems, setBeat, setHold, staffParts, toggleCutShort, toggleTie } from './index'
+import type { Bar, BassDrum, HihatFoot, PatternId, StaffEvent } from './index'
+import { FIGURES, barTicks, itemTicks, restBar, restItems, setBeat, setHold, staffParts as writeParts, toggleCutShort, toggleTie } from './index'
+
+/** The grooves these tests write under: a pattern and the feet set with it. */
+type Groove = 'off' | 'jazz' | 'jazzFeathered' | 'hihatEighths'
+
+/** The jazz ride is the Ride pattern with the hi-hat foot on 2 & 4, and feathered, the bass drum on every beat. */
+const GROOVES: Record<Groove, { pattern: PatternId; hihatFoot?: HihatFoot; bassDrum?: BassDrum }> = {
+  off: { pattern: 'off' },
+  jazz: { pattern: 'ride', hihatFoot: 'twoAndFour' },
+  jazzFeathered: { pattern: 'ride', hihatFoot: 'twoAndFour', bassDrum: 'feathered' },
+  hihatEighths: { pattern: 'hihatEighths' },
+}
+
+/** The staff parts under a groove; a hi-hat foot given in `options` is played in place of the groove's. */
+function staffParts(bars: Bar[], groove: Groove, options: Parameters<typeof writeParts>[2] = {}) {
+  const { pattern, ...feet } = GROOVES[groove]
+  return writeParts(bars, pattern, { ...feet, ...options })
+}
 
 /**
  * A part in shorthand, one event per entry: its start tick, its value (q e s, `.` for a dot, 3 for
@@ -25,8 +42,8 @@ const asKicks = (bars: Bar[]): Bar[] => bars.map((b) => ({ snare: restItems(), k
 /** Bar 1's kick row set beat by beat with figure hits. */
 const kicks = (bars: Bar[], ...hits: string[]) => hits.reduce((b, h, beat) => setBeat(b, 'kick', 0, beat, h), bars)
 
-const hands = (bars: Bar[], groove: GroovePresetId, b = 0) => show(staffParts(bars, groove)[b].hands)
-const feet = (bars: Bar[], groove: GroovePresetId, b = 0) => show(staffParts(bars, groove)[b].feet)
+const hands = (bars: Bar[], groove: Groove, b = 0) => show(staffParts(bars, groove)[b].hands)
+const feet = (bars: Bar[], groove: Groove, b = 0) => show(staffParts(bars, groove)[b].feet)
 
 describe('one voice where the feet only play with the hands (ADR 0004)', () => {
   it("hangs the jazz hi-hat foot on the ride's stems, with no feet part", () => {
@@ -212,8 +229,8 @@ describe('the staff parts: hands up, feet down', () => {
 })
 
 describe('a kick row alone: the feet part', () => {
-  const bassFeet = (bars: Bar[], groove: GroovePresetId) => show(staffParts(asKicks(bars), groove)[0].feet)
-  const bassHands = (bars: Bar[], groove: GroovePresetId) => show(staffParts(asKicks(bars), groove)[0].hands)
+  const bassFeet = (bars: Bar[], groove: Groove) => show(staffParts(asKicks(bars), groove)[0].feet)
+  const bassHands = (bars: Bar[], groove: Groove) => show(staffParts(asKicks(bars), groove)[0].hands)
   const line = bar('x...', '..x.', '....', 'xx.x')
   const bare = ['0 q bass', '12 e rest', '18 e bass', '24 q rest', '36 s bass', '39 e bass', '45 s bass']
 
@@ -308,7 +325,7 @@ describe('the snare row and the kick row together (ADRs 0004, 0005)', () => {
 })
 
 describe('swing written as triplets (ADR 0006)', () => {
-  const swung = (bars: Bar[], groove: GroovePresetId, b = 0) => staffParts(bars, groove, { swung: true })[b]
+  const swung = (bars: Bar[], groove: Groove, b = 0) => staffParts(bars, groove, { swung: true })[b]
 
   it("writes the jazz ride's beat 2 as a triplet group: ride, rest, ride", () => {
     const parts = swung([restBar()], 'jazz')
@@ -464,13 +481,9 @@ describe('the hi-hat foot setting under a fill (ADR 0012)', () => {
     expect(parts.feet).toEqual([])
   })
 
-  it('writes the jazz groove with the setting on 2 & 4 as with the setting off', () => {
-    const lines = [bar('....', '..x.', '....', 'x...'), kicks(bar('x...', 'x...'), '...x', '..x.'), asKicks(bar('x...', '..x.'))]
-    for (const line of lines) {
-      for (const groove of ['jazz', 'jazzFeathered'] as const) {
-        expect(staffParts(line, groove, { hihatFoot: 'twoAndFour' })).toEqual(staffParts(line, groove))
-      }
-    }
+  it('writes the feathered bass drum with no pattern, on the snare quarters it plays with', () => {
+    const parts = writeParts(bar('x...', 'x...', 'x...', 'x...'), 'off', { bassDrum: 'feathered' })[0]
+    expect(show(parts.hands)).toEqual(['0 q snare+bass', '12 q snare+bass', '24 q snare+bass', '36 q snare+bass'])
   })
 
   it('puts the foot in the feet part of a two-voice bar', () => {

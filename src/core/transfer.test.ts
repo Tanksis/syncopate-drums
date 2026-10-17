@@ -27,7 +27,7 @@ const paradiddles: Exercise = {
   ],
   sticking: 'alternate',
   leadHand: 'L',
-  practice: { bpm: 140, loopRange: { first: 1, last: 1 }, groove: 'jazz', hihatFoot: 'quarters', swing: 0.6 },
+  practice: { bpm: 140, loopRange: { first: 1, last: 1 }, pattern: 'ride', bassDrum: 'feathered', hihatFoot: 'quarters', swing: 0.6 },
 }
 /** Paradiddles as stored before version 4, which had no hi-hat foot setting, and as it reads back: with it off. */
 const { hihatFoot: _hihatFoot, ...practiceBefore4 } = paradiddles.practice
@@ -176,7 +176,8 @@ describe('parsing an import', () => {
     ['an unknown lead hand', { ...paradiddles, leadHand: 'both' }],
     ['a BPM out of range', { ...paradiddles, practice: { ...paradiddles.practice, bpm: 900 } }],
     ['a swing out of range', { ...paradiddles, practice: { ...paradiddles.practice, swing: 0.9 } }],
-    ['an unknown groove', { ...paradiddles, practice: { ...paradiddles.practice, groove: 'polka' } }],
+    ['an unknown pattern', { ...paradiddles, practice: { ...paradiddles.practice, pattern: 'polka' } }],
+    ['an unknown bass drum setting', { ...paradiddles, practice: { ...paradiddles.practice, bassDrum: 'loud' } }],
     ['an unknown hi-hat foot setting', { ...paradiddles, practice: { ...paradiddles.practice, hihatFoot: 'eighths' } }],
     ['a loop range past the last bar', { ...paradiddles, practice: { ...paradiddles.practice, loopRange: { first: 1, last: 2 } } }],
     ['a loop range ending before it starts', { ...paradiddles, practice: { ...paradiddles.practice, loopRange: { first: 1, last: 0 } } }],

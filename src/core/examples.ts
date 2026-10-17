@@ -8,7 +8,8 @@ import { setBeat } from './speller'
 
 /** One example as written here; everything else is a new exercise's default, the lead hand R among it. */
 type Example = Pick<Exercise, 'id' | 'name' | 'sticking'> &
-  Pick<PracticeSettings, 'bpm' | 'groove' | 'swing'> & {
+  Pick<PracticeSettings, 'bpm' | 'pattern' | 'swing'> &
+  Partial<Pick<PracticeSettings, 'hihatFoot'>> & {
     /** 4/4 unless given. */
     timeSignature?: TimeSignature
     /** Each row bar by bar, as each beat figure's hits separated by spaces; a missing row rests. */
@@ -26,7 +27,7 @@ const EXAMPLES: readonly Example[] = [
     id: `${EXAMPLE_PREFIX}syncopated-eighths`,
     name: `${EXAMPLE_NAME_PREFIX}syncopated eighths`,
     bpm: 80,
-    groove: 'off',
+    pattern: 'off',
     swing: MIN_SWING,
     sticking: 'natural',
     rows: { snare: ['x... x.x. x... x.x.', '..x. x... ..x. x...', 'x.x. ..x. x.x. ..x.', 'x... ..x. ..x. x...'] },
@@ -35,7 +36,8 @@ const EXAMPLES: readonly Example[] = [
     id: `${EXAMPLE_PREFIX}jazz-comping`,
     name: `${EXAMPLE_NAME_PREFIX}jazz comping`,
     bpm: 100,
-    groove: 'jazz',
+    pattern: 'ride',
+    hihatFoot: 'twoAndFour',
     swing: TRIPLET_SWING,
     sticking: 'off',
     rows: {
@@ -47,7 +49,7 @@ const EXAMPLES: readonly Example[] = [
     id: `${EXAMPLE_PREFIX}rock-beat`,
     name: `${EXAMPLE_NAME_PREFIX}rock beat`,
     bpm: 90,
-    groove: 'hihatEighths',
+    pattern: 'hihatEighths',
     swing: MIN_SWING,
     sticking: 'off',
     rows: {
@@ -59,7 +61,7 @@ const EXAMPLES: readonly Example[] = [
     id: `${EXAMPLE_PREFIX}triplets`,
     name: `${EXAMPLE_NAME_PREFIX}triplets`,
     bpm: 70,
-    groove: 'off',
+    pattern: 'off',
     swing: MIN_SWING,
     sticking: 'alternate',
     rows: { snare: ['xxx xxx x.x x...', 'xxx .xx xxx x...'] },
@@ -68,7 +70,7 @@ const EXAMPLES: readonly Example[] = [
     id: `${EXAMPLE_PREFIX}slow-blues`,
     name: `${EXAMPLE_NAME_PREFIX}slow blues`,
     bpm: 50,
-    groove: 'off',
+    pattern: 'off',
     swing: MIN_SWING,
     sticking: 'off',
     timeSignature: '12/8',
@@ -81,7 +83,7 @@ const EXAMPLES: readonly Example[] = [
 
 /** The example exercises, in order, under their fixed ids and never opened; every call gives an equal set. */
 export function exampleExercises(): Exercise[] {
-  return EXAMPLES.map(({ id, name, bpm, groove, swing, sticking, timeSignature = '4/4', rows }) => {
+  return EXAMPLES.map(({ id, name, bpm, pattern, hihatFoot = 'off', swing, sticking, timeSignature = '4/4', rows }) => {
     const base = newExercise({ id, now: 0 })
     return {
       ...base,
@@ -89,7 +91,7 @@ export function exampleExercises(): Exercise[] {
       timeSignature,
       bars: writeRows(rows, meter(timeSignature).beats),
       sticking,
-      practice: { ...base.practice, bpm, groove, swing },
+      practice: { ...base.practice, bpm, pattern, hihatFoot, swing },
     }
   })
 }

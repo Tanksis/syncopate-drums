@@ -208,9 +208,10 @@ export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor
   const { bars } = exercise
   const barMeter = meter(exercise.timeSignature)
   const { compound } = barMeter
-  const parts = staffParts(bars, exercise.practice.groove, {
+  const parts = staffParts(bars, exercise.practice.pattern, {
     swung: swingOn(exercise.practice),
     hihatFoot: exercise.practice.hihatFoot,
+    bassDrum: exercise.practice.bassDrum,
     compound,
   })
   /** A part is drawn when it has a note or a rest anywhere. */
