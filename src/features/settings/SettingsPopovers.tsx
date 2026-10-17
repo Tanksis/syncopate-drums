@@ -1,5 +1,4 @@
 import { useAppStore } from '@/app/store'
-import { buttonClass } from '@/components/Button'
 import { Popover } from '@/components/Popover'
 import { GearIcon, SpeakerIcon, SpeakerMutedIcon } from '@/components/icons'
 import { AppearanceSettings, MixSettings } from './SettingsSidebar'
@@ -14,8 +13,7 @@ export function MixButton() {
     <Popover
       label="Mix"
       title={muted ? 'Mix (a layer is muted)' : 'Mix'}
-      button={muted ? <SpeakerMutedIcon /> : <SpeakerIcon />}
-      buttonClassName={buttonClass({ size: 'md', icon: true })}
+      icon={muted ? <SpeakerMutedIcon /> : <SpeakerIcon />}
     >
       <MixSettings />
     </Popover>
@@ -25,7 +23,7 @@ export function MixButton() {
 /** The header's Preferences button, on either screen: a panel of how the app looks on this device. */
 export function PreferencesButton() {
   return (
-    <Popover label="Preferences" button={<GearIcon />} buttonClassName={buttonClass({ size: 'md', icon: true })}>
+    <Popover label="Preferences" icon={<GearIcon />}>
       <AppearanceSettings />
     </Popover>
   )

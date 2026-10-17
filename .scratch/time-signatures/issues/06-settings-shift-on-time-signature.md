@@ -30,4 +30,6 @@ Fixed together with ticket 07, which moved General out of the sidebar:
 - Sticking's Mode is stacked, its name over full-width chips, so the column has no horizontal scroll.
 - The sidebar keeps the scrollbar's room (`scrollbar-gutter: stable`), so a scrollbar coming or going doesn't re-wrap the rows; its right padding is less, so the rows sit nearly centred.
 
-Checked headless (Playwright, real mouse events) at 1280 × 800, 1366 × 768 and 1920 × 1080: the Practice settings fit with no scrollbar at all three.
+Checked headless (Playwright, real mouse events, on a new exercise) at 1280 × 800, 1366 × 768 and 1920 × 1080 docked, and 900 × 700 in the overlay sidebar: the rows hold still at each, with or without Custom swing open, and the Practice settings fit with no scrollbar. The Metronome screen's settings, with Sound now under Subdivision, fit too.
+
+Left over: between about 1000 and 1258 px wide with both sidebars docked, the exercise's bar is too narrow for the whole transport, so the Click, Count-in and loop chips move to a Playback group at the top of the sidebar, which then scrolls by 18 px at 1200 × 800 and 50 px at 1100 × 768. A middle step that moved only the loop chip would mostly close it; not done here.

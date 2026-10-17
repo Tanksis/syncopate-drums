@@ -22,3 +22,7 @@ The separate screen was chosen. It gives the metronome any time signature withou
 ## Amended 2026-10-15 (metronome ticket 08)
 
 On the desktop, the two screens share one layout: a full-width header (the name, the switch in its centre, the settings button) that doesn't change between them, the Library sidebar, and the settings sidebar. Only the space between the sidebars and the top of the settings sidebar swap. Settings about how the app sounds and looks (the mix, the metronome's sound and volume, the theme) sit in a Settings section at the sidebar's foot on both screens. The exercise's name and transport moved from the header to a bar over the notation. The phone keeps its own layout.
+
+## Amended 2026-10-17 (time signatures tickets 06 and 07)
+
+The Settings section at the sidebar's foot is gone: on most laptop windows it left both it and the screen's own settings scrolling. The sidebar now holds only the screen's own settings. The mix is in a panel from a speaker in the header, shown on the Practice screen, and how the app looks is in a Preferences panel from a gear in the header, on both screens. The metronome's sound and volume, heard only on the Metronome screen, moved to that screen's own settings, under its subdivision. The phone keeps its own layout.
