@@ -42,7 +42,7 @@ There's no separate hotfix process: a fix is a `fix/` branch off `main`, merged 
 Deploys happen on every merge; a **release** is a named point on `main` for the user's own reference.
 
 - Version tags follow semver: `vMAJOR.MINOR.PATCH`, tagged on `main` after the merge that completes them, with a GitHub Release whose notes list the tickets and fixes since the last tag.
-- `v0.x` while v1 is being built: tag a minor version when a useful chunk works end to end (e.g. after tickets 16–18, you can enter, play and keep an exercise). `v1.0.0` when tickets 15–33 are all done (34, the installable offline PWA, was dropped).
+- `v0.x` until the public launch, and **`v1.0.0` is the public launch** (see the amendment below). Before it, tag nothing: the work is tracked by its tickets and PRs.
 - After 1.0: minor for new features, patch for fixes, major only if old exports can no longer be imported.
 - The app version is separate from the exercise **schema version**. A schema bump needs a migration in the core's shared chain, and gets called out in the release notes.
 
@@ -52,3 +52,11 @@ Deploys happen on every merge; a **release** is a named point on `main` for the 
 - Squash merging keeps `main`'s history one line per ticket, so a bad change is one commit to revert.
 - Without release branches, a half-finished feature can't sit on `main` visibly. Keep each ticket's slice complete (the tickets are vertical slices for this reason), or hide the unfinished part until its ticket is done.
 - If the app ever has a second deployed copy (a public build or a beta), revisit this: a tag-triggered production deploy would then be the next step.
+
+## Amended 2026-10-17: v1.0.0 is the public launch
+
+The first plan tagged `v0.x` minors for working chunks and `v1.0.0` when the v1 tickets (15–33) were done, and `v1.0.0` was tagged on 2026-10-08. Since then the app has grown in feature batches toward a public release on its own domain, after accounts and sync, and tags nobody reads were bookkeeping. So:
+
+- **`v1.0.0` is kept for the public launch.** The 2026-10-08 tag and its GitHub Release were renamed to **`v0.1.0`**, on the same commit with the same notes.
+- **No tags until the launch.** The work since `v0.1.0` is tracked by its tickets and PRs. Release notes for the launch are drafted as it nears.
+- After `v1.0.0`, the rules above apply: minor for new features, patch for fixes, major only if old exports can no longer be imported.
