@@ -205,8 +205,6 @@ export interface DeviceSettings {
   librarySidebarOpen: boolean
   /** The settings sidebar is open, not a rail, in a wide window. */
   settingsSidebarOpen: boolean
-  /** The General section at the foot of the desktop's settings sidebar is open, not folded to its heading. */
-  settingsSectionOpen: boolean
   /** The grid editor is collapsed to its header, giving the notation the room. */
   editorCollapsed: boolean
   /** Light or dark, or `auto` to follow the device's own setting: the mode (ADR 0013). */
@@ -279,7 +277,6 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   collapsedFolderIds: [],
   librarySidebarOpen: true,
   settingsSidebarOpen: true,
-  settingsSectionOpen: true,
   editorCollapsed: false,
   theme: 'auto',
   look: 'warm',

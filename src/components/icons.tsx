@@ -109,6 +109,15 @@ export const SettingsIcon = () => (
   </Icon>
 )
 
+/** A gear: the app's preferences. */
+export const GearIcon = () => (
+  <Icon>
+    <circle cx="8" cy="8" r="4.25" />
+    <circle cx="8" cy="8" r="1.6" />
+    <path d="M8 1.5v2.25M8 12.25v2.25M1.5 8h2.25M12.25 8h2.25M3.4 3.4l1.6 1.6M11 11l1.6 1.6M3.4 12.6l1.6-1.6M11 5l1.6-1.6" />
+  </Icon>
+)
+
 /** A speaker sounding: a layer that plays. */
 export const SpeakerIcon = () => (
   <Icon>

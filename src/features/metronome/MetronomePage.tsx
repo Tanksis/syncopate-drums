@@ -17,7 +17,7 @@ const BLOCK_PITCH = 128
  * The desktop's Metronome page, between the sidebars in place of the notation and editor: the beat
  * blocks over the dial, with − + and Tap tempo and Play beside it, each with its key. The settings
  * sidebar holds its time signature and subdivision (`MetronomeRhythm`), and its sound and volume
- * with the settings that carry over. Space, − + and the arrows, and T work from anywhere on it, and
+ * (`MetronomeSoundSettings`). Space, − + and the arrows, and T work from anywhere on it, and
  * the wheel over the dial changes the BPM.
  */
 export function MetronomePage() {

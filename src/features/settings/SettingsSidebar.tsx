@@ -3,15 +3,14 @@ import { useId, useRef, useState } from 'react'
 import { LOOK_STYLES, lookName } from '@/app/looks'
 import { useAppStore } from '@/app/store'
 import { Button } from '@/components/Button'
-import { PanelHeading } from '@/components/PanelHeading'
 import { Segmented, type SegmentedOption } from '@/components/Segmented'
 import { Menu } from '@/components/Menu'
 import { SelectButtonFace, SelectMenu, selectButtonClass } from '@/components/SelectMenu'
 import { SettingGroup } from '@/components/SettingGroup'
 import { Switch } from '@/components/Switch'
-import { FullScreenHeading, chevronButtonClass } from '@/components/Sidebar'
+import { FullScreenHeading } from '@/components/Sidebar'
 import { Slider } from '@/components/Slider'
-import { ChevronIcon, SpeakerIcon, SpeakerMutedIcon } from '@/components/icons'
+import { SpeakerIcon, SpeakerMutedIcon } from '@/components/icons'
 import { ValueField } from '@/components/ValueField'
 import { keepFocus } from '@/components/keepFocus'
 import { MetronomeVolume } from '@/features/metronome/MetronomeVolume'
@@ -63,7 +62,8 @@ export function PracticeSettings({ playbackGroup = false }: { playbackGroup?: bo
         <GrooveRows />
       </SettingGroup>
       <SettingGroup title="Sticking">
-        <Choice label="Mode" setting="sticking" options={STICKING_MODES} />
+        {/* Stacked, as its three chips beside the name are wider than the sidebar. */}
+        <Choice label="Mode" setting="sticking" options={STICKING_MODES} stacked />
         <Choice label="Lead hand" setting="leadHand" options={LEAD_HANDS} />
         <ResetOverrides />
       </SettingGroup>
@@ -71,57 +71,36 @@ export function PracticeSettings({ playbackGroup = false }: { playbackGroup?: bo
   )
 }
 
-/**
- * General: the settings that carry over between the screens, at the foot of the desktop's settings sidebar:
- * the mix, the metronome's sound and volume, and the theme. Its chevron, pointing down, folds it to
- * its heading, remembered on this device, which leaves the screen's own settings above it the room.
- */
-export function GeneralSettings() {
-  const open = useAppStore((s) => s.device.settingsSectionOpen)
-  const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
-  const id = useId()
-  const label = open ? 'Fold General' : 'Open General'
+/** The mix of the exercise's playback, on this device: a row for each layer, its volume and its mute. */
+export function MixSettings() {
   return (
-    // At most a little over half the sidebar, scrolling past that, so a short window leaves the screen's own settings room.
-    <section aria-labelledby={`${id}-heading`} className="flex max-h-[55%] shrink-0 flex-col gap-3.5 border-t border-line p-3">
-      <div className="flex items-start justify-between gap-2">
-        <PanelHeading id={`${id}-heading`} className={open ? '' : 'mb-0'}>
-          General
-        </PanelHeading>
-        <button
-          type="button"
-          aria-label={label}
-          aria-expanded={open}
-          aria-controls={`${id}-groups`}
-          title={label}
-          // Keep focus off the button, so Space still plays.
-          onMouseDown={keepFocus}
-          onClick={() => setDeviceSettings({ settingsSectionOpen: !open })}
-          className={`-mt-1 ${chevronButtonClass} ${open ? '' : '[&_svg]:rotate-180'}`}
-        >
-          <ChevronIcon />
-        </button>
-      </div>
-      {open && (
-        <div id={`${id}-groups`} className="-mx-3 flex min-h-0 flex-col gap-3.5 overflow-auto px-3">
-          <SettingGroup title="Mix">
-            <MixRow layer="click" />
-            <MixRow layer="exercise" />
-            <MixRow layer="groove" />
-          </SettingGroup>
-          <SettingGroup title="Metronome">
-            <MetronomeSound />
-            <MetronomeVolume row />
-          </SettingGroup>
-          <SettingGroup title="Appearance">
-            <LookChoice />
-            <ModeChoice />
-            <FitNotationChoice />
-            <BeatCountSwitch />
-          </SettingGroup>
-        </div>
-      )}
-    </section>
+    <SettingGroup title="Mix">
+      <MixRow layer="click" />
+      <MixRow layer="exercise" />
+      <MixRow layer="groove" />
+    </SettingGroup>
+  )
+}
+
+/** The Metronome screen's sound and volume, under its rhythm in the desktop's settings sidebar. */
+export function MetronomeSoundSettings() {
+  return (
+    <SettingGroup title="Sound">
+      <MetronomeSound />
+      <MetronomeVolume row />
+    </SettingGroup>
+  )
+}
+
+/** How the app looks on this device, on either screen: the theme, the mode, the notation's size and the beat count. */
+export function AppearanceSettings() {
+  return (
+    <SettingGroup title="Appearance">
+      <LookChoice />
+      <ModeChoice />
+      <FitNotationChoice />
+      <BeatCountSwitch />
+    </SettingGroup>
   )
 }
 
@@ -170,8 +149,8 @@ export function PhoneSettings({ onDone }: { onDone: () => void }) {
         )}
         {tab === 'sticking' && (
           <>
-            <Choice label="Mode" setting="sticking" options={STICKING_MODES} stacked />
-            <Choice label="Lead hand" setting="leadHand" options={LEAD_HANDS} stacked />
+            <Choice label="Mode" setting="sticking" options={STICKING_MODES} stacked large />
+            <Choice label="Lead hand" setting="leadHand" options={LEAD_HANDS} stacked large />
             <ResetOverrides />
           </>
         )}
@@ -482,15 +461,9 @@ function Swing({ large = false }: { large?: boolean }) {
   const setSwing = useAppStore((s) => s.setSwing)
   // The exercise Custom was picked on, so it closes again when another one opens.
   const [customFor, setCustomFor] = useState<string | null>(null)
-  const name = <span className={large ? 'font-semibold' : 'text-mute'}>Swing</span>
-  // Compound time's beats are already three eighths, so nothing is swung (ADR 0015).
-  if (meter(timeSignature).compound)
-    return (
-      <div className="flex flex-col gap-2">
-        {name}
-        <span className="text-xs text-mute">Not used in {timeSignature}: each beat is already three eighths.</span>
-      </div>
-    )
+  // Compound time's beats are already three eighths, so nothing is swung (ADR 0015). The rows stay,
+  // dimmed, so the settings under them keep their place when the time signature changes.
+  const compound = meter(timeSignature).compound
   const preset = swingPreset(swing)
   const custom = !preset || customFor === exerciseId
   const choose = (choice: SwingChoice) => {
@@ -499,11 +472,17 @@ function Swing({ large = false }: { large?: boolean }) {
     setSwing(choice)
   }
   return (
-    <div className={`flex flex-col ${large ? 'gap-2.5' : 'gap-2'}`}>
-      {name}
-      <Segmented label="Swing" fill options={SWING_CHOICES} value={custom ? 'custom' : preset.swing} onChange={choose} />
+    <div
+      className={`flex flex-col ${large ? 'gap-2.5' : 'gap-2'}`}
+      title={compound ? `Each beat of ${timeSignature} is already three eighths, so nothing is swung` : undefined}
+    >
+      <div className="flex items-baseline justify-between gap-2">
+        <span className={large ? 'font-semibold' : 'text-mute'}>Swing</span>
+        {compound && <span className="text-xs text-mute">not used in {timeSignature}</span>}
+      </div>
+      <Segmented label="Swing" fill disabled={compound} options={SWING_CHOICES} value={custom ? 'custom' : preset.swing} onChange={choose} />
       {custom && (
-        <div className="flex items-center gap-2">
+        <div inert={compound} className={`flex items-center gap-2 ${compound ? 'opacity-40' : ''}`}>
           <Slider label="Swing amount" min={MIN_SWING} max={MAX_SWING} step={0.005} value={swing} reset={MIN_SWING} onChange={setSwing} className="flex-1" />
           <ValueField
             label="Swing %"
@@ -699,30 +678,44 @@ const LEAD_HANDS: SegmentedOption<Hand>[] = [
   { value: 'L', label: 'L' },
 ]
 
-/** A row of buttons choosing one value of an exercise setting; each change is an undoable edit. */
+/**
+ * A row of buttons choosing one value of an exercise setting; each change is an undoable edit.
+ * `stacked`, the name sits over full-width buttons; `large`, on a phone, the name is bold.
+ */
 function Choice<K extends keyof ExerciseSettings>({
   label,
   setting,
   options,
   stacked = false,
+  large = false,
 }: {
   label: string
   setting: K
   options: SegmentedOption<ExerciseSettings[K]>[]
   stacked?: boolean
+  large?: boolean
 }) {
   const value = useAppStore((s) => s.editor.exercise[setting])
   const dispatch = useAppStore((s) => s.dispatch)
+  const buttons = (
+    <Segmented
+      label={label}
+      fill={stacked}
+      options={options}
+      value={value}
+      onChange={(option) => dispatch({ type: 'setExerciseSettings', settings: { [setting]: option } })}
+    />
+  )
+  if (stacked)
+    return (
+      <Stacked label={label} large={large}>
+        {buttons}
+      </Stacked>
+    )
   return (
-    <div className={stacked ? 'flex flex-col gap-2' : 'flex items-center justify-between gap-2'}>
-      <span className={stacked ? 'font-semibold' : 'text-mute'}>{label}</span>
-      <Segmented
-        label={label}
-        fill={stacked}
-        options={options}
-        value={value}
-        onChange={(option) => dispatch({ type: 'setExerciseSettings', settings: { [setting]: option } })}
-      />
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-mute">{label}</span>
+      {buttons}
     </div>
   )
 }
