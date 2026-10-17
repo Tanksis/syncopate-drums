@@ -10,8 +10,9 @@ import { PlaybackPosition } from './PlaybackPosition'
 import { usePlaybackKeys } from './usePlaybackKeys'
 
 /**
- * How much of the transport the exercise's bar, over the notation, has room for: all of it, or only
- * the position and the tempo, with the Click and Count-in chips and the loop chip in the Settings sidebar.
+ * How much of the transport the exercise's bar, over the notation, has room for beside the name: all
+ * of it, or only the position and the tempo, with the Click and Count-in chips and the loop chip on a
+ * row of their own under it (`PlaybackChips`).
  */
 export type TransportRoom = 'full' | 'compact'
 
@@ -28,12 +29,21 @@ export function TransportControls({ room }: { room: TransportRoom }) {
       {room === 'full' && (
         <>
           <span aria-hidden className="h-6 w-px bg-line" />
-          <ClickToggle />
-          <CountInToggle />
-          <span aria-hidden className="h-6 w-px bg-line" />
-          <LoopChip />
+          <PlaybackChips />
         </>
       )}
+    </div>
+  )
+}
+
+/** The Click and Count-in chips and the loop chip: in the transport, or on a row of their own under it. */
+export function PlaybackChips({ className = '' }: { className?: string }) {
+  return (
+    <div className={`flex items-center gap-2 whitespace-nowrap ${className}`}>
+      <ClickToggle />
+      <CountInToggle />
+      <span aria-hidden className="h-6 w-px bg-line" />
+      <LoopChip />
     </div>
   )
 }

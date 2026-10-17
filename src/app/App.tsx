@@ -20,7 +20,7 @@ import { NotationView } from '@/features/notation/NotationView'
 import { StaffPlayButton } from '@/features/playback/StaffPlayButton'
 import { TransportBar } from '@/features/playback/TransportBar'
 import type { TransportRoom } from '@/features/playback/TransportControls'
-import { TransportControls } from '@/features/playback/TransportControls'
+import { PlaybackChips, TransportControls } from '@/features/playback/TransportControls'
 import { PhoneSettings } from '@/features/settings/SettingsSidebar'
 import { PreferencesButton, SoundButton } from '@/features/settings/SettingsPopovers'
 import { SettingsSidebar } from '@/app/SettingsSidebar'
@@ -81,12 +81,16 @@ export function App() {
           <MetronomePage />
         ) : (
           <main className="flex min-h-0 min-w-0 flex-col">
-            {/* The exercise's bar: its name, which takes the room the transport leaves and always shows about 12 letters. */}
-            <div ref={barRef} className="flex items-center gap-3 border-b border-line px-4 py-2">
-              <div className="flex min-w-[10ch] flex-1">
-                <ExerciseName />
+            {/* The exercise's bar: its name, which takes the room the transport leaves and always shows about 12 letters;
+                where that leaves no room for the playback chips, they take a row under it, so the sidebar never changes. */}
+            <div ref={barRef} className="flex flex-col gap-2 border-b border-line px-4 py-2">
+              <div className="flex items-center gap-3">
+                <div className="flex min-w-[10ch] flex-1">
+                  <ExerciseName />
+                </div>
+                <TransportControls room={room} />
               </div>
-              <TransportControls room={room} />
+              {room === 'compact' && <PlaybackChips className="justify-end" />}
             </div>
             <ExampleNotice />
             {/* The music on a card, which takes the height the editor leaves, all of it when that's collapsed. */}
@@ -101,7 +105,7 @@ export function App() {
         )}
 
         <SidebarSlot name="Settings" side="right" {...sidebars.settings}>
-          <SettingsSidebar playbackGroup={room === 'compact'} onCollapse={sidebars.settings.onCollapse} />
+          <SettingsSidebar onCollapse={sidebars.settings.onCollapse} />
         </SidebarSlot>
       </div>
     </div>
@@ -299,7 +303,7 @@ function SettingsToggle({ state, onOpen, onCollapse }: SidebarControl) {
 /**
  * The exercise bar's widths, in px, below which its controls don't all fit while leaving the
  * exercise name its 12 letters or so, measured in each look's fonts with the click off (Warm's need
- * the most): under `full` the Click and Count-in chips and the loop chip move to the settings sidebar.
+ * the most): under `full` the Click and Count-in chips and the loop chip move to a row under the bar's.
  */
 const EXERCISE_BAR_WIDTH = { full: 778 }
 
