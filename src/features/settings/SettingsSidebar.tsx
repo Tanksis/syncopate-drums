@@ -17,25 +17,26 @@ import { MetronomeVolume } from '@/features/metronome/MetronomeVolume'
 import { SOUND_OPTIONS, pickSound } from '@/features/metronome/SoundSheet'
 import { LoopChip } from '@/features/playback/LoopChip'
 import { ClickToggle, CountInToggle } from '@/features/playback/TransportControls'
-import type { ExerciseSettings, Hand, HihatFoot, Layer, StickingMode, Theme, TimeSignature, VolumeSetting } from '@/core'
+import type { ExerciseSettings, Hand, HihatFoot, Layer, StickingMode, SwingPreset, Theme, TimeSignature, VolumeSetting } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
   MAX_SWING,
   MAX_VOLUME,
   MIN_SWING,
+  SWING_PRESETS,
   THEMES,
   TIME_SIGNATURES,
-  TRIPLET_SWING,
   grooveOptions,
   groovePreset,
   hihatFootOptions,
   meter,
   overrideCount,
+  swingPreset,
 } from '@/core'
 
 /**
- * The Practice screen's own settings, at the top of the desktop's settings sidebar: the time, the
- * groove and the sticking. `playbackGroup` adds the Click and Count-in chips and the loop chip, for when the exercise's bar has no
+ * The Practice screen's own settings, at the top of the desktop's settings sidebar: the time (and
+ * swing), the groove and the sticking. `playbackGroup` adds the Click and Count-in chips and the loop chip, for when the exercise's bar has no
  * room for them.
  */
 export function PracticeSettings({ playbackGroup = false }: { playbackGroup?: boolean }) {
@@ -55,11 +56,11 @@ export function PracticeSettings({ playbackGroup = false }: { playbackGroup?: bo
       )}
       <SettingGroup title="Time">
         <TimeSignatureChoice />
+        <Swing />
       </SettingGroup>
       <SettingGroup title="Groove">
         <GroovePicker />
         <HihatFootChoice />
-        <Swing />
       </SettingGroup>
       <SettingGroup title="Sticking">
         <Choice label="Mode" setting="sticking" options={STICKING_MODES} />
@@ -162,10 +163,10 @@ export function PhoneSettings({ onDone }: { onDone: () => void }) {
         {tab === 'groove' && (
           <>
             <TimeSignatureChoice large />
+            <Swing large />
             <hr className="w-full border-0 border-t border-line" />
             <GroovePicker large />
             <HihatFootChoice large />
-            <Swing stacked />
           </>
         )}
         {tab === 'sticking' && (
@@ -337,12 +338,12 @@ function HihatFootChoice({ large = false }: { large?: boolean }) {
   )
 }
 
-const SWING_PRESETS = [
-  { name: 'Straight', swing: MIN_SWING },
-  { name: 'Light', swing: 0.58 },
-  { name: 'Medium', swing: 0.62 },
-  { name: 'Triplet', swing: TRIPLET_SWING },
-  { name: 'Dotted', swing: 0.75 },
+/** A swing chip: one of the presets by name, or Custom, which shows the slider and the %. */
+type SwingChoice = SwingPreset['name'] | 'custom'
+
+const SWING_CHOICES: SegmentedOption<SwingChoice>[] = [
+  ...SWING_PRESETS.map((preset) => ({ value: preset.name, label: preset.name })),
+  { value: 'custom', label: 'Custom', title: 'Any amount from 50% to 75%' },
 ]
 
 /** A typed swing, as an amount; one that shows as a preset (66.7% is triplet) is that preset. */
@@ -350,63 +351,52 @@ const swingFromPercent = (percent: number) =>
   SWING_PRESETS.find((preset) => Math.abs(preset.swing * 100 - percent) < 0.05)?.swing ?? percent / 100
 
 /**
- * The swing amount: a slider from straight to dotted, and chips for straight and the common feels.
- * `stacked`, its name and percent sit over a full-width slider.
+ * The swing amount, as chips: Straight, Triplet, Dotted, or Custom, which shows a slider and the %
+ * under them. An amount that isn't a preset reads as Custom, and Custom stays open on this exercise
+ * once picked, even when the slider lands on a preset. `large`, on a phone, the name is bold.
  */
-function Swing({ stacked = false }: { stacked?: boolean }) {
+function Swing({ large = false }: { large?: boolean }) {
   const swing = useAppStore((s) => s.editor.exercise.practice.swing)
+  const exerciseId = useAppStore((s) => s.editor.exercise.id)
   const timeSignature = useAppStore((s) => s.editor.exercise.timeSignature)
   const setSwing = useAppStore((s) => s.setSwing)
+  // The exercise Custom was picked on, so it closes again when another one opens.
+  const [customFor, setCustomFor] = useState<string | null>(null)
+  const name = <span className={large ? 'font-semibold' : 'text-mute'}>Swing</span>
   // Compound time's beats are already three eighths, so nothing is swung (ADR 0015).
   if (meter(timeSignature).compound)
     return (
-      <div className={stacked ? 'flex flex-col gap-2' : 'flex items-baseline gap-2'}>
-        <span className={stacked ? 'font-semibold' : 'text-mute'}>Swing</span>
+      <div className="flex flex-col gap-2">
+        {name}
         <span className="text-xs text-mute">Not used in {timeSignature}: each beat is already three eighths.</span>
       </div>
     )
-  const preset = SWING_PRESETS.find((p) => Math.abs(p.swing - swing) < 1e-6)
-  const slider = (
-    <Slider label="Swing" min={MIN_SWING} max={MAX_SWING} step={0.005} value={swing} reset={MIN_SWING} onChange={setSwing} className="flex-1" />
-  )
-  const percent = (
-    <ValueField
-      label="Swing %"
-      value={swing * 100}
-      unit="%"
-      min={MIN_SWING * 100}
-      max={MAX_SWING * 100}
-      decimals={1}
-      onChange={(percent) => setSwing(swingFromPercent(percent))}
-      className="w-16 sm:w-14"
-    />
-  )
+  const preset = swingPreset(swing)
+  const custom = !preset || customFor === exerciseId
+  const choose = (choice: SwingChoice) => {
+    if (choice === 'custom') return setCustomFor(exerciseId)
+    setCustomFor(null)
+    setSwing(SWING_PRESETS.find((p) => p.name === choice)!.swing)
+  }
   return (
-    <div className={`flex flex-col ${stacked ? 'gap-2.5' : 'gap-1.5'}`}>
-      {stacked ? (
-        <>
-          <div className="flex items-center justify-between gap-2">
-            <span className="font-semibold">Swing</span>
-            {percent}
-          </div>
-          <div className="flex">{slider}</div>
-        </>
-      ) : (
+    <div className={`flex flex-col ${large ? 'gap-2.5' : 'gap-2'}`}>
+      {name}
+      <Segmented label="Swing" fill options={SWING_CHOICES} value={custom ? 'custom' : preset.name} onChange={choose} />
+      {custom && (
         <div className="flex items-center gap-2">
-          <span className="text-mute">Swing</span>
-          {slider}
-          {percent}
+          <Slider label="Swing amount" min={MIN_SWING} max={MAX_SWING} step={0.005} value={swing} reset={MIN_SWING} onChange={setSwing} className="flex-1" />
+          <ValueField
+            label="Swing %"
+            value={swing * 100}
+            unit="%"
+            min={MIN_SWING * 100}
+            max={MAX_SWING * 100}
+            decimals={1}
+            onChange={(percent) => setSwing(swingFromPercent(percent))}
+            className="w-16 sm:w-14"
+          />
         </div>
       )}
-      <Segmented
-        label="Swing presets"
-        fill
-        // Smaller than the panel's text, so the five names fit the desktop sidebar's width.
-        className="text-xs"
-        options={SWING_PRESETS.map((p) => ({ value: p.swing, label: p.name }))}
-        value={preset?.swing ?? null}
-        onChange={(amount) => setSwing(amount)}
-      />
     </div>
   )
 }

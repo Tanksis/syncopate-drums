@@ -21,6 +21,7 @@ import {
   withBpm,
   withGroove,
   withLoopRange,
+  swingPreset,
   withSwing,
 } from './index'
 
@@ -179,6 +180,15 @@ describe('the swing amount', () => {
     expect(withSwing(ex, 0.8).practice.swing).toBe(0.75)
     expect(withSwing(ex, NaN).practice.swing).toBe(0.5)
     expect(withSwing(ex, 0.62).practice).toMatchObject({ bpm: 80, loopRange: null, groove: 'off' })
+  })
+
+  it('reads as Straight, Triplet or Dotted, and any other amount as none of them (Custom)', () => {
+    expect(swingPreset(0.5)?.name).toBe('Straight')
+    expect(swingPreset(2 / 3)?.name).toBe('Triplet')
+    expect(swingPreset(0.6666667)?.name).toBe('Triplet')
+    expect(swingPreset(0.75)?.name).toBe('Dotted')
+    expect(swingPreset(0.58)).toBeUndefined()
+    expect(swingPreset(0.667)).toBeUndefined()
   })
 })
 
