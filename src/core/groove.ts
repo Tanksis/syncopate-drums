@@ -46,6 +46,19 @@ const BASS_DRUM: GrooveNotation = { key: 'f/4', notehead: 'normal' }
 /** The tick of a beat, or of the & of it. */
 const at = (beat: number, eighth = 0) => beat * TICKS_PER_BEAT + eighth * (TICKS_PER_BEAT / 2)
 
+/** The tick of a compound beat's eighth, 0–2, on the triplet grid (ADR 0015). */
+const third = (beat: number, eighth: number) => beat * TICKS_PER_BEAT + eighth * (TICKS_PER_BEAT / 3)
+
+/**
+ * A compound pattern's hits from its strip, one character per eighth, three to a beat: each `x` on
+ * the instrument, at `downbeat` on a beat and `offbeat` elsewhere.
+ */
+function stripHits(strip: string, instrument: Instrument, notation: GrooveNotation, downbeat: number, offbeat: number): GrooveHit[] {
+  return [...strip].flatMap((c, i): GrooveHit[] =>
+    c === 'x' ? [{ tick: third(Math.floor(i / 3), i % 3), instrument, velocity: i % 3 === 0 ? downbeat : offbeat, notation }] : [],
+  )
+}
+
 /** The bar's beats, from 0. */
 const beatsOfBar = (beats: number) => Array.from({ length: beats }, (_, beat) => beat)
 
@@ -66,6 +79,12 @@ function hihatEighths(beats: number): GrooveHit[] {
 }
 
 const simple = (m: Meter) => !m.compound
+const sixEight = (m: Meter) => m.compound && m.beats === 2
+const twelveEight = (m: Meter) => m.compound && m.beats === 4
+
+const BELL = 'x.xxx.'
+const SHUFFLE = 'x.xx.xx.xx.x'
+const SLOW_BLUES = 'xxxxxxxxxxxx'
 
 const PATTERNS: readonly Pattern[] = [
   { id: 'off', family: null, name: 'None', description: 'Just the click and your exercise.', strip: '', fits: () => true, hits: () => [] },
@@ -78,6 +97,33 @@ const PATTERNS: readonly Pattern[] = [
     strip: 'xxxxxxxx',
     fits: simple,
     hits: hihatEighths,
+  },
+  {
+    id: 'bell68',
+    family: 'Afro-Cuban',
+    name: 'Bell',
+    description: 'The 6/8 bell on the ride bell.',
+    strip: BELL,
+    fits: sixEight,
+    hits: () => stripHits(BELL, 'rideBell', RIDE, 1, 0.8),
+  },
+  {
+    id: 'shuffle128',
+    family: 'Blues',
+    name: 'Shuffle',
+    description: 'The ride on the first and third eighth of each beat.',
+    strip: SHUFFLE,
+    fits: twelveEight,
+    hits: () => stripHits(SHUFFLE, 'ride', RIDE, 1, 0.7),
+  },
+  {
+    id: 'slowBlues128',
+    family: 'Blues',
+    name: 'Slow blues',
+    description: 'The closed hi-hat on every eighth, each beat louder.',
+    strip: SLOW_BLUES,
+    fits: twelveEight,
+    hits: () => stripHits(SLOW_BLUES, 'hihatClosed', HIHAT, 1, 0.7),
   },
 ]
 

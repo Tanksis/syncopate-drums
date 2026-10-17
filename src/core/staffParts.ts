@@ -249,11 +249,12 @@ export function staffParts(
     // A swung downbeat leaves the middle of the triplet silent where its part strikes on the let.
     const lets = new Set(struck.map((s) => s.start).filter((t) => swungBeat[beatOf(t)] && t % TICKS_PER_BEAT === LET))
     const sounds = struck.map((s) => (lets.has(s.start + LET) ? { ...s, end: Math.min(s.end, s.start + TRIPLET_EIGHTH) } : s))
-    // A swung beat is a triplet group in a part only where the part has a note off the downbeat.
+    // A swung beat is a triplet group in a part only where the part has a note off the downbeat; so is
+    // a compound beat, whose eighths are always on the triplet grid, where only the groove strikes inside it.
     const offBeat = new Set(
       sounds.flatMap((s) => [s.start, s.end]).filter((tick) => tick % TICKS_PER_BEAT !== 0).map(beatOf),
     )
-    const beats = tripletBeats.map((t, beat) => t || (swungBeat[beat] && offBeat.has(beat)))
+    const beats = tripletBeats.map((t, beat) => t || ((swungBeat[beat] || compound) && offBeat.has(beat)))
     return { beats, sounds, inBar: (b: number) => sounds.some((s) => barOf(s) === b) }
   })
   /** The part that rests wherever it is silent, in a bar of two voices. */

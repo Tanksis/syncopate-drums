@@ -86,7 +86,7 @@ export type StickingMode = 'natural' | 'alternate' | 'off'
 export type Duration = 'quarter' | 'eighth' | 'sixteenth'
 
 /** The pattern played on the hands above the exercise, or none; the patterns themselves are in `groove.ts`. */
-export type PatternId = 'off' | 'ride' | 'hihatEighths'
+export type PatternId = 'off' | 'ride' | 'hihatEighths' | 'bell68' | 'shuffle128' | 'slowBlues128'
 
 /** The bass drum under the exercise: none, or feathered, softly on every beat. */
 export type BassDrum = 'off' | 'feathered'

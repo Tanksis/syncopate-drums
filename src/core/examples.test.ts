@@ -119,8 +119,9 @@ describe('what each example shows', () => {
     expect(hands.join('')).toBe('RLRLRLRLRLRLRLRLRL')
   })
 
-  it('slow blues: 12/8, the snare on 2 and 4 and the kick on 1 with pickups into 3', () => {
+  it('slow blues: 12/8 over the Slow blues pattern, the snare on 2 and 4 and the kick on 1 with pickups into 3', () => {
     expect(blues.timeSignature).toBe('12/8')
+    expect(blues.practice.pattern).toBe('slowBlues128')
     const grid = (row: 'snare' | 'kick') =>
       editorBeatViews(newEditorState(blues)).map((bar) => bar.map((beat) => beat[row].hits).join(' '))
     expect(grid('snare')).toEqual(['... x.. ... x..'])

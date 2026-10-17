@@ -14,7 +14,20 @@ describe('the patterns', () => {
       ['Rock & pop', ['hihatEighths']],
     ])
     expect(listed('3/4')).toEqual(listed('4/4'))
-    expect(listed('6/8')).toEqual([[null, ['off']]])
+    expect(listed('6/8')).toEqual([
+      [null, ['off']],
+      ['Afro-Cuban', ['bell68']],
+    ])
+    expect(listed('12/8')).toEqual([
+      [null, ['off']],
+      ['Blues', ['shuffle128', 'slowBlues128']],
+    ])
+  })
+
+  it("gives every pattern a strip of its meter's eighths", () => {
+    for (const ts of ['4/4', '6/8', '12/8'] as const)
+      for (const { patterns } of patternsFor(ts).slice(1))
+        for (const p of patterns) expect(p.strip, p.id).toHaveLength(ts === '6/8' ? 6 : ts === '12/8' ? 12 : 8)
   })
 
   it('gives each pattern a description and a strip of one character per eighth', () => {
@@ -30,6 +43,34 @@ describe('the patterns', () => {
     expect(ticks(hits, 'hihatPedal')).toEqual([])
     expect(ticks(patternHits('ride', meter('3/4')), 'ride')).toEqual([0, 12, 18, 24])
     expect(ticks(patternHits('ride', meter('2/4')), 'ride')).toEqual([0, 12, 18])
+  })
+
+  it('plays the 6/8 bell on the ride bell, x.xxx., louder on the beats', () => {
+    const hits = patternHits('bell68', meter('6/8'))
+    expect(ticks(hits, 'rideBell')).toEqual([0, 8, 12, 16])
+    expect(hits).toHaveLength(4)
+    expect(hits[0].velocity).toBeGreaterThan(hits[1].velocity)
+    expect(hits[2].velocity).toBeGreaterThan(hits[3].velocity)
+    expect(hits[0].notation).toEqual(patternHits('ride', meter('4/4'))[0].notation)
+  })
+
+  it('plays the shuffle on the ride, the first and third eighth of each beat', () => {
+    const hits = patternHits('shuffle128', meter('12/8'))
+    expect(ticks(hits, 'ride')).toEqual([0, 8, 12, 20, 24, 32, 36, 44])
+    expect(hits).toHaveLength(8)
+  })
+
+  it('plays the slow blues on the closed hi-hat, every eighth, the downbeat of each beat louder', () => {
+    const hits = patternHits('slowBlues128', meter('12/8'))
+    expect(ticks(hits, 'hihatClosed')).toEqual([0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44])
+    expect(hits).toHaveLength(12)
+    for (const h of hits) if (h.tick % 12 !== 0) expect(h.velocity).toBeLessThan(hits[0].velocity)
+  })
+
+  it('plays the compound patterns only in their own meters', () => {
+    expect(patternHits('bell68', meter('12/8'))).toEqual([])
+    expect(patternHits('shuffle128', meter('6/8'))).toEqual([])
+    expect(patternHits('slowBlues128', meter('4/4'))).toEqual([])
   })
 
   it('plays hi-hat eighths in any simple meter, and nothing for None', () => {
@@ -87,6 +128,12 @@ describe('picking a pattern', () => {
     expect(withPattern(onRide, 'ride')).toEqual({ exercise: onRide, suggested: [] })
     const compound = exercise({}, '6/8')
     expect(withPattern(compound, 'hihatEighths').exercise).toBe(compound)
+  })
+
+  it('suggests nothing for the compound patterns', () => {
+    const { exercise: picked, suggested } = withPattern(exercise({}, '12/8'), 'shuffle128')
+    expect(picked.practice).toMatchObject({ pattern: 'shuffle128', swing: 0.5, hihatFoot: 'off' })
+    expect(suggested).toEqual([])
   })
 
   it('suggests nothing for Hi-hat 8ths', () => {
