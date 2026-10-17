@@ -4,9 +4,9 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `SWING_PRESETS` and `swingPreset()` in the core, unit-tested
-- [ ] The chips and Custom's slider and % on desktop and phone; the old presets row gone
-- [ ] `CONTEXT.md`: Swing amount's presets
-- [ ] Checked in the browser at 1280 and 390 × 844
+- [x] `SWING_PRESETS` and `swingPreset()` in the core, unit-tested
+- [x] The chips and Custom's slider and % on desktop and phone; the old presets row gone
+- [x] `CONTEXT.md`: Swing amount's presets
+- [x] Checked in the browser at 1280 and 390 × 844

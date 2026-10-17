@@ -341,6 +341,20 @@ export function withSwing(exercise: Exercise, swing: number): Exercise {
   return { ...exercise, practice: { ...exercise.practice, swing: clampSwing(swing) } }
 }
 
+/** The swing amounts with names, in picker order; any other amount is a custom one. */
+export const SWING_PRESETS = [
+  { name: 'Straight', swing: MIN_SWING },
+  { name: 'Triplet', swing: TRIPLET_SWING },
+  { name: 'Dotted', swing: MAX_SWING },
+] as const
+
+export type SwingPreset = (typeof SWING_PRESETS)[number]
+
+/** The preset a swing amount is (to within a millionth, so a stored 2/3 is still Triplet), or undefined for a custom amount. */
+export function swingPreset(swing: number): SwingPreset | undefined {
+  return SWING_PRESETS.find((preset) => Math.abs(preset.swing - swing) < 1e-6)
+}
+
 /** The exercise with a hi-hat foot setting, as it was if it already has that one. */
 export function withHihatFoot(exercise: Exercise, hihatFoot: HihatFoot): Exercise {
   if (hihatFoot === exercise.practice.hihatFoot) return exercise

@@ -43,7 +43,7 @@ const WORDS: [word: string, meaning: string][] = [
   ],
   ['Groove', 'Drum-set parts played and written with the exercise, such as a jazz ride with the hi-hat on 2 & 4, picked from the presets.'],
   ['Hi-hat foot', 'The hi-hat pedal played under every bar: on 1, quarters, 2 & 4 or the off-beats, with any groove or none.'],
-  ['Swing', 'How long the first eighth of each beat is: 50% is straight, 66.7% triplet swing. It eases toward straight as the tempo rises, and written triplets never swing.'],
+  ['Swing', 'How long the first eighth of each beat is: Straight (50%), Triplet (66.7%), Dotted (75%), or a Custom amount between. It eases toward straight as the tempo rises, and written triplets never swing.'],
   ['Loop', 'The bars that repeat as you play, all of them unless you choose: click a bar number to loop it, Shift+click to extend.'],
   ['Count-in', 'One bar of click before the exercise starts, turned on and off with the Count-in chip.'],
 ]
