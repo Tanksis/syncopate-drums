@@ -17,7 +17,7 @@ import { MetronomeVolume } from '@/features/metronome/MetronomeVolume'
 import { SOUND_OPTIONS, pickSound } from '@/features/metronome/SoundSheet'
 import { LoopChip } from '@/features/playback/LoopChip'
 import { ClickToggle, CountInToggle } from '@/features/playback/TransportControls'
-import type { ExerciseSettings, Hand, HihatFoot, Layer, StickingMode, SwingPreset, Theme, TimeSignature, VolumeSetting } from '@/core'
+import type { ExerciseSettings, Hand, HihatFoot, Layer, StickingMode, Theme, TimeSignature, VolumeSetting } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
   MAX_SWING,
@@ -338,11 +338,11 @@ function HihatFootChoice({ large = false }: { large?: boolean }) {
   )
 }
 
-/** A swing chip: one of the presets by name, or Custom, which shows the slider and the %. */
-type SwingChoice = SwingPreset['name'] | 'custom'
+/** A swing chip: one of the presets' amounts, or Custom, which shows the slider and the %. */
+type SwingChoice = number | 'custom'
 
 const SWING_CHOICES: SegmentedOption<SwingChoice>[] = [
-  ...SWING_PRESETS.map((preset) => ({ value: preset.name, label: preset.name })),
+  ...SWING_PRESETS.map((preset) => ({ value: preset.swing, label: preset.name })),
   { value: 'custom', label: 'Custom', title: 'Any amount from 50% to 75%' },
 ]
 
@@ -376,12 +376,12 @@ function Swing({ large = false }: { large?: boolean }) {
   const choose = (choice: SwingChoice) => {
     if (choice === 'custom') return setCustomFor(exerciseId)
     setCustomFor(null)
-    setSwing(SWING_PRESETS.find((p) => p.name === choice)!.swing)
+    setSwing(choice)
   }
   return (
     <div className={`flex flex-col ${large ? 'gap-2.5' : 'gap-2'}`}>
       {name}
-      <Segmented label="Swing" fill options={SWING_CHOICES} value={custom ? 'custom' : preset.name} onChange={choose} />
+      <Segmented label="Swing" fill options={SWING_CHOICES} value={custom ? 'custom' : preset.swing} onChange={choose} />
       {custom && (
         <div className="flex items-center gap-2">
           <Slider label="Swing amount" min={MIN_SWING} max={MAX_SWING} step={0.005} value={swing} reset={MIN_SWING} onChange={setSwing} className="flex-1" />
