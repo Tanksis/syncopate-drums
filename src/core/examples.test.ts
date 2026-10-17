@@ -26,18 +26,19 @@ import {
 const examples = exampleExercises()
 
 describe('the example exercises', () => {
-  it('are five, named for what they show, in order', () => {
+  it('are six, named for what they show, in order', () => {
     expect(examples.map((e) => e.name)).toEqual([
       'Example: syncopated eighths',
       'Example: jazz comping',
       'Example: rock beat',
       'Example: triplets',
       'Example: slow blues',
+      'Example: afro-cuban 6/8',
     ])
   })
 
   it('are listed by their titles, without the "Example: " prefix', () => {
-    expect(examples.map(exampleTitle)).toEqual(['syncopated eighths', 'jazz comping', 'rock beat', 'triplets', 'slow blues'])
+    expect(examples.map(exampleTitle)).toEqual(['syncopated eighths', 'jazz comping', 'rock beat', 'triplets', 'slow blues', 'afro-cuban 6/8'])
   })
 
   it('each have a fixed id that isExample recognises, and come out the same from two calls', () => {
@@ -47,6 +48,7 @@ describe('the example exercises', () => {
       'example:rock-beat',
       'example:triplets',
       'example:slow-blues',
+      'example:afro-cuban',
     ])
     expect(examples.every((e) => isExample(e.id))).toBe(true)
     expect(exampleExercises()).toEqual(examples)
@@ -76,7 +78,7 @@ describe('the example exercises', () => {
 })
 
 describe('what each example shows', () => {
-  const [eighths, comping, rock, triplets, blues] = examples
+  const [eighths, comping, rock, triplets, blues, afroCuban] = examples
 
   /** Each event of a part as `start drums`, or `start rest`. */
   const show = (events: readonly StaffEvent[]) =>
@@ -126,6 +128,15 @@ describe('what each example shows', () => {
       editorBeatViews(newEditorState(blues)).map((bar) => bar.map((beat) => beat[row].hits).join(' '))
     expect(grid('snare')).toEqual(['... x.. ... x..'])
     expect(grid('kick')).toEqual(['x.. ..x x.x ...'])
+  })
+
+  it('afro-cuban 6/8: over the Bell, the snare on 2, in bar 2 also on the li of 1, and a kick pickup into bar 2', () => {
+    expect(afroCuban.timeSignature).toBe('6/8')
+    expect(afroCuban.practice.pattern).toBe('bell68')
+    const grid = (row: 'snare' | 'kick') =>
+      editorBeatViews(newEditorState(afroCuban)).map((bar) => bar.map((beat) => beat[row].hits).join(' '))
+    expect(grid('snare')).toEqual(['... x..', '..x x..'])
+    expect(grid('kick')).toEqual(['x.. ..x', 'x.. ...'])
   })
 })
 

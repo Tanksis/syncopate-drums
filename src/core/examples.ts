@@ -79,6 +79,19 @@ const EXAMPLES: readonly Example[] = [
       kick: ['x.. ..x x.x ...'],
     },
   },
+  {
+    id: `${EXAMPLE_PREFIX}afro-cuban`,
+    name: `${EXAMPLE_NAME_PREFIX}afro-cuban 6/8`,
+    bpm: 72,
+    pattern: 'bell68',
+    swing: MIN_SWING,
+    sticking: 'off',
+    timeSignature: '6/8',
+    rows: {
+      snare: ['... x..', '..x x..'],
+      kick: ['x.. ..x', 'x.. ...'],
+    },
+  },
 ]
 
 /** The example exercises, in order, under their fixed ids and never opened; every call gives an equal set. */
