@@ -4,11 +4,20 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done (merged in PR #146, 2026-10-17)
 
-- [ ] `PatternId`, `Pattern`, `patternsFor()`, `patternHits()`; `PracticeSettings.pattern` and `bassDrum`, with tests
-- [ ] `withPattern` and its suggestions, with tests; the feathered bass drum with any pattern
-- [ ] Schema 6 migration (sound unchanged) and import validation, with tests
-- [ ] The picker, the Feet rows and the note with Undo, on desktop and phone
-- [ ] ADR 0010 note; `CONTEXT.md`: Pattern, Bass drum
-- [ ] Checked in the browser at 1280 and 390 × 844, with real mouse events
+- [x] `PatternId`, `Pattern`, `patternsFor()`, `patternHits()`; `PracticeSettings.pattern` and `bassDrum`, with tests
+- [x] `withPattern` and its suggestions, with tests; the feathered bass drum with any pattern
+- [x] Schema 6 migration (sound unchanged) and import validation, with tests
+- [x] The picker, the Feet rows and the note with Undo, on desktop and phone
+- [x] ADR 0010 note; `CONTEXT.md`: Pattern, Bass drum
+- [x] Checked in the browser at 1280 and 390 × 844, with real mouse events
+
+## Comments
+
+- The sticking-pattern fill's `withPattern` (pattern.ts) was renamed `withPatternFill`, so the spec's `withPattern(exercise, id)` could take the name.
+- Notation: under a pattern, the hi-hat foot setting counts in the voicing as the jazz preset's own foot did, so migrated jazz exercises are written exactly as before. With no pattern it stays an ostinato under the fill (ADR 0012 has a note).
+- Schema 6 sets the 2 & 4 foot for a jazz exercise only in 4/4. A jazz exercise saved in 3/4 or 2/4 (possible since ticket 01) migrates with the foot off, because those meters don't offer 2 & 4. Its hi-hat on beat 2 is lost.
+- The hi-hat foot became chips (Off, 1, Beats, 2 & 4, &s), as in the prototype, rather than a select.
+- The note's Undo restores only the settings the pick changed.
+- The browser check ran at a 958 px viewport and at 1280 × 860 and 390 × 844 in iframes, because the window couldn't be resized.
