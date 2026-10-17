@@ -23,3 +23,5 @@ Choices made where the conversation was silent:
 - **The metronome's sound and volume belong to the Metronome screen.** The exercise's click is a fixed beep at the Mix's Click volume, and the metronome's sound and volume are heard only on the Metronome screen, so they moved to its sidebar, under a Sound heading.
 - **The phone is unchanged:** its full-screen settings already split into Groove, Sticking, Mix and Theme tabs.
 - **`settingsSectionOpen`** (the stored General fold) is gone from the device settings; a stored one is dropped on load, as any unknown key is.
+
+**Follow-up, 2026-10-17 (with ticket 05's branch), at the user's request:** the header's buttons run Help, speaker, Preferences, settings toggle, and the speaker no longer disappears on the Metronome screen. It opens the screen's own sound, as the sidebar holds the screen's own settings: the Mix on Practice, and the metronome's sound and volume on the Metronome, which left that screen's sidebar (back to Time signature and Subdivision). There it reads "Metronome sound" and is crossed out at 0% volume. The header now stays fully still between screens.

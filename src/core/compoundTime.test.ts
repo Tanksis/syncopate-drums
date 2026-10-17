@@ -177,6 +177,29 @@ describe('playing compound time', () => {
   })
 })
 
+describe('the compound patterns', () => {
+  it('writes the 6/8 bell on the ride line as x noteheads, sounded on the ride bell, with the line on its stems', () => {
+    const bars = setBeat(inTime('6/8').exercise.bars, 'snare', 0, 1, 'x..')
+    const parts = staffParts(bars, 'bell68', { compound: true })
+    const chords = parts[0].hands.flatMap((e) => (e.kind === 'chord' ? [`${e.start} ${e.notes.map((n) => `${n.drum}:${n.notehead}`).join('+')}`] : []))
+    expect(chords).toEqual(['0 ride:x', '8 ride:x', '12 ride:x+snare:normal', '16 ride:x'])
+    expect(parts[0].hands.map((e) => e.triplet)).toEqual([true, true, true, true])
+  })
+
+  it('plays the shuffle and the slow blues on the triplet grid in 12/8', () => {
+    const exercise = (pattern: 'shuffle128' | 'slowBlues128') => {
+      const ex = inTime('12/8').exercise
+      return { ...ex, practice: { ...ex.practice, bpm: 60, pattern } }
+    }
+    const heard = (pattern: 'shuffle128' | 'slowBlues128') =>
+      schedule(exercise(pattern), exercise(pattern).practice, DEFAULT_DEVICE_SETTINGS, { bar: 0, tick: 0 }, 2)
+        .events.filter((e) => e.kind === 'groove')
+        .map((e) => `${e.time.toFixed(3)} ${e.instrument}`)
+    expect(heard('shuffle128')).toEqual(['0.000 ride', '0.667 ride', '1.000 ride', '1.667 ride'])
+    expect(heard('slowBlues128')).toEqual(['0.000', '0.333', '0.667', '1.000', '1.333', '1.667'].map((t) => `${t} hihatClosed`))
+  })
+})
+
 describe('writing compound time', () => {
   it('cuts a note held over a beat at the beat line, tied', () => {
     const state = applyEdit(inTime('6/8'), { type: 'toggleGridPosition', row: 'snare', bar: 0, beat: 0, position: 0 })

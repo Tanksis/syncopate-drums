@@ -22,7 +22,7 @@ import { TransportBar } from '@/features/playback/TransportBar'
 import type { TransportRoom } from '@/features/playback/TransportControls'
 import { TransportControls } from '@/features/playback/TransportControls'
 import { PhoneSettings } from '@/features/settings/SettingsSidebar'
-import { MixButton, PreferencesButton } from '@/features/settings/SettingsPopovers'
+import { PreferencesButton, SoundButton } from '@/features/settings/SettingsPopovers'
 import { SettingsSidebar } from '@/app/SettingsSidebar'
 import { useAppStore } from '@/app/store'
 import { useNarrowWindow, usePhoneOrientation, usePhoneWindow } from '@/app/useMediaQuery'
@@ -60,11 +60,11 @@ export function App() {
         <ScreenTabs place="header" />
         <div className="flex items-center justify-end gap-3">
           <NotSaving />
-          {/* Left of the rest, so they keep their place when the Metronome hides it. */}
-          {!onMetronome && <MixButton />}
+          {/* The same buttons on both screens, so none moves when the screen does; the speaker's panel follows the screen. */}
           <Button size="md" icon aria-label="Help" title="Help and about" onClick={() => setHelpOpen(true)}>
             <HelpIcon />
           </Button>
+          <SoundButton />
           <PreferencesButton />
           <SettingsToggle {...sidebars.settings} />
         </div>

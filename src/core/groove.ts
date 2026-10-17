@@ -34,7 +34,7 @@ export interface Pattern {
   strip: string
   /** Whether it has a place in a bar of this meter. */
   fits: (meter: Meter) => boolean
-  /** Every bar's hits, in tick order, in a bar of this many beats. */
+  /** Every bar's hits, in tick order, in a bar of this many beats; one of a single meter's ignores it. */
   hits: (beats: number) => GrooveHit[]
 }
 
@@ -45,6 +45,20 @@ const BASS_DRUM: GrooveNotation = { key: 'f/4', notehead: 'normal' }
 
 /** The tick of a beat, or of the & of it. */
 const at = (beat: number, eighth = 0) => beat * TICKS_PER_BEAT + eighth * (TICKS_PER_BEAT / 2)
+
+/** The tick of a compound beat's eighth, 0–2, on the triplet grid (ADR 0015). */
+const third = (beat: number, eighth: number) => beat * TICKS_PER_BEAT + eighth * (TICKS_PER_BEAT / 3)
+
+/**
+ * A compound pattern's strip, one character per eighth, three to a beat, and its hits played from
+ * it: each `x` on the instrument, at `downbeat` on a beat and `offbeat` elsewhere.
+ */
+function fromStrip(strip: string, instrument: Instrument, notation: GrooveNotation, downbeat: number, offbeat: number): Pick<Pattern, 'strip' | 'hits'> {
+  const hits = [...strip].flatMap((c, i): GrooveHit[] =>
+    c === 'x' ? [{ tick: third(Math.floor(i / 3), i % 3), instrument, velocity: i % 3 === 0 ? downbeat : offbeat, notation }] : [],
+  )
+  return { strip, hits: () => hits }
+}
 
 /** The bar's beats, from 0. */
 const beatsOfBar = (beats: number) => Array.from({ length: beats }, (_, beat) => beat)
@@ -66,6 +80,8 @@ function hihatEighths(beats: number): GrooveHit[] {
 }
 
 const simple = (m: Meter) => !m.compound
+const sixEight = (m: Meter) => m.compound && m.beats === 2
+const twelveEight = (m: Meter) => m.compound && m.beats === 4
 
 const PATTERNS: readonly Pattern[] = [
   { id: 'off', family: null, name: 'None', description: 'Just the click and your exercise.', strip: '', fits: () => true, hits: () => [] },
@@ -78,6 +94,30 @@ const PATTERNS: readonly Pattern[] = [
     strip: 'xxxxxxxx',
     fits: simple,
     hits: hihatEighths,
+  },
+  {
+    id: 'bell68',
+    family: 'Afro-Cuban',
+    name: 'Bell',
+    description: 'The 6/8 bell on the ride bell.',
+    fits: sixEight,
+    ...fromStrip('x.xxx.', 'rideBell', RIDE, 1, 0.8),
+  },
+  {
+    id: 'shuffle128',
+    family: 'Blues',
+    name: 'Shuffle',
+    description: 'The ride on the first and third eighth of each beat.',
+    fits: twelveEight,
+    ...fromStrip('x.xx.xx.xx.x', 'ride', RIDE, 1, 0.7),
+  },
+  {
+    id: 'slowBlues128',
+    family: 'Blues',
+    name: 'Slow blues',
+    description: 'The closed hi-hat on every eighth, each beat louder.',
+    fits: twelveEight,
+    ...fromStrip('xxxxxxxxxxxx', 'hihatClosed', HIHAT, 1, 0.7),
   },
 ]
 

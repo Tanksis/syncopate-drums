@@ -70,7 +70,7 @@ const EXAMPLES: readonly Example[] = [
     id: `${EXAMPLE_PREFIX}slow-blues`,
     name: `${EXAMPLE_NAME_PREFIX}slow blues`,
     bpm: 50,
-    pattern: 'off',
+    pattern: 'slowBlues128',
     swing: MIN_SWING,
     sticking: 'off',
     timeSignature: '12/8',

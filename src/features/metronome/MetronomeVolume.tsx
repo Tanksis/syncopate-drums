@@ -5,7 +5,7 @@ import { DEFAULT_METRONOME_SETTINGS, MAX_VOLUME } from '@/core'
 
 /**
  * The metronome's volume, for every click: its name and percent over a full-width slider, or as a
- * `row`, its name, slider and percent side by side, as the Mix's are in the settings sidebar.
+ * `row`, its name, slider and percent side by side, as the Mix's rows are.
  */
 export function MetronomeVolume({ label = 'Volume', row = false }: { label?: string; row?: boolean }) {
   const volume = useAppStore((s) => s.device.metronome.volume)
