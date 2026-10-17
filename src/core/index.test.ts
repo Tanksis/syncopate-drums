@@ -94,9 +94,8 @@ describe('stored device settings', () => {
     expect(deviceSettingsFrom({ countIn: false, theme: 'dark' }).editorCollapsed).toBe(false)
   })
 
-  it('open the General section of the settings sidebar unless it was stored folded', () => {
-    expect(DEFAULT_DEVICE_SETTINGS.settingsSectionOpen).toBe(true)
-    expect(deviceSettingsFrom({ settingsSectionOpen: false }).settingsSectionOpen).toBe(false)
+  it('drop the stored fold of the old General section in the settings sidebar, which is gone', () => {
+    expect(deviceSettingsFrom({ settingsSectionOpen: false })).not.toHaveProperty('settingsSectionOpen')
   })
 
   it('keep a stored collapsed editor', () => {
