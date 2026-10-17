@@ -6,7 +6,7 @@ It runs in the browser at **https://tanksis.github.io/syncopate-drums/**.
 
 ## Status
 
-v1.0.0 is released and live. Since then the work has come in feature batches, each with its own spec and tickets under `.scratch/<feature>/`: the phone layout, kick fills, library folders and examples, themes, and most recently the Metronome. The installable offline PWA from the original plan was dropped.
+The app is live, released as v0.1.0; v1.0.0 will be the public launch. Since v0.1.0 the work has come in feature batches, each with its own spec and tickets under `.scratch/<feature>/`: the phone layout, kick fills, library folders and examples, themes, the Metronome, and most recently time signatures (3/4, 2/4, 6/8 and 12/8). The installable offline PWA from the original plan was dropped.
 
 ## What it does
 
