@@ -82,7 +82,7 @@ const PATTERNS: readonly Pattern[] = [
 ]
 
 /** The pattern with this id; an id this version of the app doesn't know plays none. */
-export function pattern(id: PatternId): Pattern {
+export function patternById(id: PatternId): Pattern {
   return PATTERNS.find((p) => p.id === id) ?? PATTERNS[0]
 }
 
@@ -102,7 +102,7 @@ export function patternsFor(timeSignature: TimeSignature): { family: PatternFami
 
 /** A pattern's hits in every bar of a meter, in tick order; none where it doesn't fit. */
 export function patternHits(id: PatternId, m: Meter): GrooveHit[] {
-  const p = pattern(id)
+  const p = patternById(id)
   return p.fits(m) ? p.hits(m.beats) : []
 }
 
@@ -145,7 +145,8 @@ export function hihatFootOptions(timeSignature: TimeSignature): HihatFoot[] {
 
 /** A pattern as it plays in a time signature: none where the time signature doesn't offer it. */
 export function fittedPattern(id: PatternId, timeSignature: TimeSignature): PatternId {
-  return pattern(id).id === id && pattern(id).fits(meter(timeSignature)) ? id : 'off'
+  const p = patternById(id)
+  return p.id === id && p.fits(meter(timeSignature)) ? id : 'off'
 }
 
 /** A hi-hat foot setting as it plays in a time signature: off where the time signature doesn't offer it. */

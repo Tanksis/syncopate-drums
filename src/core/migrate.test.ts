@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Item, Note } from './index'
-import { SCHEMA_VERSION, migrateExercise, newExercise, restItems } from './index'
+import { EXPORT_FORMAT, SCHEMA_VERSION, migrateExercise, newExercise, parseImport, restItems } from './index'
 
 const note = (duration: Item['duration'], extra: Partial<Note> = {}): Note => ({
   kind: 'note',
@@ -92,6 +92,16 @@ describe('version 5 to 6: groove presets become patterns and feet', () => {
   it('keeps hi-hat eighths and no groove as they were, with the bass drum off', () => {
     expect(feet(v5('hihatEighths', 'one'))).toEqual({ pattern: 'hihatEighths', bassDrum: 'off', hihatFoot: 'one' })
     expect(feet(v5('off'))).toEqual({ pattern: 'off', bassDrum: 'off', hihatFoot: 'off' })
+  })
+
+  it('leaves the hi-hat foot off under a jazz ride in 3/4, which offers no 2 & 4', () => {
+    expect(feet({ ...v5('jazz'), timeSignature: '3/4' }).hihatFoot).toBe('off')
+  })
+
+  it('imports a version 5 file with a feathered jazz ride as Ride with its feet', () => {
+    const exercises = [v5('jazzFeathered')]
+    const parsed = parseImport(JSON.stringify({ format: EXPORT_FORMAT, version: 5, exercises }))
+    expect(parsed.ok && parsed.exercises[0].practice).toMatchObject({ pattern: 'ride', bassDrum: 'feathered', hihatFoot: 'twoAndFour' })
   })
 
   it('leaves an unknown groove for import to refuse', () => {

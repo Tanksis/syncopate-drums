@@ -45,8 +45,8 @@ export interface PatternNote {
   exerciseId: string
   pattern: PatternId
   suggested: PatternSuggestion[]
-  /** The settings as they were, which Undo puts back. */
-  before: Pick<PracticeSettings, 'swing' | 'hihatFoot'>
+  /** The suggested settings as they were, which Undo puts back. */
+  before: Partial<Pick<PracticeSettings, PatternSuggestion>>
 }
 
 /** A paused playback: the exercise it was paused in and where it resumes. */
@@ -291,8 +291,8 @@ export const useAppStore = create<AppState>()((set, get) => {
       const { editor } = get()
       const { exercise, suggested } = withPattern(editor.exercise, pattern)
       if (exercise === editor.exercise) return
-      const { swing, hihatFoot } = editor.exercise.practice
-      const patternNote = suggested.length ? { exerciseId: exercise.id, pattern, suggested, before: { swing, hihatFoot } } : null
+      const before = Object.fromEntries(suggested.map((setting) => [setting, editor.exercise.practice[setting]]))
+      const patternNote = suggested.length ? { exerciseId: exercise.id, pattern, suggested, before } : null
       set({ patternNote })
       change(exercise, { ...editor, exercise })
     },

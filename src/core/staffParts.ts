@@ -193,23 +193,23 @@ export function staffParts(
     )
   // The pattern and the bass drum, and the hi-hat foot: with a pattern, part of its groove; with
   // none, an ostinato under the line, kept apart (ADR 0012).
-  const m = { beats: beatsPerBar, compound }
+  const barMeter = { beats: beatsPerBar, compound }
   const foot = hihatFootHits(hihatFoot, beatsPerBar)
   const ostinato = pattern === 'off'
-  const layer = [...patternHits(pattern, m), ...bassDrumHits(bassDrum, beatsPerBar), ...(ostinato ? [] : foot)]
-  const preset = grooveStruck(hitsByTick(layer), false)
+  const layer = [...patternHits(pattern, barMeter), ...bassDrumHits(bassDrum, beatsPerBar), ...(ostinato ? [] : foot)]
+  const layerHits = grooveStruck(hitsByTick(layer), false)
   const settingHits = ostinato ? grooveStruck(hitsByTick(foot), true) : []
 
   const lines = [...snare.sounds, ...kick.sounds]
-  const swungBeat = swung && !compound ? swungBeats([...lines, ...preset, ...settingHits], triplet) : triplet.map(() => false)
+  const swungBeat = swung && !compound ? swungBeats([...lines, ...layerHits, ...settingHits], triplet) : triplet.map(() => false)
   const exercise = lines.map((s) => respell(s, swungBeat))
-  const presetSounds = preset.map((s) => respell(s, swungBeat))
-  const grooveSounds = [...presetSounds, ...settingHits.map((s) => respell(s, swungBeat))]
+  const layerSounds = layerHits.map((s) => respell(s, swungBeat))
+  const grooveSounds = [...layerSounds, ...settingHits.map((s) => respell(s, swungBeat))]
 
   const barOf = (s: Sound) => Math.floor(s.start / ticksPerBar)
   // Each bar's voicing, chosen as if the setting were off (ADR 0012), from every sound on the grid of
   // the hands part as it would be in a bar of one voice, which holds the exercise.
-  const asIfOff = [...exercise, ...presetSounds.map((s) => onGrid(s, triplet))]
+  const asIfOff = [...exercise, ...layerSounds.map((s) => onGrid(s, triplet))]
   const drawn = [...exercise, ...grooveSounds.map((s) => onGrid(s, triplet))]
   const voicing = bars.map((_, b) => {
     const inBar = asIfOff.filter((s) => barOf(s) === b)

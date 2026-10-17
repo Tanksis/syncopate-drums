@@ -30,7 +30,7 @@ import {
   hihatFootOptions,
   meter,
   overrideCount,
-  pattern,
+  patternById,
   patternsFor,
   swingPreset,
 } from '@/core'
@@ -312,7 +312,7 @@ function PatternPicker({ large = false }: { large?: boolean }) {
   const current = useAppStore((s) => s.editor.exercise.practice.pattern)
   const timeSignature = useAppStore((s) => s.editor.exercise.timeSignature)
   const setPattern = useAppStore((s) => s.setPattern)
-  const picked = pattern(current)
+  const picked = patternById(current)
   return (
     <Stacked label="Pattern" large={large}>
       <div className="flex">

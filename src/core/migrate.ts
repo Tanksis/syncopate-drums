@@ -40,7 +40,8 @@ const steps: Record<number, (exercise: Stored) => Stored> = {
   // Version 5 had groove presets, whose jazz ride played the hi-hat foot on 2 & 4 and, feathered,
   // the bass drum on every beat. They became the Ride pattern with the same feet set, so the
   // exercise sounds as it did (a hi-hat foot setting other than off already replaced the ride's,
-  // ADR 0010). Hi-hat eighths and off keep their ids.
+  // ADR 0010). Outside 4/4, which has no 2 & 4 to offer, the foot is left off. Hi-hat eighths and
+  // off keep their ids.
   // A practice with no groove is left for import to refuse.
   5: ({ practice, ...exercise }) => {
     if (typeof practice !== 'object' || practice === null || !('groove' in practice)) return { ...exercise, practice, schemaVersion: 6 }
@@ -52,7 +53,7 @@ const steps: Record<number, (exercise: Stored) => Stored> = {
         ...rest,
         pattern: jazz ? 'ride' : groove,
         bassDrum: groove === 'jazzFeathered' ? 'feathered' : 'off',
-        hihatFoot: jazz && rest.hihatFoot === 'off' ? 'twoAndFour' : rest.hihatFoot,
+        hihatFoot: jazz && rest.hihatFoot === 'off' && exercise.timeSignature === '4/4' ? 'twoAndFour' : rest.hihatFoot,
       },
       schemaVersion: 6,
     }
