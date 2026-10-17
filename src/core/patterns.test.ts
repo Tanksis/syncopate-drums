@@ -27,7 +27,7 @@ describe('the patterns', () => {
   it("gives every pattern a strip of its meter's eighths", () => {
     for (const ts of ['4/4', '6/8', '12/8'] as const)
       for (const { patterns } of patternsFor(ts).slice(1))
-        for (const p of patterns) expect(p.strip, p.id).toHaveLength(ts === '6/8' ? 6 : ts === '12/8' ? 12 : 8)
+        for (const p of patterns) expect(p.strip, p.id).toHaveLength(meter(ts).beats * (meter(ts).compound ? 3 : 2))
   })
 
   it('gives each pattern a description and a strip of one character per eighth', () => {

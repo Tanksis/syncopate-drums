@@ -34,7 +34,7 @@ export interface Pattern {
   strip: string
   /** Whether it has a place in a bar of this meter. */
   fits: (meter: Meter) => boolean
-  /** Every bar's hits, in tick order, in a bar of this many beats. */
+  /** Every bar's hits, in tick order, in a bar of this many beats; one of a single meter's ignores it. */
   hits: (beats: number) => GrooveHit[]
 }
 
@@ -50,13 +50,14 @@ const at = (beat: number, eighth = 0) => beat * TICKS_PER_BEAT + eighth * (TICKS
 const third = (beat: number, eighth: number) => beat * TICKS_PER_BEAT + eighth * (TICKS_PER_BEAT / 3)
 
 /**
- * A compound pattern's hits from its strip, one character per eighth, three to a beat: each `x` on
- * the instrument, at `downbeat` on a beat and `offbeat` elsewhere.
+ * A compound pattern's strip, one character per eighth, three to a beat, and its hits played from
+ * it: each `x` on the instrument, at `downbeat` on a beat and `offbeat` elsewhere.
  */
-function stripHits(strip: string, instrument: Instrument, notation: GrooveNotation, downbeat: number, offbeat: number): GrooveHit[] {
-  return [...strip].flatMap((c, i): GrooveHit[] =>
+function fromStrip(strip: string, instrument: Instrument, notation: GrooveNotation, downbeat: number, offbeat: number): Pick<Pattern, 'strip' | 'hits'> {
+  const hits = [...strip].flatMap((c, i): GrooveHit[] =>
     c === 'x' ? [{ tick: third(Math.floor(i / 3), i % 3), instrument, velocity: i % 3 === 0 ? downbeat : offbeat, notation }] : [],
   )
+  return { strip, hits: () => hits }
 }
 
 /** The bar's beats, from 0. */
@@ -82,10 +83,6 @@ const simple = (m: Meter) => !m.compound
 const sixEight = (m: Meter) => m.compound && m.beats === 2
 const twelveEight = (m: Meter) => m.compound && m.beats === 4
 
-const BELL = 'x.xxx.'
-const SHUFFLE = 'x.xx.xx.xx.x'
-const SLOW_BLUES = 'xxxxxxxxxxxx'
-
 const PATTERNS: readonly Pattern[] = [
   { id: 'off', family: null, name: 'None', description: 'Just the click and your exercise.', strip: '', fits: () => true, hits: () => [] },
   { id: 'ride', family: 'Jazz', name: 'Ride', description: 'The swing ride: 1, 2 &, 3, 4 &.', strip: 'x.xxx.xx', fits: simple, hits: ride },
@@ -103,27 +100,24 @@ const PATTERNS: readonly Pattern[] = [
     family: 'Afro-Cuban',
     name: 'Bell',
     description: 'The 6/8 bell on the ride bell.',
-    strip: BELL,
     fits: sixEight,
-    hits: () => stripHits(BELL, 'rideBell', RIDE, 1, 0.8),
+    ...fromStrip('x.xxx.', 'rideBell', RIDE, 1, 0.8),
   },
   {
     id: 'shuffle128',
     family: 'Blues',
     name: 'Shuffle',
     description: 'The ride on the first and third eighth of each beat.',
-    strip: SHUFFLE,
     fits: twelveEight,
-    hits: () => stripHits(SHUFFLE, 'ride', RIDE, 1, 0.7),
+    ...fromStrip('x.xx.xx.xx.x', 'ride', RIDE, 1, 0.7),
   },
   {
     id: 'slowBlues128',
     family: 'Blues',
     name: 'Slow blues',
     description: 'The closed hi-hat on every eighth, each beat louder.',
-    strip: SLOW_BLUES,
     fits: twelveEight,
-    hits: () => stripHits(SLOW_BLUES, 'hihatClosed', HIHAT, 1, 0.7),
+    ...fromStrip('xxxxxxxxxxxx', 'hihatClosed', HIHAT, 1, 0.7),
   },
 ]
 

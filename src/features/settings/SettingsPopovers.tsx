@@ -12,7 +12,7 @@ import { AppearanceSettings, MetronomeSoundSettings, MixSettings } from './Setti
 export function SoundButton() {
   const onMetronome = useAppStore((s) => s.device.screen === 'metronome')
   const muted = useAppStore((s) =>
-    s.device.screen === 'metronome' ? s.device.metronome.volume === 0 : s.device.clickMuted || s.device.exerciseMuted || s.device.grooveMuted,
+    onMetronome ? s.device.metronome.volume === 0 : s.device.clickMuted || s.device.exerciseMuted || s.device.grooveMuted,
   )
   const label = onMetronome ? 'Metronome sound' : 'Mix'
   const silence = onMetronome ? 'at 0%' : 'a layer is muted'

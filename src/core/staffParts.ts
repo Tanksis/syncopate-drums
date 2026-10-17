@@ -250,7 +250,7 @@ export function staffParts(
     const lets = new Set(struck.map((s) => s.start).filter((t) => swungBeat[beatOf(t)] && t % TICKS_PER_BEAT === LET))
     const sounds = struck.map((s) => (lets.has(s.start + LET) ? { ...s, end: Math.min(s.end, s.start + TRIPLET_EIGHTH) } : s))
     // A swung beat is a triplet group in a part only where the part has a note off the downbeat; so is
-    // a compound beat, whose eighths are always on the triplet grid, where only the groove strikes inside it.
+    // a compound beat, whose eighths are always on the triplet grid, even one only the groove strikes inside.
     const offBeat = new Set(
       sounds.flatMap((s) => [s.start, s.end]).filter((tick) => tick % TICKS_PER_BEAT !== 0).map(beatOf),
     )
