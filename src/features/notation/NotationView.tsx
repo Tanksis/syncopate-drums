@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { useResolvedTheme } from '@/app/theme'
 import { usePhoneWindow } from '@/app/useMediaQuery'
@@ -8,11 +8,18 @@ import { PrototypeSwitcher, useVariant } from '@/components/PrototypeSwitcher'
 import { swingOn } from '@/core'
 import { BeatCount, useBeatCount } from './BeatCount'
 import { followPlayback, scrollLineIntoView } from './followPlayback'
-import type { Drawing, NotationArea } from './staff'
+import type { Drawing, NotationArea, StaffSource } from './staff'
 import { drawExercise, notationFontsReady } from './staff'
 
-// PROTOTYPE (as written / as played): three ways to show the line as written beside the line as played.
-const VARIANTS = { A: 'Automatic: both staves', B: 'Toggle: As written adds a staff', C: 'Switch: Written | Played' }
+// PROTOTYPE (as written / as played): ways to show the line as written beside the line as played.
+const VARIANTS = {
+  B: 'Toggle: a written staff under the played one',
+  D: 'Toggle: a written cue line, its room kept',
+  C: 'Switch: Written | Played',
+  E: 'Switch: Written | Played, at a fixed height',
+}
+const PLAYED: StaffSource = { which: 'played' }
+const WRITTEN: StaffSource = { which: 'written' }
 const VARIANT_KEYS = Object.keys(VARIANTS)
 
 /**
@@ -53,7 +60,22 @@ export function NotationView({ corner, coveredBottom, grow = false }: { corner?:
   const { practice } = exercise
   /** The line is played differently from how it's written: a swing, a pattern or the feet. */
   const differs = swingOn(practice) || practice.pattern !== 'off' || practice.hihatFoot !== 'off' || practice.bassDrum !== 'off'
-  const view = !differs ? 'played' : variant === 'A' ? 'both' : variant === 'B' ? (showWritten ? 'both' : 'played') : which
+  const toggle = differs && (variant === 'B' || variant === 'D')
+  const switcher = differs && (variant === 'C' || variant === 'E')
+  const { layout, reserve } = useMemo((): Pick<NotationArea, 'layout' | 'reserve'> => {
+    if (!differs) return { layout: [PLAYED] }
+    const shown = which === 'written' ? WRITTEN : PLAYED
+    switch (variant) {
+      case 'B':
+        return { layout: showWritten ? [{ ...PLAYED, label: 'Played' }, { ...WRITTEN, label: 'Written' }] : [PLAYED] }
+      case 'D':
+        return { layout: [PLAYED, { ...WRITTEN, cue: true, label: 'As written', hidden: !showWritten }] }
+      case 'C':
+        return { layout: [shown] }
+      default:
+        return { layout: [shown], reserve: [[which === 'written' ? PLAYED : WRITTEN]] }
+    }
+  }, [differs, variant, showWritten, which])
 
   useEffect(() => {
     let live = true
@@ -86,10 +108,10 @@ export function NotationView({ corner, coveredBottom, grow = false }: { corner?:
     if (!fontsReady || area.width === 0) return
     // While playing, the cursor isn't drawn, so only the playhead line marks the music, and the view
     // follows the playback rather than the cursor.
-    const drawing = (drawingRef.current = drawExercise(staffRef.current!, exercise, playing ? null : cursor, { ...area, grow, view }))
+    const drawing = (drawingRef.current = drawExercise(staffRef.current!, exercise, playing ? null : cursor, { ...area, grow, layout, reserve }))
     // Keep the cursor's line in view as typing runs past the bottom.
     if (!playing) scrollLineIntoView(scrollerRef.current!, staffRef.current!, drawing.line(cursor.bar), coverRef.current?.offsetHeight)
-  }, [exercise, cursor, area, grow, fontsReady, fontsLoaded, playing, theme, look, view])
+  }, [exercise, cursor, area, grow, fontsReady, fontsLoaded, playing, theme, look, layout, reserve])
 
   useEffect(() => {
     if (playing) return followPlayback(scrollerRef.current!, staffRef.current!, () => drawingRef.current)
@@ -124,13 +146,13 @@ export function NotationView({ corner, coveredBottom, grow = false }: { corner?:
       </section>
       {corner && <div className="absolute top-2.5 left-2.5 z-10">{corner}</div>}
       {beatCount && <BeatCount count={beatCount} small={phone} />}
-      {differs && variant === 'B' && (
+      {toggle && (
         <label className={`absolute top-3 z-10 flex cursor-pointer items-center gap-1.5 rounded-full border border-line bg-panel px-2.5 py-1 text-xs text-mute select-none ${corner ? 'left-16' : 'left-4'}`}>
           <input type="checkbox" checked={showWritten} onChange={(e) => setShowWritten(e.target.checked)} className="accent-current" />
           As written
         </label>
       )}
-      {differs && variant === 'C' && (
+      {switcher && (
         <div className={`absolute top-2.5 z-10 ${corner ? 'left-16' : 'left-4'}`}>
           <Segmented
             label="Show the line"
