@@ -13,7 +13,7 @@ import { drawExercise, notationFontsReady } from './staff'
 
 // PROTOTYPE (as written / as played): ways to show the line as written beside the line as played.
 const VARIANTS = {
-  B: 'Toggle: a written staff under the played one',
+  B: 'Toggle: a small written staff under the played one',
   D: 'Toggle: a written cue line, its room kept',
   C: 'Switch: Written | Played',
   E: 'Switch: Written | Played, at a fixed height',
@@ -67,7 +67,7 @@ export function NotationView({ corner, coveredBottom, grow = false }: { corner?:
     const shown = which === 'written' ? WRITTEN : PLAYED
     switch (variant) {
       case 'B':
-        return { layout: showWritten ? [{ ...PLAYED, label: 'Played' }, { ...WRITTEN, label: 'Written' }] : [PLAYED] }
+        return { layout: showWritten ? [PLAYED, { ...WRITTEN, label: 'Written', small: true }] : [PLAYED] }
       case 'D':
         return { layout: [PLAYED, { ...WRITTEN, cue: true, label: 'As written', hidden: !showWritten }] }
       case 'C':

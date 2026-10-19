@@ -11,25 +11,33 @@ const SVG_NS = 'http://www.w3.org/2000/svg'
  * every frame, so a redraw while playing (an edit, a resize) is picked up at once.
  */
 export function followPlayback(scroller: HTMLElement, staff: HTMLElement, drawing: () => Drawing | undefined) {
-  const marker = document.createElementNS(SVG_NS, 'line')
-  marker.classList.add('stroke-play', 'pointer-events-none')
-  marker.setAttribute('stroke-width', '2')
-  marker.setAttribute('stroke-linecap', 'round')
+  // PROTOTYPE: one line per staff the hit is marked on.
+  const markers: SVGLineElement[] = []
+  const markerAt = (i: number) => {
+    if (markers[i]) return markers[i]
+    const marker = document.createElementNS(SVG_NS, 'line')
+    marker.classList.add('stroke-play', 'pointer-events-none')
+    marker.setAttribute('stroke-width', '2')
+    marker.setAttribute('stroke-linecap', 'round')
+    return (markers[i] = marker)
+  }
   let shown: { drawing: Drawing; top: number } | undefined
   let frame = requestAnimationFrame(step)
 
   function step() {
     const head = playhead()
     const current = drawing()
-    const mark = head?.hit && current?.playheadMark(head.hit)
-    if (mark && current?.svg) {
+    const marks = (head?.hit && current?.svg && current.playheadMark(head.hit)) || []
+    marks.forEach((mark, i) => {
+      const marker = markerAt(i)
       // A redraw replaces the SVG, so the line moves into the new one.
-      if (marker.parentNode !== current.svg) current.svg.append(marker)
+      if (marker.parentNode !== current!.svg) current!.svg!.append(marker)
       marker.setAttribute('x1', String(mark.x))
       marker.setAttribute('x2', String(mark.x))
       marker.setAttribute('y1', String(mark.top))
       marker.setAttribute('y2', String(mark.bottom))
-    } else marker.remove()
+    })
+    markers.slice(marks.length).forEach((m) => m.remove())
     // Scroll only when the playhead reaches a new line, or after a redraw (which can move the
     // lines), so the drummer can still scroll by hand.
     const bar = head?.position.bar ?? -1
@@ -43,7 +51,7 @@ export function followPlayback(scroller: HTMLElement, staff: HTMLElement, drawin
 
   return () => {
     cancelAnimationFrame(frame)
-    marker.remove()
+    markers.forEach((m) => m.remove())
   }
 }
 
