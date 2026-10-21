@@ -4,7 +4,6 @@ import { useAppStore } from '@/app/store'
 import { useResolvedTheme } from '@/app/theme'
 import { usePhoneWindow } from '@/app/useMediaQuery'
 import { Segmented } from '@/components/Segmented'
-import type { NotationShows } from '@/core'
 import { playedAsWritten } from '@/core'
 import { BeatCount, useBeatCount } from './BeatCount'
 import { followPlayback, scrollLineIntoView } from './followPlayback'
@@ -44,8 +43,6 @@ export function NotationView({ corner, coveredBottom, grow = false }: { corner?:
   const notationShows = useAppStore((s) => s.device.notationShows)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   const asWritten = playedAsWritten(exercise.practice, exercise.timeSignature)
-  /** Played as written, the two versions are one, drawn as played. */
-  const shows: NotationShows = asWritten ? 'played' : notationShows
   const scrollerRef = useRef<HTMLElement>(null)
   const staffRef = useRef<HTMLDivElement>(null)
   const coverRef = useRef<HTMLDivElement>(null)
@@ -87,10 +84,10 @@ export function NotationView({ corner, coveredBottom, grow = false }: { corner?:
     if (!fontsReady || area.width === 0) return
     // While playing, the cursor isn't drawn, so only the playhead line marks the music, and the view
     // follows the playback rather than the cursor.
-    const drawing = (drawingRef.current = drawExercise(staffRef.current!, exercise, playing ? null : cursor, { ...area, grow }, shows))
+    const drawing = (drawingRef.current = drawExercise(staffRef.current!, exercise, playing ? null : cursor, { ...area, grow }, notationShows))
     // Keep the cursor's line in view as typing runs past the bottom.
     if (!playing) scrollLineIntoView(scrollerRef.current!, staffRef.current!, drawing.line(cursor.bar), coverRef.current?.offsetHeight)
-  }, [exercise, cursor, area, grow, fontsReady, fontsLoaded, playing, theme, look, shows])
+  }, [exercise, cursor, area, grow, fontsReady, fontsLoaded, playing, theme, look, notationShows])
 
   useEffect(() => {
     if (playing) return followPlayback(scrollerRef.current!, staffRef.current!, () => drawingRef.current)

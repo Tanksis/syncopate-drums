@@ -252,8 +252,8 @@ export function drawnMode(theme: Theme, systemDark: boolean): 'light' | 'dark' {
 
 /**
  * Device settings as stored, over the defaults for any added since. A stored setting the app no
- * longer has (such as `vimKeys`, ADR 0009), a theme, look, screen or notation version it doesn't have, or a yes-or-no
- * setting that isn't a boolean, is dropped.
+ * longer has (such as `vimKeys`, ADR 0009), a theme, look, screen or notation version it doesn't
+ * have, or a yes-or-no setting that isn't a boolean, is dropped.
  * The metronome is filled in setting by setting (see `metronomeSettingsFrom`).
  */
 export function deviceSettingsFrom(stored: Record<string, unknown> | undefined): DeviceSettings {

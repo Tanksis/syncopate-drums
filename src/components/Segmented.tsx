@@ -27,7 +27,7 @@ const STEP: Record<string, (i: number, n: number) => number> = {
  * A row of options, one of them chosen: a radio group. Tab reaches the chosen option (or the first),
  * and the arrow keys, Home and End move the choice, as they do in a radio group. A mouse click keeps
  * focus where it was (`keepFocus`). `fill` stretches the options across the width; a `small` one sits
- * in a beat card; `tabbable={false}` leaves the group out of the Tab order where the editor's keys
+ * in a beat card or over the notation; `tabbable={false}` leaves the group out of the Tab order where the editor's keys
  * already reach it. A `disabled` group shows its choice dimmed and takes no focus; `describedBy` names
  * the element that says why.
  */

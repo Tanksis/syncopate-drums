@@ -237,12 +237,18 @@ export function drawExercise(
   const barMeter = meter(exercise.timeSignature)
   const { compound } = barMeter
   const played = staffVersion(
-    staffParts(bars, practice.pattern, { swung: swingOn(practice), hihatFoot: practice.hihatFoot, bassDrum: practice.bassDrum, compound }),
+    staffParts(bars, practice.pattern, {
+      swung: swingOn(practice),
+      hihatFoot: practice.hihatFoot,
+      bassDrum: practice.bassDrum,
+      compound,
+    }),
     compound,
   )
   // Played as written, the two versions are one. Otherwise each line fits both, so switching moves nothing (ADR 0016).
-  const versions = playedAsWritten(practice, exercise.timeSignature) ? [played] : [played, staffVersion(staffParts(bars, 'off', { compound }), compound)]
-  const { parts, drawnLimbs, handRow } = shows === 'written' ? versions.at(-1)! : played
+  const written = playedAsWritten(practice, exercise.timeSignature) ? played : staffVersion(staffParts(bars, 'off', { compound }), compound)
+  const versions = [played, written]
+  const { parts, drawnLimbs, handRow } = shows === 'written' ? written : played
   const spaceAbove = Math.max(...versions.map((v) => v.spaceAbove))
   /** The bar number's line above the stave, clear of the hands part's stems. */
   const barNumberLine = spaceAbove - SPACE_ABOVE_STAVE

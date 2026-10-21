@@ -4,11 +4,11 @@
 
 **Blocked by:** none
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `playedAsWritten(practice, timeSignature)` in the core, unit-tested
-- [ ] `DeviceSettings.notationShows`, default `'played'`, through `deviceSettingsFrom`, unit-tested
-- [ ] `drawExercise` lays every line out to the larger of the two versions' height and bar width, and draws the chosen one, with the sticking in both
-- [ ] The switch on desktop and phone, hidden when the exercise is played as written
-- [ ] `CONTEXT.md`: As written, As played; Device settings lists the notation's version
-- [ ] Checked in the browser with real mouse clicks: no bar number moves on switching (jazz comping and rock beat, 1440 × 900 with Fit on and off, and 390 × 844)
+- [x] `playedAsWritten(practice, timeSignature)` in the core, unit-tested
+- [x] `DeviceSettings.notationShows`, default `'played'`, through `deviceSettingsFrom`, unit-tested
+- [x] `drawExercise` lays every line out to the larger of the two versions' height and bar width, and draws the chosen one, with the sticking in both
+- [x] The switch on desktop and phone, hidden when the exercise is played as written
+- [x] `CONTEXT.md`: As written, As played; Device settings lists the notation's version
+- [x] Checked in the browser with real mouse clicks: no bar number moves on switching (jazz comping and rock beat, 1440 × 900 with Fit on and off, and 390 × 844)
