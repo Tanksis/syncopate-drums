@@ -11,6 +11,7 @@ import {
   hasHits,
   loopLabel,
   newExercise,
+  playedAsWritten,
   setBeat,
 } from './index'
 
@@ -71,6 +72,13 @@ describe('the default device settings', () => {
 })
 
 describe('stored device settings', () => {
+  it('show the notation as played unless the written version was chosen', () => {
+    expect(DEFAULT_DEVICE_SETTINGS.notationShows).toBe('played')
+    expect(deviceSettingsFrom({ countIn: false }).notationShows).toBe('played')
+    expect(deviceSettingsFrom({ notationShows: 'written' }).notationShows).toBe('written')
+    expect(deviceSettingsFrom({ notationShows: 'sideways' }).notationShows).toBe('played')
+  })
+
   it('fall back to the defaults for any setting not stored', () => {
     expect(deviceSettingsFrom(undefined)).toEqual(DEFAULT_DEVICE_SETTINGS)
     expect(deviceSettingsFrom({ countIn: false })).toEqual({ ...DEFAULT_DEVICE_SETTINGS, countIn: false })
@@ -188,5 +196,25 @@ describe('loopLabel', () => {
 
   it('names only the bars the exercise still has', () => {
     expect(loopLabel({ first: 2, last: 5 }, 4)).toBe('Bars 3–4')
+  })
+})
+
+describe('playedAsWritten', () => {
+  const practice = newExercise({ id: 'e', now: 0 }).practice
+
+  it('holds for a straight exercise with no pattern or feet', () => {
+    expect(playedAsWritten(practice, '4/4')).toBe(true)
+  })
+
+  it('fails with a pattern, the bass drum or the hi-hat foot', () => {
+    expect(playedAsWritten({ ...practice, pattern: 'ride' }, '4/4')).toBe(false)
+    expect(playedAsWritten({ ...practice, bassDrum: 'feathered' }, '4/4')).toBe(false)
+    expect(playedAsWritten({ ...practice, hihatFoot: 'twoAndFour' }, '4/4')).toBe(false)
+  })
+
+  it('fails with swing, except in compound time, where nothing is swung', () => {
+    expect(playedAsWritten({ ...practice, swing: 2 / 3 }, '4/4')).toBe(false)
+    expect(playedAsWritten({ ...practice, swing: 2 / 3 }, '6/8')).toBe(true)
+    expect(playedAsWritten({ ...practice, swing: 2 / 3, hihatFoot: 'twoAndFour' }, '12/8')).toBe(false)
   })
 })

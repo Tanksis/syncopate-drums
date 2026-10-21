@@ -221,7 +221,14 @@ export interface DeviceSettings {
   fitNotation: boolean
   /** While an exercise plays, the notation card's corner counts the beats of the bar. */
   beatCount: boolean
+  /** The version of the line the notation shows when the two differ: as played, or as written (ADR 0016). */
+  notationShows: NotationShows
 }
+
+/** The versions of an exercise's line the notation can show (ADR 0016). */
+export type NotationShows = 'played' | 'written'
+
+export const NOTATION_SHOWS: readonly NotationShows[] = ['played', 'written']
 
 /** The app's screens, switched in the header. */
 export type Screen = 'practice' | 'metronome'
@@ -245,7 +252,7 @@ export function drawnMode(theme: Theme, systemDark: boolean): 'light' | 'dark' {
 
 /**
  * Device settings as stored, over the defaults for any added since. A stored setting the app no
- * longer has (such as `vimKeys`, ADR 0009), a theme, look or screen it doesn't have, or a yes-or-no
+ * longer has (such as `vimKeys`, ADR 0009), a theme, look, screen or notation version it doesn't have, or a yes-or-no
  * setting that isn't a boolean, is dropped.
  * The metronome is filled in setting by setting (see `metronomeSettingsFrom`).
  */
@@ -256,7 +263,8 @@ export function deviceSettingsFrom(stored: Record<string, unknown> | undefined):
       (typeof DEFAULT_DEVICE_SETTINGS[key as keyof DeviceSettings] !== 'boolean' || typeof value === 'boolean') &&
       (key !== 'theme' || THEMES.includes(value as Theme)) &&
       (key !== 'look' || LOOKS.includes(value as Look)) &&
-      (key !== 'screen' || SCREENS.includes(value as Screen)),
+      (key !== 'screen' || SCREENS.includes(value as Screen)) &&
+      (key !== 'notationShows' || NOTATION_SHOWS.includes(value as NotationShows)),
   )
   return { ...DEFAULT_DEVICE_SETTINGS, ...Object.fromEntries(known), metronome: metronomeSettingsFrom(stored?.metronome) }
 }
@@ -285,6 +293,7 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   welcomeDismissed: false,
   fitNotation: true,
   beatCount: true,
+  notationShows: 'played',
 }
 
 /** The device settings that are a playback layer's volume. */
@@ -331,6 +340,16 @@ export function withBpm(exercise: Exercise, bpm: number): Exercise {
 /** Whether the swing feel is on: a swing amount above straight, which the notation writes as triplets (ADR 0006). */
 export function swingOn(practice: PracticeSettings): boolean {
   return practice.swing > MIN_SWING
+}
+
+/**
+ * Whether the exercise is played just as it is written: no pattern, no bass drum, no hi-hat foot,
+ * and no swing (which compound time never has, ADR 0015). If not, the notation can show either
+ * version (ADR 0016).
+ */
+export function playedAsWritten(practice: PracticeSettings, timeSignature: TimeSignature): boolean {
+  const { pattern, bassDrum, hihatFoot } = practice
+  return pattern === 'off' && bassDrum === 'off' && hihatFoot === 'off' && (!swingOn(practice) || meter(timeSignature).compound)
 }
 
 /** Keeps a swing amount inside the supported 50–75% range. */

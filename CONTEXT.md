@@ -37,7 +37,7 @@ The span of bars within an exercise that repeats during practice; the whole exer
 How an exercise is practiced rather than what it contains: BPM, loop range, pattern, bass drum, hi-hat foot and swing amount. Remembered per exercise.
 
 **Device settings**:
-How the app is set up on this computer rather than how an exercise is practiced: volumes and mutes (the Mix), the count-in toggle, the theme and mode, the notation's fit and the beat count, which exercise was last open, which sidebar tab is showing, which folders are collapsed, whether the grid editor is collapsed, which screen is showing, and the metronome's settings. Kept per device and never exported.
+How the app is set up on this computer rather than how an exercise is practiced: volumes and mutes (the Mix), the count-in toggle, the theme and mode, the notation's fit, the beat count and the version of the line it shows (as written or as played), which exercise was last open, which sidebar tab is showing, which folders are collapsed, whether the grid editor is collapsed, which screen is showing, and the metronome's settings. Kept per device and never exported.
 
 **Mix**:
 How loud each playback layer (click, exercise, groove) plays on this device, and which are muted, set in the Mix panel the desktop header's speaker opens on the Practice screen (on the Metronome screen the same speaker opens the metronome's sound and volume; on a phone, the settings' Mix tab). A muted layer plays nothing, so the drummer can practise against any combination; a muted click still plays the count-in. The click's mute is also in the Practice screen's transport.
@@ -64,6 +64,12 @@ _Avoid_: Voice, lane, track
 **Notation view**:
 The standard drum-staff rendering of an exercise and its groove layer, with sticking below; what the user reads from while practicing.
 _Avoid_: Score, sheet
+
+**As written**:
+An exercise's line alone, as it was entered: straight, on the snare and kick rows, with no groove layer and no feet. When the exercise is played differently (swing, a pattern, the bass drum or the hi-hat foot is on), a Written | Played switch lets the notation view show it (ADR 0016).
+
+**As played**:
+An exercise as the drummer hears it: swung onto the triplet grid, with the groove layer and the feet. The notation view shows it unless As written is chosen; when nothing changes the line in playback, the two are the same.
 
 **Hands part**:
 Everything on the staff played with the hands (snare, ride, hi-hat), written stems up as one rhythm: hits that land together share a stem, and a rest appears only where no hand plays. In a bar where the feet only play with the hands, or never do (a linear fill such as `RLKK`), the feet's notes hang on its stems too (one voice).
