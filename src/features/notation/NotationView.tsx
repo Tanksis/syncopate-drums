@@ -3,10 +3,17 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { useResolvedTheme } from '@/app/theme'
 import { usePhoneWindow } from '@/app/useMediaQuery'
+import { Segmented } from '@/components/Segmented'
+import { playedAsWritten } from '@/core'
 import { BeatCount, useBeatCount } from './BeatCount'
 import { followPlayback, scrollLineIntoView } from './followPlayback'
 import type { Drawing, NotationArea } from './staff'
 import { drawExercise, notationFontsReady } from './staff'
+
+const SHOWS_OPTIONS = [
+  { value: 'written', label: 'Written', title: 'The line as written: straight, with no pattern or feet' },
+  { value: 'played', label: 'Played', title: 'The line as played' },
+] as const
 
 /**
  * The notation, scrolling in its own area. Given `corner` (the desktop play button), that's pinned
@@ -18,6 +25,8 @@ import { drawExercise, notationFontsReady } from './staff'
  * is centred in it top to bottom. While an exercise plays, the beat count shows in the top-right
  * corner. The top padding always holds room for it, even when stopped or switched off, so the
  * staff neither covers it nor moves (or is laid out again) when Play starts or the switch changes.
+ * When the exercise isn't played as written, a Written | Played switch sits at the top left, in the
+ * same padding, and switching moves nothing: each line is laid out for both versions (ADR 0016).
  */
 export function NotationView({ corner, coveredBottom, grow = false }: { corner?: ReactNode; coveredBottom?: string; grow?: boolean }) {
   const exercise = useAppStore((s) => s.editor.exercise)
@@ -31,6 +40,9 @@ export function NotationView({ corner, coveredBottom, grow = false }: { corner?:
   const phone = usePhoneWindow()
   const beatCountOn = useAppStore((s) => s.device.beatCount)
   const beatCount = useBeatCount(beatCountOn)
+  const notationShows = useAppStore((s) => s.device.notationShows)
+  const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
+  const asWritten = playedAsWritten(exercise.practice, exercise.timeSignature)
   const scrollerRef = useRef<HTMLElement>(null)
   const staffRef = useRef<HTMLDivElement>(null)
   const coverRef = useRef<HTMLDivElement>(null)
@@ -72,10 +84,10 @@ export function NotationView({ corner, coveredBottom, grow = false }: { corner?:
     if (!fontsReady || area.width === 0) return
     // While playing, the cursor isn't drawn, so only the playhead line marks the music, and the view
     // follows the playback rather than the cursor.
-    const drawing = (drawingRef.current = drawExercise(staffRef.current!, exercise, playing ? null : cursor, { ...area, grow }))
+    const drawing = (drawingRef.current = drawExercise(staffRef.current!, exercise, playing ? null : cursor, { ...area, grow }, notationShows))
     // Keep the cursor's line in view as typing runs past the bottom.
     if (!playing) scrollLineIntoView(scrollerRef.current!, staffRef.current!, drawing.line(cursor.bar), coverRef.current?.offsetHeight)
-  }, [exercise, cursor, area, grow, fontsReady, fontsLoaded, playing, theme, look])
+  }, [exercise, cursor, area, grow, fontsReady, fontsLoaded, playing, theme, look, notationShows])
 
   useEffect(() => {
     if (playing) return followPlayback(scrollerRef.current!, staffRef.current!, () => drawingRef.current)
@@ -110,6 +122,16 @@ export function NotationView({ corner, coveredBottom, grow = false }: { corner?:
       </section>
       {corner && <div className="absolute top-2.5 left-2.5 z-10">{corner}</div>}
       {beatCount && <BeatCount count={beatCount} small={phone} />}
+      {!asWritten && (
+        <Segmented
+          label="Show the line"
+          options={SHOWS_OPTIONS}
+          value={notationShows}
+          onChange={(value) => setDeviceSettings({ notationShows: value })}
+          small
+          className={`absolute top-2.5 z-10 ${corner ? 'left-16' : 'left-4'}`}
+        />
+      )}
     </div>
   )
 }

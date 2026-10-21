@@ -4,6 +4,8 @@
 
 **Blocked by:** 01
 
+**Note from 01:** Written's playhead now finds only hits on a written note's own tick. So with swing on, a swung offbeat (heard on the triplet's last third, written on the straight &) gets no line either, not just the ride and the feet. The interpolation covers it.
+
 **Status:** ready-for-agent
 
 - [ ] The interpolation from a bar's (tick, x) anchors, a pure function in the core, unit-tested: on an anchor, between anchors, before the first, at the bar's end

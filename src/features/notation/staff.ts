@@ -8,7 +8,7 @@
 
 import type { StemmableNote } from 'vexflow/bravura'
 import { Beam, Dot, Formatter, Fraction, GhostNote, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
-import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, Meter, NoteSticking, PlayPosition, StaffEvent } from '@/core'
+import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, Meter, NotationShows, NoteSticking, PlayPosition, StaffBar, StaffEvent } from '@/core'
 import {
   NOTATION_LAYOUT,
   TICKS_PER_BEAT,
@@ -17,6 +17,7 @@ import {
   meter,
   minBarWidthFor,
   notationFit,
+  playedAsWritten,
   staffParts,
   sticking,
   swingOn,
@@ -188,6 +189,26 @@ const PLAYHEAD_OVERHANG = 1.5
 /** The x of the middle of a note's noteheads. */
 const noteCentre = (note: StaveNote) => (note.getNoteHeadBeginX() + note.getNoteHeadEndX()) / 2
 
+/** One version of the exercise as drawn: its parts, the parts drawn, and the room they take. */
+interface StaffVersion {
+  parts: StaffBar[]
+  drawnLimbs: Limb[]
+  /** The stave line the sticking is printed on. */
+  handRow: number
+  /** Stave lines left above the stave's top line. */
+  spaceAbove: number
+}
+
+function staffVersion(parts: StaffBar[], compound: boolean): StaffVersion {
+  /** A part is drawn when it has a note or a rest anywhere. */
+  const drawnLimbs = (['hands', 'feet'] as const).filter((limb) => parts.some((bar) => bar[limb].some((e) => e.kind !== 'space')))
+  // Compound time's eighths have no triplet "3"s to make room for.
+  const feetTriplets = !compound && parts.some((bar) => bar.feet.some((e) => e.triplet))
+  const handRow = !drawnLimbs.includes('feet') ? HAND_ROW_HANDS : feetTriplets ? HAND_ROW_FEET_TRIPLETS : HAND_ROW_FEET
+  const spaceAbove = SPACE_ABOVE_STAVE + (drawnLimbs.includes('hands') ? STEMS_UP_SPACE : 0)
+  return { parts, drawnLimbs, handRow, spaceAbove }
+}
+
 /** The notation area the exercise is drawn to fit, in pixels. */
 export interface NotationArea {
   width: number
@@ -201,31 +222,39 @@ export interface NotationArea {
  * scaled up when the exercise is short enough (the whole SVG is scaled, so hit areas and the
  * playhead line scale with it). Each struck
  * chord carries `data-bar` and `data-beat`, the beat it sits in; each bar number
- * carries `data-loop-bar`, its bar. With no cursor, no beat or bar is highlighted.
+ * carries `data-loop-bar`, its bar. With no cursor, no beat or bar is highlighted. When the exercise
+ * isn't played as written, `shows` picks the version drawn, and each line is laid out to fit either.
  */
-export function drawExercise(el: HTMLElement, exercise: Exercise, cursor: Cursor | null, area: NotationArea): Drawing {
+export function drawExercise(
+  el: HTMLElement,
+  exercise: Exercise,
+  cursor: Cursor | null,
+  area: NotationArea,
+  shows: NotationShows = 'played',
+): Drawing {
   el.replaceChildren()
-  const { bars } = exercise
+  const { bars, practice } = exercise
   const barMeter = meter(exercise.timeSignature)
   const { compound } = barMeter
-  const parts = staffParts(bars, exercise.practice.pattern, {
-    swung: swingOn(exercise.practice),
-    hihatFoot: exercise.practice.hihatFoot,
-    bassDrum: exercise.practice.bassDrum,
+  const played = staffVersion(
+    staffParts(bars, practice.pattern, {
+      swung: swingOn(practice),
+      hihatFoot: practice.hihatFoot,
+      bassDrum: practice.bassDrum,
+      compound,
+    }),
     compound,
-  })
-  /** A part is drawn when it has a note or a rest anywhere. */
-  const drawnLimbs = (['hands', 'feet'] as const).filter((limb) =>
-    parts.some((bar) => bar[limb].some((e) => e.kind !== 'space')),
   )
-  // Compound time's eighths have no triplet "3"s to make room for.
-  const feetTriplets = !compound && parts.some((bar) => bar.feet.some((e) => e.triplet))
-  const handRow = !drawnLimbs.includes('feet') ? HAND_ROW_HANDS : feetTriplets ? HAND_ROW_FEET_TRIPLETS : HAND_ROW_FEET
-  const spaceAbove = SPACE_ABOVE_STAVE + (drawnLimbs.includes('hands') ? STEMS_UP_SPACE : 0)
+  // Played as written, the two versions are one. Otherwise each line fits both, so switching moves nothing (ADR 0016).
+  const written = playedAsWritten(practice, exercise.timeSignature) ? played : staffVersion(staffParts(bars, 'off', { compound }), compound)
+  const versions = [played, written]
+  const { parts, drawnLimbs, handRow } = shows === 'written' ? written : played
+  const spaceAbove = Math.max(...versions.map((v) => v.spaceAbove))
   /** The bar number's line above the stave, clear of the hands part's stems. */
-  const barNumberLine = drawnLimbs.includes('hands') ? STEMS_UP_SPACE : 0
-  const height = (spaceAbove + handRow + 1) * STAVE_LINE_GAP
-  const { scale, barsPerLine, barWidth } = notationFit({ bars: bars.length, ...area, lineHeight: height, minBarWidth: minBarWidthFor(parts) })
+  const barNumberLine = spaceAbove - SPACE_ABOVE_STAVE
+  const height = (spaceAbove + Math.max(...versions.map((v) => v.handRow)) + 1) * STAVE_LINE_GAP
+  const minBarWidth = Math.max(...versions.map((v) => minBarWidthFor(v.parts)))
+  const { scale, barsPerLine, barWidth } = notationFit({ bars: bars.length, ...area, lineHeight: height, minBarWidth })
   const lines = Math.ceil(bars.length / barsPerLine)
 
   const renderer = new Renderer(el as HTMLDivElement, Renderer.Backends.SVG)
