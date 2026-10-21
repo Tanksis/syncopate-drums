@@ -192,6 +192,19 @@ const PLAYHEAD_OVERHANG = 1.5
 /** The x of the middle of a note's noteheads. */
 const noteCentre = (note: StaveNote) => (note.getNoteHeadBeginX() + note.getNoteHeadEndX()) / 2
 
+/**
+ * A written bar's playhead anchors: where each written note or rest starts (a note's x winning over
+ * a rest's at the same tick), then the bar's end.
+ */
+function writtenAnchors(drawings: PartDrawing[], end: PlayheadAnchor): PlayheadAnchor[] {
+  const struck = drawings.flatMap(({ drawn }) => drawn).filter((d): d is DrawnEvent & { note: StaveNote } => d.note instanceof StaveNote)
+  struck.sort((p, q) => Number(q.event.kind === 'chord') - Number(p.event.kind === 'chord'))
+  const atTick = new Map<number, number>()
+  for (const { event, note } of struck) if (!atTick.has(event.start)) atTick.set(event.start, noteCentre(note))
+  atTick.set(end.tick, end.x)
+  return [...atTick].map(([tick, x]) => ({ tick, x })).sort((p, q) => p.tick - q.tick)
+}
+
 /** One version of the exercise as drawn: its parts, the parts drawn, and the room they take. */
 interface StaffVersion {
   parts: StaffBar[]
@@ -326,13 +339,7 @@ export function drawExercise(
     const top = stave.getYForLine(-PLAYHEAD_OVERHANG)
     const bottom = stave.getYForLine(4 + PLAYHEAD_OVERHANG)
     if (shows === 'written') {
-      // Where each written note or rest starts, a note's x winning over a rest's at the same tick, then the bar's end.
-      const atTick = new Map<number, number>()
-      const struck = drawings.flatMap(({ drawn }) => drawn).filter(({ note }) => note instanceof StaveNote)
-      struck.sort((p, q) => Number(q.event.kind === 'chord') - Number(p.event.kind === 'chord'))
-      for (const { event, note } of struck) if (!atTick.has(event.start)) atTick.set(event.start, noteCentre(note as StaveNote))
-      atTick.set(barTicks(barMeter.beats), x + w)
-      const anchors = [...atTick].map(([tick, at]) => ({ tick, x: at })).sort((p, q) => p.tick - q.tick)
+      const anchors = writtenAnchors(drawings, { tick: barTicks(barMeter.beats), x: x + w })
       barAnchors.set(b, { anchors, top, bottom })
     }
     for (const { drawn } of drawings) {

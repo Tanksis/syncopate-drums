@@ -6,8 +6,8 @@
 
 **Note from 01:** Written's playhead now finds only hits on a written note's own tick. So with swing on, a swung offbeat (heard on the triplet's last third, written on the straight &) gets no line either, not just the ride and the feet. The interpolation covers it.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The interpolation from a bar's (tick, x) anchors, a pure function in the core, unit-tested: on an anchor, between anchors, before the first, at the bar's end
-- [ ] `playheadMark` uses it in Written; Played is unchanged
-- [ ] Checked in the browser on jazz comping and rock beat. Playing in Written, the line follows every hit and sits on each written note.
+- [x] The interpolation from a bar's (tick, x) anchors, a pure function in the core, unit-tested: on an anchor, between anchors, before the first, at the bar's end
+- [x] `playheadMark` uses it in Written; Played is unchanged
+- [x] Checked in the browser on jazz comping and rock beat. Playing in Written, the line follows every hit and sits on each written note.
