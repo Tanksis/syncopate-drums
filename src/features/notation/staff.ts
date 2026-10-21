@@ -8,16 +8,18 @@
 
 import type { StemmableNote } from 'vexflow/bravura'
 import { Beam, Dot, Formatter, Fraction, GhostNote, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
-import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, Meter, NotationShows, NoteSticking, PlayPosition, StaffBar, StaffEvent } from '@/core'
+import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, Meter, NotationShows, NoteSticking, PlayheadAnchor, PlayPosition, StaffBar, StaffEvent } from '@/core'
 import {
   NOTATION_LAYOUT,
   TICKS_PER_BEAT,
+  barTicks,
   compoundValue,
   inLoopRange,
   meter,
   minBarWidthFor,
   notationFit,
   playedAsWritten,
+  playheadX,
   staffParts,
   sticking,
   swingOn,
@@ -175,7 +177,8 @@ export interface PlayheadMark {
 
 /**
  * What was drawn: the SVG, where each bar's line is, and where the playhead line goes for a hit
- * at a position (undefined for a position with nothing struck on the staff).
+ * at a position (in Played, undefined for a position with nothing struck on the staff; in Written,
+ * a hit between written notes is placed between them).
  */
 export interface Drawing {
   svg: SVGSVGElement | null
@@ -275,6 +278,11 @@ export function drawExercise(
   const ties: StaveTie[] = []
   /** Where the playhead line goes for each struck position, by `bar:tick`. */
   const marks = new Map<string, PlayheadMark>()
+  /**
+   * In Written, each bar's anchors, so a hit the written line has no note for (a ride, a foot, a
+   * swung &) is placed between the written notes around it.
+   */
+  const barAnchors = new Map<number, { anchors: PlayheadAnchor[]; top: number; bottom: number }>()
 
   bars.forEach((_, b) => {
     const line = Math.floor(b / barsPerLine)
@@ -317,6 +325,16 @@ export function drawExercise(
 
     const top = stave.getYForLine(-PLAYHEAD_OVERHANG)
     const bottom = stave.getYForLine(4 + PLAYHEAD_OVERHANG)
+    if (shows === 'written') {
+      // Where each written note or rest starts, a note's x winning over a rest's at the same tick, then the bar's end.
+      const atTick = new Map<number, number>()
+      const struck = drawings.flatMap(({ drawn }) => drawn).filter(({ note }) => note instanceof StaveNote)
+      struck.sort((p, q) => Number(q.event.kind === 'chord') - Number(p.event.kind === 'chord'))
+      for (const { event, note } of struck) if (!atTick.has(event.start)) atTick.set(event.start, noteCentre(note as StaveNote))
+      atTick.set(barTicks(barMeter.beats), x + w)
+      const anchors = [...atTick].map(([tick, at]) => ({ tick, x: at })).sort((p, q) => p.tick - q.tick)
+      barAnchors.set(b, { anchors, top, bottom })
+    }
     for (const { drawn } of drawings) {
       for (const { event, note } of drawn) {
         if (event.kind !== 'chord' || !(note instanceof StaveNote)) continue
@@ -345,7 +363,12 @@ export function drawExercise(
     const top = Math.floor(bar / barsPerLine) * height * scale
     return { top, bottom: top + (height + STAVE_TOP) * scale }
   }
-  const playheadMark = ({ bar, tick }: PlayPosition) => marks.get(`${bar}:${tick}`)
+  const playheadMark = ({ bar, tick }: PlayPosition) => {
+    const mark = marks.get(`${bar}:${tick}`)
+    const written = barAnchors.get(bar)
+    if (mark || !written) return mark
+    return { x: playheadX(written.anchors, tick), top: written.top, bottom: written.bottom }
+  }
   return { svg: el.querySelector('svg'), line, playheadMark }
 }
 
