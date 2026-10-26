@@ -4,9 +4,9 @@
 
 **Blocked by:** none
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `sticking()` mirrors overrides under Lead hand L; flipping an override under L stores the right-lead hand, unit-tested
-- [ ] The migration (schema version bump) flips stored overrides of Lead-hand-L exercises; an exercise shows the same hands before and after, unit-tested
-- [ ] Import of an older file migrates the same way
-- [ ] `CONTEXT.md`: Sticking override and Lead hand updated
+- [x] `sticking()` mirrors overrides under Lead hand L; flipping an override under L stores the right-lead hand, unit-tested
+- [x] The migration (schema version bump) flips stored overrides of Lead-hand-L exercises; an exercise shows the same hands before and after, unit-tested
+- [x] Import of an older file migrates the same way
+- [x] `CONTEXT.md`: Sticking override and Lead hand updated
