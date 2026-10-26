@@ -126,8 +126,14 @@ export type Dynamic = 'accent'
  */
 export type Grace = 'flam' | 'drag'
 
+/** How many grace notes each grace is: a flam's one and a drag's two. */
+export const GRACE_NOTES: Record<Grace, number> = { flam: 1, drag: 2 }
+
 /** The marks the tool palette puts on a struck snare note (ADR 0017). */
 export type Mark = 'accent' | Grace
+
+/** The note field each mark is kept in: marks sharing a field replace each other. */
+export const MARK_FIELD = { accent: 'dynamic', flam: 'grace', drag: 'grace' } as const satisfies Record<Mark, keyof Note>
 
 export interface Rest extends ItemBase {
   kind: 'rest'

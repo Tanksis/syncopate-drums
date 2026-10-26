@@ -16,10 +16,8 @@ export const NOTATION_LAYOUT = {
   tripletBarWidth: 260,
   /** A bar of four or more events a beat (sixteenths) is never narrower than this. */
   sixteenthBarWidth: 330,
-  /** A bar is made this much wider for each flam in it, for its grace note… */
-  flamRoom: 25,
-  /** …and this much for each drag, for its two. */
-  dragRoom: 35,
+  /** A bar is made this much wider for each flam or drag in it, room for its grace notes. */
+  graceRoom: { flam: 25, drag: 35 },
   /** An exercise on one line spreads its bars across it, but never wider than this. */
   maxBarWidth: 475,
   /** Room for the clef (and, on the first line, the time signature) before the first bar's notes. */
@@ -65,7 +63,7 @@ export function minBarWidthFor(parts: readonly StaffBar[]): number {
   let graceRoom = 0
   for (const bar of parts) {
     const graces = bar.hands.flatMap((e) => (e.kind === 'chord' ? e.notes.flatMap((n) => (n.grace ? [n.grace] : [])) : []))
-    graceRoom = Math.max(graceRoom, graces.reduce((room, g) => room + (g === 'flam' ? NOTATION_LAYOUT.flamRoom : NOTATION_LAYOUT.dragRoom), 0))
+    graceRoom = Math.max(graceRoom, graces.reduce((room, g) => room + NOTATION_LAYOUT.graceRoom[g], 0))
     for (const part of [bar.hands, bar.feet]) {
       const perBeat = new Map<number, number>()
       for (const event of part) {
@@ -133,8 +131,10 @@ export function notationFit({
   const barsPerLine = grow && scale > 1 ? Math.ceil(bars / Math.ceil(bars / most)) : most
   const available = availableAt(width, scale)
   // On one line the bars share it; over more, every bar gets a share of a full line so they line up.
+  // The cap never takes a bar under its minimum, which grace notes can push past it.
+  const cap = Math.max(NOTATION_LAYOUT.maxBarWidth, minBarWidth)
   const barWidth = Math.floor(
-    bars <= barsPerLine ? Math.min(available / bars, NOTATION_LAYOUT.maxBarWidth) : available / barsPerLine,
+    bars <= barsPerLine ? Math.min(available / bars, cap) : available / barsPerLine,
   )
   return { scale, barsPerLine, barWidth }
 }

@@ -10,6 +10,7 @@ import type { RenderContext, StemmableNote } from 'vexflow/bravura'
 import { Articulation, Beam, Dot, Formatter, Fraction, GhostNote, GraceNote, GraceNoteGroup, ModifierPosition, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
 import type { Cursor, Drum, Duration, Exercise, Grace, Limb, LoopRange, Meter, NotationShows, NoteSticking, PlayheadAnchor, PlayPosition, StaffBar, StaffEvent } from '@/core'
 import {
+  GRACE_NOTES,
   NOTATION_LAYOUT,
   TICKS_PER_BEAT,
   isRudiment,
@@ -140,7 +141,7 @@ class Graces extends GraceNoteGroup {
  * drag two grace sixteenths beamed. Neither has a slur.
  */
 function graceGroup(key: string, grace: Grace): GraceNoteGroup {
-  const notes = Array.from({ length: grace === 'flam' ? 1 : 2 }, () =>
+  const notes = Array.from({ length: GRACE_NOTES[grace] }, () =>
     new GraceNote({ keys: [key], duration: grace === 'flam' ? '8' : '16', slash: grace === 'flam', stemDirection: 1, clef: 'percussion' }),
   )
   const group = new Graces(notes, false)
@@ -512,8 +513,9 @@ function drawBarNumber(stave: Stave, bar: number, loopRange: LoopRange | null, l
   ctx.closeGroup()
 }
 
-/** The size of a hand printed under a note, and of a grace note's hand printed small before it. */
+/** The size of a hand printed under a note. */
 const HAND_SIZE = 12
+/** The size of a grace note's hand, printed small before its note's. */
 const GRACE_HAND_SIZE = 9
 
 /**

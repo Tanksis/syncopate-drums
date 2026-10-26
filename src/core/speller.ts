@@ -5,7 +5,7 @@
 import type { Figure } from './figures'
 import { figureOfHits, isTripletHits } from './figures'
 import type { Bar, Item, Mark, Note, Row, TimeSignature } from './model'
-import { ROWS, TICKS_PER_BEAT, barBeats, barTicks, beatIndex, itemTicks, meter, rowBeats } from './model'
+import { MARK_FIELD, ROWS, TICKS_PER_BEAT, barBeats, barTicks, beatIndex, itemTicks, meter, rowBeats } from './model'
 
 /** What the grid editor shows for one beat: its grid, shared by both rows, and each row on it. */
 export type BeatView = {
@@ -427,7 +427,7 @@ export function toggleMark(bars: Bar[], row: Row, bar: number, beat: number, pos
   const marked = toTimeline(rowOf(struck, row))
   const cell = marked.cells[at.tick]
   if (cell.state !== 'hit') return bars
-  const field = mark === 'accent' ? 'dynamic' : 'grace'
+  const field = MARK_FIELD[mark]
   const { [field]: old, ...rest } = cell.struck ?? {}
   // A flam and a drag share the grace field, so choosing the other one replaces it.
   marked.cells[at.tick] = { state: 'hit', struck: old === mark ? rest : { ...rest, [field]: mark } }

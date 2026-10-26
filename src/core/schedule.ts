@@ -98,7 +98,7 @@ export function schedule(
       const instrument = ROW_INSTRUMENT[row]
       const accent = note.dynamic === 'accent'
       // A grace note before the window's start goes out with its note, a moment late at worst.
-      for (const ahead of GRACE_AHEAD[note.grace ?? 'none']) {
+      for (const ahead of note.grace ? GRACE_AHEAD[note.grace] : []) {
         events.push({ time: time - ahead, kind: 'exercise', instrument, accent: false, grace: true, position })
       }
       events.push({ time, kind: 'exercise', instrument, accent, noteId: noteId(row, bar, tick), position })
@@ -121,7 +121,7 @@ export function schedule(
  * Seconds each grace note is played ahead of its note, earliest first: a fixed time, so a flam
  * sounds the same at any tempo. Tuned by ear.
  */
-const GRACE_AHEAD: Record<Grace | 'none', readonly number[]> = { flam: [0.025], drag: [0.05, 0.025], none: [] }
+const GRACE_AHEAD: Record<Grace, readonly number[]> = { flam: [0.025], drag: [0.05, 0.025] }
 
 /** Swing eases from the full amount at this tempo and below… */
 const FULL_SWING_BPM = 120

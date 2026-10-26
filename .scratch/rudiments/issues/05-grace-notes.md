@@ -13,4 +13,4 @@
 - [x] Drawn small, tucked, flam slashed, drag beamed with no slur, the sticking `lR` and `llR`: checked in a close-up screenshot
 - [ ] By ear left to the user: the flam and drag spacing
 
-Bars with grace notes are drawn wider (`flamRoom`, `dragRoom` in `NOTATION_LAYOUT`), so the formatter doesn't squeeze the rest of the bar to fit them.
+Bars with grace notes are drawn wider (`NOTATION_LAYOUT.graceRoom`), past the one-line cap if need be, so the formatter doesn't squeeze the rest of the bar to fit them.

@@ -2,8 +2,8 @@
 // plays with. Computed once over the whole exercise from bar 1, so it never depends on the loop
 // range or which pass is playing.
 
-import type { Exercise, Grace, Hand, Note } from './model'
-import { TICKS_PER_BEAT, meter, noteId } from './model'
+import type { Exercise, Hand, Note } from './model'
+import { GRACE_NOTES, TICKS_PER_BEAT, meter, noteId } from './model'
 import type { PlacedItem } from './speller'
 import { placeItems } from './speller'
 
@@ -79,9 +79,6 @@ export function sticking(exercise: Exercise): NoteSticking[] {
   )
   return [...snare, ...kicks].sort((a, b) => a.bar - b.bar || a.start - b.start)
 }
-
-/** How many grace notes each grace is: a flam's one and a drag's two. */
-const GRACE_NOTES: Record<Grace, number> = { flam: 1, drag: 2 }
 
 /** How many notes carry a sticking override, shown or hidden. */
 export function overrideCount(exercise: Exercise): number {

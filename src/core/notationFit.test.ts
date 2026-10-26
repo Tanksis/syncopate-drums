@@ -43,6 +43,10 @@ describe('notationFit', () => {
     expect(notationFit({ bars: 1, width: 2000, height: 300, lineHeight: LINE })).toEqual({ scale: 1.6, barsPerLine: 4, barWidth: 475 })
   })
 
+  it('lets a bar wider than the cap at its minimum, as grace notes make one, keep its minimum', () => {
+    expect(notationFit({ bars: 1, width: 2000, height: 300, lineHeight: LINE, minBarWidth: 530 }).barWidth).toBeGreaterThanOrEqual(530)
+  })
+
   it('gives every bar of a five-bar exercise a quarter of the line, so its one-bar last line is not stretched', () => {
     // 1000 - 2 × 10 margin - 70 clef = 910, over 4 bars.
     expect(notationFit({ bars: 5, width: 1000, height: 310, lineHeight: LINE })).toEqual({ scale: 1, barsPerLine: 4, barWidth: 227 })
@@ -95,7 +99,7 @@ describe('minBarWidthFor with grace notes', () => {
     marks.reduce((acc, mark, beat) => toggleMark(acc, 'snare', bar, beat, 0, mark), all)
 
   it('makes room for each flam, and more for each drag, in the bar with the most', () => {
-    const { flamRoom, dragRoom } = NOTATION_LAYOUT
+    const { flam: flamRoom, drag: dragRoom } = NOTATION_LAYOUT.graceRoom
     expect(minBarWidthFor(staffParts(graced(bars(2, 'x.x.'), 0, ['flam', 'flam']), 'off'))).toBe(190 + 2 * flamRoom)
     const both = graced(graced(bars(2, 'xxxx'), 0, ['flam']), 1, ['drag', 'flam'])
     expect(minBarWidthFor(staffParts(both, 'off'))).toBe(330 + dragRoom + flamRoom)

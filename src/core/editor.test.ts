@@ -1110,10 +1110,11 @@ describe('grace notes', () => {
     expect(graces(tap(tap(added, 1, 0), 1, 0))).toBe('-')
   })
 
-  it('stays on its note through a regrid and a duplicate, and is shown on its cell', () => {
+  it('stays on its note through a regrid, a duplicate and a paste, and is shown on its cell', () => {
     const flammed = mark(twoHits(), 'flam', 0, 0)
     expect(graces(applyEdit(flammed, { type: 'setBeatGrid', bar: 0, beat: 0, triplet: true }))).toBe('f')
     expect(graces(keys(flammed, ctrl('d')))).toBe('f-f-')
+    expect(graces(keys(flammed, ctrl('c'), ctrl('Enter'), ctrl('v')))).toBe('f-f-')
     const both = mark(flammed, 'accent', 0, 0)
     expect(marksAt(both, { row: 'snare', bar: 0, beat: 0, position: 0 })).toEqual(['accent', 'flam'])
   })
