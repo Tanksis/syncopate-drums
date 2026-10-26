@@ -8,7 +8,7 @@ import type { MenuItem } from '@/components/Menu'
 import { Menu } from '@/components/Menu'
 import { Segmented } from '@/components/Segmented'
 import type { BeatView, EditCommand, EditorState, GridPoint, Hand, Mark, PositionState, Row, RowView } from '@/core'
-import { ROWS, applyEdit, canTieOverBarline, editorBeatViews, inLoopRange, isExample, marksAt, meter, sticking, stickingNoteAt } from '@/core'
+import { ROWS, applyEdit, canTieOverBarline, editorBeatViews, inLoopRange, isBuiltIn, marksAt, meter, sticking, stickingNoteAt } from '@/core'
 import { ToolPalette } from './ToolPalette'
 
 /** A press on a grid position, and (once it moves to another position) the hold end it drags to. */
@@ -78,7 +78,7 @@ const countLabels = (beat: number, triplet: boolean, compound: boolean) =>
  * release. Holding still on a snare hit for half a second flips its sticking instead, flashing the
  * new hand on the cell. With a mark held in the tool palette, clicking a snare cell toggles that mark
  * on its note (adding the hit if empty), and a marked cell shows its marks in small print. Clicking elsewhere on a card moves the cursor to it. A card's 16ths | trip switch puts
- * it on the sixteenth or the triplet grid, and its ⋯ menu (not on an example) switches the grid,
+ * it on the sixteenth or the triplet grid, and its ⋯ menu (not on a built-in exercise) switches the grid,
  * rests the beat, or ties a bar's first beat over the barline. The cursor's card is outlined with a
  * mark beside its row, and the bar selection and a set loop range are shaded. `phone` gives the
  * cells room for a finger and leaves the bar's number and delete button to the sheet's bar row, and the palette to the sheet's top; held
@@ -90,7 +90,7 @@ export function BeatStrip({ phone, bar }: { phone?: PhoneOrientation; bar?: numb
   const { cursor, selection } = editor
   const { loopRange } = editor.exercise.practice
   const dispatch = useAppStore((s) => s.dispatch)
-  const example = useAppStore((s) => isExample(s.editor.exercise.id))
+  const builtIn = useAppStore((s) => isBuiltIn(s.editor.exercise.id))
   const tool = useAppStore((s) => s.tool)
   const { compound } = meter(editor.exercise.timeSignature)
   const [press, setPress] = useState<Press | null>(null)
@@ -120,7 +120,7 @@ export function BeatStrip({ phone, bar }: { phone?: PhoneOrientation; bar?: numb
   const startPress = (e: PointerEvent<HTMLElement>, from: GridPoint, position: PositionState) => {
     if (e.button !== 0) return
     e.currentTarget.setPointerCapture(e.pointerId)
-    const flipNoteId = example ? null : stickingNoteAt(editor, from)
+    const flipNoteId = builtIn ? null : stickingNoteAt(editor, from)
     track({
       pointerId: e.pointerId,
       from,
@@ -247,7 +247,7 @@ export function BeatStrip({ phone, bar }: { phone?: PhoneOrientation; bar?: numb
         {!phone && (
           <div className="flex items-center text-xs">
             <span className={`font-semibold ${looped ? 'text-loop-ink' : 'text-ink'}`}>Bar {b + 1}</span>
-            {!example && (
+            {!builtIn && (
               <Button
                 variant="ghost"
                 title={`Delete bar ${b + 1} (Ctrl+Backspace)`}
@@ -282,8 +282,8 @@ export function BeatStrip({ phone, bar }: { phone?: PhoneOrientation; bar?: numb
                 <div className="flex items-center gap-1.5">
                   <span className="text-lg/none font-bold">{beat + 1}</span>
                   {/* In compound time a beat's grid is its three eighths, so it has no switch. */}
-                  {!compound && <GridSwitch bar={b} beat={beat} triplet={view.triplet} disabled={example} onSwitch={switchGrid} />}
-                  {!example && (
+                  {!compound && <GridSwitch bar={b} beat={beat} triplet={view.triplet} disabled={builtIn} onSwitch={switchGrid} />}
+                  {!builtIn && (
                     <Menu
                       label={`Bar ${b + 1}, beat ${beat + 1} menu`}
                       items={beatMenu(editor, b, beat, view, compound ? null : switchGrid, dispatch)}
@@ -333,7 +333,7 @@ function beatMenu(
 }
 
 /**
- * A beat's 16ths | trip switch, its current grid lit, disabled on an example. It's left out of the Tab order, which would
+ * A beat's 16ths | trip switch, its current grid lit, disabled on a built-in exercise. It's left out of the Tab order, which would
  * otherwise stop at every beat twice; the beat's ⋯ menu switches the grid from the keyboard.
  */
 function GridSwitch({

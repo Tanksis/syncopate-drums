@@ -206,7 +206,7 @@ export interface DeviceSettings {
   grooveMuted: boolean
   /** The exercise open when the app was last used, reopened at launch. */
   lastOpenedId: string | null
-  /** The library sidebar's tab: the drummer's own exercises, or the built-in examples. */
+  /** The library sidebar's tab: the drummer's own exercises, the built-in examples or the rudiments. */
   libraryTab: LibraryTab
   /** The Library folders shown collapsed on this device. */
   collapsedFolderIds: string[]
@@ -278,8 +278,8 @@ export function deviceSettingsFrom(stored: Record<string, unknown> | undefined):
   return { ...DEFAULT_DEVICE_SETTINGS, ...Object.fromEntries(known), metronome: metronomeSettingsFrom(stored?.metronome) }
 }
 
-/** The library sidebar's tabs: the drummer's own exercises, and the built-in examples. */
-export type LibraryTab = 'library' | 'examples'
+/** The library sidebar's tabs: the drummer's own exercises, the built-in examples and the rudiments. */
+export type LibraryTab = 'library' | 'examples' | 'rudiments'
 
 export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   countIn: true,

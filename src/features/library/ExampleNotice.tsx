@@ -1,18 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { Button } from '@/components/Button'
-import { isExample } from '@/core'
+import { isBuiltIn, isRudiment } from '@/core'
 
-/** How long the notice stays highlighted after an example refuses an edit. */
+/** How long the notice stays highlighted after a built-in exercise refuses an edit. */
 const HIGHLIGHT_MS = 700
 
 /**
- * With an example open, says that it's read-only (ADR 0008) and offers Copy to Library. Each edit
- * the example refuses (a click on a cell, Backspace) highlights the notice briefly, so the
+ * With an example or a rudiment open, says that it's read-only (ADR 0008, 0018) and offers Copy to
+ * Library. Each edit it refuses (a click on a cell, Backspace) highlights the notice briefly, so the
  * drummer can see why nothing changed.
  */
 export function ExampleNotice() {
-  const open = useAppStore((s) => isExample(s.editor.exercise.id))
+  const id = useAppStore((s) => s.editor.exercise.id)
   const refusedEdits = useAppStore((s) => s.refusedEdits)
   const copyToLibrary = useAppStore((s) => s.duplicateOpenExercise)
   const [highlighted, setHighlighted] = useState(false)
@@ -26,7 +26,8 @@ export function ExampleNotice() {
     return () => clearTimeout(timer)
   }, [refusedEdits])
 
-  if (!open) return null
+  if (!isBuiltIn(id)) return null
+  const kind = isRudiment(id) ? 'rudiment' : 'example'
   return (
     <div
       className={`flex items-center gap-3 border-b px-4 py-1.5 transition-colors duration-300 ${
@@ -34,9 +35,9 @@ export function ExampleNotice() {
       }`}
     >
       <p role="status" className="m-0 flex-1">
-        <span className="font-semibold text-ink">Example: read-only.</span> Copy to Library to edit it.
+        <span className="font-semibold text-ink">{kind === 'rudiment' ? 'Rudiment' : 'Example'}: read-only.</span> Copy to Library to edit it.
       </p>
-      <Button title="Make an editable copy of this example" onClick={copyToLibrary}>
+      <Button title={`Make an editable copy of this ${kind}`} onClick={copyToLibrary}>
         Copy to Library
       </Button>
     </div>

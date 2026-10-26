@@ -2,10 +2,10 @@
 
 import type { Exercise } from './model'
 import { newExercise } from './model'
-import { copyExample, exampleExercises, isExample } from './examples'
+import { builtInExercises, copyExample, exampleExercises, isBuiltIn } from './examples'
 
 /**
- * The exercise to open at launch: the one last open if it still exists, an example among them,
+ * The exercise to open at launch: the one last open if it still exists, a built-in one among them,
  * otherwise the most recently opened. A fresh device (nothing ever open, an empty library) opens
  * the first example. Null for a library emptied since, where a new Untitled exercise opens instead.
  */
@@ -13,10 +13,9 @@ export function exerciseToOpenAtLaunch<E extends Pick<Exercise, 'id' | 'lastOpen
   library: E[],
   lastOpenedId: string | null,
 ): E | Exercise | null {
-  const examples = exampleExercises()
-  const example = examples.find((e) => e.id === lastOpenedId)
-  if (example) return example
-  if (library.length === 0 && lastOpenedId === null) return examples[0]
+  const builtIn = builtInExercises().find((e) => e.id === lastOpenedId)
+  if (builtIn) return builtIn
+  if (library.length === 0 && lastOpenedId === null) return exampleExercises()[0]
   return lastOpenOrLatest(library, lastOpenedId)
 }
 
@@ -82,11 +81,11 @@ function sameValue(a: unknown, b: unknown): boolean {
 
 /**
  * A copy under a new id, named "<name> (copy)", with the same content and practice settings, in its
- * original's folder. An example's copy is Copy to Library's, an ordinary exercise without the
- * "Example: " prefix, in no folder.
+ * original's folder. A built-in exercise's copy is Copy to Library's, an ordinary exercise without
+ * the "Example: " prefix, in no folder.
  */
 export function duplicateExercise(exercise: Exercise, { id, now }: { id: string; now: number }): Exercise {
-  if (isExample(exercise.id)) return copyExample(exercise, { id, now, folderId: null })
+  if (isBuiltIn(exercise.id)) return copyExample(exercise, { id, now, folderId: null })
   return { ...exercise, id, name: `${exercise.name} (copy)`, lastOpened: now }
 }
 
