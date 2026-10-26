@@ -247,7 +247,7 @@ function fromTimeline({ cells, triplet, beats }: Timeline): Item[][] {
             kind: 'note',
             ...piece.value,
             tiedToNext: i < pieces.length - 1,
-            ...(i === 0 && seg.struck),
+            ...(i === 0 ? seg.struck : {}),
           }
         : { kind: 'rest', ...piece.value }
       bars[Math.floor(piece.start / ticksPerBar)].push(item)

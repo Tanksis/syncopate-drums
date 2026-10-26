@@ -4,12 +4,21 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done, bar the by-ear check
 
-- [ ] `Note.dynamic?: 'accent'`; the mark edit (toggle, add the hit when empty, cleared with the hit, carried through copy, paste, duplicate and regrid), unit-tested
-- [ ] The schedule gives accented notes the accent level, unit-tested; the engine loads the accent band (files already in `public/samples`, see 01's comment) with the main load's error handling
-- [ ] `SCHEMA_VERSION` bumped; export and import with accents, an older version refusing, unit-tested
-- [ ] The palette on the desktop (over the cards) and the phone (top of the editor sheet); Hit held at first; disabled on an example
-- [ ] Drawn `>` close above the stem, checked in a close-up screenshot
-- [ ] Checked in the browser with real mouse clicks; by ear left to the user
-- [ ] `CONTEXT.md`: Accent, Tool palette
+- [x] `Note.dynamic?: 'accent'`; the mark edit (toggle, add the hit when empty, cleared with the hit, carried through copy, paste, duplicate and regrid), unit-tested
+- [x] The schedule gives accented notes the accent level, unit-tested; the engine loads the accent band (files already in `public/samples`, see 01's comment) with the main load's error handling
+- [x] `SCHEMA_VERSION` bumped; export and import with accents, an older version refusing, unit-tested
+- [x] The palette on the desktop (over the cards) and the phone (top of the editor sheet); Hit held at first; disabled on an example
+- [x] Drawn `>` close above the stem, checked in a close-up screenshot
+- [x] Checked in the browser with real mouse clicks
+- [ ] Left to the user: by ear, the accent band (vl24-vl30) against the normal notes
+- [x] `CONTEXT.md`: Accent, Tool palette
+
+## Comments
+
+- 2026-10-26: Done. Notes for the later tickets:
+  - An accented note is played by setting the scheduled event's existing `accent` flag, which the engine maps to the `snareAccent` band. Grace notes (05) need a third level, so that flag becomes a snare level then, as the spec's Schedule section says.
+  - The `>` places itself: over the stem tip as the beam leaves it, and over the beam group's highest tip, so a group's accents are level. VexFlow's own placement works from the unbeamed stem and snaps to half lines. A triplet's "3" over accents sits a step above them. The beams are post-formatted before the notes draw, which leaves unaccented notation pixel-identical.
+  - With a mark held, only a plain tap applies it: a drag still sets a hold and a long-press still flips the hand. A tap on a kick square still toggles a kick, since marks are snare-only.
+

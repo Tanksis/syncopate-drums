@@ -29,7 +29,7 @@ export interface ScheduledEvent {
   time: number
   kind: 'click' | 'exercise' | 'groove'
   instrument: Instrument
-  /** A bar's first click, or an accented note of the exercise, played at the snare's accent level. */
+  /** A bar's first click, played high; or an accented note of the exercise, played from the snare's accent band. */
   accent: boolean
   /** How hard a groove hit is played, 0–1 of the instrument's usual level; other events always play at 1. */
   velocity?: number
@@ -65,7 +65,7 @@ export function schedule(
   const secondsPerTick = 60 / practice.bpm / TICKS_PER_BEAT
   // In compound time each beat is already three eighths, so nothing is swung (ADR 0015).
   const swing = meter(exercise.timeSignature).compound ? MIN_SWING : effectiveSwing(practice.swing, practice.bpm)
-  const struck = ROWS.map((row) => ({ row, ticks: struckTicks(exercise, row) }))
+  const struck = ROWS.map((row) => ({ row, notes: struckNotes(exercise, row) }))
   const barMeter = meter(exercise.timeSignature)
   const { beats } = barMeter
   const groove = grooveHitsByTick(practice, barMeter)
@@ -84,7 +84,11 @@ export function schedule(
     if (tick % TICKS_PER_BEAT === 0) {
       events.push({ time, kind: 'click', instrument: 'click', accent: tick === 0, position })
     }
-    const strikes = bar >= 0 ? struck.flatMap(({ row, ticks }) => (ticks[bar]?.has(tick) ? [{ row, note: ticks[bar].get(tick)! }] : [])) : []
+    // The count-in (a negative bar) strikes nothing.
+    const strikes = struck.flatMap(({ row, notes }) => {
+      const note = bar >= 0 ? notes[bar]?.get(tick) : undefined
+      return note ? [{ row, note }] : []
+    })
     for (const { row, note } of strikes) {
       const instrument = ROW_INSTRUMENT[row]
       const accent = note.dynamic === 'accent'
@@ -139,7 +143,7 @@ export const ROW_INSTRUMENT: Record<Row, Instrument> = { snare: 'snare', kick: '
 const BASS_DRUMS: ReadonlySet<Instrument> = new Set(['kick', 'kickFeathered'])
 
 /** Per bar, the notes a row strikes, by tick (tied continuations are held, not struck). */
-function struckTicks(exercise: Exercise, row: Row): Map<number, Note>[] {
+function struckNotes(exercise: Exercise, row: Row): Map<number, Note>[] {
   const struck = exercise.bars.map(() => new Map<number, Note>())
   for (const p of placeItems(exercise.bars, row)) {
     if (p.item.kind === 'note' && !p.continuation) struck[p.bar].set(p.start, p.item)
