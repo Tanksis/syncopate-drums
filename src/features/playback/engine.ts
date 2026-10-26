@@ -17,7 +17,19 @@ import type {
   ScheduledEvent,
   TimelineEntry,
 } from '@/core'
-import { clickHeard, layerLevels, metronomeClickGain, metronomeSchedule, playheadAt, recordEvents, resumePosition, schedule, trimTimeline } from '@/core'
+import {
+  clickHeard,
+  layerLevels,
+  metronomeClickGain,
+  metronomeSchedule,
+  pickStroke,
+  playheadAt,
+  recordEvents,
+  resumePosition,
+  schedule,
+  strokeGain,
+  trimTimeline,
+} from '@/core'
 
 const LOOKAHEAD = 0.1
 /** Head start for the first event, so it isn't late before the first tick has run. */
@@ -38,8 +50,24 @@ const LAYER_GAIN: Record<Layer, number> = { click: 0.6, exercise: 0.9, groove: 3
 /** Seconds a volume change takes to settle, so a slider drag doesn't crackle. */
 const VOLUME_SMOOTHING = 0.02
 
+/** Virtuosity's snare-center velocity layers from `from` to `to`, a band of nearby loudness. */
+const snareCenter = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => `oh_snare_center_vl${from + i}`)
+
 /**
- * Virtuosity Drums one-shots for each kit piece, played round-robin, at a fixed velocity. The
+ * The snare's other bands, loaded after the first sounds: louder strokes for an accent, softer ones
+ * for a grace note, and the buzz articulation's strokes. Starting points, to be set by ear.
+ */
+const SNARE_BANDS = {
+  accent: snareCenter(24, 30),
+  grace: snareCenter(8, 12),
+  buzz: ['oh_snare_buzz_vl4', 'oh_snare_buzz_vl7', 'oh_snare_buzz_vl10'],
+}
+
+/**
+ * Virtuosity Drums one-shots for each kit piece, at a fixed velocity. The snare's are a band of
+ * nearby velocity layers (it has no round robins), each stroke picked at random from the band, never
+ * the last one, and varied ±1 dB, so a run of fast singles doesn't machine-gun. The others play
+ * their round robins in turn. The
  * overhead mics barely pick up the bass drum: its samples are about 20 dB (vl2) and 31 dB (vl1)
  * quieter than the snare's (RMS over the first 400 ms). So the kick is raised 20 dB to sit level
  * with the snare, and the feathered kick, already raised with the groove layer, sits about 10 dB
@@ -47,7 +75,7 @@ const VOLUME_SMOOTHING = 0.02
  * down at 300 ms) booms into the next hits, so it is faded out after `hold` seconds.
  */
 const SAMPLES: Record<Exclude<Instrument, 'click'>, { files: string[]; velocity: number; hold?: number }> = {
-  snare: { files: ['oh_snare_center_vl18', 'oh_snare_center_vl21', 'oh_snare_center_vl24'], velocity: 1 },
+  snare: { files: snareCenter(13, 17), velocity: 1 },
   kick: { files: ['oh_kick_snoff_vl2_rr1', 'oh_kick_snoff_vl2_rr2'], velocity: 10, hold: 0.06 },
   kickFeathered: { files: ['oh_kick_snoff_vl1_rr1', 'oh_kick_snoff_vl1_rr2'], velocity: 2.8 },
   ride: { files: ['oh_ride_ride_vl2_rr1', 'oh_ride_ride_vl2_rr2'], velocity: 0.85 },
@@ -216,15 +244,17 @@ function playThroughSilentSwitch(): void {
   if (session) session.type = 'playback'
 }
 
-async function loadSamples({ ctx, buffers }: Audio): Promise<void> {
-  const files = Object.values(SAMPLES).flatMap((s) => s.files)
-  await Promise.all(
-    files.map(async (file) => {
-      const response = await fetch(`${import.meta.env.BASE_URL}samples/${file}.flac`)
-      if (!response.ok) throw new Error(`Could not load the ${file} sample (${response.status})`)
-      buffers.set(file, trimOnset(ctx, await ctx.decodeAudioData(await response.arrayBuffer())))
-    }),
-  )
+async function loadSamples(audio: Audio): Promise<void> {
+  await Promise.all(Object.values(SAMPLES).flatMap((s) => s.files.map((file) => loadSample(audio, file))))
+  // Not waited for: nothing plays these bands yet, and the first sounds shouldn't wait on them.
+  void Promise.all(Object.values(SNARE_BANDS).flatMap((files) => files.map((file) => loadSample(audio, file)))).catch(() => {})
+}
+
+/** Fetches and decodes one sample into the buffers, trimmed to its onset. */
+async function loadSample({ ctx, buffers }: Audio, file: string): Promise<void> {
+  const response = await fetch(`${import.meta.env.BASE_URL}samples/${file}.flac`)
+  if (!response.ok) throw new Error(`Could not load the ${file} sample (${response.status})`)
+  buffers.set(file, trimOnset(ctx, await ctx.decodeAudioData(await response.arrayBuffer())))
 }
 
 /** Cuts the silence before a sample's onset, so it sounds exactly when it is started. */
@@ -375,12 +405,14 @@ function sample(
   layer: GainNode,
 ): AudioScheduledSourceNode {
   const { files, hold } = SAMPLES[instrument]
-  const turn = ((roundRobin.get(instrument) ?? -1) + 1) % files.length
+  const last = roundRobin.get(instrument)
+  const snare = instrument === 'snare'
+  const turn = snare ? pickStroke(files.length, last, Math.random()) : ((last ?? -1) + 1) % files.length
   roundRobin.set(instrument, turn)
   const source = ctx.createBufferSource()
   source.buffer = buffers.get(files[turn])!
   const gain = ctx.createGain()
-  gain.gain.value = level
+  gain.gain.value = snare ? level * strokeGain(Math.random()) : level
   source.connect(gain).connect(layer)
   source.start(when)
   if (hold !== undefined) {

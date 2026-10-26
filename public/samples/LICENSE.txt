@@ -4,3 +4,6 @@ https://github.com/sfzinstruments/virtuosity_drums
 
 They are dedicated to the public domain under CC0 1.0 Universal:
 https://creativecommons.org/publicdomain/zero/1.0/
+
+The snare is played in bands of nearby velocity layers: snare center vl8-vl17 and
+vl24-vl30, and the buzz articulation's vl4, vl7 and vl10.
