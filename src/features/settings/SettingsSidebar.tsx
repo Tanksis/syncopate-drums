@@ -27,6 +27,7 @@ import {
   THEMES,
   TIME_SIGNATURES,
   hihatFootOptions,
+  isRudiment,
   meter,
   overrideCount,
   patternById,
@@ -34,11 +35,15 @@ import {
   swingPreset,
 } from '@/core'
 
+/** Whether a rudiment is open: its hands are the rudiment, so only the Lead hand changes them (ADR 0018). */
+const useRudimentOpen = () => useAppStore((s) => isRudiment(s.editor.exercise.id))
+
 /**
  * The Practice screen's own settings, in the desktop's settings sidebar: the time (and swing), the
- * groove and the sticking.
+ * groove and the sticking. On a rudiment, Sticking mode, Reset and Pattern are hidden.
  */
 export function PracticeSettings() {
+  const rudiment = useRudimentOpen()
   return (
     <>
       <SettingGroup title="Time">
@@ -50,9 +55,9 @@ export function PracticeSettings() {
       </SettingGroup>
       <SettingGroup title="Sticking">
         {/* Stacked, as its three chips beside the name are wider than the sidebar. */}
-        <Choice label="Mode" setting="sticking" options={STICKING_MODES} stacked />
+        {!rudiment && <Choice label="Mode" setting="sticking" options={STICKING_MODES} stacked />}
         <Choice label="Lead hand" setting="leadHand" options={LEAD_HANDS} />
-        <ResetOverrides />
+        {!rudiment && <ResetOverrides />}
       </SettingGroup>
     </>
   )
@@ -116,6 +121,7 @@ type PhoneTab = (typeof PHONE_TABS)[number]['id']
  */
 export function PhoneSettings({ onDone }: { onDone: () => void }) {
   const [tab, setTab] = useState<PhoneTab>('groove')
+  const rudiment = useRudimentOpen()
   const id = useId()
   return (
     <aside aria-label="Settings" className="flex w-full flex-col bg-panel">
@@ -136,9 +142,9 @@ export function PhoneSettings({ onDone }: { onDone: () => void }) {
         )}
         {tab === 'sticking' && (
           <>
-            <Choice label="Mode" setting="sticking" options={STICKING_MODES} stacked large />
+            {!rudiment && <Choice label="Mode" setting="sticking" options={STICKING_MODES} stacked large />}
             <Choice label="Lead hand" setting="leadHand" options={LEAD_HANDS} stacked large />
-            <ResetOverrides />
+            {!rudiment && <ResetOverrides />}
           </>
         )}
         {tab === 'mix' && (
@@ -412,11 +418,12 @@ function HihatFootChoice({ large = false }: { large?: boolean }) {
   )
 }
 
-/** The Groove group's rows: the pattern, then the feet under their sub-heading. */
+/** The Groove group's rows: the pattern (none on a rudiment, whose hands are busy), then the feet under their sub-heading. */
 function GrooveRows({ large = false }: { large?: boolean }) {
+  const rudiment = useRudimentOpen()
   return (
     <>
-      <PatternPicker large={large} />
+      {!rudiment && <PatternPicker large={large} />}
       <FeetHeading />
       <BassDrumChoice large={large} />
       <HihatFootChoice large={large} />

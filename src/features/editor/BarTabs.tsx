@@ -3,18 +3,18 @@ import { useEffect, useRef } from 'react'
 import { useAppStore } from '@/app/store'
 import { keepFocus } from '@/components/keepFocus'
 import { Menu } from '@/components/Menu'
-import { inLoopRange, isExample } from '@/core'
+import { inLoopRange, isBuiltIn } from '@/core'
 
 /**
  * A tab for each bar, the cursor's lit, the selection and loop range shaded as on the beat strip's
  * bar: a click goes to that bar, which the beat strip then shows (without taking a selection
- * along), as do ‹ and ›. The + adds a bar of rests at the end and goes to it; an example, which
+ * along), as do ‹ and ›. The + adds a bar of rests at the end and goes to it; a built-in exercise, which
  * can't be changed, has none. `large` tabs, on a phone, are big enough for a finger and take a row
  * of their own: the numbered tabs scroll sideways between ‹ and ›, keeping the cursor's tab in view.
  */
 export function BarTabs({ large = false }: { large?: boolean }) {
   const barCount = useAppStore((s) => s.editor.exercise.bars.length)
-  const example = useAppStore((s) => isExample(s.editor.exercise.id))
+  const builtIn = useAppStore((s) => isBuiltIn(s.editor.exercise.id))
   const current = useAppStore((s) => s.editor.cursor.bar)
   const selection = useAppStore((s) => s.editor.selection)
   const loopRange = useAppStore((s) => s.editor.exercise.practice.loopRange)
@@ -64,7 +64,7 @@ export function BarTabs({ large = false }: { large?: boolean }) {
       <StepButton large={large} label="Next bar" disabled={current === barCount - 1} onClick={() => goTo(current + 1)}>
         ›
       </StepButton>
-      {!example && (
+      {!builtIn && (
         <button
           type="button"
           aria-label="Add a bar at the end"
@@ -91,12 +91,12 @@ export const MAX_BAR_DOTS = 6
  * The phone's bars, in the row at the foot of the editor sheet: a dot for each, which goes to that
  * bar, the cursor's a pill in the accent, the selection's and the loop range's shaded as their tabs
  * would be. The beat cards above swipe between bars too. A dashed + adds a bar of rests at the end
- * and goes to it, as the tabs' + does; an example has none. Past MAX_BAR_DOTS bars, "3 / 12" stands
+ * and goes to it, as the tabs' + does; a built-in exercise has none. Past MAX_BAR_DOTS bars, "3 / 12" stands
  * in for the dots and opens a list of the bars to go to.
  */
 export function BarDots() {
   const barCount = useAppStore((s) => s.editor.exercise.bars.length)
-  const example = useAppStore((s) => isExample(s.editor.exercise.id))
+  const builtIn = useAppStore((s) => isBuiltIn(s.editor.exercise.id))
   const current = useAppStore((s) => s.editor.cursor.bar)
   const selection = useAppStore((s) => s.editor.selection)
   const loopRange = useAppStore((s) => s.editor.exercise.practice.loopRange)
@@ -144,7 +144,7 @@ export function BarDots() {
           </button>
         ))
       )}
-      {!example && (
+      {!builtIn && (
         <button
           type="button"
           aria-label="Add a bar at the end"

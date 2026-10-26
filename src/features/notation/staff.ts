@@ -12,6 +12,7 @@ import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, Meter, Notation
 import {
   NOTATION_LAYOUT,
   TICKS_PER_BEAT,
+  isRudiment,
   barTicks,
   compoundValue,
   inLoopRange,
@@ -340,6 +341,8 @@ export function drawExercise(
   }
   const font = token('font-numbers')
   const stickings = new Map(sticking(exercise).map((n) => [n.noteId, n]))
+  // A rudiment's hands are all overrides, and they are the rudiment: none is a changed hand (ADR 0018).
+  const markOverrides = !isRudiment(exercise.id)
   /** The last drawn note of each drum, with its line, to tie the next one to. */
   const lastOf = new Map<string, TieEnd>()
   const ties: StaveTie[] = []
@@ -411,7 +414,7 @@ export function drawExercise(
           if (n.tied && previous) ties.push(...tie(previous, { note, index, line }))
           lastOf.set(n.drum, { note, index, line })
           const noteSticking = n.noteId && !n.tied ? stickings.get(n.noteId) : undefined
-          if (noteSticking) drawSticking(stave, note, noteSticking, handRow, colour.notationAccent, font)
+          if (noteSticking) drawSticking(stave, note, noteSticking, handRow, colour.notationAccent, font, markOverrides)
         }
       }
     }
@@ -478,8 +481,8 @@ function drawBarNumber(stave: Stave, bar: number, loopRange: LoopRange | null, l
 
 /**
  * Prints the shown R, L or K centred under a note, on the given stave line. A hand's group is tagged
- * with the note's id so a click can flip it, and an override is printed in the notation's accent colour, with
- * a hover hint. A kick's K has nothing to flip.
+ * with the note's id so a click can flip it, and with `markOverrides` an override is printed in the notation's
+ * accent colour, with a hover hint. A kick's K has nothing to flip.
  */
 function drawSticking(
   stave: Stave,
@@ -488,8 +491,10 @@ function drawSticking(
   line: number,
   accent: string,
   font: string,
+  markOverrides: boolean,
 ) {
   if (!label) return
+  const marked = markOverrides && override !== undefined
   const ctx = stave.checkContext()
   const flippable = row === 'snare'
   const group: SVGGElement = ctx.openGroup(flippable ? 'hand' : 'kick')
@@ -497,14 +502,14 @@ function drawSticking(
     group.dataset.noteId = noteId
     group.classList.add('cursor-pointer')
   }
-  if (override) {
+  if (marked) {
     const title = document.createElementNS('http://www.w3.org/2000/svg', 'title')
     title.textContent = 'override, click to reset'
     group.append(title)
   }
   ctx.save()
   ctx.setFont(font, 12, 'bold')
-  if (override) ctx.setFillStyle(accent)
+  if (marked) ctx.setFillStyle(accent)
   const width = ctx.measureText(label).width
   const x = noteCentre(note) - width / 2
   const y = stave.getYForLine(line)

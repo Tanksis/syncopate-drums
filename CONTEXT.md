@@ -22,6 +22,10 @@ _Avoid_: Category, tag, collection
 One of the exercises built into the app to show what it does, listed in the sidebar's Examples tab. Never stored and read-only: its practice settings can be changed to try it but aren't kept, and Copy to Library makes an ordinary exercise from it.
 _Avoid_: Demo, template, preset
 
+**Rudiment**:
+One of the 40 PAS rudiments, built into the app and listed by PAS number in the sidebar's Rudiments tab under Rolls, Diddles, Flams and Drags; one not built yet is listed greyed, "coming soon". Read-only like an **Example**, written as the fewest bars that bring it back to its starting hand, with every hand stored as a **Sticking override** and always printed. Its **Lead hand** can be changed to practise it from the left; its sticking mode and pattern can't (ADR 0018). Copy to Library makes an ordinary exercise from it.
+_Avoid_: Sticking pattern, lick
+
 **Bar**:
 One measure within an exercise.
 _Avoid_: Measure

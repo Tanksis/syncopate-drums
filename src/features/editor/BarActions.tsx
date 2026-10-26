@@ -5,21 +5,21 @@ import { Button, buttonClass } from '@/components/Button'
 import { Menu } from '@/components/Menu'
 import { PatternDialog } from '@/components/PatternDialog'
 import { RedoIcon, TrashIcon, UndoIcon } from '@/components/icons'
-import { barRange, isExample } from '@/core'
+import { barRange, isBuiltIn } from '@/core'
 
 /**
  * Undo, redo and the bar menu, for editing without the keyboard. The menu's items are the bar keys'
- * commands, so they act on the cursor bar, or on the bars Shift+arrows selected. An example, which
+ * commands, so they act on the cursor bar, or on the bars Shift+arrows selected. A built-in exercise, which
  * can't be changed, has none of them. `large` buttons, quiet ones without a border, are big enough
  * for a finger: the phone's row at the foot of the editor sheet, where `dots` (the bar dots) sit
- * between redo and a bin that deletes the bars, as the menu's last item does. An example keeps only `dots`.
+ * between redo and a bin that deletes the bars, as the menu's last item does. A built-in exercise keeps only `dots`.
  */
 export function BarActions({ large = false, dots }: { large?: boolean; dots?: ReactNode }) {
   const editor = useAppStore((s) => s.editor)
   const dispatch = useAppStore((s) => s.dispatch)
   // The bar "Fill with pattern…" fills, kept from when the dialog opened; null while it's closed.
   const [filling, setFilling] = useState<number | null>(null)
-  if (isExample(editor.exercise.id)) return dots ?? null
+  if (isBuiltIn(editor.exercise.id)) return dots ?? null
   const { first, last } = editor.selection ?? { first: editor.cursor.bar, last: editor.cursor.bar }
   const { bar } = editor.cursor
   const cursorBar = `bar ${bar + 1}`

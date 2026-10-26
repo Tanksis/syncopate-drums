@@ -1,5 +1,5 @@
 // App-wide state, and the only caller of the repository: the open exercise autosaves on every
-// change, unless it is an example, which is never stored (ADR 0008).
+// change, unless it is built in (an example or a rudiment), which is never stored (ADR 0008, 0018).
 
 import { create } from 'zustand'
 import type { BassDrum, DeviceSettings, EditCommand, Mark, MetronomeSettings, EditorState, Exercise, Folder, HihatFoot, ImportChoice, PatternGrid, PatternId, PatternSuggestion, PlayPosition, PracticeSettings } from '@/core'
@@ -10,13 +10,13 @@ import {
   applyEdit,
   deleteFolder,
   duplicateExercise,
-  exampleAccepts,
-  exampleExercises,
+  builtInAccepts,
+  builtInExercises,
   exerciseFromPattern,
   exerciseToOpenAfterDelete,
   exerciseToOpenAtLaunch,
   fileIntoFolders,
-  isExample,
+  isBuiltIn,
   isUnchangedNew,
   launchListOrder,
   leftoverExamples,
@@ -73,7 +73,7 @@ interface AppState {
   metronomePlaying: boolean
   /** Where a paused playback resumes, in the exercise it was paused in. */
   paused: PausedAt | undefined
-  /** How many edits an open example has refused, so the read-only notice can flash at each. */
+  /** How many edits an open built-in exercise has refused, so the read-only notice can flash at each. */
   refusedEdits: number
   /** The tool held in the palette, for the session: Hit until another is picked. */
   tool: Tool
@@ -108,7 +108,7 @@ interface AppState {
   loopBar: (bar: number, options?: { extend?: boolean }) => void
   /** Loops the whole exercise again. */
   loopAll: () => void
-  /** Opens a stored exercise or an example, switching the sidebar to the tab that lists it. */
+  /** Opens a stored exercise or a built-in one, switching the sidebar to the tab that lists it. */
   openExercise: (id: string) => void
   /** Opens a new Untitled exercise, on top of the list, in the open exercise's folder. */
   createExercise: () => void
@@ -128,11 +128,11 @@ interface AppState {
   /** Collapses or expands a folder, remembered on this device. */
   setFolderCollapsed: (id: string, collapsed: boolean) => void
   /**
-   * Opens a copy of the open exercise, on top of the list. For an example this is Copy to Library:
+   * Opens a copy of the open exercise, on top of the list. For a built-in exercise this is Copy to Library:
    * an ordinary, editable exercise, and the sidebar switches to the Library tab.
    */
   duplicateOpenExercise: () => void
-  /** Empty or blank names are ignored, as is an example, whose name is fixed. */
+  /** Empty or blank names are ignored, as is a built-in exercise, whose name is fixed. */
   renameExercise: (id: string, name: string) => void
   /**
    * Deletes exercises for good. If the open one goes, the most recently opened one left opens, or a
@@ -157,11 +157,12 @@ let unsaved: Exercise | null = null
 let saveTimer: ReturnType<typeof setTimeout> | undefined
 
 /**
- * Saves the exercise now, or once changes settle; either way it supersedes any pending save. An
- * example is never saved: its practice-setting changes last only until another exercise opens.
+ * Saves the exercise now, or once changes settle; either way it supersedes any pending save. A
+ * built-in exercise (an example or a rudiment) is never saved: its practice-setting changes, and a
+ * rudiment's Lead hand, last only until another exercise opens.
  */
 function autosave(exercise: Exercise, { debounced = false } = {}) {
-  if (isExample(exercise.id)) return
+  if (isBuiltIn(exercise.id)) return
   unsaved = exercise
   clearTimeout(saveTimer)
   if (debounced) saveTimer = setTimeout(flushSave, DRAG_SAVE_DELAY_MS)
@@ -280,7 +281,8 @@ export const useAppStore = create<AppState>()((set, get) => {
     setTool: (tool) => set({ tool }),
     dispatch: (command) => {
       const { editor } = get()
-      if (isExample(editor.exercise.id) && !exampleAccepts(command)) return set({ refusedEdits: get().refusedEdits + 1 })
+      const { id } = editor.exercise
+      if (isBuiltIn(id) && !builtInAccepts(id, command)) return set({ refusedEdits: get().refusedEdits + 1 })
       const next = applyEdit(editor, command)
       if (next.exercise !== editor.exercise) change(next.exercise, next)
       else set({ editor: next })
@@ -347,7 +349,7 @@ export const useAppStore = create<AppState>()((set, get) => {
       change(exercise, { ...editor, exercise })
     },
     openExercise: (id) => {
-      const target = [...get().library, ...exampleExercises()].find((e) => e.id === id)
+      const target = [...get().library, ...builtInExercises()].find((e) => e.id === id)
       if (target && id !== get().editor.exercise.id) switchTo(target, updatedInPlace)
     },
     createExercise: () => openNew(newExerciseBeside(get().editor.exercise, { id: crypto.randomUUID(), now: Date.now() })),
@@ -415,8 +417,8 @@ export const useAppStore = create<AppState>()((set, get) => {
       const { editor, library, folders } = get()
       const newId = () => crypto.randomUUID()
       const planned = planImport(
-        // An example's id is the app's own; one in a file is never stored.
-        incoming.filter((e) => !isExample(e.id)),
+        // A built-in exercise's id is the app's own; one in a file is never stored.
+        incoming.filter((e) => !isBuiltIn(e.id)),
         library.map((e) => e.id),
         choice,
         { newId },
@@ -445,10 +447,10 @@ export const useAppStore = create<AppState>()((set, get) => {
 })
 
 /**
- * Opens storage and the exercise to work on: the one last open, an example among them, or the
+ * Opens storage and the exercise to work on: the one last open, a built-in one among them, or the
  * first example on a fresh device, or a new Untitled one when the library was emptied. Examples an
  * earlier version stored, unchanged, are deleted first. A new exercise isn't stored until it is
- * first changed, and an example never is. If storage can't be opened, the app runs on an unsaved
+ * first changed, and a built-in one never is. If storage can't be opened, the app runs on an unsaved
  * new exercise and says that it isn't saving.
  */
 export async function launchApp() {
@@ -466,12 +468,12 @@ export async function launchApp() {
     const lastOpenedId = device.lastOpenedId !== null && leftovers.includes(device.lastOpenedId) ? null : device.lastOpenedId
     const found = exerciseToOpenAtLaunch(stored, lastOpenedId)
     const exercise = found ? { ...found, lastOpened: now } : untitledExercise()
-    const example = isExample(exercise.id)
-    if (found && !example) await opened.exercises.put(exercise)
+    const builtIn = isBuiltIn(exercise.id)
+    if (found && !builtIn) await opened.exercises.put(exercise)
     // The order is taken before the open exercise's new last-opened time, and then kept all session.
     const order = launchListOrder(stored)
-    // An example isn't listed; a new Untitled exercise goes on top.
-    const library = example ? order : found ? updatedInPlace(order, exercise) : addedOnTop(order, exercise)
+    // A built-in exercise isn't listed; a new Untitled exercise goes on top.
+    const library = builtIn ? order : found ? updatedInPlace(order, exercise) : addedOnTop(order, exercise)
     const deviceNow = { ...device, lastOpenedId: exercise.id, libraryTab: tabListing(exercise.id) }
     await opened.device.save(deviceNow)
 

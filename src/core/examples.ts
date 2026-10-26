@@ -4,6 +4,7 @@
 import type { EditCommand } from './editor'
 import type { Bar, Exercise, LibraryTab, PracticeSettings, Row, TimeSignature } from './model'
 import { MIN_SWING, TRIPLET_SWING, meter, newExercise, restBar } from './model'
+import { isRudiment, rudimentExercises } from './rudiments'
 import { setBeat } from './speller'
 
 /** One example as written here; everything else is a new exercise's default, the lead hand R among it. */
@@ -132,9 +133,19 @@ export function exampleTitle(example: Exercise): string {
   return name.startsWith(EXAMPLE_NAME_PREFIX) ? name.slice(EXAMPLE_NAME_PREFIX.length) : name
 }
 
-/** The sidebar tab that lists an exercise: Examples for an example, otherwise Library. */
+/** Whether an id is a built-in exercise's, an example's or a rudiment's: read-only and never stored. */
+export function isBuiltIn(id: string): boolean {
+  return isExample(id) || isRudiment(id)
+}
+
+/** The built-in exercises: the examples, then the rudiments built so far. */
+export function builtInExercises(): Exercise[] {
+  return [...exampleExercises(), ...rudimentExercises()]
+}
+
+/** The sidebar tab that lists an exercise: Examples for an example, Rudiments for a rudiment, otherwise Library. */
 export function tabListing(id: string): LibraryTab {
-  return isExample(id) ? 'examples' : 'library'
+  return isExample(id) ? 'examples' : isRudiment(id) ? 'rudiments' : 'library'
 }
 
 /**
@@ -174,6 +185,16 @@ const EXAMPLE_ACCEPTS: Record<EditCommand['type'], boolean> = {
 /** Whether an open example takes this edit command; a refused one leaves it as it is. */
 export function exampleAccepts(command: EditCommand): boolean {
   return EXAMPLE_ACCEPTS[command.type]
+}
+
+/**
+ * Whether an open built-in exercise takes this edit command: an example's rule, and a rudiment's,
+ * which also takes a change of Lead hand alone, since it is practised leading with either hand
+ * (ADR 0018). Its sticking mode stays put: the hands are the rudiment.
+ */
+export function builtInAccepts(id: string, command: EditCommand): boolean {
+  if (isRudiment(id) && command.type === 'setExerciseSettings') return Object.keys(command.settings).every((key) => key === 'leadHand')
+  return exampleAccepts(command)
 }
 
 /** The bars of `beats` beats, each beat written through the speller so the spelling is the app's own. */

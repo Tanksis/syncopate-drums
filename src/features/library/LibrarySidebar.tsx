@@ -10,7 +10,7 @@ import { SelectButtonFace, selectButtonClass } from '@/components/SelectMenu'
 import { SidebarHeading } from '@/components/Sidebar'
 import { keepFocus } from '@/components/keepFocus'
 import type { Exercise, Folder, LibraryTab } from '@/core'
-import { exampleExercises, exampleTitle, foldersByName, isExample, libraryView, tabListing } from '@/core'
+import { RUDIMENT_FAMILIES, exampleExercises, exampleTitle, foldersByName, isBuiltIn, isExample, isRudiment, libraryView, rudimentList, tabListing } from '@/core'
 import { downloadExport } from './download'
 import { exerciseCount } from './exerciseCount'
 import { ImportFile } from './ImportFile'
@@ -18,6 +18,9 @@ import { useExerciseDrop } from './useExerciseDrop'
 
 /** The built-in examples, the same every time; never stored (ADR 0008). */
 const EXAMPLES = exampleExercises()
+
+/** The 40 rudiments by family, the ones not built yet without an id; never stored (ADR 0018). */
+const RUDIMENTS = RUDIMENT_FAMILIES.map((family) => ({ family, rudiments: rudimentList().filter((r) => r.family === family) }))
 
 /** A toolbar icon button or menu button; `large` is big enough for a finger. */
 const toolSize = (large: boolean) => (large ? 'lg' : 'md')
@@ -35,15 +38,18 @@ const dropTargetClass = (over: boolean) => `rounded-md ${over ? 'outline-2 -outl
 const TABS: { id: LibraryTab; label: string }[] = [
   { id: 'library', label: 'Library' },
   { id: 'examples', label: 'Examples' },
+  { id: 'rudiments', label: 'Rudiments' },
 ]
 
 /**
- * The sidebar's two tabs. Library: a toolbar (a + menu of New, New from pattern… and New folder;
+ * The sidebar's three tabs. Library: a toolbar (a + menu of New, New from pattern… and New folder;
  * Duplicate and Delete; a ⋯ menu of Import… and Export all), the filter, and the list: the
  * folders (chevron to collapse, double-click to rename, × to delete), each with its exercises,
  * then the exercises in no folder (click to open, double-click to rename, tick to select, drag
  * onto a folder or "No folder" to move it there). The selection stays through filtering and can
  * be exported, deleted or moved to a folder together. Examples: the built-in examples, to open, and Copy to Library for the open one.
+ * Rudiments: the 40 PAS rudiments under their families, the ones built to open (the rest greyed,
+ * "coming soon"), and Copy to Library for the open one.
  * Given `onHelp` (the phone's, which has no header button for it), Help at its foot opens the Help page.
  */
 export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onCollapse: () => void; fullScreen?: boolean; onHelp?: () => void }) {
@@ -51,7 +57,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
   const openId = useAppStore((s) => s.editor.exercise.id)
   const tab = useAppStore((s) => s.device.libraryTab)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
-  const exampleOpen = isExample(openId)
+  const builtInOpen = isBuiltIn(openId)
   const openInStore = useAppStore((s) => s.openExercise)
   // An exercise opened from the Metronome screen shows on Practice, where it can be seen.
   const openExercise = (id: string) => {
@@ -171,7 +177,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
             aria-selected={tab === id}
             onMouseDown={keepFocus}
             onClick={() => setDeviceSettings({ libraryTab: id })}
-            className="-mb-px flex flex-1 cursor-pointer items-center justify-center gap-1.5 border-0 border-b-2 border-transparent bg-transparent px-2 py-1 font-semibold text-mute hover:text-ink aria-selected:border-accent aria-selected:text-accent"
+            className="-mb-px flex flex-1 cursor-pointer items-center justify-center gap-1 border-0 border-b-2 border-transparent bg-transparent px-0.5 py-1 font-semibold text-mute hover:text-ink aria-selected:border-accent aria-selected:text-accent"
           >
             {label}
             {id === tabListing(openId) && (
@@ -183,8 +189,8 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
       {tab === 'examples' && (
         <>
           <Button
-            title={exampleOpen ? 'Make an editable copy of the open example' : 'Open an example to copy it'}
-            disabled={!exampleOpen}
+            title={isExample(openId) ? 'Make an editable copy of the open example' : 'Open an example to copy it'}
+            disabled={!isExample(openId)}
             onClick={duplicateOpenExercise}
           >
             Copy to Library
@@ -205,6 +211,53 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
               </li>
             ))}
           </ul>
+        </>
+      )}
+      {tab === 'rudiments' && (
+        <>
+          <Button
+            title={isRudiment(openId) ? 'Make an editable copy of the open rudiment' : 'Open a rudiment to copy it'}
+            disabled={!isRudiment(openId)}
+            onClick={duplicateOpenExercise}
+          >
+            Copy to Library
+          </Button>
+          <div role="tabpanel" aria-label="Rudiments" className="flex min-h-0 flex-col gap-2 overflow-auto">
+            {RUDIMENTS.map(({ family, rudiments }) => (
+              <section key={family} aria-label={family} className="flex flex-col">
+                <h3 className="m-0 px-2 py-1 text-xs font-semibold tracking-wide text-mute uppercase">{family}</h3>
+                <ul className="m-0 flex list-none flex-col p-0">
+                  {rudiments.map(({ number, name, id }) => (
+                    <li key={number} className="flex">
+                      {id ? (
+                        <button
+                          type="button"
+                          title="Click to open"
+                          aria-current={id === openId}
+                          onMouseDown={keepFocus}
+                          onClick={() => openExercise(id)}
+                          className={listButtonClass(id === openId)}
+                        >
+                          <span className="text-mute tabular-nums">{number}</span> · {name}
+                        </button>
+                      ) : (
+                        <span
+                          aria-disabled
+                          title="Coming soon"
+                          className="flex min-w-0 flex-1 items-baseline gap-1.5 px-2 py-1 text-mute opacity-60 select-none"
+                        >
+                          <span className="truncate">
+                            <span className="tabular-nums">{number}</span> · {name}
+                          </span>
+                          <span className="ml-auto shrink-0 text-[10px] italic">coming soon</span>
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
         </>
       )}
       {tab === 'library' && (
@@ -233,7 +286,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
               size={toolSize(fullScreen)}
               icon
               aria-label="Duplicate"
-              title={exampleOpen ? 'Copy the open example to the Library' : 'Duplicate the open exercise'}
+              title={builtInOpen ? 'Copy the open exercise to the Library' : 'Duplicate the open exercise'}
               onClick={duplicateOpenExercise}
             >
               <DuplicateIcon />
@@ -242,8 +295,8 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
               size={toolSize(fullScreen)}
               icon
               aria-label="Delete"
-              title={exampleOpen ? 'An example can’t be deleted' : 'Delete the open exercise'}
-              disabled={exampleOpen}
+              title={builtInOpen ? 'A built-in exercise can’t be deleted' : 'Delete the open exercise'}
+              disabled={builtInOpen}
               onClick={() => setToDelete(library.filter((e) => e.id === openId))}
             >
               <TrashIcon />

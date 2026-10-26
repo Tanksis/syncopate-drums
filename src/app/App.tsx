@@ -34,7 +34,7 @@ import { keepFocus } from '@/components/keepFocus'
 import { useSlide } from '@/components/useSlide'
 import { useSwipe } from '@/components/useSwipe'
 import { HelpIcon, MenuIcon, PencilIcon, SettingsIcon } from '@/components/icons'
-import { isExample } from '@/core'
+import { isBuiltIn } from '@/core'
 
 export function App() {
   const sidebars = useSidebars()
@@ -132,7 +132,7 @@ function Wordmark() {
  * the whole screen, sliding in; so does a swipe right and left on the screen, which pulls it in
  * under the finger, and a swipe back the other way closes it. Edit, in the transport bar, slides the
  * grid editor up as a sheet over the transport and tab bars, which its tick or a drag down closes;
- * while it's up, a play button floats over the notation above it. An example, which can't be
+ * while it's up, a play button floats over the notation above it. A built-in exercise, which can't be
  * changed, has no read-only notice; Copy takes Edit's place instead, and opens an editable copy.
  *
  * Turned sideways, the screen is short, so the header and tab bar go: a rail down the left holds
@@ -142,21 +142,21 @@ function Wordmark() {
  */
 function PhoneLayout({ sidebars, onHelp }: { sidebars: Record<SidebarId, SidebarControl>; onHelp: () => void }) {
   const { library, settings } = sidebars
-  const example = useAppStore((s) => isExample(s.editor.exercise.id))
+  const builtIn = useAppStore((s) => isBuiltIn(s.editor.exercise.id))
   const copyToLibrary = useAppStore((s) => s.duplicateOpenExercise)
   const onMetronome = useAppStore((s) => s.device.screen === 'metronome')
   const orientation = usePhoneOrientation()
   const landscape = orientation === 'landscape'
   const [editOpen, setEditOpen] = useState(false)
-  // Opening an example closes the sheet, so it doesn't come back with the next exercise.
+  // Opening a built-in exercise closes the sheet, so it doesn't come back with the next exercise.
   useEffect(() => {
-    if (example) setEditOpen(false)
-  }, [example])
-  const editing = editOpen && !example && !onMetronome
+    if (builtIn) setEditOpen(false)
+  }, [builtIn])
+  const editing = editOpen && !builtIn && !onMetronome
   const openEditor = useCallback(() => setEditOpen(true), [])
   const closeEditor = useCallback(() => setEditOpen(false), [])
   // A swipe up on the transport or tab bar pulls the sheet up, as Edit opens it.
-  const footerSwipe = useSwipe({ up: example || onMetronome ? undefined : openEditor })
+  const footerSwipe = useSwipe({ up: builtIn || onMetronome ? undefined : openEditor })
   const pull = Math.min(0, footerSwipe.offset.y)
   const sheet = useSlide(editing, pull !== 0)
   const [footer, footerHeight] = useHeight()
@@ -217,7 +217,7 @@ function PhoneLayout({ sidebars, onHelp }: { sidebars: Record<SidebarId, Sidebar
         {/* Under the sheet while it is up, so out of reach. */}
         <div ref={footer} {...footerSwipe.props} inert={editing} className="flex shrink-0 touch-pan-x flex-col">
           {!onMetronome && (
-            <TransportBar slim={landscape} onEdit={example ? undefined : openEditor} onCopy={example ? copyToLibrary : undefined} />
+            <TransportBar slim={landscape} onEdit={builtIn ? undefined : openEditor} onCopy={builtIn ? copyToLibrary : undefined} />
           )}
           {!landscape && <ScreenTabs />}
         </div>
@@ -429,12 +429,12 @@ function SidebarSlot({ name, side, state, onOpen, onCollapse, children }: Sideba
   )
 }
 
-/** The open exercise's name and a pencil; click either to rename it in place. An example's name is fixed, with no pencil. */
+/** The open exercise's name and a pencil; click either to rename it in place. A built-in exercise's name is fixed, with no pencil. */
 function ExerciseName({ className = '' }: { className?: string }) {
   const { id, name } = useAppStore((s) => s.editor.exercise)
   const renameExercise = useAppStore((s) => s.renameExercise)
   const [renaming, setRenaming] = useState(false)
-  if (isExample(id)) return <span className={`truncate px-1 text-mute ${className}`}>{name}</span>
+  if (isBuiltIn(id)) return <span className={`truncate px-1 text-mute ${className}`}>{name}</span>
   if (renaming)
     return (
       <NameInput
