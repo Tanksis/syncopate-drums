@@ -1,3 +1,4 @@
+import { PrototypeSwitcher } from '@/components/PrototypeSwitcher'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from '@/app/App'
@@ -20,6 +21,7 @@ launchApp().then(() => {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <App />
+      <PrototypeSwitcher variants={{ A: 'Pick a note: popover + keys', B: 'Tool palette', C: 'Mark lanes' }} />
     </StrictMode>,
   )
 })

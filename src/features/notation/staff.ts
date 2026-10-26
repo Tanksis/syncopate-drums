@@ -7,7 +7,8 @@
 // voice stems up (ADRs 0002, 0004).
 
 import type { StemmableNote } from 'vexflow/bravura'
-import { Beam, Dot, Formatter, Fraction, GhostNote, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
+import { Annotation, AnnotationVerticalJustify, Articulation, Beam, Dot, Formatter, Fraction, GhostNote, GraceNote, GraceNoteGroup, ModifierPosition, Renderer, Stave, StaveNote, StaveTie, Tremolo, Tuplet, Voice } from 'vexflow/bravura'
+import { marksOf } from '@/features/editor/prototypeMarks'
 import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, Meter, NotationShows, NoteSticking, PlayheadAnchor, PlayPosition, StaffBar, StaffEvent } from '@/core'
 import {
   NOTATION_LAYOUT,
@@ -91,6 +92,25 @@ function eventNote(event: StaffEvent, limb: Limb, compound: boolean): StemmableN
     clef: 'percussion',
   })
   if (value.dotted) Dot.buildAndAttach([note], { all: true })
+  return note
+}
+
+/** PROTOTYPE (note marks): draws a snare note's accent, flam or drag, and roll stroke from the in-memory marks. */
+function markNote(note: StemmableNote, event: StaffEvent): StemmableNote {
+  if (event.kind !== 'chord' || !(note instanceof StaveNote)) return note
+  const snare = event.notes.find((n) => n.drum === 'snare' && n.noteId && !n.tied)
+  if (!snare?.noteId) return note
+  const m = marksOf(snare.noteId)
+  const index = keyIndex(event, 'snare')
+  if (m.accent) note.addModifier(new Articulation('a>').setPosition(ModifierPosition.ABOVE), index)
+  if (m.grace) {
+    const graces = (m.grace === 'flam' ? [1] : [1, 2]).map(() => new GraceNote({ keys: [snare.key], duration: m.grace === 'flam' ? '8' : '16', slash: m.grace === 'flam' }))
+    const group = new GraceNoteGroup(graces, m.grace === 'drag')
+    if (m.grace === 'drag') group.beamNotes()
+    note.addModifier(group, index)
+  }
+  if (m.roll === 'double') note.addModifier(new Tremolo(1), index)
+  if (m.roll === 'buzz') note.addModifier(new Annotation('z').setFont('Academico', 16, 'bold').setVerticalJustification(AnnotationVerticalJustify.CENTER_STEM), index)
   return note
 }
 
@@ -326,7 +346,7 @@ export function drawExercise(
 
     const drawings = drawnLimbs
       .filter((limb) => parts[b][limb].length)
-      .map((limb): PartDrawing => ({ limb, drawn: parts[b][limb].map((event) => ({ event, note: eventNote(event, limb, compound) })) }))
+      .map((limb): PartDrawing => ({ limb, drawn: parts[b][limb].map((event) => ({ event, note: markNote(eventNote(event, limb, compound), event) })) }))
     // The cursor's beat is lit in both parts, which hold the snare row and the kick row.
     for (const { drawn } of drawings) {
       if (b !== cursor?.bar) continue
@@ -351,6 +371,9 @@ export function drawExercise(
         svg?.setAttribute('data-bar', String(b))
         svg?.setAttribute('data-beat', String(Math.floor(event.start / TICKS_PER_BEAT)))
         svg?.classList.add('cursor-pointer')
+        // PROTOTYPE (note marks): the snare note's id, for variant A's popover.
+        const snareId = event.notes.find((n) => n.drum === 'snare' && n.noteId && !n.tied)?.noteId
+        if (snareId) svg?.setAttribute('data-snare-id', snareId)
         for (const n of event.notes) {
           const index = keyIndex(event, n.drum)
           const previous = lastOf.get(n.drum)

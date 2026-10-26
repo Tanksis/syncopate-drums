@@ -5,10 +5,15 @@ import { useResolvedTheme } from '@/app/theme'
 import { usePhoneWindow } from '@/app/useMediaQuery'
 import { Segmented } from '@/components/Segmented'
 import { playedAsWritten } from '@/core'
+import { useVariant } from '@/components/PrototypeSwitcher'
+import { MarkPopover } from '@/features/editor/PrototypeMarkEntry'
+import { pick, useMarks } from '@/features/editor/prototypeMarks'
 import { BeatCount, useBeatCount } from './BeatCount'
 import { followPlayback, scrollLineIntoView } from './followPlayback'
 import type { Drawing, NotationArea } from './staff'
 import { drawExercise, notationFontsReady } from './staff'
+
+const VARIANTS = ['A', 'B', 'C']
 
 const SHOWS_OPTIONS = [
   { value: 'written', label: 'Written', title: 'The line as written: straight, with no pattern or feet' },
@@ -52,6 +57,9 @@ export function NotationView({ corner, coveredBottom, grow = false }: { corner?:
   /** Counts the web fonts loaded, so the notation is measured again in a look's font once it arrives. */
   const [fontsLoaded, setFontsLoaded] = useState(0)
   const drawingRef = useRef<Drawing>(undefined)
+  // PROTOTYPE (note marks): redraw when a mark changes; in variant A a click on a snare note picks it.
+  const marks = useMarks()
+  const variant = useVariant(VARIANTS)
 
   useEffect(() => {
     let live = true
@@ -87,14 +95,15 @@ export function NotationView({ corner, coveredBottom, grow = false }: { corner?:
     const drawing = (drawingRef.current = drawExercise(staffRef.current!, exercise, playing ? null : cursor, { ...area, grow }, notationShows))
     // Keep the cursor's line in view as typing runs past the bottom.
     if (!playing) scrollLineIntoView(scrollerRef.current!, staffRef.current!, drawing.line(cursor.bar), coverRef.current?.offsetHeight)
-  }, [exercise, cursor, area, grow, fontsReady, fontsLoaded, playing, theme, look, notationShows])
+  }, [exercise, cursor, area, grow, fontsReady, fontsLoaded, playing, theme, look, notationShows, marks])
 
   useEffect(() => {
     if (playing) return followPlayback(scrollerRef.current!, staffRef.current!, () => drawingRef.current)
   }, [playing])
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col">
+    <div data-notation-frame className="relative flex min-h-0 flex-1 flex-col">
+      {variant === 'A' && <MarkPopover />}
       <section
         ref={scrollerRef}
         aria-label="Notation view"
@@ -114,6 +123,11 @@ export function NotationView({ corner, coveredBottom, grow = false }: { corner?:
               const handGroup = (e.target as Element).closest<SVGElement>('[data-note-id]')
               if (handGroup) return dispatch({ type: 'flipOverride', note: { id: handGroup.dataset.noteId! } })
               const note = (e.target as Element).closest<SVGElement>('[data-bar]')
+              if (variant === 'A' && note?.dataset.snareId) {
+                const box = note.getBoundingClientRect()
+                const frame = staffRef.current!.closest('[data-notation-frame]')!.getBoundingClientRect()
+                pick({ id: note.dataset.snareId, x: box.left + box.width / 2 - frame.left, y: box.top - frame.top })
+              } else if (variant === 'A') pick(null)
               if (note) dispatch({ type: 'moveTo', bar: Number(note.dataset.bar), beat: Number(note.dataset.beat) })
             }}
           />

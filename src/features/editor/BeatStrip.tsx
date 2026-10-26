@@ -8,6 +8,9 @@ import type { MenuItem } from '@/components/Menu'
 import { Menu } from '@/components/Menu'
 import { Segmented } from '@/components/Segmented'
 import type { BeatView, EditCommand, EditorState, GridPoint, Hand, PositionState, Row, RowView } from '@/core'
+import { useVariant } from '@/components/PrototypeSwitcher'
+import { CellMarks, MarkLanes, MarkPalette, applyTool } from './PrototypeMarkEntry'
+import { snareNoteAt } from './prototypeMarks'
 import { ROWS, applyEdit, canTieOverBarline, editorBeatViews, inLoopRange, isExample, meter, sticking, stickingNoteAt } from '@/core'
 
 /** A press on a grid position, and (once it moves to another position) the hold end it drags to. */
@@ -26,6 +29,8 @@ interface Press {
   /** The long-press took: the note's sticking is flipped, and the release does nothing more. */
   flipped: boolean
 }
+
+const VARIANTS = ['A', 'B', 'C']
 
 /** How long a still press on a hit lasts before it flips the note's sticking. */
 const LONG_PRESS_MS = 500
@@ -91,6 +96,8 @@ export function BeatStrip({ phone, bar }: { phone?: PhoneOrientation; bar?: numb
   const example = useAppStore((s) => isExample(s.editor.exercise.id))
   const { compound } = meter(editor.exercise.timeSignature)
   const [press, setPress] = useState<Press | null>(null)
+  // PROTOTYPE (note marks): which way of entering marks.
+  const variant = useVariant(VARIANTS)
   // The press as the handlers last left it, which the next event sees even before it has rendered.
   const pressRef = useRef<Press | null>(null)
   const track = (next: Press | null) => {
@@ -174,6 +181,7 @@ export function BeatStrip({ phone, bar }: { phone?: PhoneOrientation; bar?: numb
     if (press.flipped) return
     // The release's own position counts too, unless it is still within a long-press's slop: a click.
     const last = press.flipNoteId ? press : follow(e, press)
+    if (!last.moved && variant === 'B' && applyTool(last.from)) return
     if (!last.moved) dispatch({ type: 'toggleGridPosition', ...last.from })
     else if (last.to) dispatch({ type: 'setHold', from: last.from, to: last.to })
   }
@@ -212,6 +220,7 @@ export function BeatStrip({ phone, bar }: { phone?: PhoneOrientation; bar?: numb
             onPointerCancel={cancelPress}
             tall={phone !== undefined}
             flashedHand={flash && samePoint(flash.point, { row, bar: b, beat, position: i }) ? flashedHand : null}
+            markId={row === 'snare' ? snareNoteAt(editor, { row, bar: b, beat, position: i }) : null}
           />
         ))}
       </div>
@@ -224,6 +233,7 @@ export function BeatStrip({ phone, bar }: { phone?: PhoneOrientation; bar?: numb
   const looped = inLoopRange(loopRange, b)
   return (
     <div aria-label="Beat strip" data-beat-strip className="flex flex-col gap-2">
+      {variant === 'B' && bar === undefined && <MarkPalette />}
       <div
         aria-label={`Bar ${b + 1}`}
         aria-selected={selected || undefined}
@@ -283,6 +293,7 @@ export function BeatStrip({ phone, bar }: { phone?: PhoneOrientation; bar?: numb
                     />
                   )}
                 </div>
+                {variant === 'C' && <MarkLanes bar={b} beat={beat} view={view} />}
                 {rowCells('snare', view.snare, b, beat)}
                 <div aria-hidden className="flex gap-1">
                   {countLabels(beat, view.triplet, compound).map((label, i) => (
@@ -377,8 +388,10 @@ function Cell({
   last,
   tall,
   flashedHand,
+  markId,
   ...pointer
 }: {
+  markId: string | null
   /** The kick row's hits are drawn in its own colour. */
   row: Row
   label: string
@@ -430,6 +443,7 @@ function Cell({
           ›
         </span>
       )}
+      <CellMarks id={markId} />
       {flashedHand && (
         <span
           aria-hidden
