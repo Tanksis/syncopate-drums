@@ -7,7 +7,7 @@
 **Status:** ready-for-agent
 
 - [ ] `Note.dynamic?: 'accent'`; the mark edit (toggle, add the hit when empty, cleared with the hit, carried through copy, paste, duplicate and regrid), unit-tested
-- [ ] The schedule gives accented notes the accent level, unit-tested
+- [ ] The schedule gives accented notes the accent level, unit-tested; the engine loads the accent band (files already in `public/samples`, see 01's comment) with the main load's error handling
 - [ ] `SCHEMA_VERSION` bumped; export and import with accents, an older version refusing, unit-tested
 - [ ] The palette on the desktop (over the cards) and the phone (top of the editor sheet); Hit held at first; disabled on an example
 - [ ] Drawn `>` close above the stem, checked in a close-up screenshot
