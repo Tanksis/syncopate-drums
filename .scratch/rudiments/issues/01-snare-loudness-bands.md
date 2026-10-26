@@ -4,9 +4,13 @@
 
 **Blocked by:** none
 
-**Status:** ready-for-agent
+**Status:** done, bar the by-ear check
 
-- [ ] The band files added under `public/samples/` (FLAC), listed in `LICENSE.txt`
-- [ ] Random pick within a band, never the last file, ±1 dB; the logic in the core where it's pure, unit-tested
-- [ ] Exercises play from the normal band; nothing else changes
+- [x] The band files added under `public/samples/` (FLAC), listed in `LICENSE.txt`
+- [x] Random pick within a band, never the last file, ±1 dB; the logic in the core where it's pure, unit-tested
+- [x] Exercises play from the normal band; nothing else changes
 - [ ] Left to the user: by ear, the normal level and fast singles (no machine-gun)
+
+## Comments
+
+- 2026-10-26: Normal is vl13-vl17, varied at random (never the last file, ±1 dB). The accent (vl24-vl30), grace (vl8-vl12) and buzz (vl4, vl7, vl10) files are in `public/samples` but not loaded yet. The review found that loading them early hid load failures, so ticket 02 loads the bands it plays, failing loudly like the main load.
