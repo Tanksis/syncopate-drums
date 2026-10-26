@@ -105,6 +105,21 @@ describe('parsing an import', () => {
     expect(parseImport(asJson(exportFile([accented], [])))).toEqual({ ok: true, folders: [], exercises: [accented] })
   })
 
+  it('reads back the flams and drags on the snare notes', () => {
+    const [bar1, bar2] = paradiddles.bars
+    const graced: Exercise = {
+      ...paradiddles,
+      bars: [{ ...bar1, snare: [{ ...note('quarter'), grace: 'flam', dynamic: 'accent' }, { ...note('eighth'), grace: 'drag' }, ...bar1.snare.slice(2)] }, bar2],
+    }
+    expect(parseImport(asJson(exportFile([graced], [])))).toEqual({ ok: true, folders: [], exercises: [graced] })
+  })
+
+  it('is refused by an app from before grace notes, rather than read without them', () => {
+    const file = exportFile([paradiddles], [])
+    expect(file.version).toBeGreaterThan(8)
+    expect(parseImport(asJson(file), 8)).toEqual({ ok: false, reason: expect.stringMatching(/newer version/) })
+  })
+
   it('is refused by an app from before accents, rather than read without them', () => {
     const file = exportFile([paradiddles], [])
     expect(file.version).toBeGreaterThan(6)
@@ -196,6 +211,8 @@ describe('parsing an import', () => {
     ['a note without its tie flag', { ...paradiddles, bars: [{ ...bar1, kick: [{ ...rest, kind: 'note' }, rest, rest, rest] }] }],
     ['an unknown sticking override', { ...paradiddles, bars: [{ ...bar1, snare: [{ ...note('quarter'), override: 'X' }, rest, rest, rest] }, bar2] }],
     ['an unknown dynamic', { ...paradiddles, bars: [{ ...bar1, snare: [{ ...note('quarter'), dynamic: 'loud' }, rest, rest, rest] }, bar2] }],
+    ['an unknown grace', { ...paradiddles, bars: [{ ...bar1, snare: [{ ...note('quarter'), grace: 'ruff' }, rest, rest, rest] }, bar2] }],
+    ['a flam on the kick row', { ...paradiddles, bars: [{ ...bar1, kick: [{ ...note('quarter'), grace: 'flam' }, rest, rest, rest] }, bar2] }],
     ['an accent on the kick row', { ...paradiddles, bars: [{ ...bar1, kick: [{ ...note('quarter'), dynamic: 'accent' }, rest, rest, rest] }, bar2] }],
     ['an unknown sticking mode', { ...paradiddles, sticking: 'paradiddle' }],
     ['an unknown lead hand', { ...paradiddles, leadHand: 'both' }],

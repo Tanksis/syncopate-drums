@@ -2,7 +2,7 @@
 // plays with. Computed once over the whole exercise from bar 1, so it never depends on the loop
 // range or which pass is playing.
 
-import type { Exercise, Hand, Note } from './model'
+import type { Exercise, Grace, Hand, Note } from './model'
 import { TICKS_PER_BEAT, meter, noteId } from './model'
 import type { PlacedItem } from './speller'
 import { placeItems } from './speller'
@@ -27,6 +27,11 @@ export interface HandSticking extends StruckNote {
   override?: Hand
   /** The hand printed under the note: null with sticking off. */
   shown: Hand | null
+  /**
+   * The hands of the note's grace notes, earliest first, printed small before its hand: the other
+   * hand from it, one for a flam and two for a drag. Missing with sticking off, or with no grace.
+   */
+  graces?: Hand[]
 }
 
 /** A struck kick with no struck snare note at its tick. It never carries an override. */
@@ -35,6 +40,7 @@ export interface KickSticking extends StruckNote {
   computed: 'K'
   override?: never
   shown: 'K'
+  graces?: never
 }
 
 /** The other hand. */
@@ -60,7 +66,8 @@ export function sticking(exercise: Exercise): NoteSticking[] {
     const computed = mode === 'off' ? null : hands[i]
     const override = p.item.override && mirrored(p.item.override, leadHand)
     const shown = computed && (override ?? computed)
-    return [{ row: 'snare', noteId: noteId('snare', p.bar, p.start), bar: p.bar, start: p.start, computed, override, shown }]
+    const graces = shown && p.item.grace ? { graces: Array<Hand>(GRACE_NOTES[p.item.grace]).fill(opposite(shown)) } : {}
+    return [{ row: 'snare', noteId: noteId('snare', p.bar, p.start), bar: p.bar, start: p.start, computed, override, shown, ...graces }]
   })
   if (mode === 'off') return snare
   // A snare note's id is its `bar:tick`, so a kick with a hand at its tick finds it here.
@@ -72,6 +79,9 @@ export function sticking(exercise: Exercise): NoteSticking[] {
   )
   return [...snare, ...kicks].sort((a, b) => a.bar - b.bar || a.start - b.start)
 }
+
+/** How many grace notes each grace is: a flam's one and a drag's two. */
+const GRACE_NOTES: Record<Grace, number> = { flam: 1, drag: 2 }
 
 /** How many notes carry a sticking override, shown or hidden. */
 export function overrideCount(exercise: Exercise): number {

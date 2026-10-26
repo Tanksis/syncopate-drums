@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Bar, PatternId } from './index'
-import { minBarWidthFor, notationFit, restBar, setBeat, staffParts } from './index'
+import { NOTATION_LAYOUT, minBarWidthFor, notationFit, restBar, setBeat, staffParts, toggleMark } from './index'
 
 /** One line of staff at scale 1, about what the renderer draws with both parts. */
 const LINE = 150
@@ -86,6 +86,19 @@ describe('minBarWidthFor', () => {
     const one = bars(4, 'x...')
     const busy = setBeat(one, 'snare', 3, 2, 'xxxx')
     expect(minBarWidthFor(staffParts(busy, 'off'))).toBe(330)
+  })
+})
+
+describe('minBarWidthFor with grace notes', () => {
+  /** The bars with the marks put on bar `bar`'s snare notes at beat starts. */
+  const graced = (all: ReturnType<typeof bars>, bar: number, marks: ('flam' | 'drag')[]) =>
+    marks.reduce((acc, mark, beat) => toggleMark(acc, 'snare', bar, beat, 0, mark), all)
+
+  it('makes room for each flam, and more for each drag, in the bar with the most', () => {
+    const { flamRoom, dragRoom } = NOTATION_LAYOUT
+    expect(minBarWidthFor(staffParts(graced(bars(2, 'x.x.'), 0, ['flam', 'flam']), 'off'))).toBe(190 + 2 * flamRoom)
+    const both = graced(graced(bars(2, 'xxxx'), 0, ['flam']), 1, ['drag', 'flam'])
+    expect(minBarWidthFor(staffParts(both, 'off'))).toBe(330 + dragRoom + flamRoom)
   })
 })
 

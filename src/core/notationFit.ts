@@ -16,6 +16,10 @@ export const NOTATION_LAYOUT = {
   tripletBarWidth: 260,
   /** A bar of four or more events a beat (sixteenths) is never narrower than this. */
   sixteenthBarWidth: 330,
+  /** A bar is made this much wider for each flam in it, for its grace note… */
+  flamRoom: 25,
+  /** …and this much for each drag, for its two. */
+  dragRoom: 35,
   /** An exercise on one line spreads its bars across it, but never wider than this. */
   maxBarWidth: 475,
   /** Room for the clef (and, on the first line, the time signature) before the first bar's notes. */
@@ -52,12 +56,16 @@ function barsPerLineAt(width: number, scale: number, minBarWidth: number): numbe
 
 /**
  * The narrowest an exercise's bars may be drawn, set by its busiest beat: the most events (notes
- * and rests) in one beat of either part, anywhere in the exercise. One width for the whole exercise,
+ * and rests) in one beat of either part, anywhere in the exercise; and widened for the grace notes
+ * of the bar with the most, which take room before their notes. One width for the whole exercise,
  * so its bars stay equal and line up.
  */
 export function minBarWidthFor(parts: readonly StaffBar[]): number {
   let busiest = 0
+  let graceRoom = 0
   for (const bar of parts) {
+    const graces = bar.hands.flatMap((e) => (e.kind === 'chord' ? e.notes.flatMap((n) => (n.grace ? [n.grace] : [])) : []))
+    graceRoom = Math.max(graceRoom, graces.reduce((room, g) => room + (g === 'flam' ? NOTATION_LAYOUT.flamRoom : NOTATION_LAYOUT.dragRoom), 0))
     for (const part of [bar.hands, bar.feet]) {
       const perBeat = new Map<number, number>()
       for (const event of part) {
@@ -70,7 +78,7 @@ export function minBarWidthFor(parts: readonly StaffBar[]): number {
     }
   }
   const { minBarWidth, tripletBarWidth, sixteenthBarWidth } = NOTATION_LAYOUT
-  return busiest >= 4 ? sixteenthBarWidth : busiest === 3 ? tripletBarWidth : minBarWidth
+  return (busiest >= 4 ? sixteenthBarWidth : busiest === 3 ? tripletBarWidth : minBarWidth) + graceRoom
 }
 
 /**

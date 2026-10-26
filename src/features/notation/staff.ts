@@ -7,8 +7,8 @@
 // voice stems up (ADRs 0002, 0004).
 
 import type { RenderContext, StemmableNote } from 'vexflow/bravura'
-import { Articulation, Beam, Dot, Formatter, Fraction, GhostNote, ModifierPosition, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
-import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, Meter, NotationShows, NoteSticking, PlayheadAnchor, PlayPosition, StaffBar, StaffEvent } from '@/core'
+import { Articulation, Beam, Dot, Formatter, Fraction, GhostNote, GraceNote, GraceNoteGroup, ModifierPosition, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
+import type { Cursor, Drum, Duration, Exercise, Grace, Limb, LoopRange, Meter, NotationShows, NoteSticking, PlayheadAnchor, PlayPosition, StaffBar, StaffEvent } from '@/core'
 import {
   NOTATION_LAYOUT,
   TICKS_PER_BEAT,
@@ -117,10 +117,41 @@ interface DrawnEvent {
   note: StemmableNote
 }
 
+/** Pixels between a grace note's head and its note's: the grace notes are tucked close before it. */
+const GRACE_TUCK = 6
+
+/**
+ * A note's grace notes, tucked just before it. VexFlow starts them at the left edge of the room it
+ * makes for them, leaving a gap before the note; the room still keeps them clear of the note before.
+ */
+class Graces extends GraceNoteGroup {
+  draw() {
+    const note = this.checkAttachedNote() as StaveNote
+    const graces = this.getGraceNotes() as GraceNote[]
+    this.alignSubNotesWithNote(graces, note, this.position)
+    const gap = note.getNoteHeadBeginX() - graces.at(-1)!.getNoteHeadEndX() - GRACE_TUCK
+    this.setSpacingFromNextModifier(this.getSpacingFromNextModifier() + Math.max(0, gap))
+    super.draw()
+  }
+}
+
+/**
+ * A flam's or drag's grace notes, stems up on its note's line: a flam one slashed grace eighth, a
+ * drag two grace sixteenths beamed. Neither has a slur.
+ */
+function graceGroup(key: string, grace: Grace): GraceNoteGroup {
+  const notes = Array.from({ length: grace === 'flam' ? 1 : 2 }, () =>
+    new GraceNote({ keys: [key], duration: grace === 'flam' ? '8' : '16', slash: grace === 'flam', stemDirection: 1, clef: 'percussion' }),
+  )
+  const group = new Graces(notes, false)
+  return grace === 'drag' ? group.beamNotes() : group
+}
+
 /**
  * The VexFlow note for one event of a part. Chord keys go bottom to top, the order ties index. In
  * compound time a value is written half as long again, with no triplet "3" (ADR 0015). An accented
- * note gets its `>` above the stem, as a modifier, so the formatter makes room for it.
+ * note gets its `>` above the stem, and a flammed or dragged note its grace notes before it, as
+ * modifiers, so the formatter makes room for them.
  */
 function eventNote(event: StaffEvent, limb: Limb, compound: boolean): StemmableNote {
   const value = compound ? compoundValue(event) : event
@@ -137,6 +168,8 @@ function eventNote(event: StaffEvent, limb: Limb, compound: boolean): StemmableN
   if (accented) {
     note.addModifier(new Accent('a>').setPosition(ModifierPosition.ABOVE), keyIndex(event, accented.drum))
   }
+  const graced = event.kind === 'chord' ? event.notes.find((n) => n.grace) : undefined
+  if (graced?.grace) note.addModifier(graceGroup(graced.key, graced.grace), keyIndex(event, graced.drum))
   return note
 }
 
@@ -479,15 +512,20 @@ function drawBarNumber(stave: Stave, bar: number, loopRange: LoopRange | null, l
   ctx.closeGroup()
 }
 
+/** The size of a hand printed under a note, and of a grace note's hand printed small before it. */
+const HAND_SIZE = 12
+const GRACE_HAND_SIZE = 9
+
 /**
- * Prints the shown R, L or K centred under a note, on the given stave line. A hand's group is tagged
+ * Prints the shown R, L or K centred under a note, on the given stave line, with a flam's or drag's
+ * grace hands small and in lower case just before it (`lR`, `llR`). A hand's group is tagged
  * with the note's id so a click can flip it, and with `markOverrides` an override is printed in the notation's
  * accent colour, with a hover hint. A kick's K has nothing to flip.
  */
 function drawSticking(
   stave: Stave,
   note: StaveNote,
-  { noteId, shown: label, override, row }: NoteSticking,
+  { noteId, shown: label, override, row, graces }: NoteSticking,
   line: number,
   accent: string,
   font: string,
@@ -508,14 +546,19 @@ function drawSticking(
     group.append(title)
   }
   ctx.save()
-  ctx.setFont(font, 12, 'bold')
+  ctx.setFont(font, HAND_SIZE, 'bold')
   if (marked) ctx.setFillStyle(accent)
   const width = ctx.measureText(label).width
   const x = noteCentre(note) - width / 2
   const y = stave.getYForLine(line)
   ctx.fillText(label, x, y)
+  if (graces) {
+    const small = graces.join('').toLowerCase()
+    ctx.setFont(font, GRACE_HAND_SIZE, 'bold')
+    ctx.fillText(small, x - ctx.measureText(small).width - 0.5, y)
+  }
   // VexFlow's SVG ignores the pointer, so the hand needs its own invisible hit area to be clicked.
-  if (flippable) ctx.pointerRect(x - HAND_HIT_PAD, y - 12 - HAND_HIT_PAD, width + 2 * HAND_HIT_PAD, 14 + 2 * HAND_HIT_PAD)
+  if (flippable) ctx.pointerRect(x - HAND_HIT_PAD, y - HAND_SIZE - HAND_HIT_PAD, width + 2 * HAND_HIT_PAD, HAND_SIZE + 2 + 2 * HAND_HIT_PAD)
   ctx.restore()
   ctx.closeGroup()
 }

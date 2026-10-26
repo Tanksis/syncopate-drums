@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Bar, Cursor, EditorState, ExerciseSettings, KeyPress, Row } from './index'
+import type { Bar, Cursor, EditorState, ExerciseSettings, KeyPress, Mark, Row } from './index'
 import {
   FIGURES,
   REST_FIGURE,
@@ -1067,5 +1067,54 @@ describe('accents', () => {
     const accented = accent(tap(fresh(), 0, 0), 0, 0)
     const held = applyEdit(accented, { type: 'setHold', from: { row: 'snare', bar: 0, beat: 0, position: 0 }, to: { row: 'snare', bar: 0, beat: 1, position: 2 } })
     expect(accents(held)).toBe('>')
+  })
+})
+
+describe('grace notes', () => {
+  /** Each struck snare note in order: `f` a flam, `d` a drag, `>` an accent alone, `-` none. */
+  const graces = (state: EditorState) =>
+    placeItems(state.exercise.bars, 'snare')
+      .filter((p) => p.item.kind === 'note' && !p.continuation)
+      .map((p) => (p.item.kind !== 'note' ? '' : p.item.grace ? p.item.grace[0] : p.item.dynamic === 'accent' ? '>' : '-'))
+      .join('')
+  const tap = (state: EditorState, beat: number, position: number) =>
+    applyEdit(state, { type: 'toggleGridPosition', row: 'snare', bar: 0, beat, position })
+  const mark = (state: EditorState, mark: Mark, beat: number, position: number) =>
+    applyEdit(state, { type: 'toggleMark', mark, row: 'snare', bar: 0, beat, position })
+  /** x.x. on beat 1. */
+  const twoHits = () => tap(tap(fresh(), 0, 0), 0, 2)
+
+  it('toggles a flam on a hit, and off again; a drag likewise', () => {
+    const flammed = mark(twoHits(), 'flam', 0, 2)
+    expect(graces(flammed)).toBe('-f')
+    expect(graces(mark(flammed, 'flam', 0, 2))).toBe('--')
+    expect(graces(mark(twoHits(), 'drag', 0, 0))).toBe('d-')
+  })
+
+  it('replaces a flam with a drag and back: a note has one grace at most', () => {
+    const dragged = mark(mark(twoHits(), 'flam', 0, 2), 'drag', 0, 2)
+    expect(graces(dragged)).toBe('-d')
+    expect(graces(mark(dragged, 'flam', 0, 2))).toBe('-f')
+  })
+
+  it('sits beside an accent on the same note, each toggled on its own', () => {
+    const flamAccent = mark(mark(twoHits(), 'accent', 0, 2), 'flam', 0, 2)
+    const note = placeItems(flamAccent.exercise.bars, 'snare').filter((p) => p.item.kind === 'note')[1].item
+    expect(note).toMatchObject({ dynamic: 'accent', grace: 'flam' })
+    expect(graces(mark(flamAccent, 'flam', 0, 2))).toBe('->')
+  })
+
+  it('adds a flammed hit on an empty cell, and goes with its hit when cleared', () => {
+    const added = mark(fresh(), 'drag', 1, 0)
+    expect(graces(added)).toBe('d')
+    expect(graces(tap(tap(added, 1, 0), 1, 0))).toBe('-')
+  })
+
+  it('stays on its note through a regrid and a duplicate, and is shown on its cell', () => {
+    const flammed = mark(twoHits(), 'flam', 0, 0)
+    expect(graces(applyEdit(flammed, { type: 'setBeatGrid', bar: 0, beat: 0, triplet: true }))).toBe('f')
+    expect(graces(keys(flammed, ctrl('d')))).toBe('f-f-')
+    const both = mark(flammed, 'accent', 0, 0)
+    expect(marksAt(both, { row: 'snare', bar: 0, beat: 0, position: 0 })).toEqual(['accent', 'flam'])
   })
 })

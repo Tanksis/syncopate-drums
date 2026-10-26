@@ -4,11 +4,13 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `Note.grace`; the edit replaces flam with drag and back, unit-tested
-- [ ] Schedule: grace events ahead of the note, grace level, not struck notes (no playhead, no beat lit), unit-tested
-- [ ] Sticking: the grace hands, the other hand, mirrored with the Lead hand, unit-tested
-- [ ] Export and import carry graces
-- [ ] Drawn small, tucked, flam slashed, drag beamed with no slur, the sticking `lR` and `llR`: checked in a close-up screenshot
+- [x] `Note.grace`; the edit replaces flam with drag and back, unit-tested
+- [x] Schedule: grace events ahead of the note, grace level, not struck notes (no playhead, no beat lit), unit-tested
+- [x] Sticking: the grace hands, the other hand, mirrored with the Lead hand, unit-tested
+- [x] Export and import carry graces
+- [x] Drawn small, tucked, flam slashed, drag beamed with no slur, the sticking `lR` and `llR`: checked in a close-up screenshot
 - [ ] By ear left to the user: the flam and drag spacing
+
+Bars with grace notes are drawn wider (`flamRoom`, `dragRoom` in `NOTATION_LAYOUT`), so the formatter doesn't squeeze the rest of the bar to fit them.

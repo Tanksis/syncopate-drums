@@ -103,12 +103,16 @@ How long a note is written to last, in grid positions: by default until the next
 _Avoid_: Length, sustain
 
 **Note mark**:
-Something a struck snare note carries besides its rhythm, drawn on the staff and shown in small print on its grid position in the grid editor: an **Accent** so far (ADR 0017). A tied continuation carries none, and neither does a kick.
+Something a struck snare note carries besides its rhythm, drawn on the staff and shown in small print on its grid position in the grid editor: an **Accent** or a **Grace note** so far (ADR 0017). A tied continuation carries none, and neither does a kick.
 _Avoid_: Articulation, ornament
 
 **Accent**:
 A note mark: the note is played from the snare's accent band, louder than the normal notes around it, and drawn `>` just above its stem, level across a beam group.
 _Avoid_: Emphasis, stress
+
+**Grace note**:
+A note mark: a **Flam** (one grace note) or a **Drag** (two), each replacing the other. They are played soft from the snare's grace band a short fixed time ahead of the note, by the other hand, and drawn small just before it: a flam's slashed, a drag's two beamed with no slur. The sticking prints their hands small and in lower case before the note's (`lR`, `llR`).
+_Avoid_: Ornament, ruff
 
 **Tool palette**:
 The row of tools over the beat cards (at the top of the editor sheet on a phone): Hit, and a tool per note mark. One is held at a time, Hit at first. With Hit held the grid works as always; with a mark held, tapping a snare grid position toggles that mark on its note, adding the hit if the position is empty. Disabled on an example.

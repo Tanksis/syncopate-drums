@@ -77,6 +77,9 @@ const steps: Record<number, (exercise: Stored) => Stored> = {
     })
     return { ...exercise, bars, schemaVersion: 8 }
   },
+  // Version 8 had no grace notes, so its notes have none as they are. The bump makes an older app
+  // refuse an export with flams or drags rather than drop them (ADR 0017).
+  8: (exercise) => ({ ...exercise, schemaVersion: 9 }),
 }
 
 /** The stored exercise in the current shape; throws for one from a newer version of the app. */
