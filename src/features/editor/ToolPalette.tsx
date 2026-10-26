@@ -1,12 +1,18 @@
 import type { Tool } from '@/app/store'
 import { useAppStore } from '@/app/store'
 import { Button } from '@/components/Button'
+import type { Mark } from '@/core'
 import { isBuiltIn } from '@/core'
+
+/** Each mark's glyph, on its tool and in small print on a marked cell. */
+export const MARK_GLYPH: Record<Mark, string> = { accent: '>', flam: '♪', drag: '♬' }
 
 /** The palette's tools in order, each with its glyph and name. */
 const TOOLS: readonly { tool: Tool; glyph: string; name: string; title: string }[] = [
   { tool: 'hit', glyph: '●', name: 'Hit', title: 'Hit: tap a square to add or remove a hit' },
-  { tool: 'accent', glyph: '>', name: 'Accent', title: 'Accent: tap a snare hit to accent it, or an empty snare square to add an accented hit' },
+  { tool: 'accent', glyph: MARK_GLYPH.accent, name: 'Accent', title: 'Accent: tap a snare hit to accent it, or an empty snare square to add an accented hit' },
+  { tool: 'flam', glyph: MARK_GLYPH.flam, name: 'Flam', title: 'Flam: tap a snare hit to give it one grace note, or an empty snare square to add a flammed hit' },
+  { tool: 'drag', glyph: MARK_GLYPH.drag, name: 'Drag', title: 'Drag: tap a snare hit to give it two grace notes, or an empty snare square to add a dragged hit' },
 ]
 
 /**

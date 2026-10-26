@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { Exercise, Hand, StickingMode } from './index'
-import { newExercise, setBeat, sticking, toggleTie } from './index'
+import type { Exercise, Hand, Mark, StickingMode } from './index'
+import { newExercise, setBeat, sticking, toggleMark, toggleTie } from './index'
 
 /** An exercise from beat figures, one string per beat: `['x.x.', 'xxx', '....', …]`. */
 const line = (beats: string[], options: { mode?: StickingMode; lead?: Hand } = {}): Exercise => {
@@ -141,5 +141,30 @@ describe('sticking over the whole exercise', () => {
     const looped = { ...ex, practice: { ...ex.practice, loopRange: { first: 1, last: 1 } } }
     expect(shown(looped)).toBe(shown(ex))
     expect(shown(looped)).toBe('RLRLR' + 'LR')
+  })
+})
+
+describe('grace hands', () => {
+  /** Each struck note's hands, its grace hands small before it: `lR` for a flam. */
+  const hands = (ex: Exercise) => sticking(ex).map((n) => (n.graces ?? []).join('').toLowerCase() + (n.shown ?? '-')).join(' ')
+  const marked = (ex: Exercise, ...marks: [beat: number, position: number, mark: Mark][]): Exercise => ({
+    ...ex,
+    bars: marks.reduce((bars, [beat, position, mark]) => toggleMark(bars, 'snare', 0, beat, position, mark), ex.bars),
+  })
+
+  it("plays a flam's or a drag's grace notes with the other hand from its note", () => {
+    const ex = marked(line(['x.x.', 'x...']), [0, 0, 'flam'], [0, 2, 'drag'], [1, 0, 'flam'])
+    expect(hands(ex)).toBe('lR rrL lR')
+  })
+
+  it('mirrors the grace hands with a left lead, overrides too', () => {
+    const ex = marked(overridden(line(['xx..']), 1, 'R'), [0, 0, 'flam'], [0, 1, 'drag'])
+    expect(hands(ex)).toBe('lR llR')
+    expect(hands({ ...ex, leadHand: 'L' })).toBe('rL rrL')
+  })
+
+  it('prints no grace hands with sticking off', () => {
+    const ex = marked(line(['x...'], { mode: 'off' }), [0, 0, 'flam'])
+    expect(sticking(ex)[0].graces).toBeUndefined()
   })
 })

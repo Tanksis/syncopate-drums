@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Exercise, PatternId, TimelineEntry } from './index'
+import type { Exercise, PatternId, ScheduledEvent, TimelineEntry } from './index'
 import { DEFAULT_DEVICE_SETTINGS, beatCountAt, newExercise, playheadAt, positionLabel, recordEvents, resumePosition, schedule, trimTimeline } from './index'
 
 /** Count-in beat 4 at 0, then bar 1: a note with the click at 1, a click at 1.5, a note at 1.75. */
@@ -59,7 +59,13 @@ describe('recording the timeline', () => {
     ])
   })
 
+  it("leaves out a flam's grace note: it moves no playhead", () => {
+    const grace: ScheduledEvent = { time: -0.025, kind: 'exercise', instrument: 'snare', accent: false, grace: true, position: { bar: 0, tick: 0 } }
+    expect(recordEvents([], [grace], 10)).toEqual([])
+  })
+
   it('keeps the timeline in time order when a swung & lands after the next window starts', () => {
+
     const late: TimelineEntry = { time: 2.2, staffHit: true, position: { bar: 0, tick: 18 } }
     const ex = resting('off')
     const { events } = schedule(ex, ex.practice, DEFAULT_DEVICE_SETTINGS, { bar: 0, tick: 24 }, 0.5)

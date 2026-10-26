@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Bar, PatternId } from './index'
-import { minBarWidthFor, notationFit, restBar, setBeat, staffParts } from './index'
+import { NOTATION_LAYOUT, minBarWidthFor, notationFit, restBar, setBeat, staffParts, toggleMark } from './index'
 
 /** One line of staff at scale 1, about what the renderer draws with both parts. */
 const LINE = 150
@@ -41,6 +41,10 @@ describe('notationFit', () => {
 
   it('caps a bar at 475 so a one-bar exercise in a very wide area is not stretched thin', () => {
     expect(notationFit({ bars: 1, width: 2000, height: 300, lineHeight: LINE })).toEqual({ scale: 1.6, barsPerLine: 4, barWidth: 475 })
+  })
+
+  it('lets a bar wider than the cap at its minimum, as grace notes make one, keep its minimum', () => {
+    expect(notationFit({ bars: 1, width: 2000, height: 300, lineHeight: LINE, minBarWidth: 530 }).barWidth).toBeGreaterThanOrEqual(530)
   })
 
   it('gives every bar of a five-bar exercise a quarter of the line, so its one-bar last line is not stretched', () => {
@@ -86,6 +90,19 @@ describe('minBarWidthFor', () => {
     const one = bars(4, 'x...')
     const busy = setBeat(one, 'snare', 3, 2, 'xxxx')
     expect(minBarWidthFor(staffParts(busy, 'off'))).toBe(330)
+  })
+})
+
+describe('minBarWidthFor with grace notes', () => {
+  /** The bars with the marks put on bar `bar`'s snare notes at beat starts. */
+  const graced = (all: ReturnType<typeof bars>, bar: number, marks: ('flam' | 'drag')[]) =>
+    marks.reduce((acc, mark, beat) => toggleMark(acc, 'snare', bar, beat, 0, mark), all)
+
+  it('makes room for each flam, and more for each drag, in the bar with the most', () => {
+    const { flam: flamRoom, drag: dragRoom } = NOTATION_LAYOUT.graceRoom
+    expect(minBarWidthFor(staffParts(graced(bars(2, 'x.x.'), 0, ['flam', 'flam']), 'off'))).toBe(190 + 2 * flamRoom)
+    const both = graced(graced(bars(2, 'xxxx'), 0, ['flam']), 1, ['drag', 'flam'])
+    expect(minBarWidthFor(staffParts(both, 'off'))).toBe(330 + dragRoom + flamRoom)
   })
 })
 

@@ -9,7 +9,7 @@ import { Menu } from '@/components/Menu'
 import { Segmented } from '@/components/Segmented'
 import type { BeatView, EditCommand, EditorState, GridPoint, Hand, Mark, PositionState, Row, RowView } from '@/core'
 import { ROWS, applyEdit, canTieOverBarline, editorBeatViews, inLoopRange, isBuiltIn, marksAt, meter, sticking, stickingNoteAt } from '@/core'
-import { ToolPalette } from './ToolPalette'
+import { MARK_GLYPH, ToolPalette } from './ToolPalette'
 
 /** A press on a grid position, and (once it moves to another position) the hold end it drags to. */
 interface Press {
@@ -440,9 +440,9 @@ function Cell({
           ›
         </span>
       )}
-      {marks.includes('accent') && (
+      {marks.length > 0 && (
         <span aria-hidden data-marks className="pointer-events-none absolute top-0 left-1 font-mono text-[11px]/none font-bold text-accent">
-          &gt;
+          {marks.map((mark) => MARK_GLYPH[mark]).join('')}
         </span>
       )}
       {flashedHand && (

@@ -13,7 +13,7 @@ const blank = (bpm = 120): Exercise => {
 /** A compact view of the events for readable assertions: "time kind instrument [accent] [noteId]". */
 const show = (events: ScheduledEvent[]) =>
   events.map((e) =>
-    [e.time.toFixed(3), e.kind, e.instrument, e.accent && 'accent', e.noteId].filter(Boolean).join(' '),
+    [e.time.toFixed(3), e.kind, e.instrument, e.accent && 'accent', e.grace && 'grace', e.noteId].filter(Boolean).join(' '),
   )
 
 describe('the count-in', () => {
@@ -77,7 +77,31 @@ describe('playing the exercise', () => {
     expect(show(events)).toEqual(['0.000 click click accent', '0.000 exercise snare 0:0', '0.250 exercise snare accent 0:6'])
   })
 
+  it("plays a flam's grace note 25 ms ahead of its note, and a drag's two at 50 and 25 ms, as no struck note", () => {
+    const ex = line(['x.x.', 'x...', '....', '....'])
+    const marked = { ...ex, bars: toggleMark(toggleMark(ex.bars, 'snare', 0, 0, 2, 'flam'), 'snare', 0, 1, 0, 'drag') }
+    const { events } = schedule(marked, marked.practice, device, { bar: 0, tick: 0 }, 0.75)
+    expect(show(events)).toEqual([
+      '0.000 click click accent',
+      '0.000 exercise snare 0:0',
+      '0.225 exercise snare grace',
+      '0.250 exercise snare 0:6',
+      '0.450 exercise snare grace',
+      '0.475 exercise snare grace',
+      '0.500 click click',
+      '0.500 exercise snare 0:12',
+    ])
+  })
+
+  it("plays an accented flam's note at the accent level and its grace note at the grace level", () => {
+    const ex = line(['x...', '....', '....', '....'])
+    const marked = { ...ex, bars: toggleMark(toggleMark(ex.bars, 'snare', 0, 0, 0, 'flam'), 'snare', 0, 0, 0, 'accent') }
+    const { events } = schedule(marked, marked.practice, device, { bar: 0, tick: 0 }, 0.1)
+    expect(show(events)).toEqual(['-0.025 exercise snare grace', '0.000 click click accent', '0.000 exercise snare accent 0:0'])
+  })
+
   it('places triplet notes at thirds of the beat, next to straight beats', () => {
+
     const ex = line(['x.x.', 'xxx', 'x.x', '....'], 60)
     const { events } = schedule(ex, ex.practice, device, { bar: 0, tick: 0 }, 3.1)
     expect(show(events)).toEqual([

@@ -513,3 +513,22 @@ describe('accents', () => {
     expect(accents(accented)).toEqual(['>snare', '~snare'])
   })
 })
+
+describe('grace notes', () => {
+  /** Each chord's notes, a flammed one written `f:snare` and a dragged one `d:snare`. */
+  const graces = (bars: Bar[], groove: Groove = 'off') =>
+    staffParts(bars, groove)[0].hands.flatMap((e) =>
+      e.kind === 'chord' ? [e.notes.map((n) => (n.grace ? n.grace[0] + ':' : '') + (n.tied ? '~' : '') + n.drum).join('+')] : [],
+    )
+
+  it('marks the flammed and dragged snare notes, in a chord with the groove too', () => {
+    const marked = toggleMark(toggleMark(bar('x.x.', '....', '....', '....'), 'snare', 0, 0, 0, 'flam'), 'snare', 0, 0, 2, 'drag')
+    expect(graces(marked)).toEqual(['f:snare', 'd:snare'])
+    expect(graces(marked, 'hihatEighths').slice(0, 2)).toEqual(['hihat+f:snare', 'hihat+d:snare'])
+  })
+
+  it('leaves a tied continuation of a flammed note without one', () => {
+    const held = setHold(bar('x...', '....', '....', '....'), { row: 'snare', bar: 0, beat: 0, position: 0 }, { row: 'snare', bar: 0, beat: 1, position: 1 })
+    expect(graces(toggleMark(held, 'snare', 0, 0, 0, 'flam'))).toEqual(['f:snare', '~snare'])
+  })
+})

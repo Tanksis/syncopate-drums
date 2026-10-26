@@ -5,7 +5,7 @@
 import type { Figure } from './figures'
 import { figureOfHits, isTripletHits } from './figures'
 import type { Bar, Item, Mark, Note, Row, TimeSignature } from './model'
-import { ROWS, TICKS_PER_BEAT, barBeats, barTicks, beatIndex, itemTicks, meter, rowBeats } from './model'
+import { MARK_FIELD, ROWS, TICKS_PER_BEAT, barBeats, barTicks, beatIndex, itemTicks, meter, rowBeats } from './model'
 
 /** What the grid editor shows for one beat: its grid, shared by both rows, and each row on it. */
 export type BeatView = {
@@ -36,12 +36,13 @@ export type PositionState = 'hit' | 'hold' | 'empty'
  * What a struck note carries besides its value: its sticking override and its note marks. A tied
  * continuation carries none of it.
  */
-type Struck = Pick<Note, 'override' | 'dynamic'>
+type Struck = Pick<Note, 'override' | 'dynamic' | 'grace'>
 
 /** A note's override and marks, with none of the fields it doesn't have. */
-const struckOf = ({ override, dynamic }: Struck): Struck => ({
+const struckOf = ({ override, dynamic, grace }: Struck): Struck => ({
   ...(override ? { override } : {}),
   ...(dynamic ? { dynamic } : {}),
+  ...(grace ? { grace } : {}),
 })
 
 /** One tick of the timeline: a struck note, a note still sounding, or silence. */
@@ -426,8 +427,10 @@ export function toggleMark(bars: Bar[], row: Row, bar: number, beat: number, pos
   const marked = toTimeline(rowOf(struck, row))
   const cell = marked.cells[at.tick]
   if (cell.state !== 'hit') return bars
-  const { dynamic, ...rest } = cell.struck ?? {}
-  marked.cells[at.tick] = { state: 'hit', struck: dynamic === mark ? rest : { ...rest, dynamic: mark } }
+  const field = MARK_FIELD[mark]
+  const { [field]: old, ...rest } = cell.struck ?? {}
+  // A flam and a drag share the grace field, so choosing the other one replaces it.
+  marked.cells[at.tick] = { state: 'hit', struck: old === mark ? rest : { ...rest, [field]: mark } }
   return withRow(struck, row, fromTimeline(marked))
 }
 

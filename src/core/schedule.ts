@@ -2,7 +2,7 @@
 // Musical position (bar, tick) is the source of truth. Each call converts ticks to seconds from
 // the position it is given, at the BPM it is given, so a tempo change only affects what comes next.
 
-import type { DeviceSettings, Exercise, LoopRange, Note, PracticeSettings, Row } from './model'
+import type { DeviceSettings, Exercise, Grace, LoopRange, Note, PracticeSettings, Row } from './model'
 import type { BeatLevel } from './metronome'
 import { MIN_SWING, ROWS, TICKS_PER_BEAT, barTicks, loopBars, meter, noteId } from './model'
 import { grooveHitsByTick } from './groove'
@@ -31,6 +31,11 @@ export interface ScheduledEvent {
   instrument: Instrument
   /** A bar's first click, played high; or an accented note of the exercise, played from the snare's accent band. */
   accent: boolean
+  /**
+   * A grace note of a flam or drag, played from the snare's grace band just ahead of its note. It
+   * isn't a struck note: it has no note id and moves no playhead.
+   */
+  grace?: true
   /** How hard a groove hit is played, 0–1 of the instrument's usual level; other events always play at 1. */
   velocity?: number
   /** A metronome click's beat block level, or `subdivision` for a click between the beats. */
@@ -92,6 +97,10 @@ export function schedule(
     for (const { row, note } of strikes) {
       const instrument = ROW_INSTRUMENT[row]
       const accent = note.dynamic === 'accent'
+      // A grace note before the window's start goes out with its note, a moment late at worst.
+      for (const ahead of note.grace ? GRACE_AHEAD[note.grace] : []) {
+        events.push({ time: time - ahead, kind: 'exercise', instrument, accent: false, grace: true, position })
+      }
       events.push({ time, kind: 'exercise', instrument, accent, noteId: noteId(row, bar, tick), position })
     }
     if (bar >= 0) {
@@ -107,6 +116,12 @@ export function schedule(
   events.sort((a, b) => a.time - b.time)
   return { events, next: position, nextTime: elapsed * secondsPerTick }
 }
+
+/**
+ * Seconds each grace note is played ahead of its note, earliest first: a fixed time, so a flam
+ * sounds the same at any tempo. Tuned by ear.
+ */
+const GRACE_AHEAD: Record<Grace, readonly number[]> = { flam: [0.025], drag: [0.05, 0.025] }
 
 /** Swing eases from the full amount at this tempo and below… */
 const FULL_SWING_BPM = 120
