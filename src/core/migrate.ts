@@ -58,6 +58,9 @@ const steps: Record<number, (exercise: Stored) => Stored> = {
       schemaVersion: 6,
     }
   },
+  // Version 6 had no note marks, so its notes are unmarked as they are. The bump makes an older app
+  // refuse an export with accents rather than drop them (ADR 0017).
+  6: (exercise) => ({ ...exercise, schemaVersion: 7 }),
 }
 
 /** The stored exercise in the current shape; throws for one from a newer version of the app. */

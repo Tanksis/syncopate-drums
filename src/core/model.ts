@@ -63,7 +63,7 @@ export const MAX_SWING = 0.75
 export const TRIPLET_SWING = 2 / 3
 
 /** Bumped whenever the stored shape changes; storage and import migrate through it. */
-export const SCHEMA_VERSION = 6
+export const SCHEMA_VERSION = 7
 
 export type Hand = 'R' | 'L'
 
@@ -110,7 +110,15 @@ export interface Note extends ItemBase {
   /** Held into the next item, which is then a tied continuation rather than a new note. */
   tiedToNext: boolean
   override?: Hand
+  /** The note's dynamic, a note mark: only a struck snare note carries one (ADR 0017). */
+  dynamic?: Dynamic
 }
+
+/** A note's dynamic: an accent is played louder and drawn `>` (ghost notes will be another). */
+export type Dynamic = 'accent'
+
+/** The marks the tool palette puts on a struck snare note (ADR 0017). */
+export type Mark = 'accent'
 
 export interface Rest extends ItemBase {
   kind: 'rest'

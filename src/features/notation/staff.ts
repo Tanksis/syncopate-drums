@@ -6,8 +6,8 @@
 // comes from the core's staff parts: the hands part stems up, the feet part stems down, or one
 // voice stems up (ADRs 0002, 0004).
 
-import type { StemmableNote } from 'vexflow/bravura'
-import { Beam, Dot, Formatter, Fraction, GhostNote, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
+import type { RenderContext, StemmableNote } from 'vexflow/bravura'
+import { Articulation, Beam, Dot, Formatter, Fraction, GhostNote, ModifierPosition, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
 import type { Cursor, Drum, Duration, Exercise, Limb, LoopRange, Meter, NotationShows, NoteSticking, PlayheadAnchor, PlayPosition, StaffBar, StaffEvent } from '@/core'
 import {
   NOTATION_LAYOUT,
@@ -66,6 +66,46 @@ const HAND_HIT_PAD = 3
 /** Pixels of clickable space around a bar number, which is printed small. */
 const BAR_NUMBER_HIT_PAD = 6
 
+/**
+ * Stave spaces between an accent's baseline and the stem tip it sits over. The `>` glyph's foot is a
+ * tenth of a space over its baseline, so this leaves it about a quarter of a space clear.
+ */
+const ACCENT_BASELINE = 0.15
+
+/**
+ * An accent `>` drawn just over its stem's tip, or, in a beam group, over the group's highest tip
+ * (`groupTop`), so a group's accents are level. VexFlow's own placement snaps to the stave's half
+ * lines and works from the stem as it was before beaming, so the accent places itself as it's drawn.
+ */
+class Accent extends Articulation {
+  groupTop?: number
+
+  renderText(ctx: RenderContext, xPos: number, yPos: number) {
+    const top = this.groupTop ?? this.checkAttachedNote().getStemExtents().topY
+    this.y = top - ACCENT_BASELINE * STAVE_LINE_GAP
+    this.setYShift(0)
+    super.renderText(ctx, xPos, yPos)
+  }
+}
+
+/**
+ * Stave spaces a triplet's "3" is placed over its group's highest stem tip when the group has
+ * accents: their tops are about 1.2 spaces up, and the "3" reaches half a space below where it's placed.
+ */
+const TRIPLET_OVER_ACCENTS = 2
+
+/**
+ * A triplet group's tuplet. Over accents its "3" sits a step above them, as they place themselves,
+ * not where VexFlow reserves room for its own accents.
+ */
+class Triplet extends Tuplet {
+  getYPosition(): number {
+    const stems = (this.getNotes() as StemmableNote[]).filter((n) => n.hasStem() && n.getStemDirection() === 1)
+    if (!stems.some((n) => n.getModifiers().some((m) => m instanceof Accent))) return super.getYPosition()
+    return Math.min(...stems.map((n) => n.getStemExtents().topY)) - TRIPLET_OVER_ACCENTS * STAVE_LINE_GAP
+  }
+}
+
 const STEM_DIRECTION: Record<Limb, 1 | -1> = { hands: 1, feet: -1 }
 /** Where each part's rests sit: the middle line, or lower for the feet. */
 const REST_KEY: Record<Limb, string> = { hands: 'b/4', feet: 'e/4' }
@@ -78,7 +118,8 @@ interface DrawnEvent {
 
 /**
  * The VexFlow note for one event of a part. Chord keys go bottom to top, the order ties index. In
- * compound time a value is written half as long again, with no triplet "3" (ADR 0015).
+ * compound time a value is written half as long again, with no triplet "3" (ADR 0015). An accented
+ * note gets its `>` above the stem, as a modifier, so the formatter makes room for it.
  */
 function eventNote(event: StaffEvent, limb: Limb, compound: boolean): StemmableNote {
   const value = compound ? compoundValue(event) : event
@@ -91,6 +132,10 @@ function eventNote(event: StaffEvent, limb: Limb, compound: boolean): StemmableN
     clef: 'percussion',
   })
   if (value.dotted) Dot.buildAndAttach([note], { all: true })
+  const accented = event.kind === 'chord' ? event.notes.find((n) => n.accent) : undefined
+  if (accented) {
+    note.addModifier(new Accent('a>').setPosition(ModifierPosition.ABOVE), keyIndex(event, accented.drum))
+  }
   return note
 }
 
@@ -130,7 +175,7 @@ function drawParts(stave: Stave, parts: readonly PartDrawing[], { beats, compoun
       .filter((group) => group.triplet && !compound)
       .map(
         (group) =>
-          new Tuplet(group.notes, {
+          new Triplet(group.notes, {
             numNotes: 3,
             notesOccupied: 2,
             location: limb === 'hands' ? Tuplet.LOCATION_TOP : Tuplet.LOCATION_BOTTOM,
@@ -157,6 +202,15 @@ function drawParts(stave: Stave, parts: readonly PartDrawing[], { beats, compoun
     new Voice(time).setStrict(false).addTickables(p.drawn.map((d) => d.note)),
   )
   new Formatter().joinVoices(voices).format(voices, width)
+  // The beams set their stems' lengths before the notes and their accents are drawn, from the notes
+  // on the stave, so an accent sits over its stem's real tip rather than an unbeamed one's.
+  for (const { drawn } of parts) for (const { note } of drawn) note.setStave(stave)
+  beams.forEach((b) => b.postFormat())
+  for (const beam of beams) {
+    const notes = beam.getNotes()
+    const groupTop = Math.min(...notes.map((n) => n.getStemExtents().topY))
+    for (const note of notes) for (const m of note.getModifiers()) if (m instanceof Accent) m.groupTop = groupTop
+  }
   voices.forEach((v) => v.draw(ctx, stave))
   beams.forEach((b) => b.setContext(ctx).draw())
   tuplets.forEach((tuplet) => tuplet.setContext(ctx).draw())

@@ -2,7 +2,7 @@
 // change, unless it is an example, which is never stored (ADR 0008).
 
 import { create } from 'zustand'
-import type { BassDrum, DeviceSettings, EditCommand, MetronomeSettings, EditorState, Exercise, Folder, HihatFoot, ImportChoice, PatternGrid, PatternId, PatternSuggestion, PlayPosition, PracticeSettings } from '@/core'
+import type { BassDrum, DeviceSettings, EditCommand, Mark, MetronomeSettings, EditorState, Exercise, Folder, HihatFoot, ImportChoice, PatternGrid, PatternId, PatternSuggestion, PlayPosition, PracticeSettings } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
   addedOnTop,
@@ -49,6 +49,9 @@ export interface PatternNote {
   before: Partial<Pick<PracticeSettings, PatternSuggestion>>
 }
 
+/** The tool palette's tools: Hit, which works the grid as it always has, or a mark to put on notes (ADR 0017). */
+export type Tool = 'hit' | Mark
+
 /** A paused playback: the exercise it was paused in and where it resumes. */
 export interface PausedAt {
   exerciseId: string
@@ -72,6 +75,9 @@ interface AppState {
   paused: PausedAt | undefined
   /** How many edits an open example has refused, so the read-only notice can flash at each. */
   refusedEdits: number
+  /** The tool held in the palette, for the session: Hit until another is picked. */
+  tool: Tool
+  setTool: (tool: Tool) => void
   dispatch: (command: EditCommand) => void
   /** `dragging` marks a slider drag: its many small changes are saved once they settle. */
   setBpm: (bpm: number, options?: { dragging?: boolean }) => void
@@ -270,6 +276,8 @@ export const useAppStore = create<AppState>()((set, get) => {
     metronomePlaying: false,
     paused: undefined,
     refusedEdits: 0,
+    tool: 'hit',
+    setTool: (tool) => set({ tool }),
     dispatch: (command) => {
       const { editor } = get()
       if (isExample(editor.exercise.id) && !exampleAccepts(command)) return set({ refusedEdits: get().refusedEdits + 1 })

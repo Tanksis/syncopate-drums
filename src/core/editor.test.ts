@@ -10,8 +10,10 @@ import {
   commandForKey,
   editorBeatViews,
   loopAt,
+  marksAt,
   newEditorState,
   newExercise,
+  placeItems,
   restBar,
   setBeat,
   sticking,
@@ -982,5 +984,77 @@ describe("the cursor's row", () => {
     expect(kickHits(keys(both, press('Backspace')))[0]).toBe('x.x. x.x. .... x.x.')
     expect(kickHits(keys(both, press('Delete')))[0]).toBe('x.x. x.x. .... x.x.')
     for (const key of ['Backspace', 'Delete']) expect(figureKeys(keys(both, press(key)))[0]).toBe('1111')
+  })
+})
+
+describe('accents', () => {
+  /** Each struck snare note in order: `>` accented, `-` not. */
+  const accents = (state: EditorState) =>
+    placeItems(state.exercise.bars, 'snare')
+      .filter((p) => p.item.kind === 'note' && !p.continuation)
+      .map((p) => (p.item.kind === 'note' && p.item.dynamic === 'accent' ? '>' : '-'))
+      .join('')
+  const snareHits = (state: EditorState) => editorBeatViews(state)[0].map((v) => v.snare.hits).join(' ')
+  const tap = (state: EditorState, beat: number, position: number, row: Row = 'snare') =>
+    applyEdit(state, { type: 'toggleGridPosition', row, bar: 0, beat, position })
+  const accent = (state: EditorState, beat: number, position: number, row: Row = 'snare', bar = 0) =>
+    applyEdit(state, { type: 'toggleMark', mark: 'accent', row, bar, beat, position })
+  /** x.x. on beat 1. */
+  const twoHits = () => tap(tap(fresh(), 0, 0), 0, 2)
+
+  it('toggles an accent on a hit, and off again', () => {
+    const accented = accent(twoHits(), 0, 2)
+    expect(accents(accented)).toBe('->')
+    expect(snareHits(accented)).toBe('x.x. .... .... ....')
+    expect(accents(accent(accented, 0, 2))).toBe('--')
+  })
+
+  it('adds an accented hit on an empty cell, splitting a hold', () => {
+    const added = accent(twoHits(), 0, 3)
+    expect(snareHits(added)).toBe('x.xx .... .... ....')
+    expect(accents(added)).toBe('-->')
+    expect(accents(accent(fresh(), 2, 0))).toBe('>')
+  })
+
+  it('moves the cursor to the tapped beat, and can be undone', () => {
+    const accented = accent(twoHits(), 1, 0)
+    expect(accented.cursor).toEqual(cursorAt(0, 1))
+    expect(accents(keys(accented, ctrl('z')))).toBe('--')
+  })
+
+  it('goes with its hit: clearing the hit clears it, and a new hit there is plain', () => {
+    const cleared = tap(accent(twoHits(), 0, 2), 0, 2)
+    expect(accents(cleared)).toBe('-')
+    expect(accents(tap(cleared, 0, 2))).toBe('--')
+  })
+
+  it('is snare-only: a kick cell is left as it was', () => {
+    const state = tap(fresh(), 0, 0, 'kick')
+    expect(accent(state, 0, 0, 'kick').exercise.bars).toBe(state.exercise.bars)
+  })
+
+  it('stays on its note through a new hit beside it, a regrid, a duplicate and a paste', () => {
+    const accented = accent(twoHits(), 0, 0)
+    expect(accents(tap(accented, 0, 1))).toBe('>--')
+    const regridded = applyEdit(accented, { type: 'setBeatGrid', bar: 0, beat: 0, triplet: true })
+    expect(accents(regridded)).toBe('>')
+    expect(accents(keys(accented, ctrl('d')))).toBe('>-' + '>-')
+    const pasted = keys(accented, ctrl('c'), ctrl('Enter'), ctrl('v'))
+    expect(accents(pasted)).toBe('>-' + '>-')
+  })
+
+  it("is read at a grid position for the cell to show, on the grid the editor shows the beat on", () => {
+    const accented = accent(twoHits(), 0, 2)
+    const at = (state: EditorState, beat: number, position: number, row: Row = 'snare') => marksAt(state, { row, bar: 0, beat, position })
+    expect([0, 1, 2, 3].map((p) => at(accented, 0, p))).toEqual([[], [], ['accent'], []])
+    expect(at(accented, 0, 2, 'kick')).toEqual([])
+    const triplets = accent(applyEdit(fresh(), { type: 'setBeatGrid', bar: 0, beat: 1, triplet: true }), 1, 2)
+    expect([0, 1, 2].map((p) => at(triplets, 1, p))).toEqual([[], [], ['accent']])
+  })
+
+  it('stays on a hit kept by a hold drag', () => {
+    const accented = accent(tap(fresh(), 0, 0), 0, 0)
+    const held = applyEdit(accented, { type: 'setHold', from: { row: 'snare', bar: 0, beat: 0, position: 0 }, to: { row: 'snare', bar: 0, beat: 1, position: 2 } })
+    expect(accents(held)).toBe('>')
   })
 })

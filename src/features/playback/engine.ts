@@ -53,11 +53,14 @@ const VOLUME_SMOOTHING = 0.02
 /** Virtuosity's snare-center velocity layers from `from` to `to`, a band of nearby loudness. */
 const snareCenter = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => `oh_snare_center_vl${from + i}`)
 
+/** What a sample set is played for: an instrument, or the snare's accent band. */
+type Sound = Exclude<Instrument, 'click'> | 'snareAccent'
+
 /**
- * Virtuosity Drums one-shots for each kit piece, at a fixed velocity. The snare's are a band of
- * nearby velocity layers (it has no round robins), each stroke picked at random from the band, never
- * the last one, and varied ±1 dB (`varied`), so a run of fast singles doesn't machine-gun. The
- * others play their round robins in turn.
+ * Virtuosity Drums one-shots for each kit piece, at a fixed velocity. The snare's are bands of
+ * nearby velocity layers (it has no round robins), normal and accent (ADR 0017), each stroke picked
+ * at random from its band, never the last one, and varied ±1 dB (`varied`), so a run of fast singles
+ * doesn't machine-gun. The others play their round robins in turn.
  *
  * The overhead mics barely pick up the bass drum: its samples are about 20 dB (vl2) and 31 dB
  * (vl1) quieter than the snare's (RMS over the first 400 ms). So the kick is raised 20 dB to sit level
@@ -65,8 +68,9 @@ const snareCenter = (from: number, to: number) => Array.from({ length: to - from
  * under it: soft, but heard. Raised that much, the kick's room tail (two seconds, only about 17 dB
  * down at 300 ms) booms into the next hits, so it is faded out after `hold` seconds.
  */
-const SAMPLES: Record<Exclude<Instrument, 'click'>, { files: string[]; velocity: number; hold?: number; varied?: true }> = {
+const SAMPLES: Record<Sound, { files: string[]; velocity: number; hold?: number; varied?: true }> = {
   snare: { files: snareCenter(13, 17), velocity: 1, varied: true },
+  snareAccent: { files: snareCenter(24, 30), velocity: 1, varied: true },
   kick: { files: ['oh_kick_snoff_vl2_rr1', 'oh_kick_snoff_vl2_rr2'], velocity: 10, hold: 0.06 },
   kickFeathered: { files: ['oh_kick_snoff_vl1_rr1', 'oh_kick_snoff_vl1_rr2'], velocity: 2.8 },
   ride: { files: ['oh_ride_ride_vl2_rr1', 'oh_ride_ride_vl2_rr2'], velocity: 0.85 },
@@ -103,8 +107,8 @@ let read: (() => PlaybackSource) | undefined
 const sources = new Set<AudioScheduledSourceNode>()
 /** Every event scheduled and not yet long past, on the audio clock, for the playhead. */
 let timeline: TimelineEntry[] = []
-/** The file each instrument last played, so the next stroke can move on from it. */
-const lastFile = new Map<Instrument, number>()
+/** The file each sound last played, so the next stroke can move on from it. */
+const lastFile = new Map<Sound, number>()
 /** The gain each layer was last set to. */
 const gainTargets: Record<Layer, number> = { ...LAYER_GAIN }
 
@@ -314,8 +318,9 @@ function play(audio: Audio, when: number, event: ScheduledEvent, playing: Playba
 /** Starts an event's sounds, returning their nodes: none for an Off beat. */
 function startSounds(audio: Audio, when: number, event: ScheduledEvent, playing: PlaybackSource): AudioScheduledSourceNode[] {
   if (event.instrument !== 'click') {
-    const { velocity } = SAMPLES[event.instrument]
-    return [sample(audio, when, event.instrument, velocity * (event.velocity ?? 1), audio.layers[event.kind])]
+    const sound = event.instrument === 'snare' && event.accent ? 'snareAccent' : event.instrument
+    const { velocity } = SAMPLES[sound]
+    return [sample(audio, when, sound, velocity * (event.velocity ?? 1), audio.layers[event.kind])]
   }
   if (playing.kind === 'exercise') {
     if (!clickHeard(event, playing.device)) return []
@@ -390,14 +395,14 @@ function strike(ctx: AudioContext, when: number, peak: number, decay: number): G
 function sample(
   { ctx, buffers }: Audio,
   when: number,
-  instrument: Exclude<Instrument, 'click'>,
+  sound: Sound,
   level: number,
   layer: GainNode,
 ): AudioScheduledSourceNode {
-  const { files, hold, varied } = SAMPLES[instrument]
-  const last = lastFile.get(instrument)
+  const { files, hold, varied } = SAMPLES[sound]
+  const last = lastFile.get(sound)
   const file = varied ? pickStroke(files.length, last, Math.random()) : ((last ?? -1) + 1) % files.length
-  lastFile.set(instrument, file)
+  lastFile.set(sound, file)
   const source = ctx.createBufferSource()
   source.buffer = buffers.get(files[file])!
   const gain = ctx.createGain()

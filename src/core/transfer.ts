@@ -3,7 +3,7 @@
 import { inKnownFolder } from './folders'
 import { PATTERN_IDS, fittedPractice } from './groove'
 import { migrateExercise } from './migrate'
-import type { Duration, Exercise, Folder, Hand, Item, StickingMode, TimeSignature } from './model'
+import type { Duration, Dynamic, Exercise, Folder, Hand, Item, Row, StickingMode, TimeSignature } from './model'
 import {
   BASS_DRUM_SETTINGS,
   HIHAT_FOOT_SETTINGS,
@@ -202,23 +202,26 @@ function practiceProblem(practice: unknown, barCount: number): string | null {
 }
 
 function isBar(bar: unknown, beats: number): boolean {
-  return isRecord(bar) && ROWS.every((row) => isRowOfBar(bar[row], beats))
+  return isRecord(bar) && ROWS.every((row) => isRowOfBar(bar[row], row, beats))
 }
 
 /** One row of a bar: notes and rests adding up to the bar's beats. */
-function isRowOfBar(items: unknown, beats: number): boolean {
-  if (!Array.isArray(items) || !items.every(isItem)) return false
+function isRowOfBar(items: unknown, row: Row, beats: number): boolean {
+  if (!Array.isArray(items) || !items.every((item) => isItem(item, row))) return false
   return items.reduce((ticks: number, item: Item) => ticks + itemTicks(item), 0) === barTicks(beats)
 }
 
-function isItem(item: unknown): item is Item {
+/** A note or rest of a row; only the snare row's notes carry marks. */
+function isItem(item: unknown, row: Row): item is Item {
   if (!isRecord(item)) return false
   const { kind, duration, dotted, triplet } = item
   if (!oneOf(duration, DURATIONS) || typeof dotted !== 'boolean' || typeof triplet !== 'boolean') return false
   if (kind === 'rest') return true
-  return kind === 'note' && typeof item.tiedToNext === 'boolean' && (item.override === undefined || oneOf(item.override, HANDS))
+  const dynamic = item.dynamic === undefined || (row === 'snare' && oneOf(item.dynamic, DYNAMICS))
+  return kind === 'note' && typeof item.tiedToNext === 'boolean' && (item.override === undefined || oneOf(item.override, HANDS)) && dynamic
 }
 
 const STICKING_MODES: StickingMode[] = ['natural', 'alternate', 'off']
 const HANDS: Hand[] = ['R', 'L']
+const DYNAMICS: Dynamic[] = ['accent']
 const DURATIONS: Duration[] = ['quarter', 'eighth', 'sixteenth']

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Bar, BassDrum, HihatFoot, PatternId, StaffEvent } from './index'
-import { FIGURES, barTicks, itemTicks, restBar, restItems, setBeat, setHold, staffParts as writeParts, toggleCutShort, toggleTie } from './index'
+import { FIGURES, barTicks, itemTicks, restBar, restItems, setBeat, setHold, staffParts as writeParts, toggleCutShort, toggleMark, toggleTie } from './index'
 
 /** The grooves these tests write under: a pattern and the feet set with it. */
 type Groove = 'off' | 'jazz' | 'jazzFeathered' | 'hihatEighths'
@@ -491,5 +491,25 @@ describe('the hi-hat foot setting under a fill (ADR 0012)', () => {
     const parts = staffParts(line, 'off', { hihatFoot: 'twoAndFour' })[0]
     expect(show(parts.feet)).toEqual(['0 q bass', '12 e hihatFoot', '18 e bass', '24 q rest', '36 q hihatFoot'])
     expect(show(parts.hands)).toEqual(show(staffParts(line, 'off')[0].hands))
+  })
+})
+
+describe('accents', () => {
+  /** Each chord's notes, an accented one written `>snare`. */
+  const accents = (bars: Bar[], groove: Groove = 'off') =>
+    staffParts(bars, groove)[0].hands.flatMap((e) =>
+      e.kind === 'chord' ? [e.notes.map((n) => (n.accent ? '>' : '') + (n.tied ? '~' : '') + n.drum).join('+')] : [],
+    )
+
+  it('marks the accented snare note, and only it, in a chord with the groove', () => {
+    const accented = toggleMark(bar('x.x.', '....', '....', '....'), 'snare', 0, 0, 2, 'accent')
+    expect(accents(accented)).toEqual(['snare', '>snare'])
+    expect(accents(accented, 'hihatEighths').slice(0, 2)).toEqual(['hihat+snare', 'hihat+>snare'])
+  })
+
+  it("leaves a tied continuation of an accented note unmarked", () => {
+    const held = setHold(bar('x...', '....', '....', '....'), { row: 'snare', bar: 0, beat: 0, position: 0 }, { row: 'snare', bar: 0, beat: 1, position: 1 })
+    const accented = toggleMark(held, 'snare', 0, 0, 0, 'accent')
+    expect(accents(accented)).toEqual(['>snare', '~snare'])
   })
 })

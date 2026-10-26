@@ -2,7 +2,7 @@
 // Musical position (bar, tick) is the source of truth. Each call converts ticks to seconds from
 // the position it is given, at the BPM it is given, so a tempo change only affects what comes next.
 
-import type { DeviceSettings, Exercise, LoopRange, PracticeSettings, Row } from './model'
+import type { DeviceSettings, Exercise, LoopRange, Note, PracticeSettings, Row } from './model'
 import type { BeatLevel } from './metronome'
 import { MIN_SWING, ROWS, TICKS_PER_BEAT, barTicks, loopBars, meter, noteId } from './model'
 import { grooveHitsByTick } from './groove'
@@ -29,6 +29,7 @@ export interface ScheduledEvent {
   time: number
   kind: 'click' | 'exercise' | 'groove'
   instrument: Instrument
+  /** A bar's first click, or an accented note of the exercise, played at the snare's accent level. */
   accent: boolean
   /** How hard a groove hit is played, 0–1 of the instrument's usual level; other events always play at 1. */
   velocity?: number
@@ -83,15 +84,16 @@ export function schedule(
     if (tick % TICKS_PER_BEAT === 0) {
       events.push({ time, kind: 'click', instrument: 'click', accent: tick === 0, position })
     }
-    const strikes = bar >= 0 ? struck.filter(({ ticks }) => ticks[bar]?.has(tick)).map(({ row }) => row) : []
-    for (const row of strikes) {
+    const strikes = bar >= 0 ? struck.flatMap(({ row, ticks }) => (ticks[bar]?.has(tick) ? [{ row, note: ticks[bar].get(tick)! }] : [])) : []
+    for (const { row, note } of strikes) {
       const instrument = ROW_INSTRUMENT[row]
-      events.push({ time, kind: 'exercise', instrument, accent: false, noteId: noteId(row, bar, tick), position })
+      const accent = note.dynamic === 'accent'
+      events.push({ time, kind: 'exercise', instrument, accent, noteId: noteId(row, bar, tick), position })
     }
     if (bar >= 0) {
       for (const { instrument, velocity } of groove.get(tick) ?? []) {
         // One drum is played once: a kick row's hit replaces the groove's bass drum there.
-        if (strikes.includes('kick') && BASS_DRUMS.has(instrument)) continue
+        if (strikes.some((s) => s.row === 'kick') && BASS_DRUMS.has(instrument)) continue
         events.push({ time, kind: 'groove', instrument, accent: false, velocity, position })
       }
     }
@@ -136,11 +138,11 @@ export const ROW_INSTRUMENT: Record<Row, Instrument> = { snare: 'snare', kick: '
 
 const BASS_DRUMS: ReadonlySet<Instrument> = new Set(['kick', 'kickFeathered'])
 
-/** Per bar, the ticks where a row strikes a note (tied continuations are held, not struck). */
-function struckTicks(exercise: Exercise, row: Row): Set<number>[] {
-  const struck = exercise.bars.map(() => new Set<number>())
+/** Per bar, the notes a row strikes, by tick (tied continuations are held, not struck). */
+function struckTicks(exercise: Exercise, row: Row): Map<number, Note>[] {
+  const struck = exercise.bars.map(() => new Map<number, Note>())
   for (const p of placeItems(exercise.bars, row)) {
-    if (p.item.kind === 'note' && !p.continuation) struck[p.bar].add(p.start)
+    if (p.item.kind === 'note' && !p.continuation) struck[p.bar].set(p.start, p.item)
   }
   return struck
 }
