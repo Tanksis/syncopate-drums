@@ -23,6 +23,7 @@ export interface HandSticking extends StruckNote {
   row: 'snare'
   /** The hand the sticking mode gives this note; null with sticking off. */
   computed: Hand | null
+  /** The note's override as the Lead hand shows it: stored as for a right lead, mirrored under L. */
   override?: Hand
   /** The hand printed under the note: null with sticking off. */
   shown: Hand | null
@@ -39,6 +40,12 @@ export interface KickSticking extends StruckNote {
 const other = (hand: Hand): Hand => (hand === 'R' ? 'L' : 'R')
 
 /**
+ * A hand as for a right lead turned into the hand under `lead`, or back: mirrored under Lead hand
+ * L. An override is stored as for a right lead (ADR 0018), so it flips with the Lead hand.
+ */
+export const mirrored = (hand: Hand, lead: Hand): Hand => (lead === 'L' ? other(hand) : hand)
+
+/**
  * A hand for each struck note of the snare row, and K for each struck kick with no struck snare
  * note at its tick (none with sticking off), in order. Rests and tied continuations get none.
  */
@@ -50,7 +57,7 @@ export function sticking(exercise: Exercise): NoteSticking[] {
     if (!isStruck(p)) return []
     // Hidden hands keep their overrides, so switching back brings them back.
     const computed = mode === 'off' ? null : hands[i]
-    const { override } = p.item
+    const override = p.item.override && mirrored(p.item.override, leadHand)
     const shown = computed && (override ?? computed)
     return [{ row: 'snare', noteId: noteId('snare', p.bar, p.start), bar: p.bar, start: p.start, computed, override, shown }]
   })

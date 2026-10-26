@@ -61,6 +61,22 @@ const steps: Record<number, (exercise: Stored) => Stored> = {
   // Version 6 had no note marks, so its notes are unmarked as they are. The bump makes an older app
   // refuse an export with accents rather than drop them (ADR 0017).
   6: (exercise) => ({ ...exercise, schemaVersion: 7 }),
+  // Version 7 stored an override as the hand itself. Now it is stored as for a right lead and Lead
+  // hand L mirrors it, so a Lead hand L exercise has each override flipped and shows what it did
+  // (ADR 0018). A malformed bar is left for import to refuse.
+  7: (exercise) => {
+    if (exercise.leadHand !== 'L' || !Array.isArray(exercise.bars)) return { ...exercise, schemaVersion: 8 }
+    const flip = (item: unknown) => {
+      if (typeof item !== 'object' || item === null) return item
+      const { override } = item as Stored
+      return override === 'R' || override === 'L' ? { ...item, override: override === 'R' ? 'L' : 'R' } : item
+    }
+    const bars = exercise.bars.map((bar: unknown) => {
+      if (typeof bar !== 'object' || bar === null || !Array.isArray((bar as Stored).snare)) return bar
+      return { ...bar, snare: ((bar as Stored).snare as unknown[]).map(flip) }
+    })
+    return { ...exercise, bars, schemaVersion: 8 }
+  },
 }
 
 /** The stored exercise in the current shape; throws for one from a newer version of the app. */

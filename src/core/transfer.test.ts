@@ -33,6 +33,17 @@ const paradiddles: Exercise = {
 const { hihatFoot: _hihatFoot, ...practiceBefore4 } = paradiddles.practice
 const paradiddlesBefore4 = { ...paradiddles, practice: practiceBefore4 }
 const paradiddlesFootOff: Exercise = { ...paradiddles, practice: { ...paradiddles.practice, hihatFoot: 'off' } }
+/**
+ * Paradiddles footless as a file from before version 8 reads back: Lead hand L, so its override
+ * is flipped to be stored as for a right lead and still shows an L (ADR 0018).
+ */
+const paradiddlesBefore8: Exercise = {
+  ...paradiddlesFootOff,
+  bars: paradiddles.bars.map((bar) => ({
+    ...bar,
+    snare: bar.snare.map((item) => (item.kind === 'note' && item.override === 'L' ? { ...item, override: 'R' } : item)),
+  })),
+}
 const syncopation = { ...newExercise({ id: 'syncopation-p38', now: 900 }), name: 'Syncopation p.38' }
 
 /** The book page folder, and a warm-ups folder none of the exported exercises is in. */
@@ -113,7 +124,7 @@ describe('parsing an import', () => {
     expect(parseImport(asJson({ format: 'drum-app-exercises', version: 2, exercises: [v2] }))).toEqual({
       ok: true,
       folders: [],
-      exercises: [paradiddlesFootOff],
+      exercises: [paradiddlesBefore8],
     })
   })
 
@@ -139,7 +150,7 @@ describe('parsing an import', () => {
     expect(parseImport(asJson({ format: 'drum-app-exercises', version: 0, exercises: [v1('snare')] }))).toEqual({
       ok: true,
       folders: [],
-      exercises: [{ ...paradiddlesFootOff, bars: bars.map((bar) => ({ snare: bar.snare, kick: restItems() })) }],
+      exercises: [{ ...paradiddlesBefore8, bars: paradiddlesBefore8.bars.map((bar) => ({ snare: bar.snare, kick: restItems() })) }],
     })
   })
 

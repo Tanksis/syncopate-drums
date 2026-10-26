@@ -131,6 +131,13 @@ describe("a fill's sticking", () => {
     expect(state.exercise.sticking).toBe('alternate')
     expect(line(state)).toBe('RLLRLRK'.repeat(2))
   })
+
+  it('stores the typed hands as for a right lead, so a left lead mirrors them back to the typed ones', () => {
+    const left = fill(applyEdit(editor(), { type: 'setExerciseSettings', settings: { leadHand: 'L' } }), 'RRLL')
+    expect(line(left)).toBe('RRLL'.repeat(4))
+    const right = applyEdit(left, { type: 'setExerciseSettings', settings: { leadHand: 'R' } })
+    expect(line(right)).toBe('LLRR'.repeat(4))
+  })
 })
 
 describe('a new exercise from a pattern', () => {

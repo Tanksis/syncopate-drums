@@ -34,7 +34,7 @@ import {
   toggleTie,
 } from './speller'
 import type { NoteSticking } from './sticking'
-import { overrideCount, sticking } from './sticking'
+import { mirrored, overrideCount, sticking } from './sticking'
 
 export interface Cursor {
   bar: number
@@ -486,7 +486,8 @@ function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'und
       const target = overrideTarget(state, command.note)
       // Hidden sticking keeps its overrides as they are, and a kick's K has none.
       if (target?.row !== 'snare' || target.shown === null) return state
-      const hand = target.override ? undefined : target.computed === 'R' ? 'L' : 'R'
+      // The opposite hand is shown, and stored as for a right lead.
+      const hand = target.override || !target.computed ? undefined : mirrored(target.computed === 'R' ? 'L' : 'R', state.exercise.leadHand)
       return withBars(state, withOverride(state.exercise.bars, target, hand))
     }
     case 'resetOverrides': {

@@ -3,7 +3,7 @@
 import type { Bar, Exercise, Hand, Row } from './model'
 import { ROWS, TICKS_PER_BEAT, itemTicks, meter, newExercise, restBar } from './model'
 import { setBeat, slotTicks, toggleHit, toggleTie } from './speller'
-import { sticking } from './sticking'
+import { mirrored, sticking } from './sticking'
 
 /** One step of a pattern: a hand on the snare, a kick, or a rest in both rows. */
 export type PatternStep = 'R' | 'L' | 'K' | '.'
@@ -32,7 +32,7 @@ export function parsePattern(text: string): { steps: PatternStep[] } | { error: 
  * into and out of the bar are cut (see `cutTies`).
  *
  * Sticking off becomes natural, and each hand that the sticking would give otherwise is written as
- * an override, so the typed hands are the ones shown. `next` is the step the following bar would
+ * an override (stored as for a right lead), so the typed hands are the ones shown. `next` is the step the following bar would
  * start on, to carry the pattern on across barlines.
  */
 export function withPatternFill(
@@ -64,7 +64,7 @@ export function withPatternFill(
     const at = tick
     tick += itemTicks(item)
     const hand = typed.get(at)
-    return item.kind === 'note' && hand && computed.get(at) !== hand ? { ...item, override: hand } : item
+    return item.kind === 'note' && hand && computed.get(at) !== hand ? { ...item, override: mirrored(hand, filled.leadHand) } : item
   })
   bars = bars.map((b, i) => (i === bar ? { ...b, snare } : b))
   return { exercise: { ...filled, bars }, next: step % pattern.length }

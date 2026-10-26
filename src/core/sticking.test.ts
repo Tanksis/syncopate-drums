@@ -90,6 +90,14 @@ describe('overrides and hidden sticking', () => {
     ])
   })
 
+  it('mirrors every override under a left lead, as it mirrors the computed hands', () => {
+    // A paradiddle-diddle's RLRRLL written as overrides on six sixteenths under a right lead.
+    const paradiddle = (lead: Hand) =>
+      ['R', 'L', 'R', 'R', 'L', 'L'].reduce((ex, hand, i) => overridden(ex, i, hand as Hand), line(['xxxx', 'xx..'], { lead }))
+    expect(shown(paradiddle('R'))).toBe('RLRR' + 'LL')
+    expect(shown(paradiddle('L'))).toBe('LRLL' + 'RR')
+    expect(sticking(paradiddle('L')).map((n) => n.override).join('')).toBe('LRLLRR')
+  })
 })
 
 describe('sticking and the kick row', () => {
