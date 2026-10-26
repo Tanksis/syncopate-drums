@@ -8,6 +8,7 @@ import { setBeat } from './speller'
 /** The four families the PAS chart lists the rudiments under, in its order. */
 export type RudimentFamily = 'Rolls' | 'Diddles' | 'Flams' | 'Drags'
 
+/** The families in the order the Rudiments tab heads them. */
 export const RUDIMENT_FAMILIES: readonly RudimentFamily[] = ['Rolls', 'Diddles', 'Flams', 'Drags']
 
 /**
@@ -34,6 +35,7 @@ interface Written {
   bars: string[]
 }
 
+/** One of the PAS 40 as the chart numbers and files it, with its notes once it is built. */
 interface Rudiment {
   number: number
   name: string

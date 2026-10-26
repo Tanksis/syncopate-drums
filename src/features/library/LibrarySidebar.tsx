@@ -20,7 +20,8 @@ import { useExerciseDrop } from './useExerciseDrop'
 const EXAMPLES = exampleExercises()
 
 /** The 40 rudiments by family, the ones not built yet without an id; never stored (ADR 0018). */
-const RUDIMENTS = RUDIMENT_FAMILIES.map((family) => ({ family, rudiments: rudimentList().filter((r) => r.family === family) }))
+const RUDIMENT_LIST = rudimentList()
+const RUDIMENTS_BY_FAMILY = RUDIMENT_FAMILIES.map((family) => ({ family, rudiments: RUDIMENT_LIST.filter((r) => r.family === family) }))
 
 /** A toolbar icon button or menu button; `large` is big enough for a finger. */
 const toolSize = (large: boolean) => (large ? 'lg' : 'md')
@@ -223,37 +224,42 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
             Copy to Library
           </Button>
           <div role="tabpanel" aria-label="Rudiments" className="flex min-h-0 flex-col gap-2 overflow-auto">
-            {RUDIMENTS.map(({ family, rudiments }) => (
+            {RUDIMENTS_BY_FAMILY.map(({ family, rudiments }) => (
               <section key={family} aria-label={family} className="flex flex-col">
                 <h3 className="m-0 px-2 py-1 text-xs font-semibold tracking-wide text-mute uppercase">{family}</h3>
                 <ul className="m-0 flex list-none flex-col p-0">
-                  {rudiments.map(({ number, name, id }) => (
-                    <li key={number} className="flex">
-                      {id ? (
-                        <button
-                          type="button"
-                          title="Click to open"
-                          aria-current={id === openId}
-                          onMouseDown={keepFocus}
-                          onClick={() => openExercise(id)}
-                          className={listButtonClass(id === openId)}
-                        >
-                          <span className="text-mute tabular-nums">{number}</span> · {name}
-                        </button>
-                      ) : (
-                        <span
-                          aria-disabled
-                          title="Coming soon"
-                          className="flex min-w-0 flex-1 items-baseline gap-1.5 px-2 py-1 text-mute opacity-60 select-none"
-                        >
-                          <span className="truncate">
-                            <span className="tabular-nums">{number}</span> · {name}
+                  {rudiments.map(({ number, name, id }) => {
+                    const label = (
+                      <>
+                        <span className="tabular-nums">{number}</span> · {name}
+                      </>
+                    )
+                    return (
+                      <li key={number} className="flex">
+                        {id ? (
+                          <button
+                            type="button"
+                            title="Click to open"
+                            aria-current={id === openId}
+                            onMouseDown={keepFocus}
+                            onClick={() => openExercise(id)}
+                            className={listButtonClass(id === openId)}
+                          >
+                            {label}
+                          </button>
+                        ) : (
+                          <span
+                            aria-disabled
+                            title="Coming soon"
+                            className="flex min-w-0 flex-1 items-baseline gap-1.5 px-2 py-1 text-mute opacity-60 select-none"
+                          >
+                            <span className="truncate">{label}</span>
+                            <span className="ml-auto shrink-0 text-[10px] italic">coming soon</span>
                           </span>
-                          <span className="ml-auto shrink-0 text-[10px] italic">coming soon</span>
-                        </span>
-                      )}
-                    </li>
-                  ))}
+                        )}
+                      </li>
+                    )
+                  })}
                 </ul>
               </section>
             ))}
