@@ -4,7 +4,7 @@
 
 import type { Figure } from './figures'
 import { figureOfHits, isTripletHits } from './figures'
-import type { Bar, Hand, Item, Row, TimeSignature } from './model'
+import type { Bar, Item, Mark, Note, Row, TimeSignature } from './model'
 import { ROWS, TICKS_PER_BEAT, barBeats, barTicks, beatIndex, itemTicks, meter, rowBeats } from './model'
 
 /** What the grid editor shows for one beat: its grid, shared by both rows, and each row on it. */
@@ -32,8 +32,20 @@ export interface RowView {
  */
 export type PositionState = 'hit' | 'hold' | 'empty'
 
+/**
+ * What a struck note carries besides its value: its sticking override and its note marks. A tied
+ * continuation carries none of it.
+ */
+type Struck = Pick<Note, 'override' | 'dynamic'>
+
+/** A note's override and marks, with none of the fields it doesn't have. */
+const struckOf = ({ override, dynamic }: Struck): Struck => ({
+  ...(override ? { override } : {}),
+  ...(dynamic ? { dynamic } : {}),
+})
+
 /** One tick of the timeline: a struck note, a note still sounding, or silence. */
-type Cell = { state: 'hit'; override?: Hand } | { state: 'hold' } | { state: 'rest' }
+type Cell = { state: 'hit'; struck?: Struck } | { state: 'hold' } | { state: 'rest' }
 
 /** One row's items, bar by bar. */
 type RowBars = readonly (readonly Item[])[]
@@ -100,7 +112,7 @@ function toTimeline(row: RowBars): Timeline {
     while (i + 1 < placed.length && at(placed[i + 1]) <= tick) i++
     const p = placed[i]
     if (p.item.kind === 'rest') cells.push({ state: 'rest' })
-    else if (at(p) === tick && !p.continuation) cells.push({ state: 'hit', override: p.item.override })
+    else if (at(p) === tick && !p.continuation) cells.push({ state: 'hit', struck: struckOf(p.item) })
     else cells.push({ state: 'hold' })
   }
   return { cells, triplet, beats }
@@ -214,14 +226,14 @@ export function spellSpan(
 function fromTimeline({ cells, triplet, beats }: Timeline): Item[][] {
   const ticksPerBar = barTicks(beats)
   // Runs of sound or silence over the whole timeline, in ticks.
-  type Segment = { note: boolean; start: number; end: number; override?: Hand }
+  type Segment = { note: boolean; start: number; end: number; struck?: Struck }
   const segments: Segment[] = []
   cells.forEach((cell, start) => {
     const last = segments.at(-1)
     const note = cell.state !== 'rest'
     // A hold with no note sounding before it has nothing to continue, so it is struck.
     if (cell.state === 'hit' || (note && !last?.note)) {
-      segments.push({ note: true, start, end: start + 1, override: cell.state === 'hit' ? cell.override : undefined })
+      segments.push({ note: true, start, end: start + 1, struck: cell.state === 'hit' ? cell.struck : undefined })
     } else if (last && last.note === note) last.end++
     else segments.push({ note: false, start, end: start + 1 })
   })
@@ -235,7 +247,7 @@ function fromTimeline({ cells, triplet, beats }: Timeline): Item[][] {
             kind: 'note',
             ...piece.value,
             tiedToNext: i < pieces.length - 1,
-            ...(i === 0 && seg.override ? { override: seg.override } : {}),
+            ...(i === 0 ? seg.struck : {}),
           }
         : { kind: 'rest', ...piece.value }
       bars[Math.floor(piece.start / ticksPerBar)].push(item)
@@ -317,7 +329,7 @@ function rowView(timeline: Timeline, index: number): RowView {
  * Writes a figure's hits into one beat of a row and re-spells the bars. Three characters make the
  * beat a triplet group, four a straight beat, unless it reads the same on either grid (only a
  * downbeat, or nothing), which is written as a plain beat. A hit that lands where a note already started keeps
- * that note's sticking override, and a tie into the beat is kept if the figure starts with a hit.
+ * that note's sticking override and marks, and a tie into the beat is kept if the figure starts with a hit.
  * Where the figure puts the beat on the other grid from the other row's, the other row's beat is
  * cleared to its downbeat, as a grid switch does: a beat never mixes grids.
  */
@@ -337,7 +349,7 @@ export function setBeat(bars: readonly Bar[], row: Row, bar: number, beat: numbe
       sounding = true
     } else if (hitTicks.has(t)) {
       sounding = true
-      cells[first + t] = { state: 'hit', override: old.state === 'hit' ? old.override : undefined }
+      cells[first + t] = { state: 'hit', struck: old.state === 'hit' ? old.struck : undefined }
     } else {
       cells[first + t] = { state: sounding ? 'hold' : 'rest' }
     }
@@ -361,7 +373,7 @@ export function setBeat(bars: readonly Bar[], row: Row, bar: number, beat: numbe
  *   removed note's span; otherwise the span (with any tied continuation) becomes empty. A downbeat
  *   is never held on into from the beat before, so a tie never points at a rest.
  *
- * A removed note's sticking override goes with it. Off the grid, the same bars are returned.
+ * A removed note's sticking override and marks go with it. Off the grid, the same bars are returned.
  *
  * `triplet` picks the grid to click on, by default the beat's own, which both rows share. A triplet
  * beat left with no hit off the downbeat reads the same on either grid, so it is written as a
@@ -371,15 +383,13 @@ export function toggleHit(bars: Bar[], row: Row, bar: number, beat: number, posi
   const timeline = toTimeline(rowOf(bars, row))
   const { cells } = timeline
   const index = beatIndex(bar, beat, timeline.beats)
-  if (index >= timeline.triplet.length) return bars
-  const onTriplets = triplet ?? (timeline.triplet[index] || sharedTripletBeats(bars, row).includes(index))
-  const offset = slotTicks(onTriplets)[position]
-  if (offset === undefined) return bars
+  const at = gridTick(bars, timeline, row, index, position, triplet)
+  if (!at) return bars
+  const { tick, onTriplets } = at
   timeline.triplet[index] = onTriplets
   const first = index * TICKS_PER_BEAT
-  const tick = first + offset
   if (cells[tick].state === 'hit') {
-    const state = offset > 0 && cells[tick - 1].state !== 'rest' ? 'hold' : 'rest'
+    const state = tick > first && cells[tick - 1].state !== 'rest' ? 'hold' : 'rest'
     cells[tick] = { state }
     for (let t = tick + 1; t < cells.length && cells[t].state === 'hold'; t++) cells[t] = { state }
   } else {
@@ -388,6 +398,37 @@ export function toggleHit(bars: Bar[], row: Row, bar: number, beat: number, posi
   }
   if (onTriplets) timeline.triplet[index] = hitsOf(timeline, index).slice(1).includes('x')
   return withRow(bars, row, fromTimeline(timeline))
+}
+
+/**
+ * The tick of a grid position in a row's beat (`index` across the exercise), on the grid `triplet`
+ * picks or else the beat's own, which both rows share; undefined off the grid.
+ */
+function gridTick(bars: readonly Bar[], timeline: Timeline, row: Row, index: number, position: number, triplet?: boolean) {
+  if (index >= timeline.triplet.length) return undefined
+  const onTriplets = triplet ?? (timeline.triplet[index] || sharedTripletBeats(bars, row).includes(index))
+  const offset = slotTicks(onTriplets)[position]
+  return offset === undefined ? undefined : { tick: index * TICKS_PER_BEAT + offset, onTriplets }
+}
+
+/**
+ * Toggles a mark on the snare note struck at a grid position of a beat (on the grid `triplet`
+ * picks, as for `toggleHit`), and re-spells the bars. An empty position, or one inside a note's
+ * hold, is given a hit with the mark, as `toggleHit` adds one. Marks are snare-only, so in the kick
+ * row, or off the grid, the same bars are returned.
+ */
+export function toggleMark(bars: Bar[], row: Row, bar: number, beat: number, position: number, mark: Mark, triplet?: boolean): Bar[] {
+  if (row !== 'snare') return bars
+  const timeline = toTimeline(rowOf(bars, row))
+  const at = gridTick(bars, timeline, row, beatIndex(bar, beat, timeline.beats), position, triplet)
+  if (!at) return bars
+  const struck = timeline.cells[at.tick].state === 'hit' ? bars : toggleHit(bars, row, bar, beat, position, triplet)
+  const marked = toTimeline(rowOf(struck, row))
+  const cell = marked.cells[at.tick]
+  if (cell.state !== 'hit') return bars
+  const { dynamic, ...rest } = cell.struck ?? {}
+  marked.cells[at.tick] = { state: 'hit', struck: dynamic === mark ? rest : { ...rest, dynamic: mark } }
+  return withRow(struck, row, fromTimeline(marked))
 }
 
 /** A grid position of one beat in a row: bar, beat in the bar, and position on the beat's grid (from 0). */

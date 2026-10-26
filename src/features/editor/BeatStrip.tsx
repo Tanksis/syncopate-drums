@@ -7,8 +7,9 @@ import { Button } from '@/components/Button'
 import type { MenuItem } from '@/components/Menu'
 import { Menu } from '@/components/Menu'
 import { Segmented } from '@/components/Segmented'
-import type { BeatView, EditCommand, EditorState, GridPoint, Hand, PositionState, Row, RowView } from '@/core'
-import { ROWS, applyEdit, canTieOverBarline, editorBeatViews, inLoopRange, isExample, meter, sticking, stickingNoteAt } from '@/core'
+import type { BeatView, EditCommand, EditorState, GridPoint, Hand, Mark, PositionState, Row, RowView } from '@/core'
+import { ROWS, applyEdit, canTieOverBarline, editorBeatViews, inLoopRange, isExample, marksAt, meter, sticking, stickingNoteAt } from '@/core'
+import { ToolPalette } from './ToolPalette'
 
 /** A press on a grid position, and (once it moves to another position) the hold end it drags to. */
 interface Press {
@@ -69,17 +70,18 @@ const countLabels = (beat: number, triplet: boolean, compound: boolean) =>
 /**
  * The bars and beats of the exercise, the main editor. It shows one bar at a time, the cursor's
  * (the bar tabs go to another), so it stays the same height however long the exercise is: a header
- * with the bar's number and delete button, over its beats, each a card. A card shows the snare
+ * with the bar's number and delete button and the tool palette, over its beats, each a card. A card shows the snare
  * row's grid positions as big cells (a hit, a hold bar for a note still sounding, or a ghost hit on
  * hover), their count labels, and the kick row's cells under them, as the staff writes hands over
  * feet. Clicking a cell turns a hit on or off in its row; pressing on a note and dragging sets
  * where its hold ends, on into later beats of the bar in the same row, shown live and written on
  * release. Holding still on a snare hit for half a second flips its sticking instead, flashing the
- * new hand on the cell. Clicking elsewhere on a card moves the cursor to it. A card's 16ths | trip switch puts
+ * new hand on the cell. With a mark held in the tool palette, clicking a snare cell toggles that mark
+ * on its note (adding the hit if empty), and a marked cell shows its marks in small print. Clicking elsewhere on a card moves the cursor to it. A card's 16ths | trip switch puts
  * it on the sixteenth or the triplet grid, and its ⋯ menu (not on an example) switches the grid,
  * rests the beat, or ties a bar's first beat over the barline. The cursor's card is outlined with a
  * mark beside its row, and the bar selection and a set loop range are shaded. `phone` gives the
- * cells room for a finger and leaves the bar's number and delete button to the sheet's bar row; held
+ * cells room for a finger and leaves the bar's number and delete button to the sheet's bar row, and the palette to the sheet's top; held
  * upright (`portrait`), the cards sit two to a row, and turned sideways all four in one. `bar` draws another bar than the
  * cursor's, for the phone's slide from one bar to the next.
  */
@@ -89,6 +91,7 @@ export function BeatStrip({ phone, bar }: { phone?: PhoneOrientation; bar?: numb
   const { loopRange } = editor.exercise.practice
   const dispatch = useAppStore((s) => s.dispatch)
   const example = useAppStore((s) => isExample(s.editor.exercise.id))
+  const tool = useAppStore((s) => s.tool)
   const { compound } = meter(editor.exercise.timeSignature)
   const [press, setPress] = useState<Press | null>(null)
   // The press as the handlers last left it, which the next event sees even before it has rendered.
@@ -174,7 +177,9 @@ export function BeatStrip({ phone, bar }: { phone?: PhoneOrientation; bar?: numb
     if (press.flipped) return
     // The release's own position counts too, unless it is still within a long-press's slop: a click.
     const last = press.flipNoteId ? press : follow(e, press)
-    if (!last.moved) dispatch({ type: 'toggleGridPosition', ...last.from })
+    // A mark held in the palette goes on the snare note tapped; the kick row has no marks, so a tap there is a hit's.
+    if (!last.moved && tool !== 'hit' && last.from.row === 'snare') dispatch({ type: 'toggleMark', mark: tool, ...last.from })
+    else if (!last.moved) dispatch({ type: 'toggleGridPosition', ...last.from })
     else if (last.to) dispatch({ type: 'setHold', from: last.from, to: last.to })
   }
   /** The beat after this one, if any, to run a hold bar on into it. */
@@ -212,6 +217,7 @@ export function BeatStrip({ phone, bar }: { phone?: PhoneOrientation; bar?: numb
             onPointerCancel={cancelPress}
             tall={phone !== undefined}
             flashedHand={flash && samePoint(flash.point, { row, bar: b, beat, position: i }) ? flashedHand : null}
+            marks={marksAt(shown, { row, bar: b, beat, position: i })}
           />
         ))}
       </div>
@@ -255,6 +261,7 @@ export function BeatStrip({ phone, bar }: { phone?: PhoneOrientation; bar?: numb
             )}
           </div>
         )}
+        {!phone && <ToolPalette />}
         <div className={`grid gap-2 ${phone === 'portrait' ? 'grid-cols-2' : 'grid-cols-4'}`}>
           {beats.map((view, beat) => {
             const current = cursor.bar === b && cursor.beat === beat
@@ -377,6 +384,7 @@ function Cell({
   last,
   tall,
   flashedHand,
+  marks,
   ...pointer
 }: {
   /** The kick row's hits are drawn in its own colour. */
@@ -392,6 +400,8 @@ function Cell({
   tall: boolean
   /** The hand a long-press here just flipped the note to, shown for a moment. */
   flashedHand: Hand | null
+  /** The marks on the note struck here, shown in small print. */
+  marks: Mark[]
   /** A press here is a click on release, or a drag of the note's hold once it moves. */
   onPointerDown: (e: PointerEvent<HTMLElement>) => void
   onPointerMove: (e: PointerEvent<HTMLElement>) => void
@@ -428,6 +438,11 @@ function Cell({
       {sounding && !holdsOn && (
         <span aria-hidden className="pointer-events-none absolute right-0.5 text-sm/none font-bold text-mute group-hover/cell:text-accent">
           ›
+        </span>
+      )}
+      {marks.includes('accent') && (
+        <span aria-hidden data-marks className="pointer-events-none absolute top-0 left-1 font-mono text-[11px]/none font-bold text-accent">
+          &gt;
         </span>
       )}
       {flashedHand && (

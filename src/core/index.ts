@@ -4,7 +4,7 @@
 export * from './model'
 export * from './figures'
 // toggleCutShort stays for exercises stored with cut-short beats; toggleTie also backs "Tie over the barline" (ADR 0009).
-export { beatViews, clearBeatToDownbeat, placeItems, setBeat, setHold, toggleCutShort, toggleHit, toggleTie } from './speller'
+export { beatViews, clearBeatToDownbeat, placeItems, setBeat, setHold, toggleCutShort, toggleHit, toggleMark, toggleTie } from './speller'
 export type { BeatView, GridPoint, PlacedItem, PositionState, RowView } from './speller'
 export * from './editor'
 export * from './schedule'

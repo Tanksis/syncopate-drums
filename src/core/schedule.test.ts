@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DeviceSettings, Exercise, GrooveSettings, HihatFoot, PatternId, PlayPosition, ScheduledEvent } from './index'
-import { DEFAULT_DEVICE_SETTINGS, newExercise, schedule, setBeat, setHold, toggleTie } from './index'
+import { DEFAULT_DEVICE_SETTINGS, newExercise, schedule, setBeat, setHold, toggleMark, toggleTie } from './index'
 
 const device: DeviceSettings = DEFAULT_DEVICE_SETTINGS
 
@@ -68,6 +68,13 @@ describe('playing the exercise', () => {
       '1.500 click click',
       '1.500 exercise snare 0:36',
     ])
+  })
+
+  it('plays an accented snare note at the accent level, and the others at the normal level', () => {
+    const ex = line(['x.x.', '....', '....', '....'])
+    const accented = { ...ex, bars: toggleMark(ex.bars, 'snare', 0, 0, 2, 'accent') }
+    const { events } = schedule(accented, accented.practice, device, { bar: 0, tick: 0 }, 0.5)
+    expect(show(events)).toEqual(['0.000 click click accent', '0.000 exercise snare 0:0', '0.250 exercise snare accent 0:6'])
   })
 
   it('places triplet notes at thirds of the beat, next to straight beats', () => {

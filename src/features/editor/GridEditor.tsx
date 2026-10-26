@@ -14,12 +14,13 @@ import { BarDots, BarTabs } from './BarTabs'
 import { BeatStrip } from './BeatStrip'
 import { CheatSheet } from './CheatSheet'
 import { EditorHint } from './EditorHint'
+import { ToolPalette } from './ToolPalette'
 import { useEditorKeys } from './useEditorKeys'
 
 /**
  * The grid editor: the bar tabs, undo, redo and the bar menu over the cursor bar's beat cards. Given
  * `onDone`, it's the phone layout's sheet over the lower part of the screen, its transport and tab
- * bars too: a grab handle, the beat cards two to a row (on most phones they fit; else they scroll),
+ * bars too: a grab handle, the tool palette, the beat cards two to a row (on most phones they fit; else they scroll),
  * or all four in a row with the phone turned sideways (`orientation`), with a small ‹ and › either side, and a row at its foot, in the thumb's reach, of undo, redo, the
  * bar dots and +, the bin, the bar menu and the tick. Going to another bar slides its cards in; the
  * tick, or a drag down on the handle or the cards, closes the sheet (`onDone`). It is drawn in place
@@ -82,6 +83,9 @@ function EditorSheet({
     >
       <div {...swipe.props} className="flex h-[18px] shrink-0 touch-pan-x items-center justify-center select-none">
         <span aria-hidden className="h-1 w-10 rounded-full bg-edge/60" />
+      </div>
+      <div className="shrink-0 px-6 pb-2">
+        <ToolPalette large />
       </div>
       <div className="relative flex min-h-0 flex-1 flex-col">
         {/* The beat cards, centred between the ‹ and ›. While going to another bar, the bar left

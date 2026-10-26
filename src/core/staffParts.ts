@@ -55,6 +55,8 @@ export interface StaffNote {
   notehead: 'x' | 'normal'
   /** Set only on the exercise's notes: the struck note's id (see `noteId`), for sticking and overrides. */
   noteId?: string
+  /** An accented snare note, drawn `>`; never set on a tied continuation. */
+  accent?: true
   /** A tied continuation of this drum's note in the part's previous chord: drawn, not struck. */
   tied: boolean
 }
@@ -109,6 +111,8 @@ interface Sound {
   /** Where it is heard: differs from `start` only for a groove hit moved onto a triplet grid. */
   heard: number
   noteId?: string
+  /** An accented note of the exercise. */
+  accent?: true
   /** One of the hi-hat foot setting's hits: written under the fill, not counted in the voicing (ADR 0012). */
   ostinato?: boolean
 }
@@ -172,7 +176,10 @@ export function staffParts(
       if (p.item.triplet) triplet[Math.floor(start / TICKS_PER_BEAT)] = true
       const end = start + itemTicks(p.item)
       if (p.continuation && sounds.length) sounds.at(-1)!.end = end
-      else sounds.push({ drum: ROW_DRUM[row], notation: ROW_NOTATION[row], start, end, heard: start, noteId: noteId(row, p.bar, p.start) })
+      else {
+        const accent = p.item.dynamic === 'accent' ? { accent: true as const } : {}
+        sounds.push({ drum: ROW_DRUM[row], notation: ROW_NOTATION[row], start, end, heard: start, noteId: noteId(row, p.bar, p.start), ...accent })
+      }
     }
     return { sounds, triplet }
   })
@@ -340,6 +347,7 @@ function writePart(
           key: s.notation.key,
           notehead: s.notation.notehead,
           ...(s.noteId ? { noteId: s.noteId } : {}),
+          ...(s.accent && piece === 0 ? { accent: s.accent } : {}),
           tied: piece > 0,
         }))
       const heard = piece === 0 ? [...struck.values()].map((s) => s.heard % ticksPerBar) : []

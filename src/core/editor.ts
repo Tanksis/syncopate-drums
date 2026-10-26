@@ -3,7 +3,7 @@
 
 import { REST_FIGURE } from './figures'
 import { fittedPractice } from './groove'
-import type { Bar, Exercise, PatternId, HihatFoot, Hand, Item, LoopRange, Row, TimeSignature } from './model'
+import type { Bar, Exercise, PatternId, HihatFoot, Hand, Item, LoopRange, Mark, Row, TimeSignature } from './model'
 import {
   ROWS,
   TICKS_PER_BEAT,
@@ -25,10 +25,12 @@ import {
   clearBeatToDownbeat,
   fittedBars,
   kicksInGaps,
+  placeItems,
   setBeat,
   setHold,
   slotTicks,
   toggleHit,
+  toggleMark,
   toggleTie,
 } from './speller'
 import type { NoteSticking } from './sticking'
@@ -95,6 +97,12 @@ export type EditCommand =
    * or off, and moves the cursor to that beat and row without advancing.
    */
   | ({ type: 'toggleGridPosition' } & GridPoint)
+  /**
+   * A tap on a grid position with a mark tool held: toggles that mark on the snare note struck
+   * there, adding the hit with the mark where there is none, and moves the cursor as a click does.
+   * Marks are snare-only, so in the kick row only the cursor moves.
+   */
+  | ({ type: 'toggleMark'; mark: Mark } & GridPoint)
   /**
    * A drag on a note in the beat strip: sets where the hold of the note sounding at `from` ends (at
    * `to` in the same row, which is not held), and moves the cursor to `from`'s beat and row
@@ -210,6 +218,18 @@ export function stickingNoteAt(state: EditorState, { row, bar, beat, position }:
   return sticking(state.exercise).find((n) => n.noteId === id)?.shown ? id : null
 }
 
+/**
+ * The marks on the snare note struck at a grid position, as the editor shows its grid, for its cell
+ * to show; none where no snare note is struck.
+ */
+export function marksAt(state: EditorState, { row, bar, beat, position }: GridPoint): Mark[] {
+  const view = editorBeatViews(state)[bar]?.[beat]
+  if (row !== 'snare' || view?.snare.positions[position] !== 'hit') return []
+  const tick = beat * TICKS_PER_BEAT + slotTicks(view.triplet)[position]
+  const struck = placeItems(state.exercise.bars, 'snare').find((p) => p.bar === bar && p.start === tick && !p.continuation)?.item
+  return struck?.kind === 'note' && struck.dynamic === 'accent' ? ['accent'] : []
+}
+
 /** The bars with a bar's first beat in a row tied over the barline or untied, or null if it can't be. */
 function tiedOverBarline(bars: Bar[], bar: number, row: Row): Bar[] | null {
   if (bar < 1 || bar >= bars.length) return null
@@ -239,7 +259,7 @@ type RecordedCommand = Exclude<EditCommand, { type: 'selectBars' }>
  * The beat strip's own edits, which look after the pending grid themselves. A tie over the barline
  * leaves it as it was: a beat on it holds only its downbeat, tied or struck.
  */
-const GRID_COMMANDS = new Set<EditCommand['type']>(['toggleGridPosition', 'setBeatGrid', 'setHold', 'tieOverBarline', 'fillPattern'])
+const GRID_COMMANDS = new Set<EditCommand['type']>(['toggleGridPosition', 'toggleMark', 'setBeatGrid', 'setHold', 'tieOverBarline', 'fillPattern'])
 
 function record(state: EditorState, command: RecordedCommand): EditorState {
   if (command.type === 'undo' || command.type === 'redo') return clearSelection(travel(state, command.type))
@@ -339,12 +359,17 @@ function travel(state: EditorState, direction: 'undo' | 'redo'): EditorState {
 
 function edit(state: EditorState, command: Exclude<RecordedCommand, { type: 'undo' | 'redo' }>): EditorState {
   switch (command.type) {
-    case 'toggleGridPosition': {
+    case 'toggleGridPosition':
+    case 'toggleMark': {
       const moved = moveTo(state, command.bar, command.beat, command.row)
       const { bar, beat } = moved.cursor
       const index = beatIndex(bar, beat, beatsIn(state))
-      const pending = tripletGrid(state).includes(index)
-      const bars = toggleHit(state.exercise.bars, command.row, bar, beat, command.position, pending || undefined)
+      const pending = tripletGrid(state).includes(index) || undefined
+      const { row, position } = command
+      const bars =
+        command.type === 'toggleMark'
+          ? toggleMark(state.exercise.bars, row, bar, beat, position, command.mark, pending)
+          : toggleHit(state.exercise.bars, row, bar, beat, position, pending)
       if (bars === state.exercise.bars) return moved
       // A beat on the triplet grid stays there while it reads the same on either grid.
       return { ...withBars(moved, bars), pendingGrid: pendingGridAfter(state, bars, index, index) }

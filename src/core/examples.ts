@@ -139,7 +139,7 @@ export function tabListing(id: string): LibraryTab {
 
 /**
  * Which edit commands an example takes: those that move the cursor, or select or copy bars. Every
- * command that would change its bars, time signature, sticking, lead hand or overrides is refused, and so are undo
+ * command that would change its bars, time signature, sticking, lead hand, overrides or marks is refused, and so are undo
  * and redo, since it has no changes to go back over. A new command must be listed here, so it can't
  * slip past the read-only rule. (Practice settings aren't edit commands.)
  */
@@ -151,6 +151,7 @@ const EXAMPLE_ACCEPTS: Record<EditCommand['type'], boolean> = {
   selectBars: true,
   copyBars: true,
   toggleGridPosition: false,
+  toggleMark: false,
   setHold: false,
   setBeatGrid: false,
   rest: false,

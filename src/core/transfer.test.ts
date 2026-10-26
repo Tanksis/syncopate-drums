@@ -88,6 +88,18 @@ describe('parsing an import', () => {
     })
   })
 
+  it('reads back the accents on the snare notes', () => {
+    const [bar1, bar2] = paradiddles.bars
+    const accented: Exercise = { ...paradiddles, bars: [{ ...bar1, snare: [{ ...note('quarter'), dynamic: 'accent' }, ...bar1.snare.slice(1)] }, bar2] }
+    expect(parseImport(asJson(exportFile([accented], [])))).toEqual({ ok: true, folders: [], exercises: [accented] })
+  })
+
+  it('is refused by an app from before accents, rather than read without them', () => {
+    const file = exportFile([paradiddles], [])
+    expect(file.version).toBeGreaterThan(6)
+    expect(parseImport(asJson(file), 6)).toEqual({ ok: false, reason: expect.stringMatching(/newer version/) })
+  })
+
   it('reads back the folders the exercises were in', () => {
     expect(parseImport(asJson(exportFile([paradiddles, filedSyncopation], [page38])))).toEqual({
       ok: true,
@@ -171,7 +183,9 @@ describe('parsing an import', () => {
     ['a bar without its kick row', { ...paradiddles, bars: [{ snare: bar1.snare }, bar2] }],
     ['an item of an unknown duration', { ...paradiddles, bars: [{ ...bar1, snare: [{ ...rest, duration: 'half' }] }] }],
     ['a note without its tie flag', { ...paradiddles, bars: [{ ...bar1, kick: [{ ...rest, kind: 'note' }, rest, rest, rest] }] }],
-    ['an unknown sticking override', { ...paradiddles, bars: [{ ...bar1, snare: [{ ...note('quarter'), override: 'X' }, rest, rest, rest] }] }],
+    ['an unknown sticking override', { ...paradiddles, bars: [{ ...bar1, snare: [{ ...note('quarter'), override: 'X' }, rest, rest, rest] }, bar2] }],
+    ['an unknown dynamic', { ...paradiddles, bars: [{ ...bar1, snare: [{ ...note('quarter'), dynamic: 'loud' }, rest, rest, rest] }, bar2] }],
+    ['an accent on the kick row', { ...paradiddles, bars: [{ ...bar1, kick: [{ ...note('quarter'), dynamic: 'accent' }, rest, rest, rest] }, bar2] }],
     ['an unknown sticking mode', { ...paradiddles, sticking: 'paradiddle' }],
     ['an unknown lead hand', { ...paradiddles, leadHand: 'both' }],
     ['a BPM out of range', { ...paradiddles, practice: { ...paradiddles.practice, bpm: 900 } }],
