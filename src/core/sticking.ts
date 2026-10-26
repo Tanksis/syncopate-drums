@@ -23,6 +23,7 @@ export interface HandSticking extends StruckNote {
   row: 'snare'
   /** The hand the sticking mode gives this note; null with sticking off. */
   computed: Hand | null
+  /** The note's override as the Lead hand shows it: stored as for a right lead, mirrored under L. */
   override?: Hand
   /** The hand printed under the note: null with sticking off. */
   shown: Hand | null
@@ -36,7 +37,14 @@ export interface KickSticking extends StruckNote {
   shown: 'K'
 }
 
-const other = (hand: Hand): Hand => (hand === 'R' ? 'L' : 'R')
+/** The other hand. */
+export const opposite = (hand: Hand): Hand => (hand === 'R' ? 'L' : 'R')
+
+/**
+ * A hand as for a right lead turned into the hand under `lead`, or back: mirrored under Lead hand
+ * L. An override is stored as for a right lead (ADR 0018), so it flips with the Lead hand.
+ */
+export const mirrored = (hand: Hand, lead: Hand): Hand => (lead === 'L' ? opposite(hand) : hand)
 
 /**
  * A hand for each struck note of the snare row, and K for each struck kick with no struck snare
@@ -50,7 +58,7 @@ export function sticking(exercise: Exercise): NoteSticking[] {
     if (!isStruck(p)) return []
     // Hidden hands keep their overrides, so switching back brings them back.
     const computed = mode === 'off' ? null : hands[i]
-    const { override } = p.item
+    const override = p.item.override && mirrored(p.item.override, leadHand)
     const shown = computed && (override ?? computed)
     return [{ row: 'snare', noteId: noteId('snare', p.bar, p.start), bar: p.bar, start: p.start, computed, override, shown }]
   })
@@ -75,7 +83,7 @@ const isStruck = (p: PlacedItem): p is PlacedItem & { item: Note } => p.item.kin
 /** Alternates hand to hand over the struck notes, starting on the lead hand. */
 function alternate(placed: readonly PlacedItem[], lead: Hand): Hand[] {
   let count = 0
-  return placed.map((p) => (isStruck(p) && count++ % 2 === 1 ? other(lead) : lead))
+  return placed.map((p) => (isStruck(p) && count++ % 2 === 1 ? opposite(lead) : lead))
 }
 
 /**
@@ -103,7 +111,7 @@ function natural(placed: readonly PlacedItem[], lead: Hand, { beats, compound }:
     const step = triplet ? 4 : offsets.some((o) => o % 6) ? 3 : offsets.some((o) => o % 12) ? 6 : 12
     indexes.forEach((i, k) => {
       const position = (triplet ? run : 0) + offsets[k] / step
-      hands[i] = position % 2 === 0 ? lead : other(lead)
+      hands[i] = position % 2 === 0 ? lead : opposite(lead)
     })
     run = triplet ? run + 3 : 0
     previousBeat = beat

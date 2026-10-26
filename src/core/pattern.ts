@@ -3,7 +3,7 @@
 import type { Bar, Exercise, Hand, Row } from './model'
 import { ROWS, TICKS_PER_BEAT, itemTicks, meter, newExercise, restBar } from './model'
 import { setBeat, slotTicks, toggleHit, toggleTie } from './speller'
-import { sticking } from './sticking'
+import { mirrored, sticking } from './sticking'
 
 /** One step of a pattern: a hand on the snare, a kick, or a rest in both rows. */
 export type PatternStep = 'R' | 'L' | 'K' | '.'
@@ -64,7 +64,7 @@ export function withPatternFill(
     const at = tick
     tick += itemTicks(item)
     const hand = typed.get(at)
-    return item.kind === 'note' && hand && computed.get(at) !== hand ? { ...item, override: hand } : item
+    return item.kind === 'note' && hand && computed.get(at) !== hand ? { ...item, override: mirrored(hand, filled.leadHand) } : item
   })
   bars = bars.map((b, i) => (i === bar ? { ...b, snare } : b))
   return { exercise: { ...filled, bars }, next: step % pattern.length }

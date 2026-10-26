@@ -159,7 +159,7 @@ Sticking where each hand is bound to a grid position, so the hands keep moving t
 _Avoid_: Hand-to-hand
 
 **Lead hand**:
-The hand that plays the first grid position under natural sticking, or the first note under alternate sticking; R by default.
+The hand that plays the first grid position under natural sticking, or the first note under alternate sticking; R by default. Lead hand L mirrors every hand, the sticking overrides too, so an exercise can be practised leading with either hand.
 
 **Sticking pattern**:
 A short run of R, L, K (kick) and `.` (rest), such as `RLRK`, laid on a grid (sixteenths or triplets) and repeated through a bar or an exercise by a **pattern fill**, which writes the typed hands as the sticking. In the sticking line under the staff, a kick that isn't played with a hand shows K.
@@ -169,7 +169,7 @@ _Avoid_: Permutation, rudiment
 Turning every grid position where neither row strikes into a kick, on the grid each beat is already on: a GRID line such as `RLRL RL.L` becomes `RLRL RLKL`.
 
 **Sticking override**:
-A hand the user has set manually on one note, replacing the computed sticking; always the hand opposite the one computed when it was set. Hidden but kept when sticking is off. Only the snare row's notes carry one.
+A hand the user has set manually on one note, replacing the computed sticking; always the hand opposite the one computed when it was set. It is stored as for a right lead, and with **Lead hand** L it is shown and played mirrored (ADR 0018). Hidden but kept when sticking is off. Only the snare row's notes carry one.
 
 ### Groove
 

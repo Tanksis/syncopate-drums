@@ -624,6 +624,17 @@ describe('sticking overrides', () => {
     expect(hands(flip(start(), 12, 21))).toBe('RL' + 'LLRR')
   })
 
+  it('under a left lead, a flip shows the opposite hand but stores it as for a right lead', () => {
+    const left = applyEdit(start(), { type: 'setExerciseSettings', settings: { leadHand: 'L' } })
+    expect(hands(left)).toBe('LR' + 'LRLR')
+    const flipped = flip(left, 15)
+    expect(hands(flipped)).toBe('LR' + 'LLLR')
+    const stored = flipped.exercise.bars[0].snare.filter((item) => item.kind === 'note').map((item) => item.override ?? '-')
+    expect(stored.join('')).toBe('---R--')
+    // Back to a right lead, the flipped note mirrors with the rest.
+    expect(hands(applyEdit(flipped, { type: 'setExerciseSettings', settings: { leadHand: 'R' } }))).toBe('RL' + 'RRRL')
+  })
+
   it('flipping an overridden note again clears its override', () => {
     expect(overrides(flip(start(), 15, 15))).toBe('------')
     expect(hands(flip(start(), 15, 15))).toBe('RL' + 'RLRL')

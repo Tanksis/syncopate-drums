@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Item, Note } from './index'
-import { EXPORT_FORMAT, SCHEMA_VERSION, migrateExercise, newExercise, parseImport, restItems } from './index'
+import { EXPORT_FORMAT, SCHEMA_VERSION, migrateExercise, newExercise, parseImport, restItems, setBeat, sticking } from './index'
 
 const note = (duration: Item['duration'], extra: Partial<Note> = {}): Note => ({
   kind: 'note',
@@ -115,5 +115,35 @@ describe('version 2 to 3: folders', () => {
     const migrated = migrateExercise(v2)
     expect(migrated.folderId).toBeNull()
     expect(migrated.schemaVersion).toBe(SCHEMA_VERSION)
+  })
+})
+
+describe('version 7 to 8: overrides stored as for a right lead (ADR 0018)', () => {
+  /** A version-7 exercise: `xxxx` under natural sticking, its second note's override the hand itself. */
+  const v7 = (leadHand: 'R' | 'L', override: 'R' | 'L') => {
+    const ex = newExercise({ id: 'e1', now: 5 })
+    const bars = setBeat(ex.bars, 'snare', 0, 0, 'xxxx')
+    const snare = bars[0].snare.map((item, i) => (i === 1 && item.kind === 'note' ? { ...item, override } : item))
+    return { ...ex, sticking: 'natural' as const, leadHand, bars: [{ ...bars[0], snare }, ...bars.slice(1)], schemaVersion: 7 }
+  }
+  const shown = (ex: Parameters<typeof sticking>[0]) => sticking(ex).map((n) => n.shown).join('')
+  const stored = (ex: Parameters<typeof sticking>[0]) => ex.bars[0].snare.flatMap((item) => (item.kind === 'note' ? [item.override ?? '-'] : [])).join('')
+
+  it('flips each override of a Lead hand L exercise, so it shows the hands it did: L R L R with an L on the second', () => {
+    const migrated = migrateExercise(v7('L', 'L'))
+    expect(stored(migrated)).toBe('-R--')
+    expect(shown(migrated)).toBe('LLLR')
+  })
+
+  it('leaves a Lead hand R exercise as it was', () => {
+    const migrated = migrateExercise(v7('R', 'R'))
+    expect(stored(migrated)).toBe('-R--')
+    expect(shown(migrated)).toBe('RRRL')
+  })
+
+  it('migrates an imported version 7 file the same way', () => {
+    const file = { format: EXPORT_FORMAT, version: 7, exercises: [v7('L', 'L')] }
+    const result = parseImport(JSON.stringify(file))
+    expect(result.ok && result.exercises.map((ex) => [stored(ex), shown(ex)])).toEqual([['-R--', 'LLLR']])
   })
 })

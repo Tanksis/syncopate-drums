@@ -63,7 +63,7 @@ export const MAX_SWING = 0.75
 export const TRIPLET_SWING = 2 / 3
 
 /** Bumped whenever the stored shape changes; storage and import migrate through it. */
-export const SCHEMA_VERSION = 7
+export const SCHEMA_VERSION = 8
 
 export type Hand = 'R' | 'L'
 
@@ -109,6 +109,7 @@ export interface Note extends ItemBase {
   kind: 'note'
   /** Held into the next item, which is then a tied continuation rather than a new note. */
   tiedToNext: boolean
+  /** A sticking override, stored as for a right lead: Lead hand L mirrors it (ADR 0018). */
   override?: Hand
   /** The note's dynamic, a note mark: only a struck snare note carries one (ADR 0017). */
   dynamic?: Dynamic
