@@ -25,7 +25,10 @@ import {
 const rudiments = rudimentExercises()
 const byName = (name: string) => rudiments.find((r) => r.name === name)!
 
-/** The hands printed under the snare notes, in order, each after `>` when accented. */
+/**
+ * The hands printed under the snare notes, in order: each one after `>` when accented and after
+ * its grace hands in lower case (`lR` a flam, `llR` a drag), as the PAS chart writes them.
+ */
 function written(exercise: Exercise): string {
   const accented = new Set(
     placeItems(exercise.bars, 'snare')
@@ -33,7 +36,7 @@ function written(exercise: Exercise): string {
       .map((p) => `${p.bar}:${p.start}`),
   )
   return sticking(exercise)
-    .map((n) => (accented.has(n.noteId) ? '>' : '') + n.shown)
+    .map((n) => (accented.has(n.noteId) ? '>' : '') + (n.graces ?? []).join('').toLowerCase() + n.shown)
     .join('')
 }
 
@@ -46,12 +49,24 @@ const PAS: Record<string, string> = {
   'Double paradiddle': '>RLRLRR>LRLRLL',
   'Triple paradiddle': '>RLRLRLRR>LRLRLRLL',
   'Single paradiddle-diddle': '>RLRRLL',
+  Flam: 'lRrL',
+  'Flam accent': '>lRLR>rLRL',
+  'Flam tap': '>lRR>rLL',
+  Flamacue: 'lR>LRLlRrL>RLRrL',
+  'Flam paradiddle': '>lRLRR>rLRLL',
+  'Single flammed mill': '>lRRLR>rLLRL',
+  'Flam paradiddle-diddle': '>lRLRRLL>rLRLLRR',
+  Pataflafla: 'lRLRrL',
+  'Swiss army triplet': '>lRRL',
+  'Inverted flam tap': '>lRL>rLR',
+  'Flam drag': '>lRLLR>rLRRL',
 }
 
-const mirror = (text: string) => text.replace(/[RL]/g, (hand) => (hand === 'R' ? 'L' : 'R'))
+const MIRRORED: Record<string, string> = { R: 'L', L: 'R', r: 'l', l: 'r' }
+const mirror = (text: string) => text.replace(/[RLrl]/g, (hand) => MIRRORED[hand])
 
 describe('the rudiments', () => {
-  it('are the singles and the diddles so far, in PAS order', () => {
+  it('are the singles, the diddles and the flams so far, in PAS order', () => {
     expect(rudiments.map((r) => r.name)).toEqual(Object.keys(PAS))
   })
 
@@ -59,13 +74,13 @@ describe('the rudiments', () => {
     const list = rudimentList()
     expect(list.map((r) => r.number)).toEqual(Array.from({ length: 40 }, (_, i) => i + 1))
     expect([...new Set(list.map((r) => r.family))]).toEqual(RUDIMENT_FAMILIES)
-    expect(list.filter((r) => r.id).map((r) => r.number)).toEqual([1, 2, 3, 16, 17, 18, 19])
+    expect(list.filter((r) => r.id).map((r) => r.number)).toEqual([1, 2, 3, ...Array.from({ length: 15 }, (_, i) => i + 16)])
     expect(list.find((r) => r.number === 16)).toEqual({ number: 16, name: 'Single paradiddle', family: 'Diddles', id: 'rudiment:single-paradiddle' })
   })
 
   it('each have a fixed id that isRudiment recognises, and come out the same from two calls', () => {
     expect(rudiments.every((r) => isRudiment(r.id) && !isExample(r.id))).toBe(true)
-    expect(isRudiment('rudiment:flam')).toBe(false)
+    expect(isRudiment('rudiment:no-such-rudiment')).toBe(false)
     expect(isRudiment(crypto.randomUUID())).toBe(false)
     expect(rudimentExercises()).toEqual(rudiments)
   })
@@ -96,7 +111,7 @@ describe('the rudiments', () => {
   })
 
   it('are the fewest bars back to the starting hand', () => {
-    expect(rudiments.map((r) => r.bars.length)).toEqual([1, 1, 2, 1, 1, 1, 1])
+    for (const r of rudiments) expect(r.bars.length, r.name).toBe(r.name === 'Single stroke seven' ? 2 : 1)
   })
 
   it('print a hand on every note, an override, whatever the sticking mode would give', () => {
@@ -108,9 +123,22 @@ describe('the rudiments', () => {
     expect(written({ ...byName('Single paradiddle'), leadHand: 'L' })).toBe('>LRLL>RLRR>LRLL>RLRR')
   })
 
-  it('write the paradiddle-diddle in triplet eighths', () => {
-    const items = byName('Single paradiddle-diddle').bars[0].snare
-    expect(items.every((item) => item.triplet && item.duration === 'eighth')).toBe(true)
+  it('write the paradiddle-diddles, the flam accent and the Swiss army triplet in triplet eighths', () => {
+    for (const name of ['Single paradiddle-diddle', 'Flam paradiddle-diddle', 'Flam accent', 'Swiss army triplet']) {
+      const items = byName(name).bars[0].snare
+      expect(items.every((item) => item.triplet && item.duration === 'eighth'), name).toBe(true)
+    }
+  })
+
+  it('write the flamacue as four sixteenths and a quarter flam, twice', () => {
+    const half = ['sixteenth', 'sixteenth', 'sixteenth', 'sixteenth', 'quarter']
+    expect(byName('Flamacue').bars[0].snare.map((item) => item.duration)).toEqual([...half, ...half])
+  })
+
+  it('write the flam drag in 3/4 sixteenths, each half an eighth, two sixteenths and an eighth', () => {
+    const flamDrag = byName('Flam drag')
+    expect(flamDrag.timeSignature).toBe('3/4')
+    expect(flamDrag.bars[0].snare.map(itemTicks)).toEqual([6, 3, 3, 6, 6, 3, 3, 6])
   })
 })
 

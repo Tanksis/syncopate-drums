@@ -4,8 +4,16 @@
 
 **Blocked by:** 04, 05
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The eleven, unit-tested like 04's (bars, PAS sticking with the grace hands, mirror, back to the start)
-- [ ] The Flams rows are no longer "coming soon"
-- [ ] Each checked in a close-up screenshot
+- [x] The eleven, unit-tested like 04's (bars, PAS sticking with the grace hands, mirror, back to the start)
+- [x] The Flams rows are no longer "coming soon"
+- [x] Each checked in a close-up screenshot
+
+## Comments
+
+- 2026-10-28: Done. Notes for ticket 07:
+  - The text form writes a note's grace hands in lower case before its hand, as the PAS chart does: `lR` a flam, `llR` a drag (already read, so 07 only writes the bars). A grace hand that isn't the other hand is refused.
+  - The flam drag (an eighth, two sixteenths and an eighth, twice; 6/8 on the chart) is in 3/4 sixteenths, since the grid can't split a triplet eighth. Same sound, the click on the quarters.
+  - The flam accent and the Swiss army triplet are in triplet eighths, as charted; the flam paradiddle-diddle too (sextuplets on the chart, as 19).
+  - Open for the user: the pataflafla is written without accents; some charts accent its first and last notes. The Flam is in alternating eighths.
