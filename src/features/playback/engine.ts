@@ -53,12 +53,12 @@ const VOLUME_SMOOTHING = 0.02
 /** Virtuosity's snare-center velocity layers from `from` to `to`, a band of nearby loudness. */
 const snareCenter = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => `oh_snare_center_vl${from + i}`)
 
-/** What a sample set is played for: an instrument, or the snare's accent or grace band. */
-type Sound = Exclude<Instrument, 'click'> | 'snareAccent' | 'snareGrace'
+/** What a sample set is played for: an instrument, the snare's accent or grace band, or its buzz strokes. */
+type Sound = Exclude<Instrument, 'click'> | 'snareAccent' | 'snareGrace' | 'snareBuzz'
 
 /**
  * Virtuosity Drums one-shots for each kit piece, at a fixed velocity. The snare's are bands of
- * nearby velocity layers (it has no round robins), normal, accent and grace (ADR 0017), each stroke picked
+ * nearby velocity layers (it has no round robins), normal, accent and grace, and its buzz strokes (ADR 0017), each stroke picked
  * at random from its band, never the last one, and varied ±1 dB (`varied`), so a run of fast singles
  * doesn't machine-gun. The others play their round robins in turn.
  *
@@ -72,6 +72,7 @@ const SAMPLES: Record<Sound, { files: string[]; velocity: number; hold?: number;
   snare: { files: snareCenter(13, 17), velocity: 1, varied: true },
   snareAccent: { files: snareCenter(24, 30), velocity: 1, varied: true },
   snareGrace: { files: snareCenter(8, 12), velocity: 1, varied: true },
+  snareBuzz: { files: ['oh_snare_buzz_vl4', 'oh_snare_buzz_vl7', 'oh_snare_buzz_vl10'], velocity: 1, varied: true },
   kick: { files: ['oh_kick_snoff_vl2_rr1', 'oh_kick_snoff_vl2_rr2'], velocity: 10, hold: 0.06 },
   kickFeathered: { files: ['oh_kick_snoff_vl1_rr1', 'oh_kick_snoff_vl1_rr2'], velocity: 2.8 },
   ride: { files: ['oh_ride_ride_vl2_rr1', 'oh_ride_ride_vl2_rr2'], velocity: 0.85 },
@@ -319,7 +320,8 @@ function play(audio: Audio, when: number, event: ScheduledEvent, playing: Playba
 /** Starts an event's sounds, returning their nodes: none for an Off beat. */
 function startSounds(audio: Audio, when: number, event: ScheduledEvent, playing: PlaybackSource): AudioScheduledSourceNode[] {
   if (event.instrument !== 'click') {
-    const sound = event.instrument !== 'snare' ? event.instrument : event.grace ? 'snareGrace' : event.accent ? 'snareAccent' : 'snare'
+    const sound =
+      event.instrument !== 'snare' ? event.instrument : event.grace ? 'snareGrace' : event.buzz ? 'snareBuzz' : event.accent ? 'snareAccent' : 'snare'
     const { velocity } = SAMPLES[sound]
     return [sample(audio, when, sound, velocity * (event.velocity ?? 1), audio.layers[event.kind])]
   }

@@ -532,3 +532,22 @@ describe('grace notes', () => {
     expect(graces(toggleMark(held, 'snare', 0, 0, 0, 'flam'))).toEqual(['f:snare', '~snare'])
   })
 })
+
+describe('roll strokes', () => {
+  /** Each chord's notes, a doubled one written `d:snare` and a buzzed one `z:snare`. */
+  const rolls = (bars: Bar[], groove: Groove = 'off') =>
+    staffParts(bars, groove)[0].hands.flatMap((e) =>
+      e.kind === 'chord' ? [e.notes.map((n) => (n.roll ? (n.roll === 'double' ? 'd' : 'z') + ':' : '') + (n.tied ? '~' : '') + n.drum).join('+')] : [],
+    )
+
+  it('marks the doubled and buzzed snare notes, in a chord with the groove too', () => {
+    const marked = toggleMark(toggleMark(bar('x.x.', '....', '....', '....'), 'snare', 0, 0, 0, 'double'), 'snare', 0, 0, 2, 'buzz')
+    expect(rolls(marked)).toEqual(['d:snare', 'z:snare'])
+    expect(rolls(marked, 'hihatEighths').slice(0, 2)).toEqual(['hihat+d:snare', 'hihat+z:snare'])
+  })
+
+  it('leaves a tied continuation of a doubled note without one', () => {
+    const held = setHold(bar('x...', '....', '....', '....'), { row: 'snare', bar: 0, beat: 0, position: 0 }, { row: 'snare', bar: 0, beat: 1, position: 1 })
+    expect(rolls(toggleMark(held, 'snare', 0, 0, 0, 'double'))).toEqual(['d:snare', '~snare'])
+  })
+})

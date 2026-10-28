@@ -1119,3 +1119,52 @@ describe('grace notes', () => {
     expect(marksAt(both, { row: 'snare', bar: 0, beat: 0, position: 0 })).toEqual(['accent', 'flam'])
   })
 })
+
+describe('roll strokes', () => {
+  /** Each struck snare note in order: `d` a double, `z` a buzz, `-` none. */
+  const rolls = (state: EditorState) =>
+    placeItems(state.exercise.bars, 'snare')
+      .filter((p) => p.item.kind === 'note' && !p.continuation)
+      .map((p) => (p.item.kind !== 'note' ? '' : p.item.roll === 'double' ? 'd' : p.item.roll === 'buzz' ? 'z' : '-'))
+      .join('')
+  const tap = (state: EditorState, beat: number, position: number) =>
+    applyEdit(state, { type: 'toggleGridPosition', row: 'snare', bar: 0, beat, position })
+  const mark = (state: EditorState, mark: Mark, beat: number, position: number) =>
+    applyEdit(state, { type: 'toggleMark', mark, row: 'snare', bar: 0, beat, position })
+  /** x.x. on beat 1. */
+  const twoHits = () => tap(tap(fresh(), 0, 0), 0, 2)
+
+  it('toggles a double on a hit, and off again; a buzz likewise', () => {
+    const doubled = mark(twoHits(), 'double', 0, 2)
+    expect(rolls(doubled)).toBe('-d')
+    expect(rolls(mark(doubled, 'double', 0, 2))).toBe('--')
+    expect(rolls(mark(twoHits(), 'buzz', 0, 0))).toBe('z-')
+  })
+
+  it('replaces a double with a buzz and back: a note has one roll stroke at most', () => {
+    const buzzed = mark(mark(twoHits(), 'double', 0, 2), 'buzz', 0, 2)
+    expect(rolls(buzzed)).toBe('-z')
+    expect(rolls(mark(buzzed, 'double', 0, 2))).toBe('-d')
+  })
+
+  it('sits beside an accent and a grace on the same note, each toggled on its own', () => {
+    const marked = mark(mark(mark(twoHits(), 'accent', 0, 2), 'flam', 0, 2), 'double', 0, 2)
+    const second = (state: EditorState) => placeItems(state.exercise.bars, 'snare').filter((p) => p.item.kind === 'note')[1].item
+    expect(second(marked)).toMatchObject({ dynamic: 'accent', grace: 'flam', roll: 'double' })
+    expect(marksAt(marked, { row: 'snare', bar: 0, beat: 0, position: 2 })).toEqual(['accent', 'flam', 'double'])
+    expect(second(mark(marked, 'buzz', 0, 2))).toMatchObject({ dynamic: 'accent', grace: 'flam', roll: 'buzz' })
+  })
+
+  it('adds a buzzed hit on an empty cell, and goes with its hit when cleared', () => {
+    const added = mark(fresh(), 'buzz', 1, 0)
+    expect(rolls(added)).toBe('z')
+    expect(rolls(tap(tap(added, 1, 0), 1, 0))).toBe('-')
+  })
+
+  it('stays on its note through a regrid, a duplicate and a paste', () => {
+    const doubled = mark(twoHits(), 'double', 0, 0)
+    expect(rolls(applyEdit(doubled, { type: 'setBeatGrid', bar: 0, beat: 0, triplet: true }))).toBe('d')
+    expect(rolls(keys(doubled, ctrl('d')))).toBe('d-d-')
+    expect(rolls(keys(doubled, ctrl('c'), ctrl('Enter'), ctrl('v')))).toBe('d-d-')
+  })
+})

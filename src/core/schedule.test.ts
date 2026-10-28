@@ -13,7 +13,7 @@ const blank = (bpm = 120): Exercise => {
 /** A compact view of the events for readable assertions: "time kind instrument [accent] [noteId]". */
 const show = (events: ScheduledEvent[]) =>
   events.map((e) =>
-    [e.time.toFixed(3), e.kind, e.instrument, e.accent && 'accent', e.grace && 'grace', e.noteId].filter(Boolean).join(' '),
+    [e.time.toFixed(3), e.kind, e.instrument, e.accent && 'accent', e.grace && 'grace', e.buzz && 'buzz', e.second && 'second', e.noteId].filter(Boolean).join(' '),
   )
 
 describe('the count-in', () => {
@@ -98,6 +98,43 @@ describe('playing the exercise', () => {
     const marked = { ...ex, bars: toggleMark(toggleMark(ex.bars, 'snare', 0, 0, 0, 'flam'), 'snare', 0, 0, 0, 'accent') }
     const { events } = schedule(marked, marked.practice, device, { bar: 0, tick: 0 }, 0.1)
     expect(show(events)).toEqual(['-0.025 exercise snare grace', '0.000 click click accent', '0.000 exercise snare accent 0:0'])
+  })
+
+  it("plays a double's second stroke halfway through its note, as no struck note", () => {
+    const ex = line(['x.x.', 'x...', '....', '....'])
+    const marked = { ...ex, bars: toggleMark(toggleMark(ex.bars, 'snare', 0, 0, 0, 'double'), 'snare', 0, 1, 0, 'double') }
+    const { events } = schedule(marked, marked.practice, device, { bar: 0, tick: 0 }, 1)
+    expect(show(events)).toEqual([
+      '0.000 click click accent',
+      '0.000 exercise snare 0:0',
+      '0.125 exercise snare second',
+      '0.250 exercise snare 0:6',
+      '0.500 click click',
+      '0.500 exercise snare 0:12',
+      '0.750 exercise snare second',
+    ])
+  })
+
+  it("halves a held double's whole time, its tied continuation too", () => {
+    const ex = line(['x...', '....', '....', '....'])
+    const held = setHold(ex.bars, { row: 'snare', bar: 0, beat: 0, position: 0 }, { row: 'snare', bar: 0, beat: 2, position: 0 })
+    const marked = { ...ex, bars: toggleMark(held, 'snare', 0, 0, 0, 'double') }
+    const { events } = schedule(marked, marked.practice, device, { bar: 0, tick: 0 }, 1)
+    expect(show(events).filter((e) => e.includes('exercise'))).toEqual(['0.000 exercise snare 0:0', '0.500 exercise snare second'])
+  })
+
+  it("plays an accented double's first stroke at the accent level and its second at the normal level", () => {
+    const ex = line(['x...', '....', '....', '....'])
+    const marked = { ...ex, bars: toggleMark(toggleMark(ex.bars, 'snare', 0, 0, 0, 'double'), 'snare', 0, 0, 0, 'accent') }
+    const { events } = schedule(marked, marked.practice, device, { bar: 0, tick: 0 }, 0.5)
+    expect(show(events)).toEqual(['0.000 click click accent', '0.000 exercise snare accent 0:0', '0.250 exercise snare second'])
+  })
+
+  it('plays a buzz as one buzz stroke, a struck note', () => {
+    const ex = line(['x.x.', '....', '....', '....'])
+    const marked = { ...ex, bars: toggleMark(ex.bars, 'snare', 0, 0, 2, 'buzz') }
+    const { events } = schedule(marked, marked.practice, device, { bar: 0, tick: 0 }, 0.5)
+    expect(show(events)).toEqual(['0.000 click click accent', '0.000 exercise snare 0:0', '0.250 exercise snare buzz 0:6'])
   })
 
   it('places triplet notes at thirds of the beat, next to straight beats', () => {

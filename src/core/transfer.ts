@@ -3,7 +3,7 @@
 import { inKnownFolder } from './folders'
 import { PATTERN_IDS, fittedPractice } from './groove'
 import { migrateExercise } from './migrate'
-import type { Duration, Dynamic, Exercise, Folder, Grace, Hand, Item, Row, StickingMode, TimeSignature } from './model'
+import type { Duration, Dynamic, Exercise, Folder, Grace, Hand, Item, Roll, Row, StickingMode, TimeSignature } from './model'
 import {
   BASS_DRUM_SETTINGS,
   HIHAT_FOOT_SETTINGS,
@@ -222,11 +222,13 @@ function isItem(item: unknown, row: Row): item is Item {
   if (kind === 'rest') return true
   const dynamic = item.dynamic === undefined || (row === 'snare' && oneOf(item.dynamic, DYNAMICS))
   const grace = item.grace === undefined || (row === 'snare' && oneOf(item.grace, GRACES))
-  return kind === 'note' && typeof item.tiedToNext === 'boolean' && (item.override === undefined || oneOf(item.override, HANDS)) && dynamic && grace
+  const roll = item.roll === undefined || (row === 'snare' && oneOf(item.roll, ROLLS))
+  return kind === 'note' && typeof item.tiedToNext === 'boolean' && (item.override === undefined || oneOf(item.override, HANDS)) && dynamic && grace && roll
 }
 
 const STICKING_MODES: StickingMode[] = ['natural', 'alternate', 'off']
 const HANDS: Hand[] = ['R', 'L']
 const DYNAMICS: Dynamic[] = ['accent']
 const GRACES: Grace[] = ['flam', 'drag']
+const ROLLS: Roll[] = ['double', 'buzz']
 const DURATIONS: Duration[] = ['quarter', 'eighth', 'sixteenth']

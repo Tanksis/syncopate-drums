@@ -36,13 +36,14 @@ export type PositionState = 'hit' | 'hold' | 'empty'
  * What a struck note carries besides its value: its sticking override and its note marks. A tied
  * continuation carries none of it.
  */
-type Struck = Pick<Note, 'override' | 'dynamic' | 'grace'>
+type Struck = Pick<Note, 'override' | 'dynamic' | 'grace' | 'roll'>
 
 /** A note's override and marks, with none of the fields it doesn't have. */
-const struckOf = ({ override, dynamic, grace }: Struck): Struck => ({
+const struckOf = ({ override, dynamic, grace, roll }: Struck): Struck => ({
   ...(override ? { override } : {}),
   ...(dynamic ? { dynamic } : {}),
   ...(grace ? { grace } : {}),
+  ...(roll ? { roll } : {}),
 })
 
 /** One tick of the timeline: a struck note, a note still sounding, or silence. */
@@ -430,7 +431,8 @@ export function toggleMark(bars: Bar[], row: Row, bar: number, beat: number, pos
   if (cell.state !== 'hit') return bars
   const field = MARK_FIELD[mark]
   const { [field]: old, ...rest } = cell.struck ?? {}
-  // A flam and a drag share the grace field, so choosing the other one replaces it.
+  // A flam and a drag share the grace field, and a double and a buzz the roll field, so choosing
+  // the other one replaces it.
   marked.cells[at.tick] = { state: 'hit', struck: old === mark ? rest : { ...rest, [field]: mark } }
   return withRow(struck, row, fromTimeline(marked))
 }

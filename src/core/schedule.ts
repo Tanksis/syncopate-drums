@@ -4,7 +4,7 @@
 
 import type { DeviceSettings, Exercise, Grace, LoopRange, Note, PracticeSettings, Row } from './model'
 import type { BeatLevel } from './metronome'
-import { MIN_SWING, ROWS, TICKS_PER_BEAT, barTicks, loopBars, meter, noteId } from './model'
+import { MIN_SWING, ROWS, TICKS_PER_BEAT, barTicks, itemTicks, loopBars, meter, noteId } from './model'
 import { grooveHitsByTick } from './groove'
 import { placeItems } from './speller'
 
@@ -36,6 +36,13 @@ export interface ScheduledEvent {
    * isn't a struck note: it has no note id and moves no playhead.
    */
   grace?: true
+  /** A buzzed note of the exercise, played from the snare's buzz strokes. */
+  buzz?: true
+  /**
+   * A double's second stroke, played halfway through its note by the same hand. It isn't a struck
+   * note: it has no note id and moves no playhead.
+   */
+  second?: true
   /** How hard a groove hit is played, 0–1 of the instrument's usual level; other events always play at 1. */
   velocity?: number
   /** A metronome click's beat block level, or `subdivision` for a click between the beats. */
@@ -91,17 +98,21 @@ export function schedule(
     }
     // The count-in (a negative bar) strikes nothing.
     const strikes = struck.flatMap(({ row, notes }) => {
-      const note = bar >= 0 ? notes[bar]?.get(tick) : undefined
-      return note ? [{ row, note }] : []
+      const strike = bar >= 0 ? notes[bar]?.get(tick) : undefined
+      return strike ? [{ row, ...strike }] : []
     })
-    for (const { row, note } of strikes) {
+    for (const { row, note, ticks } of strikes) {
       const instrument = ROW_INSTRUMENT[row]
       const accent = note.dynamic === 'accent'
       // A grace note before the window's start goes out with its note, a moment late at worst.
       for (const ahead of note.grace ? GRACE_AHEAD[note.grace] : []) {
         events.push({ time: time - ahead, kind: 'exercise', instrument, accent: false, grace: true, position })
       }
-      events.push({ time, kind: 'exercise', instrument, accent, noteId: noteId(row, bar, tick), position })
+      const buzz = note.roll === 'buzz' ? { buzz: true as const } : {}
+      events.push({ time, kind: 'exercise', instrument, accent, ...buzz, noteId: noteId(row, bar, tick), position })
+      if (note.roll === 'double') {
+        events.push({ time: time + (ticks / 2) * secondsPerTick, kind: 'exercise', instrument, accent: false, second: true, position })
+      }
     }
     if (bar >= 0) {
       for (const { instrument, velocity } of groove.get(tick) ?? []) {
@@ -157,11 +168,20 @@ export const ROW_INSTRUMENT: Record<Row, Instrument> = { snare: 'snare', kick: '
 
 const BASS_DRUMS: ReadonlySet<Instrument> = new Set(['kick', 'kickFeathered'])
 
+/** A struck note, and how long it sounds in ticks: its tied continuations too. */
+interface Strike {
+  note: Note
+  ticks: number
+}
+
 /** Per bar, the notes a row strikes, by tick (tied continuations are held, not struck). */
-function struckNotes(exercise: Exercise, row: Row): Map<number, Note>[] {
-  const struck = exercise.bars.map(() => new Map<number, Note>())
+function struckNotes(exercise: Exercise, row: Row): Map<number, Strike>[] {
+  const struck = exercise.bars.map(() => new Map<number, Strike>())
+  let last: Strike | undefined
   for (const p of placeItems(exercise.bars, row)) {
-    if (p.item.kind === 'note' && !p.continuation) struck[p.bar].set(p.start, p.item)
+    if (p.continuation && last) last.ticks += itemTicks(p.item)
+    else if (p.item.kind === 'note') struck[p.bar].set(p.start, (last = { note: p.item, ticks: itemTicks(p.item) }))
+    else last = undefined
   }
   return struck
 }

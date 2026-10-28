@@ -64,6 +64,11 @@ describe('recording the timeline', () => {
     expect(recordEvents([], [grace], 10)).toEqual([])
   })
 
+  it("leaves out a double's second stroke: it moves no playhead", () => {
+    const second: ScheduledEvent = { time: 0.125, kind: 'exercise', instrument: 'snare', accent: false, second: true, position: { bar: 0, tick: 0 } }
+    expect(recordEvents([], [second], 10)).toEqual([])
+  })
+
   it('keeps the timeline in time order when a swung & lands after the next window starts', () => {
 
     const late: TimelineEntry = { time: 2.2, staffHit: true, position: { bar: 0, tick: 18 } }

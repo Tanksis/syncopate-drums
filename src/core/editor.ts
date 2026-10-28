@@ -228,7 +228,7 @@ export function marksAt(state: EditorState, { row, bar, beat, position }: GridPo
   const tick = beat * TICKS_PER_BEAT + slotTicks(view.triplet)[position]
   const struck = placeItems(state.exercise.bars, 'snare').find((p) => p.bar === bar && p.start === tick && !p.continuation)?.item
   if (struck?.kind !== 'note') return []
-  return [...(struck.dynamic === 'accent' ? (['accent'] as const) : []), ...(struck.grace ? [struck.grace] : [])]
+  return [...(struck.dynamic === 'accent' ? (['accent'] as const) : []), ...(struck.grace ? [struck.grace] : []), ...(struck.roll ? [struck.roll] : [])]
 }
 
 /** The bars with a bar's first beat in a row tied over the barline or untied, or null if it can't be. */

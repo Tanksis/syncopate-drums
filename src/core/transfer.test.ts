@@ -114,6 +114,21 @@ describe('parsing an import', () => {
     expect(parseImport(asJson(exportFile([graced], [])))).toEqual({ ok: true, folders: [], exercises: [graced] })
   })
 
+  it('reads back the doubles and buzzes on the snare notes', () => {
+    const [bar1, bar2] = paradiddles.bars
+    const rolled: Exercise = {
+      ...paradiddles,
+      bars: [{ ...bar1, snare: [{ ...note('quarter'), roll: 'double', dynamic: 'accent' }, { ...note('eighth'), roll: 'buzz' }, ...bar1.snare.slice(2)] }, bar2],
+    }
+    expect(parseImport(asJson(exportFile([rolled], [])))).toEqual({ ok: true, folders: [], exercises: [rolled] })
+  })
+
+  it('is refused by an app from before roll strokes, rather than read without them', () => {
+    const file = exportFile([paradiddles], [])
+    expect(file.version).toBeGreaterThan(10)
+    expect(parseImport(asJson(file), 10)).toEqual({ ok: false, reason: expect.stringMatching(/newer version/) })
+  })
+
   it('reads back the clean runs', () => {
     const practised: Exercise = { ...paradiddles, cleanRuns: [{ bpm: 96, at: 1000 }, { bpm: 120, at: 2000 }] }
     expect(parseImport(asJson(exportFile([practised], [])))).toEqual({ ok: true, folders: [], exercises: [practised] })
@@ -223,6 +238,8 @@ describe('parsing an import', () => {
     ['an unknown sticking override', { ...paradiddles, bars: [{ ...bar1, snare: [{ ...note('quarter'), override: 'X' }, rest, rest, rest] }, bar2] }],
     ['an unknown dynamic', { ...paradiddles, bars: [{ ...bar1, snare: [{ ...note('quarter'), dynamic: 'loud' }, rest, rest, rest] }, bar2] }],
     ['an unknown grace', { ...paradiddles, bars: [{ ...bar1, snare: [{ ...note('quarter'), grace: 'ruff' }, rest, rest, rest] }, bar2] }],
+    ['an unknown roll stroke', { ...paradiddles, bars: [{ ...bar1, snare: [{ ...note('quarter'), roll: 'triple' }, rest, rest, rest] }, bar2] }],
+    ['a double on the kick row', { ...paradiddles, bars: [{ ...bar1, kick: [{ ...note('quarter'), roll: 'double' }, rest, rest, rest] }, bar2] }],
     ['a flam on the kick row', { ...paradiddles, bars: [{ ...bar1, kick: [{ ...note('quarter'), grace: 'flam' }, rest, rest, rest] }, bar2] }],
     ['an accent on the kick row', { ...paradiddles, bars: [{ ...bar1, kick: [{ ...note('quarter'), dynamic: 'accent' }, rest, rest, rest] }, bar2] }],
     ['an unknown sticking mode', { ...paradiddles, sticking: 'paradiddle' }],
