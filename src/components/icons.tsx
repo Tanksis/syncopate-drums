@@ -168,3 +168,26 @@ export const MetronomeOffIcon = () => (
     <path d="M5.5 1.5h5l3 13h-11zM8 11.5l3-7M1.5 1.5l13 13" />
   </Icon>
 )
+
+/** Books on a shelf, one leaning: the drummer's own Library. */
+export const LibraryIcon = () => (
+  <Icon>
+    <path d="M2.5 2.5h3v11h-3zM6.5 2.5h3v11h-3zM10.4 3.4l2.6-.7 2.6 10-2.6.7z" />
+  </Icon>
+)
+
+/** Two crossed drumsticks, tips up: the Rudiments. */
+export const SticksIcon = () => (
+  <Icon>
+    <path d="M3 14L12.2 3.8M13 14L3.8 3.8" />
+    <circle cx="12.7" cy="3.2" r="1" fill="currentColor" />
+    <circle cx="3.3" cy="3.2" r="1" fill="currentColor" />
+  </Icon>
+)
+
+/** A light bulb: the Examples, ideas to start from. */
+export const BulbIcon = () => (
+  <Icon>
+    <path d="M6 12.25h4M6.5 14.5h3M8 1.5a4.5 4.5 0 0 0-2.5 8.25V10.5h5V9.75A4.5 4.5 0 0 0 8 1.5z" />
+  </Icon>
+)
