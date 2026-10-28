@@ -177,6 +177,7 @@ function exerciseProblem(exercise: Exercise): string | null {
   if (!oneOf(e.leadHand, HANDS)) return 'has an unknown lead hand'
   if (!isFiniteNumber(e.lastOpened)) return 'has no last-opened time'
   if (e.folderId !== null && typeof e.folderId !== 'string') return 'has an unknown folder'
+  if (e.cleanRuns !== undefined && !(Array.isArray(e.cleanRuns) && e.cleanRuns.every(isCleanRun))) return 'has a clean run without its BPM or time'
   return practiceProblem(e.practice, e.bars.length)
 }
 
@@ -200,6 +201,8 @@ function practiceProblem(practice: unknown, barCount: number): string | null {
   }
   return null
 }
+
+const isCleanRun = (run: unknown) => isRecord(run) && isFiniteNumber(run.bpm) && isFiniteNumber(run.at)
 
 function isBar(bar: unknown, beats: number): boolean {
   return isRecord(bar) && ROWS.every((row) => isRowOfBar(bar[row], row, beats))

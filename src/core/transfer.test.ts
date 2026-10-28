@@ -114,6 +114,17 @@ describe('parsing an import', () => {
     expect(parseImport(asJson(exportFile([graced], [])))).toEqual({ ok: true, folders: [], exercises: [graced] })
   })
 
+  it('reads back the clean runs', () => {
+    const practised: Exercise = { ...paradiddles, cleanRuns: [{ bpm: 96, at: 1000 }, { bpm: 120, at: 2000 }] }
+    expect(parseImport(asJson(exportFile([practised], [])))).toEqual({ ok: true, folders: [], exercises: [practised] })
+  })
+
+  it('is refused by an app from before clean runs, rather than read without them', () => {
+    const file = exportFile([paradiddles], [])
+    expect(file.version).toBeGreaterThan(9)
+    expect(parseImport(asJson(file), 9)).toEqual({ ok: false, reason: expect.stringMatching(/newer version/) })
+  })
+
   it('is refused by an app from before grace notes, rather than read without them', () => {
     const file = exportFile([paradiddles], [])
     expect(file.version).toBeGreaterThan(8)
@@ -223,6 +234,9 @@ describe('parsing an import', () => {
     ['an unknown hi-hat foot setting', { ...paradiddles, practice: { ...paradiddles.practice, hihatFoot: 'eighths' } }],
     ['a loop range past the last bar', { ...paradiddles, practice: { ...paradiddles.practice, loopRange: { first: 1, last: 2 } } }],
     ['a loop range ending before it starts', { ...paradiddles, practice: { ...paradiddles.practice, loopRange: { first: 1, last: 0 } } }],
+    ['clean runs that are not a list', { ...paradiddles, cleanRuns: { bpm: 96, at: 1000 } }],
+    ['a clean run without a BPM', { ...paradiddles, cleanRuns: [{ bpm: 'fast', at: 1000 }] }],
+    ['a clean run without a time', { ...paradiddles, cleanRuns: [{ bpm: 96 }] }],
     ['an exercise without a last-opened time', { ...paradiddles, lastOpened: 'yesterday' }],
     ['an exercise in a folder that is not an id', { ...paradiddles, folderId: 7 }],
     ['a second exercise with the same id', syncopation],

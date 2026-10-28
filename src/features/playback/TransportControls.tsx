@@ -5,6 +5,7 @@ import { keepFocus } from '@/components/keepFocus'
 import { CheckIcon, MetronomeIcon, MetronomeOffIcon, MinusIcon, PlusIcon } from '@/components/icons'
 import { MAX_BPM, MIN_BPM, wheelSteps } from '@/core'
 import { BpmStep } from './BpmStep'
+import { CleanRunsPopover } from './CleanRuns'
 import { LoopChip } from './LoopChip'
 import { PlaybackPosition } from './PlaybackPosition'
 import { usePlaybackKeys } from './usePlaybackKeys'
@@ -17,7 +18,7 @@ import { usePlaybackKeys } from './usePlaybackKeys'
 export type TransportRoom = 'full' | 'compact'
 
 /**
- * The exercise bar's playback position, tempo, Click and Count-in chips and loop chip. Play is on the
+ * The exercise bar's playback position, tempo and its clean runs, Click and Count-in chips and loop chip. Play is on the
  * staff (`StaffPlayButton`); Ctrl+Space and Space work from here.
  */
 export function TransportControls({ room }: { room: TransportRoom }) {
@@ -26,6 +27,7 @@ export function TransportControls({ room }: { room: TransportRoom }) {
     <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
       <PlaybackPosition />
       <Tempo />
+      <CleanRunsPopover />
       {room === 'full' && (
         <>
           <span aria-hidden className="h-6 w-px bg-line" />

@@ -44,6 +44,9 @@ The span of bars within an exercise that repeats during practice; the whole exer
 **Practice settings**:
 How an exercise is practiced rather than what it contains: BPM, loop range, pattern, bass drum, hi-hat foot and swing amount. Remembered per exercise.
 
+**Clean run**:
+A tempo an exercise was played cleanly at, and the day: logged with "Played it clean" by the tempo, kept one a day at each BPM, and removable. The sidebar's lists show ✓ and the best one beside an exercise. A stored exercise keeps its own, which go with it on export and start afresh on a copy; a **Built-in exercise**'s are kept on the device beside it (ADR 0019).
+
 **Device settings**:
 How the app is set up on this computer rather than how an exercise is practiced: volumes and mutes (the Mix), the count-in toggle, the theme and mode, the notation's fit, the beat count and the version of the line it shows (as written or as played), which exercise was last open, which sidebar tab is showing (chosen from its heading's menu), which folders are collapsed and which rudiment families open, whether the grid editor is collapsed, which screen is showing, and the metronome's settings. Kept per device and never exported.
 

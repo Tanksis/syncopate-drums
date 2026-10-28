@@ -1,8 +1,8 @@
-// Persistence: exercises, folders and device settings in IndexedDB. Only the app store calls this.
+// Persistence: exercises, folders, device settings and the built-ins' clean runs in IndexedDB. Only the app store calls this.
 
 import type { DBSchema, IDBPDatabase } from 'idb'
 import { openDB } from 'idb'
-import type { DeviceSettings, Exercise, Folder } from '@/core'
+import type { CleanRun, DeviceSettings, Exercise, Folder } from '@/core'
 import { SCHEMA_VERSION, deviceSettingsFrom, migrateExercise } from '@/core'
 
 export interface ExerciseRepository {
@@ -24,10 +24,17 @@ export interface DeviceSettingsStore {
   save(settings: DeviceSettings): Promise<void>
 }
 
+/** The clean runs of the built-in exercises, which aren't stored themselves, by exercise id. */
+export interface BuiltInCleanRunStore {
+  all(): Promise<Record<string, CleanRun[]>>
+  put(id: string, runs: CleanRun[]): Promise<void>
+}
+
 export interface AppStorage {
   exercises: ExerciseRepository
   folders: FolderRepository
   device: DeviceSettingsStore
+  builtInCleanRuns: BuiltInCleanRunStore
 }
 
 interface Schema extends DBSchema {
@@ -36,6 +43,8 @@ interface Schema extends DBSchema {
   folders: { key: string; value: Folder }
   // One record, under the key 'device'. Partial: settings added later fall back to their defaults.
   settings: { key: 'device'; value: Partial<DeviceSettings> }
+  // Added in database version 3: an example's or a rudiment's clean runs, under its id.
+  builtInCleanRuns: { key: string; value: CleanRun[] }
 }
 
 type Db = IDBPDatabase<Schema>
@@ -46,17 +55,23 @@ type Db = IDBPDatabase<Schema>
  * this version never overwrites it.
  */
 export async function openStorage(): Promise<AppStorage> {
-  const db = await openDB<Schema>('syncopate', 2, {
+  const db = await openDB<Schema>('syncopate', 3, {
     upgrade(db, oldVersion) {
       if (oldVersion < 1) {
         db.createObjectStore('exercises', { keyPath: 'id' })
         db.createObjectStore('settings')
       }
       if (oldVersion < 2) db.createObjectStore('folders', { keyPath: 'id' })
+      if (oldVersion < 3) db.createObjectStore('builtInCleanRuns')
     },
   })
   await migrateStored(db)
-  return { exercises: exerciseRepository(db), folders: folderRepository(db), device: deviceSettingsStore(db) }
+  return {
+    exercises: exerciseRepository(db),
+    folders: folderRepository(db),
+    device: deviceSettingsStore(db),
+    builtInCleanRuns: builtInCleanRunStore(db),
+  }
 }
 
 async function migrateStored(db: Db) {
@@ -105,6 +120,19 @@ function deviceSettingsStore(db: Db): DeviceSettingsStore {
     load: async () => deviceSettingsFrom(await db.get('settings', 'device')),
     save: async (settings) => {
       await db.put('settings', settings, 'device')
+    },
+  }
+}
+
+function builtInCleanRunStore(db: Db): BuiltInCleanRunStore {
+  return {
+    all: async () => {
+      const tx = db.transaction('builtInCleanRuns')
+      const [ids, runs] = await Promise.all([tx.store.getAllKeys(), tx.store.getAll(), tx.done])
+      return Object.fromEntries(ids.map((id, index) => [id, runs[index]]))
+    },
+    put: async (id, runs) => {
+      await db.put('builtInCleanRuns', runs, id)
     },
   }
 }

@@ -1,5 +1,6 @@
 // The exercise model: what an exercise contains and how it is practised.
 
+import type { CleanRun } from './cleanRuns'
 import type { MetronomeSettings } from './metronome'
 import type { RudimentFamily } from './rudiments'
 import { DEFAULT_METRONOME_SETTINGS, metronomeSettingsFrom } from './metronome'
@@ -64,7 +65,7 @@ export const MAX_SWING = 0.75
 export const TRIPLET_SWING = 2 / 3
 
 /** Bumped whenever the stored shape changes; storage and import migrate through it. */
-export const SCHEMA_VERSION = 9
+export const SCHEMA_VERSION = 10
 
 export type Hand = 'R' | 'L'
 
@@ -196,6 +197,8 @@ export interface Exercise {
   lastOpened: number
   /** The Library folder it's filed in, or null for none. */
   folderId: string | null
+  /** The tempos it was played cleanly at, in the order logged; absent before the first. */
+  cleanRuns?: CleanRun[]
 }
 
 /** A Library folder: one level deep, holding exercises by their `folderId`. */

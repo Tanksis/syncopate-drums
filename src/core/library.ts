@@ -86,7 +86,9 @@ function sameValue(a: unknown, b: unknown): boolean {
  */
 export function duplicateExercise(exercise: Exercise, { id, now }: { id: string; now: number }): Exercise {
   if (isBuiltIn(exercise.id)) return copyExample(exercise, { id, now, folderId: null })
-  return { ...exercise, id, name: `${exercise.name} (copy)`, lastOpened: now }
+  // A copy is practised afresh.
+  const { cleanRuns: _, ...content } = exercise
+  return { ...content, id, name: `${content.name} (copy)`, lastOpened: now }
 }
 
 /** The exercises whose name contains the filter text anywhere, ignoring case, in list order. */
