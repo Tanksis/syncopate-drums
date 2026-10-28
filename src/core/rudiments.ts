@@ -1,7 +1,7 @@
 // The 40 PAS rudiments, built into the app and never stored, read-only like the examples (ADR 0018).
 // Our own notation of the standard patterns, each written in a compact text form of hands and marks.
 
-import type { Bar, Exercise, Hand, Item, Note, TimeSignature } from './model'
+import type { Bar, Exercise, Grace, Hand, Item, Note, TimeSignature } from './model'
 import { meter, newExercise, restBar } from './model'
 import { setBeat } from './speller'
 
@@ -25,8 +25,9 @@ export interface RudimentEntry {
 /**
  * A rudiment's notes, written bar by bar, each bar's beats separated by spaces. A beat is four
  * sixteenth slots or three triplet-eighth slots: `.` for no hit, or a hand (`R` or `L`, as for a
- * right lead) after its marks (`>` an accent). A hit sounds until the next hit or the end of its
- * beat, so `>R..` is an accented quarter.
+ * right lead) after its marks: `>` an accent, then its grace hands in lower case as the PAS chart
+ * writes them, the other hand (`lR` a flam, `llR` a drag). A hit sounds until the next hit or the
+ * end of its beat, so `>R..` is an accented quarter.
  */
 interface Written {
   /** 4/4 unless given. */
@@ -68,17 +69,18 @@ const RUDIMENTS: readonly Rudiment[] = [
   { number: 17, name: 'Double paradiddle', family: 'Diddles', written: { bpm: 100, bars: ['>RLR LRR >LRL RLL'] } },
   { number: 18, name: 'Triple paradiddle', family: 'Diddles', written: { bpm: 80, bars: ['>RLRL RLRR >LRLR LRLL'] } },
   { number: 19, name: 'Single paradiddle-diddle', family: 'Diddles', written: { bpm: 100, bars: ['>RLR RLL >RLR RLL'] } },
-  { number: 20, name: 'Flam', family: 'Flams' },
-  { number: 21, name: 'Flam accent', family: 'Flams' },
-  { number: 22, name: 'Flam tap', family: 'Flams' },
-  { number: 23, name: 'Flamacue', family: 'Flams' },
-  { number: 24, name: 'Flam paradiddle', family: 'Flams' },
-  { number: 25, name: 'Single flammed mill', family: 'Flams' },
-  { number: 26, name: 'Flam paradiddle-diddle', family: 'Flams' },
-  { number: 27, name: 'Pataflafla', family: 'Flams' },
-  { number: 28, name: 'Swiss army triplet', family: 'Flams' },
-  { number: 29, name: 'Inverted flam tap', family: 'Flams' },
-  { number: 30, name: 'Flam drag', family: 'Flams' },
+  { number: 20, name: 'Flam', family: 'Flams', written: { bpm: 80, bars: ['lR.rL. lR.rL. lR.rL. lR.rL.'] } },
+  { number: 21, name: 'Flam accent', family: 'Flams', written: { bpm: 80, bars: ['>lRLR >rLRL >lRLR >rLRL'] } },
+  { number: 22, name: 'Flam tap', family: 'Flams', written: { bpm: 80, bars: ['>lRR>rLL >lRR>rLL >lRR>rLL >lRR>rLL'] } },
+  { number: 23, name: 'Flamacue', family: 'Flams', written: { bpm: 80, bars: ['lR>LRL lR... rL>RLR rL...'] } },
+  { number: 24, name: 'Flam paradiddle', family: 'Flams', written: { bpm: 70, bars: ['>lRLRR >rLRLL >lRLRR >rLRLL'] } },
+  { number: 25, name: 'Single flammed mill', family: 'Flams', written: { bpm: 70, bars: ['>lRRLR >rLLRL >lRRLR >rLLRL'] } },
+  { number: 26, name: 'Flam paradiddle-diddle', family: 'Flams', written: { bpm: 80, bars: ['>lRLR RLL >rLRL LRR'] } },
+  { number: 27, name: 'Pataflafla', family: 'Flams', written: { bpm: 70, bars: ['lRLRrL lRLRrL lRLRrL lRLRrL'] } },
+  { number: 28, name: 'Swiss army triplet', family: 'Flams', written: { bpm: 80, bars: ['>lRRL >lRRL >lRRL >lRRL'] } },
+  { number: 29, name: 'Inverted flam tap', family: 'Flams', written: { bpm: 70, bars: ['>lRL>rLR >lRL>rLR >lRL>rLR >lRL>rLR'] } },
+  // An eighth, two sixteenths and an eighth, twice: the PAS chart's 6/8 halves, in 3/4 sixteenths.
+  { number: 30, name: 'Flam drag', family: 'Flams', written: { timeSignature: '3/4', bpm: 80, bars: ['>lR.LL R.>rL. RRL.'] } },
   { number: 31, name: 'Drag', family: 'Drags' },
   { number: 32, name: 'Single drag tap', family: 'Drags' },
   { number: 33, name: 'Double drag tap', family: 'Drags' },
@@ -129,10 +131,13 @@ export function isRudiment(id: string): boolean {
 }
 
 /** What one struck note of the text form carries besides its rhythm. */
-type Struck = Pick<Note, 'override' | 'dynamic'>
+type Struck = Pick<Note, 'override' | 'dynamic' | 'grace'>
 
 /** One slot of a beat: `.`, or a hand after its marks. */
-const SLOT = /\.|>?[RL]/g
+const SLOT = /\.|>?(?:rr?|ll?)?[RL]/g
+
+/** The grace the lower-case hands before a note's hand write: one is a flam and two a drag. */
+const GRACES: Record<string, Grace> = { lR: 'flam', rL: 'flam', llR: 'drag', rrL: 'drag' }
 
 /**
  * The bars of `beats` beats: each beat's hits written through the speller, so the spelling is the
@@ -149,7 +154,13 @@ function writeBars(lines: string[], beats: number): Bar[] {
       for (const slot of slots) {
         if (slot === '.') continue
         const hand = slot.at(-1) as Hand
-        struck.push({ override: hand, ...(slot.startsWith('>') ? { dynamic: 'accent' } : {}) })
+        const graces = slot.replace(/^>/, '').slice(0, -1)
+        if (graces && !GRACES[graces + hand]) throw new Error(`Grace notes "${graces}" aren't the other hand from ${hand}`)
+        struck.push({
+          override: hand,
+          ...(slot.startsWith('>') ? { dynamic: 'accent' } : {}),
+          ...(graces ? { grace: GRACES[graces + hand] } : {}),
+        })
       }
     })
   })
