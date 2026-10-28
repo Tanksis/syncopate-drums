@@ -7,8 +7,8 @@
 // voice stems up (ADRs 0002, 0004).
 
 import type { RenderContext, StemmableNote } from 'vexflow/bravura'
-import { Articulation, Beam, Dot, Formatter, Fraction, GhostNote, GraceNote, GraceNoteGroup, ModifierPosition, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from 'vexflow/bravura'
-import type { Cursor, Drum, Duration, Exercise, Grace, Limb, LoopRange, Meter, NotationShows, NoteSticking, PlayheadAnchor, PlayPosition, StaffBar, StaffEvent } from '@/core'
+import { Articulation, Beam, Dot, Formatter, Fraction, GhostNote, GraceNote, GraceNoteGroup, Modifier, ModifierPosition, Renderer, Stave, StaveNote, StaveTie, Stem, Tuplet, Voice } from 'vexflow/bravura'
+import type { Cursor, Drum, Duration, Exercise, Grace, Limb, LoopRange, Meter, NotationShows, NoteSticking, PlayheadAnchor, PlayPosition, Roll, StaffBar, StaffEvent } from '@/core'
 import {
   GRACE_NOTES,
   NOTATION_LAYOUT,
@@ -148,11 +148,62 @@ function graceGroup(key: string, grace: Grace): GraceNoteGroup {
   return grace === 'drag' ? group.beamNotes() : group
 }
 
+/** Pixels of stem a beam (or flag) takes from its tip: VexFlow's first beam is 5 deep, and each more 7.5 further. */
+const beamDepth = (beams: number) => (beams ? 5 * (1 + (beams - 1) * 1.5) : 0)
+
+/** SMuFL's buzz roll, a Z across a stem. */
+const BUZZ_ROLL = '\uE22A'
+/** The pixel size of a buzz's Z, drawn small enough to sit across a stem between its notehead and beam. */
+const BUZZ_SIZE = 30
+/** A double's slash: half its width, and how far it rises across it, in pixels. */
+const DOUBLE_SLASH = { halfWidth: 4.5, rise: 3.5, thickness: 1.5 }
+
+/**
+ * A double's thin slash or a buzz's Z, across the middle of the stem between its top notehead and
+ * its beam (or flag): not VexFlow's tremolo, a block at the stem tip. Drawn once the beams have set
+ * the stem's length, so it takes no room in the bar.
+ */
+class RollStroke extends Modifier {
+  static get CATEGORY() {
+    return 'RollStroke'
+  }
+
+  constructor(readonly roll: Roll) {
+    super()
+  }
+
+  draw() {
+    const ctx = this.checkContext()
+    const note = this.checkAttachedNote() as StaveNote
+    this.setRendered()
+    const up = note.getStemDirection() === Stem.UP
+    const x = note.getAbsoluteX() + (up ? note.getGlyphWidth() - Stem.WIDTH / 2 : Stem.WIDTH / 2)
+    const { topY } = note.getStemExtents()
+    const head = up ? Math.min(...note.getYs()) : Math.max(...note.getYs())
+    const tip = topY + (up ? 1 : -1) * beamDepth(note.getBeamCount())
+    const y = (head + tip) / 2
+    ctx.save()
+    if (this.roll === 'double') {
+      const { halfWidth, rise, thickness } = DOUBLE_SLASH
+      ctx.setLineWidth(thickness)
+      ctx.beginPath()
+      ctx.moveTo(x - halfWidth, y + rise)
+      ctx.lineTo(x + halfWidth, y - rise)
+      ctx.stroke()
+    } else {
+      ctx.setFont({ ...this.fontInfo, size: BUZZ_SIZE })
+      ctx.fillText(BUZZ_ROLL, x, y)
+    }
+    ctx.restore()
+  }
+}
+
 /**
  * The VexFlow note for one event of a part. Chord keys go bottom to top, the order ties index. In
  * compound time a value is written half as long again, with no triplet "3" (ADR 0015). An accented
  * note gets its `>` above the stem, and a flammed or dragged note its grace notes before it, as
- * modifiers, so the formatter makes room for them.
+ * modifiers, so the formatter makes room for them. A doubled or buzzed note gets its slash or Z
+ * across the stem.
  */
 function eventNote(event: StaffEvent, limb: Limb, compound: boolean): StemmableNote {
   const value = compound ? compoundValue(event) : event
@@ -171,6 +222,8 @@ function eventNote(event: StaffEvent, limb: Limb, compound: boolean): StemmableN
   }
   const graced = event.kind === 'chord' ? event.notes.find((n) => n.grace) : undefined
   if (graced?.grace) note.addModifier(graceGroup(graced.key, graced.grace), keyIndex(event, graced.drum))
+  const rolled = event.kind === 'chord' ? event.notes.find((n) => n.roll) : undefined
+  if (rolled?.roll) note.addModifier(new RollStroke(rolled.roll), keyIndex(event, rolled.drum))
   return note
 }
 

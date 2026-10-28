@@ -4,10 +4,12 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `Note.roll`; the edit replaces double with buzz and back, unit-tested
-- [ ] Schedule: a double's second stroke halfway through the note's time; a buzz's level, unit-tested
-- [ ] Export and import carry roll strokes
-- [ ] Drawn: the slash across the stem, the Z across the stem, checked in a close-up screenshot
+- [x] `Note.roll`; the edit replaces double with buzz and back, unit-tested
+- [x] Schedule: a double's second stroke halfway through the note's time; a buzz's level, unit-tested
+- [x] Export and import carry roll strokes
+- [x] Drawn: the slash across the stem, the Z across the stem, checked in a close-up screenshot
 - [ ] By ear left to the user: the buzz
+
+The marks sit on the free stem between the top notehead and the beam (or flag), so on a chord with the hi-hat they go above the hi-hat's head. A double's second stroke isn't a struck note: it moves no playhead. An accented buzz plays from the same buzz strokes as an unaccented one.

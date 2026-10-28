@@ -4,7 +4,7 @@
 // feet only ever play with the hands in a bar, or never do (a linear fill, ADR 0011): then the bar
 // is one voice and the feet hang on the hands' stems. Hits at the same tick share a stem.
 
-import type { Bar, BassDrum, Duration, Grace, HihatFoot, Item, Limb, PatternId, Row } from './model'
+import type { Bar, BassDrum, Duration, Grace, HihatFoot, Item, Limb, PatternId, Roll, Row } from './model'
 import { ROWS, TICKS_PER_BEAT, barBeats, barTicks, itemTicks, noteId } from './model'
 import type { GrooveHit, GrooveNotation } from './groove'
 import { bassDrumHits, hihatFootHits, hitsByTick, patternHits } from './groove'
@@ -59,6 +59,8 @@ export interface StaffNote {
   accent?: true
   /** A flammed or dragged snare note, drawn with its grace notes before it; never set on a tied continuation. */
   grace?: Grace
+  /** A doubled or buzzed snare note, drawn with a slash or a Z across its stem; never set on a tied continuation. */
+  roll?: Roll
   /** A tied continuation of this drum's note in the part's previous chord: drawn, not struck. */
   tied: boolean
 }
@@ -117,6 +119,8 @@ interface Sound {
   accent?: true
   /** A flammed or dragged note of the exercise. */
   grace?: Grace
+  /** A doubled or buzzed note of the exercise. */
+  roll?: Roll
   /** One of the hi-hat foot setting's hits: written under the fill, not counted in the voicing (ADR 0012). */
   ostinato?: boolean
 }
@@ -183,7 +187,8 @@ export function staffParts(
       else {
         const accent = p.item.dynamic === 'accent' ? { accent: true as const } : {}
         const grace = p.item.grace ? { grace: p.item.grace } : {}
-        sounds.push({ drum: ROW_DRUM[row], notation: ROW_NOTATION[row], start, end, heard: start, noteId: noteId(row, p.bar, p.start), ...accent, ...grace })
+        const roll = p.item.roll ? { roll: p.item.roll } : {}
+        sounds.push({ drum: ROW_DRUM[row], notation: ROW_NOTATION[row], start, end, heard: start, noteId: noteId(row, p.bar, p.start), ...accent, ...grace, ...roll })
       }
     }
     return { sounds, triplet }
@@ -354,6 +359,7 @@ function writePart(
           ...(s.noteId ? { noteId: s.noteId } : {}),
           ...(s.accent && piece === 0 ? { accent: s.accent } : {}),
           ...(s.grace && piece === 0 ? { grace: s.grace } : {}),
+          ...(s.roll && piece === 0 ? { roll: s.roll } : {}),
           tied: piece > 0,
         }))
       const heard = piece === 0 ? [...struck.values()].map((s) => s.heard % ticksPerBar) : []

@@ -31,8 +31,8 @@ export function recordEvents(
 ): TimelineEntry[] {
   const result = [...timeline]
   for (const event of events) {
-    // A grace note isn't a struck note, so the playhead never moves to it.
-    if (event.grace) continue
+    // A grace note or a double's second stroke isn't a struck note, so the playhead never moves to it.
+    if (event.grace || event.secondStroke) continue
     const entry: TimelineEntry = { time: start + event.time, position: event.position }
     if (event.kind !== 'click') entry.staffHit = true
     let i = result.length
