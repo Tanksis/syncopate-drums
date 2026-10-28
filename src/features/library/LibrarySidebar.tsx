@@ -21,12 +21,9 @@ import { useExerciseDrop } from './useExerciseDrop'
 /** The built-in examples, the same every time; never stored (ADR 0008). */
 const EXAMPLES = exampleExercises()
 
-/** The 40 rudiments by family, the ones not built yet without an id; never stored (ADR 0018). */
+/** The 40 rudiments by family; never stored (ADR 0018). */
 const RUDIMENT_LIST = rudimentList()
-const RUDIMENTS_BY_FAMILY = RUDIMENT_FAMILIES.map((family) => {
-  const rudiments = RUDIMENT_LIST.filter((r) => r.family === family)
-  return { family, rudiments, built: rudiments.filter((r) => r.id).length }
-})
+const RUDIMENTS_BY_FAMILY = RUDIMENT_FAMILIES.map((family) => ({ family, rudiments: RUDIMENT_LIST.filter((r) => r.family === family) }))
 
 /** A toolbar icon button or menu button; `large` is big enough for a finger. */
 const toolSize = (large: boolean) => (large ? 'lg' : 'md')
@@ -61,9 +58,8 @@ const TABS: { id: LibraryTab; label: string; icon: ReactNode }[] = [
  * onto a folder or "No folder" to move it there). The selection stays through filtering and can
  * be exported, deleted or moved to a folder together. Examples: the built-in examples, to open.
  * Rudiments: the 40 PAS rudiments in their families, folders that fold (remembered on the device)
- * and count the ones built; those open, the rest greyed ("Coming soon" on hover), each name wrapping
- * rather than cut short. (The read-only notice over
- * the notation has Copy to Library for the open one.)
+ * and count their rudiments; each opens, its name wrapping rather than cut short. (The read-only
+ * notice over the notation has Copy to Library for the open one.)
  * Given `onHelp` (the phone's, which has no header button for it), Help at its foot opens the Help page.
  */
 export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onCollapse: () => void; fullScreen?: boolean; onHelp?: () => void }) {
@@ -250,7 +246,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
       {tab === 'rudiments' && (
         <>
           <div aria-label="Rudiments" className="flex min-h-0 flex-col overflow-auto">
-            {RUDIMENTS_BY_FAMILY.map(({ family, rudiments, built }) => {
+            {RUDIMENTS_BY_FAMILY.map(({ family, rudiments }) => {
               const open = openFamilies.includes(family)
               return (
                 <section key={family} aria-label={family} className="flex flex-col">
@@ -265,51 +261,29 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
                       {open ? '▾' : '▸'}
                     </span>
                     <span className="flex-1">{family}</span>
-                    <span title={`${built} of its ${rudiments.length} built so far`} className="text-xs font-normal text-mute tabular-nums">
-                      {built} / {rudiments.length}
-                    </span>
+                    <span className="text-xs font-normal text-mute tabular-nums">{rudiments.length}</span>
                   </button>
                   {open && (
                   <ul className="m-0 flex list-none flex-col p-0 pl-2.5">
                     {/* A rudiment's name wraps under itself, not under its number, rather than being cut short. */}
-                    {rudiments.map(({ number, name, id }) => {
-                      // The best clean BPM follows the name, wrapping with it, rather than taking a column.
-                      const label = (
-                        <>
+                    {rudiments.map(({ number, name, id }) => (
+                      <li key={number} className="flex items-baseline gap-1 pr-2">
+                        <button
+                          type="button"
+                          title="Click to open"
+                          aria-current={id === openId}
+                          onMouseDown={keepFocus}
+                          onClick={() => openExercise(id)}
+                          className={`flex min-w-0 flex-1 items-baseline gap-2 ${rowClass(id === openId, { plain: true })}`}
+                        >
                           <span className="w-4 shrink-0 text-right text-xs font-normal tabular-nums opacity-60">{number}</span>
+                          {/* The best clean BPM follows the name, wrapping with it, rather than taking a column. */}
                           <span className="min-w-0 flex-1">
-                            {name}
-                            {id && (
-                              <>
-                                {' '}
-                                <BestCleanBpm runs={builtInCleanRuns[id]} />
-                              </>
-                            )}
+                            {name} <BestCleanBpm runs={builtInCleanRuns[id]} />
                           </span>
-                        </>
-                      )
-                      return (
-                        <li key={number} className="flex items-baseline gap-1 pr-2">
-                          {id ? (
-                            <button
-                              type="button"
-                              title="Click to open"
-                              aria-current={id === openId}
-                              onMouseDown={keepFocus}
-                              onClick={() => openExercise(id)}
-                              className={`flex min-w-0 flex-1 items-baseline gap-2 ${rowClass(id === openId, { plain: true })}`}
-                            >
-                              {label}
-                            </button>
-                          ) : (
-                            // Greyed, and named on hover; the family's count says how many are built.
-                            <span aria-disabled title="Coming soon" className="flex min-w-0 flex-1 items-baseline gap-2 px-2 py-1 text-mute opacity-60 select-none">
-                              {label}
-                            </span>
-                          )}
-                        </li>
-                      )
-                    })}
+                        </button>
+                      </li>
+                    ))}
                   </ul>
                   )}
                 </section>

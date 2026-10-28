@@ -4,8 +4,18 @@
 
 **Blocked by:** 04, 08
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The twelve, unit-tested like 04's
-- [ ] No rudiment is "coming soon"; the "coming soon" code removed
-- [ ] Each checked in a close-up screenshot
+- [x] The twelve, unit-tested like 04's
+- [x] No rudiment is "coming soon"; the "coming soon" code removed
+- [x] Each checked in a close-up screenshot
+
+## Comments
+
+- 2026-10-28: Done. Notes:
+  - The text form gained the roll strokes, after the accent and before the grace hands: `/` a double, `z` a buzz.
+  - The stroke rolls' doubles are slashed eighths (two sixteenths each), the release accented: on the beat for the five, nine, thirteen and seventeen, on its & for the eleven and fifteen. Those with an odd number of doubles (5, 7, 11, 15) alternate, so take two cycles; the rest repeat from the right. Each is in the meter its cycle fills: the nine, ten and eleven in 3/4, the seventeen in two bars of 3/4 with a beat's rest (eight doubles and the release are five beats).
+  - The triple stroke and seven stroke rolls are in triplet eighths, as the singles four and seven are: the chart's sixteenth triplets.
+  - The multiple bounce roll is buzzed sixteenths, and the double stroke open roll slashed eighths throughout.
+  - The single dragadiddle is the paradiddle with its first sixteenth an accented double: `>/RLRR >/LRLL`.
+  - The family headings now count their rudiments, not "N / M built".

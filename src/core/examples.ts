@@ -138,7 +138,7 @@ export function isBuiltIn(id: string): boolean {
   return isExample(id) || isRudiment(id)
 }
 
-/** The built-in exercises: the examples, then the rudiments built so far. */
+/** The built-in exercises: the examples, then the rudiments. */
 export function builtInExercises(): Exercise[] {
   return [...exampleExercises(), ...rudimentExercises()]
 }

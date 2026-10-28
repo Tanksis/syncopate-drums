@@ -1,7 +1,7 @@
 // The 40 PAS rudiments, built into the app and never stored, read-only like the examples (ADR 0018).
 // Our own notation of the standard patterns, each written in a compact text form of hands and marks.
 
-import type { Bar, Exercise, Grace, Hand, Item, Note, TimeSignature } from './model'
+import type { Bar, Exercise, Grace, Hand, Item, Note, Roll, TimeSignature } from './model'
 import { GRACE_NOTES, meter, newExercise, restBar } from './model'
 import { setBeat } from './speller'
 import { opposite } from './sticking'
@@ -12,22 +12,19 @@ export type RudimentFamily = 'Rolls' | 'Diddles' | 'Flams' | 'Drags'
 /** The families in the order the Rudiments tab heads them. */
 export const RUDIMENT_FAMILIES: readonly RudimentFamily[] = ['Rolls', 'Diddles', 'Flams', 'Drags']
 
-/**
- * A rudiment as the Rudiments tab lists it: its PAS number, name and family, and the id of its
- * exercise, or null for one not built yet ("coming soon").
- */
+/** A rudiment as the Rudiments tab lists it: its PAS number, name and family, and the id of its exercise. */
 export interface RudimentEntry {
   number: number
   name: string
   family: RudimentFamily
-  id: string | null
+  id: string
 }
 
 /**
  * A rudiment's notes, written bar by bar, each bar's beats separated by spaces. A beat is four
  * sixteenth slots or three triplet-eighth slots: `.` for no hit, or a hand (`R` or `L`, as for a
- * right lead) after its marks: `>` an accent, then its grace hands in lower case as the PAS chart
- * writes them, the other hand (`lR` a flam, `llR` a drag). A hit sounds until the next hit or the
+ * right lead) after its marks: `>` an accent, then `/` a double or `z` a buzz, then its grace hands
+ * in lower case as the PAS chart writes them, the other hand (`lR` a flam, `llR` a drag). A hit sounds until the next hit or the
  * end of its beat, so `>R..` is an accented quarter, and `~` first in a beat ties the hit before
  * on into it.
  */
@@ -38,13 +35,12 @@ interface Written {
   bars: string[]
 }
 
-/** One of the PAS 40 as the chart numbers and files it, with its notes once it is built. */
+/** One of the PAS 40 as the chart numbers and files it, with its notes. */
 interface Rudiment {
   number: number
   name: string
   family: RudimentFamily
-  /** Missing for a rudiment not built yet. */
-  written?: Written
+  written: Written
 }
 
 /** Starts every rudiment's id, so it can never match a stored exercise's UUID. */
@@ -55,18 +51,22 @@ const RUDIMENTS: readonly Rudiment[] = [
   // Written in triplet eighths: the grid has no sixteenth triplets (half the speed per tempo).
   { number: 2, name: 'Single stroke four', family: 'Rolls', written: { bpm: 100, bars: ['RLR >L.. RLR >L..'] } },
   { number: 3, name: 'Single stroke seven', family: 'Rolls', written: { bpm: 100, bars: ['RLR LRL >R.. ...', 'LRL RLR >L.. ...'] } },
-  { number: 4, name: 'Multiple bounce roll', family: 'Rolls' },
-  { number: 5, name: 'Triple stroke roll', family: 'Rolls' },
-  { number: 6, name: 'Double stroke open roll', family: 'Rolls' },
-  { number: 7, name: 'Five stroke roll', family: 'Rolls' },
-  { number: 8, name: 'Six stroke roll', family: 'Rolls' },
-  { number: 9, name: 'Seven stroke roll', family: 'Rolls' },
-  { number: 10, name: 'Nine stroke roll', family: 'Rolls' },
-  { number: 11, name: 'Ten stroke roll', family: 'Rolls' },
-  { number: 12, name: 'Eleven stroke roll', family: 'Rolls' },
-  { number: 13, name: 'Thirteen stroke roll', family: 'Rolls' },
-  { number: 14, name: 'Fifteen stroke roll', family: 'Rolls' },
-  { number: 15, name: 'Seventeen stroke roll', family: 'Rolls' },
+  { number: 4, name: 'Multiple bounce roll', family: 'Rolls', written: { bpm: 70, bars: ['zRzLzRzL zRzLzRzL zRzLzRzL zRzLzRzL'] } },
+  // In triplet eighths, as the paradiddle-diddle is: the chart's sixteenth triplets.
+  { number: 5, name: 'Triple stroke roll', family: 'Rolls', written: { bpm: 100, bars: ['RRR LLL RRR LLL'] } },
+  // The doubles of the rolls from here on are slashed eighths, two sixteenths each, the release accented.
+  { number: 6, name: 'Double stroke open roll', family: 'Rolls', written: { bpm: 80, bars: ['/R./L. /R./L. /R./L. /R./L.'] } },
+  { number: 7, name: 'Five stroke roll', family: 'Rolls', written: { bpm: 80, bars: ['/R./L. >R... /L./R. >L...'] } },
+  { number: 8, name: 'Six stroke roll', family: 'Rolls', written: { bpm: 80, bars: ['>R./L. /R.>L. >R./L. /R.>L.'] } },
+  // In triplet eighths, as the single stroke four is: the chart's sixteenth triplets.
+  { number: 9, name: 'Seven stroke roll', family: 'Rolls', written: { bpm: 100, bars: ['/R/L/R >L.. /L/R/L >R..'] } },
+  { number: 10, name: 'Nine stroke roll', family: 'Rolls', written: { timeSignature: '3/4', bpm: 80, bars: ['/R./L. /R./L. >R...'] } },
+  { number: 11, name: 'Ten stroke roll', family: 'Rolls', written: { timeSignature: '3/4', bpm: 80, bars: ['/R./L. /R./L. >R.>L.'] } },
+  { number: 12, name: 'Eleven stroke roll', family: 'Rolls', written: { timeSignature: '3/4', bpm: 80, bars: ['/R./L. /R./L. /R.>L.', '/L./R. /L./R. /L.>R.'] } },
+  { number: 13, name: 'Thirteen stroke roll', family: 'Rolls', written: { bpm: 80, bars: ['/R./L. /R./L. /R./L. >R...'] } },
+  { number: 14, name: 'Fifteen stroke roll', family: 'Rolls', written: { bpm: 80, bars: ['/R./L. /R./L. /R./L. /R.>L.', '/L./R. /L./R. /L./R. /L.>R.'] } },
+  // Eight doubles and the release are five beats, so two bars of 3/4 with a beat's rest.
+  { number: 15, name: 'Seventeen stroke roll', family: 'Rolls', written: { timeSignature: '3/4', bpm: 80, bars: ['/R./L. /R./L. /R./L.', '/R./L. >R... ....'] } },
   { number: 16, name: 'Single paradiddle', family: 'Diddles', written: { bpm: 80, bars: ['>RLRR >LRLL >RLRR >LRLL'] } },
   { number: 17, name: 'Double paradiddle', family: 'Diddles', written: { bpm: 100, bars: ['>RLR LRR >LRL RLL'] } },
   { number: 18, name: 'Triple paradiddle', family: 'Diddles', written: { bpm: 80, bars: ['>RLRL RLRR >LRLR LRLL'] } },
@@ -88,8 +88,8 @@ const RUDIMENTS: readonly Rudiment[] = [
   // A dotted eighth, a sixteenth and an eighth, twice: the PAS chart's 6/8 halves, in 3/4 sixteenths.
   { number: 33, name: 'Double drag tap', family: 'Drags', written: { timeSignature: '3/4', bpm: 70, bars: ['llR..llR >L.rrL. ~rrL>R.'] } },
   { number: 34, name: 'Lesson 25', family: 'Drags', written: { bpm: 80, bars: ['llRL>R. rrLR>L. llRL>R. rrLR>L.'] } },
-  // Its drag is a double stroke of the note's own hand (RR L R R), which waits for the roll strokes.
-  { number: 35, name: 'Single dragadiddle', family: 'Drags' },
+  // Its drag is a double stroke of the note's own hand (RR L R R), not grace notes of the other.
+  { number: 35, name: 'Single dragadiddle', family: 'Drags', written: { bpm: 70, bars: ['>/RLRR >/LRLL >/RLRR >/LRLL'] } },
   // An eighth and four sixteenths, twice: the PAS chart's 6/8 halves, in 3/4 sixteenths.
   { number: 36, name: 'Drag paradiddle #1', family: 'Drags', written: { timeSignature: '3/4', bpm: 70, bars: ['>R.llRL RR>L. rrLRLL'] } },
   { number: 37, name: 'Drag paradiddle #2', family: 'Drags', written: { bpm: 70, bars: ['>R.llR. llRLRR >L.rrL. rrLRLL'] } },
@@ -105,43 +105,42 @@ const idOf = ({ name }: Rudiment) => RUDIMENT_PREFIX + name.toLowerCase().replac
 
 /** The 40 rudiments in PAS order, as the Rudiments tab lists them. */
 export function rudimentList(): RudimentEntry[] {
-  return RUDIMENTS.map((r) => ({ number: r.number, name: r.name, family: r.family, id: r.written ? idOf(r) : null }))
+  return RUDIMENTS.map((r) => ({ number: r.number, name: r.name, family: r.family, id: idOf(r) }))
 }
 
 /**
- * The rudiments built so far as exercises, in PAS order, under their fixed ids and never opened;
- * every call gives an equal set. Each note's hand is stored as an override, so it is always
- * printed and the Lead hand mirrors it.
+ * The rudiments as exercises, in PAS order, under their fixed ids and never opened; every call
+ * gives an equal set. Each note's hand is stored as an override, so it is always printed and the
+ * Lead hand mirrors it.
  */
 export function rudimentExercises(): Exercise[] {
-  return RUDIMENTS.flatMap((rudiment) => {
-    const { written } = rudiment
-    if (!written) return []
-    const { timeSignature = '4/4', bpm, bars } = written
+  return RUDIMENTS.map((rudiment) => {
+    const { timeSignature = '4/4', bpm, bars } = rudiment.written
     const base = newExercise({ id: idOf(rudiment), now: 0 })
-    return [
-      {
-        ...base,
-        name: rudiment.name,
-        timeSignature,
-        bars: writeBars(bars, meter(timeSignature).beats),
-        sticking: 'alternate',
-        practice: { ...base.practice, bpm },
-      },
-    ]
+    return {
+      ...base,
+      name: rudiment.name,
+      timeSignature,
+      bars: writeBars(bars, meter(timeSignature).beats),
+      sticking: 'alternate',
+      practice: { ...base.practice, bpm },
+    }
   })
 }
 
 /** Whether an id is one of the rudiments', rather than a stored exercise's or an example's. */
 export function isRudiment(id: string): boolean {
-  return RUDIMENTS.some((r) => r.written && idOf(r) === id)
+  return RUDIMENTS.some((r) => idOf(r) === id)
 }
 
 /** What one struck note of the text form carries besides its rhythm. */
-type Struck = Pick<Note, 'override' | 'dynamic' | 'grace'>
+type Struck = Pick<Note, 'override' | 'dynamic' | 'grace' | 'roll'>
 
-/** One slot of a beat: `.`, `~` (first only), or a hand after its accent and its grace hands. */
-const SLOT = /^~|\.|>?(?:rr?|ll?)?[RL]/g
+/** One slot of a beat: `.`, `~` (first only), or a hand after its accent, roll stroke and grace hands. */
+const SLOT = /^~|\.|>?[/z]?(?:rr?|ll?)?[RL]/g
+
+/** The roll stroke each mark of the text form writes. */
+const ROLL_MARKS: Record<string, Roll> = { '/': 'double', z: 'buzz' }
 
 /** Whether a slot of a beat strikes a note, rather than resting or holding on. */
 const strikes = (slot: string) => slot !== '.' && slot !== '~'
@@ -170,10 +169,11 @@ function writeBars(lines: string[], beats: number): Bar[] {
       for (const slot of slots) {
         if (!strikes(slot)) continue
         const hand = slot.at(-1) as Hand
-        const graces = slot.replace(/^>/, '').slice(0, -1)
+        const [, accent, roll, graces] = slot.match(/^(>?)([/z]?)(.*).$/)!
         struck.push({
           override: hand,
-          ...(slot.startsWith('>') ? { dynamic: 'accent' } : {}),
+          ...(accent ? { dynamic: 'accent' } : {}),
+          ...(roll ? { roll: ROLL_MARKS[roll] } : {}),
           ...(graces ? { grace: graceOf(graces, hand) } : {}),
         })
       }
