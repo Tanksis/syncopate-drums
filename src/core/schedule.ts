@@ -42,7 +42,7 @@ export interface ScheduledEvent {
    * A double's second stroke, played halfway through its note by the same hand. It isn't a struck
    * note: it has no note id and moves no playhead.
    */
-  second?: true
+  secondStroke?: true
   /** How hard a groove hit is played, 0–1 of the instrument's usual level; other events always play at 1. */
   velocity?: number
   /** A metronome click's beat block level, or `subdivision` for a click between the beats. */
@@ -111,7 +111,9 @@ export function schedule(
       const buzz = note.roll === 'buzz' ? { buzz: true as const } : {}
       events.push({ time, kind: 'exercise', instrument, accent, ...buzz, noteId: noteId(row, bar, tick), position })
       if (note.roll === 'double') {
-        events.push({ time: time + (ticks / 2) * secondsPerTick, kind: 'exercise', instrument, accent: false, second: true, position })
+        // Halfway between the note's swung start and its swung end, so swing moves it with them.
+        const end = straight + (ticks + swingShift((tick + ticks) % TICKS_PER_BEAT, swing)) * secondsPerTick
+        events.push({ time: (time + end) / 2, kind: 'exercise', instrument, accent: false, secondStroke: true, position })
       }
     }
     if (bar >= 0) {
@@ -180,8 +182,10 @@ function struckNotes(exercise: Exercise, row: Row): Map<number, Strike>[] {
   let last: Strike | undefined
   for (const p of placeItems(exercise.bars, row)) {
     if (p.continuation && last) last.ticks += itemTicks(p.item)
-    else if (p.item.kind === 'note') struck[p.bar].set(p.start, (last = { note: p.item, ticks: itemTicks(p.item) }))
-    else last = undefined
+    else if (p.item.kind === 'note') {
+      last = { note: p.item, ticks: itemTicks(p.item) }
+      struck[p.bar].set(p.start, last)
+    } else last = undefined
   }
   return struck
 }

@@ -65,7 +65,7 @@ describe('recording the timeline', () => {
   })
 
   it("leaves out a double's second stroke: it moves no playhead", () => {
-    const second: ScheduledEvent = { time: 0.125, kind: 'exercise', instrument: 'snare', accent: false, second: true, position: { bar: 0, tick: 0 } }
+    const second: ScheduledEvent = { time: 0.125, kind: 'exercise', instrument: 'snare', accent: false, secondStroke: true, position: { bar: 0, tick: 0 } }
     expect(recordEvents([], [second], 10)).toEqual([])
   })
 

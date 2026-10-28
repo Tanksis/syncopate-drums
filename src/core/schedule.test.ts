@@ -13,7 +13,7 @@ const blank = (bpm = 120): Exercise => {
 /** A compact view of the events for readable assertions: "time kind instrument [accent] [noteId]". */
 const show = (events: ScheduledEvent[]) =>
   events.map((e) =>
-    [e.time.toFixed(3), e.kind, e.instrument, e.accent && 'accent', e.grace && 'grace', e.buzz && 'buzz', e.second && 'second', e.noteId].filter(Boolean).join(' '),
+    [e.time.toFixed(3), e.kind, e.instrument, e.accent && 'accent', e.grace && 'grace', e.buzz && 'buzz', e.secondStroke && 'second', e.noteId].filter(Boolean).join(' '),
   )
 
 describe('the count-in', () => {
@@ -309,6 +309,12 @@ describe('swing', () => {
 
   it('puts the e halfway through the long eighth and the a halfway through the short one', () => {
     expect(landings(swung(['xxxx', '....', '....', '....'], 100, 2 / 3))).toEqual([0, 0.333, 0.667, 0.833])
+  })
+
+  it("plays a double's second stroke halfway between its swung start and its swung end", () => {
+    const ex = swung(['xxxx', 'x.x.', '....', '....'], 100, 2 / 3)
+    const doubled = { ...ex, bars: toggleMark(toggleMark(ex.bars, 'snare', 0, 0, 1, 'double'), 'snare', 0, 1, 2, 'double') }
+    expect(landings(doubled)).toEqual([0, 0.333, 0.5, 0.667, 0.833, 1, 1.667, 1.833])
   })
 
   it('swings the binary part of every beat, beside unmoved triplet beats', () => {

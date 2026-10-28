@@ -152,7 +152,7 @@ function graceGroup(key: string, grace: Grace): GraceNoteGroup {
 const beamDepth = (beams: number) => (beams ? 5 * (1 + (beams - 1) * 1.5) : 0)
 
 /** SMuFL's buzz roll, a Z across a stem. */
-const BUZZ_ROLL = ''
+const BUZZ_ROLL = '\uE22A'
 /** The pixel size of a buzz's Z, drawn small enough to sit across a stem between its notehead and beam. */
 const BUZZ_SIZE = 30
 /** A double's slash: half its width, and how far it rises across it, in pixels. */
