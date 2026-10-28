@@ -111,7 +111,7 @@ describe('the rudiments', () => {
   })
 
   it('are the fewest bars back to the starting hand', () => {
-    expect(rudiments.map((r) => r.bars.length)).toEqual([1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+    for (const r of rudiments) expect(r.bars.length, r.name).toBe(r.name === 'Single stroke seven' ? 2 : 1)
   })
 
   it('print a hand on every note, an override, whatever the sticking mode would give', () => {

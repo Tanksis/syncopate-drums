@@ -2,8 +2,9 @@
 // Our own notation of the standard patterns, each written in a compact text form of hands and marks.
 
 import type { Bar, Exercise, Grace, Hand, Item, Note, TimeSignature } from './model'
-import { meter, newExercise, restBar } from './model'
+import { GRACE_NOTES, meter, newExercise, restBar } from './model'
 import { setBeat } from './speller'
+import { opposite } from './sticking'
 
 /** The four families the PAS chart lists the rudiments under, in its order. */
 export type RudimentFamily = 'Rolls' | 'Diddles' | 'Flams' | 'Drags'
@@ -133,11 +134,17 @@ export function isRudiment(id: string): boolean {
 /** What one struck note of the text form carries besides its rhythm. */
 type Struck = Pick<Note, 'override' | 'dynamic' | 'grace'>
 
-/** One slot of a beat: `.`, or a hand after its marks. */
+/** One slot of a beat: `.`, or a hand after its accent and its grace hands. */
 const SLOT = /\.|>?(?:rr?|ll?)?[RL]/g
 
-/** The grace the lower-case hands before a note's hand write: one is a flam and two a drag. */
-const GRACES: Record<string, Grace> = { lR: 'flam', rL: 'flam', llR: 'drag', rrL: 'drag' }
+/** The grace that lower-case hands before a note's hand write, so many grace notes of the other hand. */
+function graceOf(graces: string, hand: Hand): Grace {
+  const grace = (Object.keys(GRACE_NOTES) as Grace[]).find((g) => GRACE_NOTES[g] === graces.length)
+  if (!grace || graces !== opposite(hand).toLowerCase().repeat(graces.length)) {
+    throw new Error(`Grace notes "${graces}" aren't the other hand from ${hand}`)
+  }
+  return grace
+}
 
 /**
  * The bars of `beats` beats: each beat's hits written through the speller, so the spelling is the
@@ -155,11 +162,10 @@ function writeBars(lines: string[], beats: number): Bar[] {
         if (slot === '.') continue
         const hand = slot.at(-1) as Hand
         const graces = slot.replace(/^>/, '').slice(0, -1)
-        if (graces && !GRACES[graces + hand]) throw new Error(`Grace notes "${graces}" aren't the other hand from ${hand}`)
         struck.push({
           override: hand,
           ...(slot.startsWith('>') ? { dynamic: 'accent' } : {}),
-          ...(graces ? { grace: GRACES[graces + hand] } : {}),
+          ...(graces ? { grace: graceOf(graces, hand) } : {}),
         })
       }
     })
