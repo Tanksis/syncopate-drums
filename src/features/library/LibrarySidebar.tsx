@@ -33,9 +33,12 @@ const toolSize = (large: boolean) => (large ? 'lg' : 'md')
 const toolClass = (large: boolean) => buttonClass({ size: toolSize(large), icon: true })
 
 /** An exercise's button in a list, marked when it's the open one. */
-const listButtonClass = (open: boolean) =>
-  `min-w-0 flex-1 cursor-pointer truncate rounded-md border-0 px-2 py-1 text-left ${
-    open ? 'bg-accent/10 font-semibold text-accent' : 'bg-transparent hover:bg-hover'
+const listButtonClass = (open: boolean) => `min-w-0 flex-1 truncate ${rowClass(open)}`
+
+/** A list row's button, marked when it's the open one, in bold unless its name wraps (`plain`). */
+const rowClass = (open: boolean, { plain = false } = {}) =>
+  `cursor-pointer rounded-md border-0 px-2 py-1 text-left ${
+    open ? `bg-accent/10 text-accent ${plain ? '' : 'font-semibold'}` : 'bg-transparent hover:bg-hover'
   }`
 
 /** A drop target, outlined in the accent while an exercise is dragged over it; inset, as the list clips. */
@@ -58,7 +61,8 @@ const TABS: { id: LibraryTab; label: string; icon: ReactNode }[] = [
  * onto a folder or "No folder" to move it there). The selection stays through filtering and can
  * be exported, deleted or moved to a folder together. Examples: the built-in examples, to open.
  * Rudiments: the 40 PAS rudiments in their families, folders that fold (remembered on the device)
- * and count the ones built; those open, the rest greyed, "coming soon". (The read-only notice over
+ * and count the ones built; those open, the rest greyed ("Coming soon" on hover), each name wrapping
+ * rather than cut short. (The read-only notice over
  * the notation has Copy to Library for the open one.)
  * Given `onHelp` (the phone's, which has no header button for it), Help at its foot opens the Help page.
  */
@@ -155,7 +159,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
         <>
           <button
             type="button"
-            title="Click to open, double-click to rename"
+            title={`${exercise.name}: click to open, double-click to rename`}
             aria-current={exercise.id === openId}
             // Not keepFocus, whose mousedown preventDefault would stop the row being dragged: a mouse
             // click lets the focus go afterwards instead (a keyboard one, detail 0, keeps it).
@@ -229,7 +233,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
               <li key={example.id} className="flex items-center gap-1 pr-2">
                 <button
                   type="button"
-                  title="Click to open"
+                  title={`${exampleTitle(example)}: click to open`}
                   aria-current={example.id === openId}
                   onMouseDown={keepFocus}
                   onClick={() => openExercise(example.id)}
@@ -266,37 +270,41 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
                     </span>
                   </button>
                   {open && (
-                  <ul className="m-0 flex list-none flex-col p-0 pl-5">
+                  <ul className="m-0 flex list-none flex-col p-0 pl-2.5">
+                    {/* A rudiment's name wraps under itself, not under its number, rather than being cut short. */}
                     {rudiments.map(({ number, name, id }) => {
+                      // The best clean BPM follows the name, wrapping with it, rather than taking a column.
                       const label = (
                         <>
-                          <span className="tabular-nums">{number}</span> · {name}
+                          <span className="w-4 shrink-0 text-right text-xs font-normal tabular-nums opacity-60">{number}</span>
+                          <span className="min-w-0 flex-1">
+                            {name}
+                            {id && (
+                              <>
+                                {' '}
+                                <BestCleanBpm runs={builtInCleanRuns[id]} />
+                              </>
+                            )}
+                          </span>
                         </>
                       )
                       return (
-                        <li key={number} className="flex items-center gap-1 pr-2">
+                        <li key={number} className="flex items-baseline gap-1 pr-2">
                           {id ? (
-                            <>
-                              <button
-                                type="button"
-                                title="Click to open"
-                                aria-current={id === openId}
-                                onMouseDown={keepFocus}
-                                onClick={() => openExercise(id)}
-                                className={listButtonClass(id === openId)}
-                              >
-                                {label}
-                              </button>
-                              <BestCleanBpm runs={builtInCleanRuns[id]} />
-                            </>
-                          ) : (
-                            <span
-                              aria-disabled
-                              title="Coming soon"
-                              className="flex min-w-0 flex-1 items-baseline gap-1.5 px-2 py-1 text-mute opacity-60 select-none"
+                            <button
+                              type="button"
+                              title="Click to open"
+                              aria-current={id === openId}
+                              onMouseDown={keepFocus}
+                              onClick={() => openExercise(id)}
+                              className={`flex min-w-0 flex-1 items-baseline gap-2 ${rowClass(id === openId, { plain: true })}`}
                             >
-                              <span className="truncate">{label}</span>
-                              <span className="ml-auto shrink-0 text-[10px] italic">coming soon</span>
+                              {label}
+                            </button>
+                          ) : (
+                            // Greyed, and named on hover; the family's count says how many are built.
+                            <span aria-disabled title="Coming soon" className="flex min-w-0 flex-1 items-baseline gap-2 px-2 py-1 text-mute opacity-60 select-none">
+                              {label}
                             </span>
                           )}
                         </li>

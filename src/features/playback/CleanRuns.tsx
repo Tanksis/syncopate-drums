@@ -94,7 +94,7 @@ export function BestCleanBpm({ runs }: { runs: readonly CleanRun[] | undefined }
   const best = bestCleanBpm(runs)
   if (best === undefined) return null
   return (
-    <span title={`Played cleanly at up to ${best} BPM`} className="shrink-0 text-xs font-semibold text-accent tabular-nums">
+    <span title={`Played cleanly at up to ${best} BPM`} className="shrink-0 text-xs font-semibold whitespace-nowrap text-accent tabular-nums">
       ✓ {best}
     </span>
   )

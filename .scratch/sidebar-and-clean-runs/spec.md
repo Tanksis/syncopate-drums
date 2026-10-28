@@ -28,3 +28,4 @@ The sidebar's three tabs (Library, Examples, Rudiments) crowd one row, and a Cop
 1. The dropdown title and the folding families.
 2. Clean runs: logging, the best BPM in the list, the history, export.
 3. Icon tabs in place of the heading's menu.
+4. Rudiment names wrap rather than being cut short.

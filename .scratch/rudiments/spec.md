@@ -20,7 +20,7 @@ A drummer practises the rudiments at the laptop with a practice pad. Syncopate! 
 - The snare plays at three loudness levels: grace, normal and accent. Normal notes are a little softer than today, so accents stand out.
 - A **Rudiments** tab joins Library and Examples in the exercises sidebar. It lists the 40 PAS rudiments, numbered, under their four families. Each one is a read-only exercise that plays with the click, with its hands printed. Copy to Library makes your own version.
 - The **Lead hand** mirrors the sticking overrides, so a rudiment (or any exercise) can be practised leading with the left.
-- It ships in stages. A rudiment that isn't built yet is listed greyed, marked "coming soon". The launch doesn't wait for it.
+- It ships in stages. A rudiment that isn't built yet is listed greyed, "Coming soon" on hover. The launch doesn't wait for it.
 
 ## User Stories
 
@@ -35,7 +35,7 @@ A drummer practises the rudiments at the laptop with a practice pad. Syncopate! 
 9. As a drummer, a double is drawn as one thin slash across the middle of the stem and plays as two strokes, same hand, in the note's time. A buzz is drawn as a Z across the stem and plays a buzz stroke.
 10. As a drummer, normal snare notes vary a little from stroke to stroke, as a real drummer's do, and a run of fast singles doesn't sound machine-gunned.
 11. As a drummer, the exercises sidebar has three tabs: Library, Examples and Rudiments.
-12. As a drummer, the Rudiments tab lists the 40 rudiments by PAS number and name under the headings Rolls, Diddles, Flams and Drags. A rudiment that isn't built yet is listed greyed, marked "coming soon", and doesn't open.
+12. As a drummer, the Rudiments tab lists the 40 rudiments by PAS number and name under the headings Rolls, Diddles, Flams and Drags. A rudiment that isn't built yet is listed greyed, "Coming soon" on hover, and doesn't open. Long names wrap rather than being cut short.
 13. As a drummer, opening a rudiment shows it as a read-only exercise: the fewest bars that bring it back to the starting hand, at a sensible tempo, with its hands always printed. Play loops it with the click.
 14. As a drummer on a rudiment, the settings sidebar shows Lead hand, Swing and the Feet (Bass drum, Hi-hat foot), and hides Sticking mode and Pattern.
 15. As a drummer, switching Lead hand to L mirrors every hand of the rudiment (RLRR LRLL becomes LRLL RLRR), the grace hands too.
