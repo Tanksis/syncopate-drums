@@ -84,6 +84,12 @@ describe('stored device settings', () => {
     expect(deviceSettingsFrom({ countIn: false })).toEqual({ ...DEFAULT_DEVICE_SETTINGS, countIn: false })
   })
 
+  it("fold every rudiment family until one is opened, and drop a stored list that isn't one", () => {
+    expect(DEFAULT_DEVICE_SETTINGS.openRudimentFamilies).toEqual([])
+    expect(deviceSettingsFrom({ openRudimentFamilies: ['Diddles'] }).openRudimentFamilies).toEqual(['Diddles'])
+    expect(deviceSettingsFrom({ openRudimentFamilies: 'Diddles' }).openRudimentFamilies).toEqual([])
+  })
+
   it('drop a stored vim keys or figures panel setting', () => {
     const stored = { countIn: false, vimKeys: true, figuresPanelOpen: true }
     expect(deviceSettingsFrom(stored)).toEqual({ ...DEFAULT_DEVICE_SETTINGS, countIn: false })

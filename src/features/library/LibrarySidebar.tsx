@@ -10,7 +10,7 @@ import { SelectButtonFace, selectButtonClass } from '@/components/SelectMenu'
 import { SidebarHeading } from '@/components/Sidebar'
 import { keepFocus } from '@/components/keepFocus'
 import type { Exercise, Folder, LibraryTab } from '@/core'
-import { RUDIMENT_FAMILIES, exampleExercises, exampleTitle, foldersByName, isBuiltIn, isExample, isRudiment, libraryView, rudimentList, tabListing } from '@/core'
+import { RUDIMENT_FAMILIES, exampleExercises, exampleTitle, foldersByName, isBuiltIn, libraryView, rudimentList, tabListing } from '@/core'
 import { downloadExport } from './download'
 import { exerciseCount } from './exerciseCount'
 import { ImportFile } from './ImportFile'
@@ -21,7 +21,10 @@ const EXAMPLES = exampleExercises()
 
 /** The 40 rudiments by family, the ones not built yet without an id; never stored (ADR 0018). */
 const RUDIMENT_LIST = rudimentList()
-const RUDIMENTS_BY_FAMILY = RUDIMENT_FAMILIES.map((family) => ({ family, rudiments: RUDIMENT_LIST.filter((r) => r.family === family) }))
+const RUDIMENTS_BY_FAMILY = RUDIMENT_FAMILIES.map((family) => {
+  const rudiments = RUDIMENT_LIST.filter((r) => r.family === family)
+  return { family, rudiments, built: rudiments.filter((r) => r.id).length }
+})
 
 /** A toolbar icon button or menu button; `large` is big enough for a finger. */
 const toolSize = (large: boolean) => (large ? 'lg' : 'md')
@@ -36,6 +39,7 @@ const listButtonClass = (open: boolean) =>
 /** A drop target, outlined in the accent while an exercise is dragged over it; inset, as the list clips. */
 const dropTargetClass = (over: boolean) => `rounded-md ${over ? 'outline-2 -outline-offset-2 outline-accent' : ''}`
 
+/** The lists the heading's menu switches between: the sidebar's tabs. */
 const TABS: { id: LibraryTab; label: string }[] = [
   { id: 'library', label: 'Library' },
   { id: 'examples', label: 'Examples' },
@@ -43,14 +47,16 @@ const TABS: { id: LibraryTab; label: string }[] = [
 ]
 
 /**
- * The sidebar's three tabs. Library: a toolbar (a + menu of New, New from pattern… and New folder;
+ * The sidebar's three tabs, switched by the menu its heading is, which names the one showing and dots
+ * the one holding the open exercise. Library: a toolbar (a + menu of New, New from pattern… and New folder;
  * Duplicate and Delete; a ⋯ menu of Import… and Export all), the filter, and the list: the
  * folders (chevron to collapse, double-click to rename, × to delete), each with its exercises,
  * then the exercises in no folder (click to open, double-click to rename, tick to select, drag
  * onto a folder or "No folder" to move it there). The selection stays through filtering and can
- * be exported, deleted or moved to a folder together. Examples: the built-in examples, to open, and Copy to Library for the open one.
- * Rudiments: the 40 PAS rudiments under their families, the ones built to open (the rest greyed,
- * "coming soon"), and Copy to Library for the open one.
+ * be exported, deleted or moved to a folder together. Examples: the built-in examples, to open.
+ * Rudiments: the 40 PAS rudiments in their families, folders that fold (remembered on the device)
+ * and count the ones built; those open, the rest greyed, "coming soon". On both, a copy icon by the
+ * heading makes a Library copy of the open one.
  * Given `onHelp` (the phone's, which has no header button for it), Help at its foot opens the Help page.
  */
 export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onCollapse: () => void; fullScreen?: boolean; onHelp?: () => void }) {
@@ -58,6 +64,8 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
   const openId = useAppStore((s) => s.editor.exercise.id)
   const tab = useAppStore((s) => s.device.libraryTab)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
+  const openFamilies = useAppStore((s) => s.device.openRudimentFamilies)
+  const tabLabel = TABS.find(({ id }) => id === tab)!.label
   const builtInOpen = isBuiltIn(openId)
   const openInStore = useAppStore((s) => s.openExercise)
   // An exercise opened from the Metronome screen shows on Practice, where it can be seen.
@@ -168,35 +176,54 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
       aria-label="Exercise library"
       className={`flex min-h-0 flex-col gap-2 bg-panel px-2.5 py-3 ${fullScreen ? 'w-full' : 'w-[230px] border-r border-line'}`}
     >
-      <SidebarHeading name="Exercises" side="left" fullScreen={fullScreen} onCollapse={onCollapse} />
-      <div role="tablist" aria-label="Exercise lists" className="flex border-b border-line">
-        {TABS.map(({ id, label }) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={tab === id}
-            onMouseDown={keepFocus}
-            onClick={() => setDeviceSettings({ libraryTab: id })}
-            className="-mb-px flex flex-1 cursor-pointer items-center justify-center gap-1 border-0 border-b-2 border-transparent bg-transparent px-0.5 py-1 font-semibold text-mute hover:text-ink aria-selected:border-accent aria-selected:text-accent"
-          >
-            {label}
-            {id === tabListing(openId) && (
-              <span title="The open exercise is here" className="size-1.5 rounded-full bg-accent" />
-            )}
-          </button>
-        ))}
-      </div>
+      <SidebarHeading
+        name="Exercises"
+        side="left"
+        fullScreen={fullScreen}
+        onCollapse={onCollapse}
+        title={
+          <Menu
+            label={`Exercise list: ${tabLabel}`}
+            large={fullScreen}
+            align="left"
+            icon={
+              <>
+                {tabLabel}
+                <span aria-hidden className="text-[0.8em]">
+                  ▾
+                </span>
+              </>
+            }
+            // The heading's own face, as a button.
+            buttonClassName="-mx-1 -my-0.5 flex cursor-pointer items-center gap-1 rounded border-0 bg-transparent px-1 py-0.5 [font:inherit] [letter-spacing:inherit] [font-variant-caps:inherit] [text-transform:inherit] text-inherit hover:bg-hover hover:text-ink aria-expanded:bg-hover aria-expanded:text-ink"
+            items={TABS.map(({ id, label }) => ({
+              label,
+              checked: tab === id,
+              aside: id === tabListing(openId) && <span title="The open exercise is here" className="block size-1.5 rounded-full bg-accent" />,
+              onSelect: () => setDeviceSettings({ libraryTab: id }),
+            }))}
+          />
+        }
+        actions={
+          tab !== 'library' && (
+            <Button
+              variant="ghost"
+              size={fullScreen ? 'lg' : 'sm'}
+              icon
+              aria-label="Copy to Library"
+              title={tabListing(openId) === tab ? 'Make an editable copy of the open one in the Library' : `Open one of the ${tabLabel.toLowerCase()} to copy it`}
+              disabled={tabListing(openId) !== tab}
+              onClick={duplicateOpenExercise}
+              className={fullScreen ? '' : '-mt-1'}
+            >
+              <DuplicateIcon />
+            </Button>
+          )
+        }
+      />
       {tab === 'examples' && (
         <>
-          <Button
-            title={isExample(openId) ? 'Make an editable copy of the open example' : 'Open an example to copy it'}
-            disabled={!isExample(openId)}
-            onClick={duplicateOpenExercise}
-          >
-            Copy to Library
-          </Button>
-          <ul role="tabpanel" aria-label="Examples" className="m-0 flex min-h-0 list-none flex-col overflow-auto p-0">
+          <ul aria-label="Examples" className="m-0 flex min-h-0 list-none flex-col overflow-auto p-0">
             {EXAMPLES.map((example) => (
               <li key={example.id} className="flex">
                 <button
@@ -216,53 +243,65 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
       )}
       {tab === 'rudiments' && (
         <>
-          <Button
-            title={isRudiment(openId) ? 'Make an editable copy of the open rudiment' : 'Open a rudiment to copy it'}
-            disabled={!isRudiment(openId)}
-            onClick={duplicateOpenExercise}
-          >
-            Copy to Library
-          </Button>
-          <div role="tabpanel" aria-label="Rudiments" className="flex min-h-0 flex-col gap-2 overflow-auto">
-            {RUDIMENTS_BY_FAMILY.map(({ family, rudiments }) => (
-              <section key={family} aria-label={family} className="flex flex-col">
-                <h3 className="m-0 px-2 py-1 text-xs font-semibold tracking-wide text-mute uppercase">{family}</h3>
-                <ul className="m-0 flex list-none flex-col p-0">
-                  {rudiments.map(({ number, name, id }) => {
-                    const label = (
-                      <>
-                        <span className="tabular-nums">{number}</span> · {name}
-                      </>
-                    )
-                    return (
-                      <li key={number} className="flex">
-                        {id ? (
-                          <button
-                            type="button"
-                            title="Click to open"
-                            aria-current={id === openId}
-                            onMouseDown={keepFocus}
-                            onClick={() => openExercise(id)}
-                            className={listButtonClass(id === openId)}
-                          >
-                            {label}
-                          </button>
-                        ) : (
-                          <span
-                            aria-disabled
-                            title="Coming soon"
-                            className="flex min-w-0 flex-1 items-baseline gap-1.5 px-2 py-1 text-mute opacity-60 select-none"
-                          >
-                            <span className="truncate">{label}</span>
-                            <span className="ml-auto shrink-0 text-[10px] italic">coming soon</span>
-                          </span>
-                        )}
-                      </li>
-                    )
-                  })}
-                </ul>
-              </section>
-            ))}
+          <div aria-label="Rudiments" className="flex min-h-0 flex-col overflow-auto">
+            {RUDIMENTS_BY_FAMILY.map(({ family, rudiments, built }) => {
+              const open = openFamilies.includes(family)
+              return (
+                <section key={family} aria-label={family} className="flex flex-col">
+                  <button
+                    type="button"
+                    aria-expanded={open}
+                    onMouseDown={keepFocus}
+                    onClick={() => setDeviceSettings({ openRudimentFamilies: open ? openFamilies.filter((f) => f !== family) : [...openFamilies, family] })}
+                    className={`flex cursor-pointer items-center rounded-md border-0 bg-transparent pr-2 pl-0 text-left font-semibold hover:bg-hover ${fullScreen ? 'py-2.5' : 'py-1'}`}
+                  >
+                    <span aria-hidden className="w-5 shrink-0 text-mute">
+                      {open ? '▾' : '▸'}
+                    </span>
+                    <span className="flex-1">{family}</span>
+                    <span title={`${built} of its ${rudiments.length} built so far`} className="text-xs font-normal text-mute tabular-nums">
+                      {built} / {rudiments.length}
+                    </span>
+                  </button>
+                  {open && (
+                  <ul className="m-0 flex list-none flex-col p-0 pl-5">
+                    {rudiments.map(({ number, name, id }) => {
+                      const label = (
+                        <>
+                          <span className="tabular-nums">{number}</span> · {name}
+                        </>
+                      )
+                      return (
+                        <li key={number} className="flex">
+                          {id ? (
+                            <button
+                              type="button"
+                              title="Click to open"
+                              aria-current={id === openId}
+                              onMouseDown={keepFocus}
+                              onClick={() => openExercise(id)}
+                              className={listButtonClass(id === openId)}
+                            >
+                              {label}
+                            </button>
+                          ) : (
+                            <span
+                              aria-disabled
+                              title="Coming soon"
+                              className="flex min-w-0 flex-1 items-baseline gap-1.5 px-2 py-1 text-mute opacity-60 select-none"
+                            >
+                              <span className="truncate">{label}</span>
+                              <span className="ml-auto shrink-0 text-[10px] italic">coming soon</span>
+                            </span>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  )}
+                </section>
+              )
+            })}
           </div>
         </>
       )}

@@ -23,7 +23,7 @@ One of the exercises built into the app to show what it does, listed in the side
 _Avoid_: Demo, template, preset
 
 **Rudiment**:
-One of the 40 PAS rudiments, built into the app and listed by PAS number in the sidebar's Rudiments tab under Rolls, Diddles, Flams and Drags; one not built yet is listed greyed, "coming soon". Read-only like an **Example**, written as the fewest bars that bring it back to its starting hand, with every hand stored as a **Sticking override** and always printed. Its **Lead hand** can be changed to practise it from the left; its sticking mode and pattern can't (ADR 0018). Copy to Library makes an ordinary exercise from it.
+One of the 40 PAS rudiments, built into the app and listed by PAS number in the sidebar's Rudiments tab in the folding families Rolls, Diddles, Flams and Drags; one not built yet is listed greyed, "coming soon". Read-only like an **Example**, written as the fewest bars that bring it back to its starting hand, with every hand stored as a **Sticking override** and always printed. Its **Lead hand** can be changed to practise it from the left; its sticking mode and pattern can't (ADR 0018). Copy to Library makes an ordinary exercise from it.
 _Avoid_: Sticking pattern, lick
 
 **Built-in exercise**:
@@ -45,7 +45,7 @@ The span of bars within an exercise that repeats during practice; the whole exer
 How an exercise is practiced rather than what it contains: BPM, loop range, pattern, bass drum, hi-hat foot and swing amount. Remembered per exercise.
 
 **Device settings**:
-How the app is set up on this computer rather than how an exercise is practiced: volumes and mutes (the Mix), the count-in toggle, the theme and mode, the notation's fit, the beat count and the version of the line it shows (as written or as played), which exercise was last open, which sidebar tab is showing, which folders are collapsed, whether the grid editor is collapsed, which screen is showing, and the metronome's settings. Kept per device and never exported.
+How the app is set up on this computer rather than how an exercise is practiced: volumes and mutes (the Mix), the count-in toggle, the theme and mode, the notation's fit, the beat count and the version of the line it shows (as written or as played), which exercise was last open, which sidebar tab is showing (chosen from its heading's menu), which folders are collapsed and which rudiment families open, whether the grid editor is collapsed, which screen is showing, and the metronome's settings. Kept per device and never exported.
 
 **Mix**:
 How loud each playback layer (click, exercise, groove) plays on this device, and which are muted, set in the Mix panel the desktop header's speaker opens on the Practice screen (on the Metronome screen the same speaker opens the metronome's sound and volume; on a phone, the settings' Mix tab). A muted layer plays nothing, so the drummer can practise against any combination; a muted click still plays the count-in. The click's mute is also in the Practice screen's transport.

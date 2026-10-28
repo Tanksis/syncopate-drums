@@ -16,8 +16,8 @@ const KEYS: KeyHelpGroup[] = [...KEY_HELP, METRONOME_KEY_HELP]
 const QUICK_START: { title: string; desktop: string; phone: string }[] = [
   {
     title: 'Make an exercise',
-    desktop: 'In Exercises, on the left, open the Library tab, press + and choose New.',
-    phone: 'Open ☰, then the Library tab, press + and choose New.',
+    desktop: 'In the sidebar on the left, choose Library from its heading's menu, press + and choose New.',
+    phone: 'Open ☰, choose Library from its heading's menu, press + and choose New.',
   },
   {
     title: 'Enter the hits',

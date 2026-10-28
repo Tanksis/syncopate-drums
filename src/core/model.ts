@@ -1,6 +1,7 @@
 // The exercise model: what an exercise contains and how it is practised.
 
 import type { MetronomeSettings } from './metronome'
+import type { RudimentFamily } from './rudiments'
 import { DEFAULT_METRONOME_SETTINGS, metronomeSettingsFrom } from './metronome'
 import { TICKS_PER_BEAT, clampBpm } from './units'
 
@@ -224,6 +225,8 @@ export interface DeviceSettings {
   libraryTab: LibraryTab
   /** The Library folders shown collapsed on this device. */
   collapsedFolderIds: string[]
+  /** The rudiment families shown open on this device; the rest are folded. */
+  openRudimentFamilies: RudimentFamily[]
   /** The library sidebar is open, not a rail, in a wide window. */
   librarySidebarOpen: boolean
   /** The settings sidebar is open, not a rail, in a wide window. */
@@ -276,7 +279,7 @@ export function drawnMode(theme: Theme, systemDark: boolean): 'light' | 'dark' {
 /**
  * Device settings as stored, over the defaults for any added since. A stored setting the app no
  * longer has (such as `vimKeys`, ADR 0009), a theme, look, screen or notation version it doesn't
- * have, or a yes-or-no setting that isn't a boolean, is dropped.
+ * have, a yes-or-no setting that isn't a boolean, or a list that isn't an array, is dropped.
  * The metronome is filled in setting by setting (see `metronomeSettingsFrom`).
  */
 export function deviceSettingsFrom(stored: Record<string, unknown> | undefined): DeviceSettings {
@@ -284,6 +287,7 @@ export function deviceSettingsFrom(stored: Record<string, unknown> | undefined):
     ([key, value]) =>
       key in DEFAULT_DEVICE_SETTINGS &&
       (typeof DEFAULT_DEVICE_SETTINGS[key as keyof DeviceSettings] !== 'boolean' || typeof value === 'boolean') &&
+      (!Array.isArray(DEFAULT_DEVICE_SETTINGS[key as keyof DeviceSettings]) || Array.isArray(value)) &&
       (key !== 'theme' || THEMES.includes(value as Theme)) &&
       (key !== 'look' || LOOKS.includes(value as Look)) &&
       (key !== 'screen' || SCREENS.includes(value as Screen)) &&
@@ -306,6 +310,7 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   lastOpenedId: null,
   libraryTab: 'library',
   collapsedFolderIds: [],
+  openRudimentFamilies: [],
   librarySidebarOpen: true,
   settingsSidebarOpen: true,
   editorCollapsed: false,
