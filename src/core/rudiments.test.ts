@@ -25,18 +25,22 @@ import {
 const rudiments = rudimentExercises()
 const byName = (name: string) => rudiments.find((r) => r.name === name)!
 
+/** How the text form marks each roll stroke. */
+const ROLL_MARK = { double: '/', buzz: 'z' }
+
 /**
- * The hands printed under the snare notes, in order: each one after `>` when accented and after
- * its grace hands in lower case (`lR` a flam, `llR` a drag), as the PAS chart writes them.
+ * The hands printed under the snare notes, in order, each after its marks as the text form writes
+ * them: `>` when accented, `/` a double or `z` a buzz, then its grace hands in lower case (`lR` a
+ * flam, `llR` a drag), as the PAS chart writes them.
  */
 function written(exercise: Exercise): string {
-  const accented = new Set(
-    placeItems(exercise.bars, 'snare')
-      .filter((p) => p.item.kind === 'note' && p.item.dynamic === 'accent')
-      .map((p) => `${p.bar}:${p.start}`),
-  )
+  const marks = new Map<string, string>()
+  for (const p of placeItems(exercise.bars, 'snare')) {
+    if (p.item.kind !== 'note') continue
+    marks.set(`${p.bar}:${p.start}`, (p.item.dynamic === 'accent' ? '>' : '') + (p.item.roll ? ROLL_MARK[p.item.roll] : ''))
+  }
   return sticking(exercise)
-    .map((n) => (accented.has(n.noteId) ? '>' : '') + (n.graces ?? []).join('').toLowerCase() + n.shown)
+    .map((n) => marks.get(n.noteId) + (n.graces ?? []).join('').toLowerCase() + n.shown)
     .join('')
 }
 
@@ -56,6 +60,18 @@ const PAS: Record<string, string> = {
   'Single stroke roll': 'RL',
   'Single stroke four': 'RLR>L',
   'Single stroke seven': 'RLRLRL>RLRLRLR>L',
+  'Multiple bounce roll': 'zRzL',
+  'Triple stroke roll': 'RRRLLL',
+  'Double stroke open roll': '/R/L',
+  'Five stroke roll': '/R/L>R/L/R>L',
+  'Six stroke roll': '>R/L/R>L',
+  'Seven stroke roll': '/R/L/R>L/L/R/L>R',
+  'Nine stroke roll': '/R/L/R/L>R',
+  'Ten stroke roll': '/R/L/R/L>R>L',
+  'Eleven stroke roll': '/R/L/R/L/R>L/L/R/L/R/L>R',
+  'Thirteen stroke roll': '/R/L/R/L/R/L>R',
+  'Fifteen stroke roll': '/R/L/R/L/R/L/R>L/L/R/L/R/L/R/L>R',
+  'Seventeen stroke roll': '/R/L/R/L/R/L/R/L>R',
   'Single paradiddle': '>RLRR>LRLL',
   'Double paradiddle': '>RLRLRR>LRLRLL',
   'Triple paradiddle': '>RLRLRLRR>LRLRLRLL',
@@ -75,6 +91,7 @@ const PAS: Record<string, string> = {
   'Single drag tap': 'llR>LrrL>R',
   'Double drag tap': 'llRllR>LrrLrrL>R',
   'Lesson 25': 'llRL>RrrLR>L',
+  'Single dragadiddle': '>/RLRR>/LRLL',
   'Drag paradiddle #1': '>RllRLRR>LrrLRLL',
   'Drag paradiddle #2': '>RllRllRLRR>LrrLrrLRLL',
   'Single ratamacue': 'llRLR>LrrLRL>R',
@@ -83,23 +100,28 @@ const PAS: Record<string, string> = {
 }
 
 /** The rudiments that take two bars to come back to the starting hand; the rest take one. */
-const TWO_BARS = ['Single stroke seven', 'Double ratamacue', 'Triple ratamacue']
+const TWO_BARS = [
+  'Single stroke seven',
+  'Eleven stroke roll',
+  'Fifteen stroke roll',
+  'Seventeen stroke roll',
+  'Double ratamacue',
+  'Triple ratamacue',
+]
 
 const MIRRORED: Record<string, string> = { R: 'L', L: 'R', r: 'l', l: 'r' }
 const mirror = (text: string) => text.replace(/[RLrl]/g, (hand) => MIRRORED[hand])
 
 describe('the rudiments', () => {
-  it('are the singles, the diddles, the flams and the drags so far, in PAS order', () => {
+  it('are all 40, in PAS order', () => {
     expect(rudiments.map((r) => r.name)).toEqual(Object.keys(PAS))
   })
 
-  it('list all 40 under their four families, in PAS order, those not built yet without an id', () => {
+  it('list all 40 under their four families, in PAS order, each with its exercise', () => {
     const list = rudimentList()
     expect(list.map((r) => r.number)).toEqual(Array.from({ length: 40 }, (_, i) => i + 1))
     expect([...new Set(list.map((r) => r.family))]).toEqual(RUDIMENT_FAMILIES)
-    // Waiting on the roll strokes: the rolls past the single strokes, and the single dragadiddle.
-    const unbuilt = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 35]
-    expect(list.filter((r) => r.id).map((r) => r.number)).toEqual(list.map((r) => r.number).filter((n) => !unbuilt.includes(n)))
+    expect(list.map((r) => r.id)).toEqual(rudiments.map((r) => r.id))
     expect(list.find((r) => r.number === 16)).toEqual({ number: 16, name: 'Single paradiddle', family: 'Diddles', id: 'rudiment:single-paradiddle' })
   })
 
@@ -148,11 +170,33 @@ describe('the rudiments', () => {
     expect(written({ ...byName('Single paradiddle'), leadHand: 'L' })).toBe('>LRLL>RLRR>LRLL>RLRR')
   })
 
-  it('write the paradiddle-diddles, the flam accent and the Swiss army triplet in triplet eighths', () => {
-    for (const name of ['Single paradiddle-diddle', 'Flam paradiddle-diddle', 'Flam accent', 'Swiss army triplet']) {
+  it('write the triple stroke roll, the paradiddle-diddles, the flam accent and the Swiss army triplet in triplet eighths', () => {
+    for (const name of ['Triple stroke roll', 'Single paradiddle-diddle', 'Flam paradiddle-diddle', 'Flam accent', 'Swiss army triplet']) {
       const items = byName(name).bars[0].snare
       expect(items.every((item) => item.triplet && item.duration === 'eighth'), name).toBe(true)
     }
+  })
+
+  it('write the seven stroke roll as triplet eighth doubles and an accented quarter, twice', () => {
+    expect(struckTicks(byName('Seven stroke roll'))).toEqual([4, 4, 4, 12, 4, 4, 4, 12])
+  })
+
+  it('write the doubles of the stroke rolls and the double stroke open roll as slashed eighths', () => {
+    expect(struckTicks(byName('Double stroke open roll'))).toEqual(Array(8).fill(6))
+    expect(struckTicks(byName('Five stroke roll'))).toEqual([6, 6, 12, 6, 6, 12])
+    expect(struckTicks(byName('Nine stroke roll'))).toEqual([6, 6, 6, 6, 12])
+    expect(byName('Nine stroke roll').timeSignature).toBe('3/4')
+    expect(struckTicks(byName('Seventeen stroke roll'))).toEqual([...Array(8).fill(6), 12])
+  })
+
+  it('write the multiple bounce roll as buzzed sixteenths', () => {
+    expect(struckTicks(byName('Multiple bounce roll'))).toEqual(Array(16).fill(3))
+  })
+
+  it("write the single dragadiddle's drag as a double on its accented first sixteenth", () => {
+    const [first, ...rest] = byName('Single dragadiddle').bars[0].snare
+    expect(first).toMatchObject({ duration: 'sixteenth', roll: 'double', dynamic: 'accent', override: 'R' })
+    expect(rest.slice(0, 3).every((item) => item.kind === 'note' && !item.roll && !item.grace)).toBe(true)
   })
 
   it('write the flamacue as four sixteenths and a quarter flam, twice', () => {

@@ -23,7 +23,7 @@ One of the exercises built into the app to show what it does, listed in the side
 _Avoid_: Demo, template, preset
 
 **Rudiment**:
-One of the 40 PAS rudiments, built into the app and listed by PAS number in the sidebar's Rudiments tab in the folding families Rolls, Diddles, Flams and Drags; one not built yet is listed greyed, "Coming soon" on hover. Read-only like an **Example**, written as the fewest bars that bring it back to its starting hand, with every hand stored as a **Sticking override** and always printed. Its **Lead hand** can be changed to practise it from the left; its sticking mode and pattern can't (ADR 0018). Copy to Library makes an ordinary exercise from it.
+One of the 40 PAS rudiments, built into the app and listed by PAS number in the sidebar's Rudiments tab in the folding families Rolls, Diddles, Flams and Drags. Read-only like an **Example**, written as the fewest bars that bring it back to its starting hand, with every hand stored as a **Sticking override** and always printed. Its **Lead hand** can be changed to practise it from the left; its sticking mode and pattern can't (ADR 0018). Copy to Library makes an ordinary exercise from it.
 _Avoid_: Sticking pattern, lick
 
 **Built-in exercise**:
