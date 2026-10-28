@@ -40,6 +40,17 @@ function written(exercise: Exercise): string {
     .join('')
 }
 
+/** How long each struck snare note sounds, in ticks, a tied note counted whole. */
+function struckTicks(exercise: Exercise): number[] {
+  const ticks: number[] = []
+  for (const p of placeItems(exercise.bars, 'snare')) {
+    if (p.item.kind !== 'note') continue
+    if (p.continuation) ticks[ticks.length - 1] += itemTicks(p.item)
+    else ticks.push(itemTicks(p.item))
+  }
+  return ticks
+}
+
 /** One PAS cycle of each rudiment built, from the PAS chart; the exercise repeats it whole. */
 const PAS: Record<string, string> = {
   'Single stroke roll': 'RL',
@@ -60,13 +71,25 @@ const PAS: Record<string, string> = {
   'Swiss army triplet': '>lRRL',
   'Inverted flam tap': '>lRL>rLR',
   'Flam drag': '>lRLLR>rLRRL',
+  Drag: 'llRrrL',
+  'Single drag tap': 'llR>LrrL>R',
+  'Double drag tap': 'llRllR>LrrLrrL>R',
+  'Lesson 25': 'llRL>RrrLR>L',
+  'Drag paradiddle #1': '>RllRLRR>LrrLRLL',
+  'Drag paradiddle #2': '>RllRllRLRR>LrrLrrLRLL',
+  'Single ratamacue': 'llRLR>LrrLRL>R',
+  'Double ratamacue': 'llRllRLR>LrrLrrLRL>R',
+  'Triple ratamacue': 'llRllRllRLR>LrrLrrLrrLRL>R',
 }
+
+/** The rudiments that take two bars to come back to the starting hand; the rest take one. */
+const TWO_BARS = ['Single stroke seven', 'Double ratamacue', 'Triple ratamacue']
 
 const MIRRORED: Record<string, string> = { R: 'L', L: 'R', r: 'l', l: 'r' }
 const mirror = (text: string) => text.replace(/[RLrl]/g, (hand) => MIRRORED[hand])
 
 describe('the rudiments', () => {
-  it('are the singles, the diddles and the flams so far, in PAS order', () => {
+  it('are the singles, the diddles, the flams and the drags so far, in PAS order', () => {
     expect(rudiments.map((r) => r.name)).toEqual(Object.keys(PAS))
   })
 
@@ -74,7 +97,7 @@ describe('the rudiments', () => {
     const list = rudimentList()
     expect(list.map((r) => r.number)).toEqual(Array.from({ length: 40 }, (_, i) => i + 1))
     expect([...new Set(list.map((r) => r.family))]).toEqual(RUDIMENT_FAMILIES)
-    expect(list.filter((r) => r.id).map((r) => r.number)).toEqual([1, 2, 3, ...Array.from({ length: 15 }, (_, i) => i + 16)])
+    expect(list.filter((r) => r.id).map((r) => r.number)).toEqual([1, 2, 3, ...Array.from({ length: 19 }, (_, i) => i + 16), 36, 37, 38, 39, 40])
     expect(list.find((r) => r.number === 16)).toEqual({ number: 16, name: 'Single paradiddle', family: 'Diddles', id: 'rudiment:single-paradiddle' })
   })
 
@@ -111,7 +134,7 @@ describe('the rudiments', () => {
   })
 
   it('are the fewest bars back to the starting hand', () => {
-    for (const r of rudiments) expect(r.bars.length, r.name).toBe(r.name === 'Single stroke seven' ? 2 : 1)
+    for (const r of rudiments) expect(r.bars.length, r.name).toBe(TWO_BARS.includes(r.name) ? 2 : 1)
   })
 
   it('print a hand on every note, an override, whatever the sticking mode would give', () => {
@@ -139,6 +162,27 @@ describe('the rudiments', () => {
     const flamDrag = byName('Flam drag')
     expect(flamDrag.timeSignature).toBe('3/4')
     expect(flamDrag.bars[0].snare.map(itemTicks)).toEqual([6, 3, 3, 6, 6, 3, 3, 6])
+  })
+
+  it('write the double drag tap in 3/4 sixteenths, each half a dotted eighth, a sixteenth and an eighth', () => {
+    const doubleDragTap = byName('Double drag tap')
+    expect(doubleDragTap.timeSignature).toBe('3/4')
+    expect(struckTicks(doubleDragTap)).toEqual([9, 3, 6, 9, 3, 6])
+    // The second half's dotted eighth starts on the & of 2, so it is tied over into beat 3.
+    expect(placeItems(doubleDragTap.bars, 'snare').filter((p) => p.continuation)).toHaveLength(1)
+  })
+
+  it('write drag paradiddle #1 in 3/4 sixteenths, each half an eighth and four sixteenths', () => {
+    const dragParadiddle = byName('Drag paradiddle #1')
+    expect(dragParadiddle.timeSignature).toBe('3/4')
+    expect(struckTicks(dragParadiddle)).toEqual([6, 3, 3, 3, 3, 6, 3, 3, 3, 3])
+  })
+
+  it("write the ratamacues' sixteenth triplets as triplet eighths, the eighths around them as quarters", () => {
+    expect(struckTicks(byName('Single ratamacue'))).toEqual([4, 4, 4, 12, 4, 4, 4, 12])
+    expect(byName('Double ratamacue').timeSignature).toBe('3/4')
+    expect(struckTicks(byName('Double ratamacue'))).toEqual([12, 4, 4, 4, 12, 12, 4, 4, 4, 12])
+    expect(struckTicks(byName('Triple ratamacue'))).toEqual([12, 12, 4, 4, 4, 12, 12, 12, 4, 4, 4, 12])
   })
 })
 
