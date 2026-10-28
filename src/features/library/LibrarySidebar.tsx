@@ -1,8 +1,9 @@
+import type { ReactNode } from 'react'
 import { useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { Button, buttonClass } from '@/components/Button'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { DuplicateIcon, HelpIcon, MoreIcon, PencilIcon, PlusIcon, TrashIcon } from '@/components/icons'
+import { BulbIcon, DuplicateIcon, HelpIcon, LibraryIcon, MoreIcon, PencilIcon, PlusIcon, SticksIcon, TrashIcon } from '@/components/icons'
 import { Menu } from '@/components/Menu'
 import { NameInput } from '@/components/NameInput'
 import { PatternDialog } from '@/components/PatternDialog'
@@ -40,24 +41,25 @@ const listButtonClass = (open: boolean) =>
 /** A drop target, outlined in the accent while an exercise is dragged over it; inset, as the list clips. */
 const dropTargetClass = (over: boolean) => `rounded-md ${over ? 'outline-2 -outline-offset-2 outline-accent' : ''}`
 
-/** The lists the heading's menu switches between: the sidebar's tabs. */
-const TABS: { id: LibraryTab; label: string }[] = [
-  { id: 'library', label: 'Library' },
-  { id: 'examples', label: 'Examples' },
-  { id: 'rudiments', label: 'Rudiments' },
+/** The lists the switch at the top chooses between, the drummer's own first and the examples last. */
+const TABS: { id: LibraryTab; label: string; icon: ReactNode }[] = [
+  { id: 'library', label: 'Library', icon: <LibraryIcon /> },
+  { id: 'rudiments', label: 'Rudiments', icon: <SticksIcon /> },
+  { id: 'examples', label: 'Examples', icon: <BulbIcon /> },
 ]
 
 /**
- * The sidebar's three tabs, switched by the menu its heading is, which names the one showing and dots
- * the one holding the open exercise. Library: a toolbar (a + menu of New, New from pattern… and New folder;
+ * The sidebar's three lists, switched by icon tabs at its top in place of a heading, each named on
+ * hover (and under it on a phone, which has no hover), over a line; the open exercise's list is
+ * dotted while another shows. Library: a toolbar (a + menu of New, New from pattern… and New folder;
  * Duplicate and Delete; a ⋯ menu of Import… and Export all), the filter, and the list: the
  * folders (chevron to collapse, double-click to rename, × to delete), each with its exercises,
  * then the exercises in no folder (click to open, double-click to rename, tick to select, drag
  * onto a folder or "No folder" to move it there). The selection stays through filtering and can
  * be exported, deleted or moved to a folder together. Examples: the built-in examples, to open.
  * Rudiments: the 40 PAS rudiments in their families, folders that fold (remembered on the device)
- * and count the ones built; those open, the rest greyed, "coming soon". On both, a copy icon by the
- * heading makes a Library copy of the open one.
+ * and count the ones built; those open, the rest greyed, "coming soon". (The read-only notice over
+ * the notation has Copy to Library for the open one.)
  * Given `onHelp` (the phone's, which has no header button for it), Help at its foot opens the Help page.
  */
 export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onCollapse: () => void; fullScreen?: boolean; onHelp?: () => void }) {
@@ -67,7 +69,6 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   const openFamilies = useAppStore((s) => s.device.openRudimentFamilies)
   const builtInCleanRuns = useAppStore((s) => s.builtInCleanRuns)
-  const tabLabel = TABS.find(({ id }) => id === tab)!.label
   const builtInOpen = isBuiltIn(openId)
   const openInStore = useAppStore((s) => s.openExercise)
   // An exercise opened from the Metronome screen shows on Practice, where it can be seen.
@@ -185,45 +186,42 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
         fullScreen={fullScreen}
         onCollapse={onCollapse}
         title={
-          <Menu
-            label={`Exercise list: ${tabLabel}`}
-            large={fullScreen}
-            align="left"
-            icon={
-              <>
-                {tabLabel}
-                <span aria-hidden className="text-[0.8em]">
-                  ▾
-                </span>
-              </>
-            }
-            // The heading's own face, as a button.
-            buttonClassName="-mx-1 -my-0.5 flex cursor-pointer items-center gap-1 rounded border-0 bg-transparent px-1 py-0.5 [font:inherit] [letter-spacing:inherit] [font-variant-caps:inherit] [text-transform:inherit] text-inherit hover:bg-hover hover:text-ink aria-expanded:bg-hover aria-expanded:text-ink"
-            items={TABS.map(({ id, label }) => ({
-              label,
-              checked: tab === id,
-              aside: id === tabListing(openId) && <span title="The open exercise is here" className="block size-1.5 rounded-full bg-accent" />,
-              onSelect: () => setDeviceSettings({ libraryTab: id }),
-            }))}
-          />
-        }
-        actions={
-          tab !== 'library' && (
-            <Button
-              variant="ghost"
-              size={fullScreen ? 'lg' : 'sm'}
-              icon
-              aria-label="Copy to Library"
-              title={tabListing(openId) === tab ? 'Make an editable copy of the open one in the Library' : `Open one of the ${tabLabel.toLowerCase()} to copy it`}
-              disabled={tabListing(openId) !== tab}
-              onClick={duplicateOpenExercise}
-              className={fullScreen ? '' : '-mt-1'}
-            >
-              <DuplicateIcon />
-            </Button>
-          )
+          <div role="tablist" aria-label="Exercise lists" className="mr-auto flex gap-1">
+            {TABS.map(({ id, label, icon }) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={tab === id}
+                aria-label={label}
+                onMouseDown={keepFocus}
+                onClick={() => setDeviceSettings({ libraryTab: id })}
+                // On a phone, its name under it, as in the tab bar.
+                className={`group relative flex cursor-pointer items-center justify-center rounded-md border-0 bg-transparent text-mute hover:bg-hover hover:text-ink aria-selected:bg-accent/10 aria-selected:text-accent ${
+                  fullScreen ? 'min-w-16 flex-col gap-0.5 px-2 py-1.5 text-[11px] font-semibold' : 'size-8'
+                }`}
+              >
+                {icon}
+                {fullScreen && <span aria-hidden>{label}</span>}
+                {id !== tab && id === tabListing(openId) && (
+                  <span title="The open exercise is here" className="absolute top-1 right-1 size-1.5 rounded-full bg-accent" />
+                )}
+                {/* Its name, on hover or keyboard focus, as quick as a menu's; under the line, over the list. */}
+                {!fullScreen && (
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute top-full left-0 z-20 mt-1.5 rounded bg-ink px-1.5 py-0.5 text-xs font-semibold whitespace-nowrap text-bg opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+                  >
+                    {label}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         }
       />
+      {/* Parts the tabs from the list's own tools. */}
+      <span aria-hidden className="h-px shrink-0 bg-line" />
       {tab === 'examples' && (
         <>
           <ul aria-label="Examples" className="m-0 flex min-h-0 list-none flex-col overflow-auto p-0">

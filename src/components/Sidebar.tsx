@@ -21,8 +21,8 @@ export const chevronButtonClass =
 /**
  * A sidebar's heading, with the chevron that collapses the sidebar to its rail, or, shown
  * `fullScreen` on a phone, the tick that closes it. `sidebarName` names the sidebar in the
- * chevron's label where the heading names only what's under it. `title` draws the heading in place
- * of `name` (a menu naming it), and `actions` go before the chevron or tick.
+ * chevron's label where the heading names only what's under it. `title` takes the heading's place
+ * (a switch between what the sidebar lists), `name` still naming the sidebar.
  */
 export function SidebarHeading({
   name,
@@ -30,7 +30,6 @@ export function SidebarHeading({
   side,
   fullScreen = false,
   title,
-  actions,
   onCollapse,
 }: {
   name: string
@@ -38,16 +37,13 @@ export function SidebarHeading({
   side: Side
   fullScreen?: boolean
   title?: ReactNode
-  actions?: ReactNode
   onCollapse: () => void
 }) {
   // Its panel's padding is 10 px across and 12 down, so this lines the title up with Settings'.
-  if (fullScreen)
-    return <FullScreenHeading name={name} title={title} actions={actions} onClose={onCollapse} className="px-1.5 pt-0.5 pb-0.5" />
+  if (fullScreen) return <FullScreenHeading name={name} title={title} onClose={onCollapse} className="px-1.5 pt-0.5 pb-0.5" />
   return (
-    <div className="flex items-start gap-2">
-      <PanelHeading className="mr-auto">{title ?? name}</PanelHeading>
-      {actions}
+    <div className={`flex gap-2 ${title ? 'items-center' : 'items-start justify-between'}`}>
+      {title ?? <PanelHeading>{name}</PanelHeading>}
       <button
         type="button"
         aria-label={`Collapse ${sidebarName.toLowerCase()}`}
@@ -55,7 +51,7 @@ export function SidebarHeading({
         // Keep focus off the button, so Space still pauses.
         onMouseDown={keepFocus}
         onClick={onCollapse}
-        className={`-mt-1 ${chevronButtonClass}`}
+        className={`${title ? '' : '-mt-1'} ${chevronButtonClass}`}
       >
         <span aria-hidden>{CHEVRON[side].collapse}</span>
       </button>
@@ -64,26 +60,13 @@ export function SidebarHeading({
 }
 
 /**
- * A phone's full-screen panel's title, as large as a sheet's, and the tick that closes the panel;
- * `title` and `actions` as for `SidebarHeading`.
+ * A phone's full-screen panel's title, as large as a sheet's, or `title` in its place as for
+ * `SidebarHeading`, and the tick that closes the panel.
  */
-export function FullScreenHeading({
-  name,
-  title,
-  actions,
-  onClose,
-  className = '',
-}: {
-  name: string
-  title?: ReactNode
-  actions?: ReactNode
-  onClose: () => void
-  className?: string
-}) {
+export function FullScreenHeading({ name, title, onClose, className = '' }: { name: string; title?: ReactNode; onClose: () => void; className?: string }) {
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <h2 className="m-0 mr-auto font-display text-2xl font-semibold">{title ?? name}</h2>
-      {actions}
+    <div className={`flex items-center justify-between gap-2 ${className}`}>
+      {title ?? <h2 className="m-0 font-display text-2xl font-semibold">{name}</h2>}
       <DoneButton label={`Close ${name.toLowerCase()}`} onClick={onClose} />
     </div>
   )
