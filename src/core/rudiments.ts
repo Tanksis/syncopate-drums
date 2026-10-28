@@ -23,10 +23,10 @@ export interface RudimentEntry {
 /**
  * A rudiment's notes, written bar by bar, each bar's beats separated by spaces. A beat is four
  * sixteenth slots or three triplet-eighth slots: `.` for no hit, or a hand (`R` or `L`, as for a
- * right lead) after its marks: `>` an accent, then `/` a double or `z` a buzz, then its grace hands
- * in lower case as the PAS chart writes them, the other hand (`lR` a flam, `llR` a drag). A hit sounds until the next hit or the
- * end of its beat, so `>R..` is an accented quarter, and `~` first in a beat ties the hit before
- * on into it.
+ * right lead) after its marks: `>` an accent, then `/` a double or `z` a buzz, then its grace
+ * hands in lower case as the PAS chart writes them, the other hand (`lR` a flam, `llR` a drag). A
+ * hit sounds until the next hit or the end of its beat, so `>R..` is an accented quarter, and `~`
+ * first in a beat ties the hit before on into it.
  */
 interface Written {
   /** 4/4 unless given. */
@@ -136,14 +136,14 @@ export function isRudiment(id: string): boolean {
 /** What one struck note of the text form carries besides its rhythm. */
 type Struck = Pick<Note, 'override' | 'dynamic' | 'grace' | 'roll'>
 
-/** One slot of a beat: `.`, `~` (first only), or a hand after its accent, roll stroke and grace hands. */
-const SLOT = /^~|\.|>?[/z]?(?:rr?|ll?)?[RL]/g
+/**
+ * One slot of a beat: `.`, `~` (first only), or a hand after its accent, roll stroke and grace
+ * hands, each caught in its group.
+ */
+const SLOT = /^~|\.|(>?)([/z]?)((?:rr?|ll?)?)([RL])/g
 
 /** The roll stroke each mark of the text form writes. */
-const ROLL_MARKS: Record<string, Roll> = { '/': 'double', z: 'buzz' }
-
-/** Whether a slot of a beat strikes a note, rather than resting or holding on. */
-const strikes = (slot: string) => slot !== '.' && slot !== '~'
+const ROLL_MARKS = { '/': 'double', z: 'buzz' } satisfies Record<string, Roll>
 
 /** The grace that lower-case hands before a note's hand write, so many grace notes of the other hand. */
 function graceOf(graces: string, hand: Hand): Grace {
@@ -163,18 +163,17 @@ function writeBars(lines: string[], beats: number): Bar[] {
   const struck: Struck[] = []
   lines.forEach((line, bar) => {
     line.split(' ').forEach((beat, b) => {
-      const slots = beat.match(SLOT) ?? []
-      if (slots.join('') !== beat) throw new Error(`Unreadable rudiment beat "${beat}"`)
-      bars = setBeat(bars, 'snare', bar, b, slots.map((s) => (strikes(s) ? 'x' : s)).join(''))
-      for (const slot of slots) {
-        if (!strikes(slot)) continue
-        const hand = slot.at(-1) as Hand
-        const [, accent, roll, graces] = slot.match(/^(>?)([/z]?)(.*).$/)!
+      const slots = [...beat.matchAll(SLOT)]
+      if (slots.map(([slot]) => slot).join('') !== beat) throw new Error(`Unreadable rudiment beat "${beat}"`)
+      // A slot strikes a note when it has a hand, rather than resting or holding on.
+      bars = setBeat(bars, 'snare', bar, b, slots.map(([slot, , , , hand]) => (hand ? 'x' : slot)).join(''))
+      for (const [, accent, roll, graces, hand] of slots) {
+        if (!hand) continue
         struck.push({
-          override: hand,
+          override: hand as Hand,
           ...(accent ? { dynamic: 'accent' } : {}),
-          ...(roll ? { roll: ROLL_MARKS[roll] } : {}),
-          ...(graces ? { grace: graceOf(graces, hand) } : {}),
+          ...(roll ? { roll: ROLL_MARKS[roll as keyof typeof ROLL_MARKS] } : {}),
+          ...(graces ? { grace: graceOf(graces, hand as Hand) } : {}),
         })
       }
     })

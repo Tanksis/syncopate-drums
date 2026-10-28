@@ -25,19 +25,22 @@ import {
 const rudiments = rudimentExercises()
 const byName = (name: string) => rudiments.find((r) => r.name === name)!
 
+/** How the text form marks each roll stroke. */
+const ROLL_MARK = { double: '/', buzz: 'z' }
+
 /**
  * The hands printed under the snare notes, in order, each after its marks as the text form writes
  * them: `>` when accented, `/` a double or `z` a buzz, then its grace hands in lower case (`lR` a
  * flam, `llR` a drag), as the PAS chart writes them.
  */
 function written(exercise: Exercise): string {
-  const notes = new Map(placeItems(exercise.bars, 'snare').flatMap((p) => (p.item.kind === 'note' ? [[`${p.bar}:${p.start}`, p.item]] : [])))
-  const ROLL = { double: '/', buzz: 'z' }
+  const marks = new Map<string, string>()
+  for (const p of placeItems(exercise.bars, 'snare')) {
+    if (p.item.kind !== 'note') continue
+    marks.set(`${p.bar}:${p.start}`, (p.item.dynamic === 'accent' ? '>' : '') + (p.item.roll ? ROLL_MARK[p.item.roll] : ''))
+  }
   return sticking(exercise)
-    .map((n) => {
-      const note = notes.get(n.noteId)!
-      return (note.dynamic === 'accent' ? '>' : '') + (note.roll ? ROLL[note.roll] : '') + (n.graces ?? []).join('').toLowerCase() + n.shown
-    })
+    .map((n) => marks.get(n.noteId) + (n.graces ?? []).join('').toLowerCase() + n.shown)
     .join('')
 }
 
@@ -167,7 +170,7 @@ describe('the rudiments', () => {
     expect(written({ ...byName('Single paradiddle'), leadHand: 'L' })).toBe('>LRLL>RLRR>LRLL>RLRR')
   })
 
-  it('write the paradiddle-diddles, the triple stroke and seven stroke rolls, the flam accent and the Swiss army triplet in triplet eighths', () => {
+  it('write the triple stroke roll, the paradiddle-diddles, the flam accent and the Swiss army triplet in triplet eighths', () => {
     for (const name of ['Triple stroke roll', 'Single paradiddle-diddle', 'Flam paradiddle-diddle', 'Flam accent', 'Swiss army triplet']) {
       const items = byName(name).bars[0].snare
       expect(items.every((item) => item.triplet && item.duration === 'eighth'), name).toBe(true)
