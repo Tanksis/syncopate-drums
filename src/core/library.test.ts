@@ -127,6 +127,10 @@ describe('duplicating an exercise', () => {
     expect(copy.practice).toEqual({ bpm: 132, loopRange: { first: 0, last: 0 }, pattern: 'off', bassDrum: 'feathered', hihatFoot: 'one', swing: 0.58 })
   })
 
+  it('starts the copy’s clean runs afresh', () => {
+    expect(duplicateExercise({ ...original, cleanRuns: [{ bpm: 120, at: 50 }] }, { id: 'copy', now: 900 })).not.toHaveProperty('cleanRuns')
+  })
+
   it('puts the copy in its original’s folder', () => {
     expect(duplicateExercise({ ...original, folderId: 'f1' }, { id: 'copy', now: 900 }).folderId).toBe('f1')
     expect(copy.folderId).toBeNull()

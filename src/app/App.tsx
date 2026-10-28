@@ -20,6 +20,7 @@ import { NotationView } from '@/features/notation/NotationView'
 import { StaffPlayButton } from '@/features/playback/StaffPlayButton'
 import { TransportBar } from '@/features/playback/TransportBar'
 import type { TransportRoom } from '@/features/playback/TransportControls'
+import { CleanRunsSheet } from '@/features/playback/CleanRuns'
 import { PlaybackChips, TransportControls } from '@/features/playback/TransportControls'
 import { PhoneSettings } from '@/features/settings/SettingsSidebar'
 import { PreferencesButton, SoundButton } from '@/features/settings/SettingsPopovers'
@@ -173,7 +174,16 @@ function PhoneLayout({ sidebars, onHelp }: { sidebars: Record<SidebarId, Sidebar
           </PhoneHeaderButton>
           <span aria-hidden className="my-0.5 h-px w-6 bg-line" />
           <ScreenTabs place="rail" />
-          <PhoneHeaderButton label="Open settings" expanded={settings.state === 'overlay'} onClick={settings.onOpen} rail className="mt-auto">
+          {!onMetronome && (
+            <CleanRunsSheet>
+              {(open, tick) => (
+                <PhoneHeaderButton label="Clean runs" expanded={false} onClick={open} rail className="mt-auto">
+                  {tick}
+                </PhoneHeaderButton>
+              )}
+            </CleanRunsSheet>
+          )}
+          <PhoneHeaderButton label="Open settings" expanded={settings.state === 'overlay'} onClick={settings.onOpen} rail className={onMetronome ? 'mt-auto' : ''}>
             <SettingsIcon />
           </PhoneHeaderButton>
         </nav>
@@ -191,6 +201,15 @@ function PhoneLayout({ sidebars, onHelp }: { sidebars: Record<SidebarId, Sidebar
                 <ExerciseName className="w-full text-center" />
               )}
             </div>
+            {!onMetronome && (
+              <CleanRunsSheet>
+                {(open, tick) => (
+                  <PhoneHeaderButton label="Clean runs" expanded={false} onClick={open}>
+                    {tick}
+                  </PhoneHeaderButton>
+                )}
+              </CleanRunsSheet>
+            )}
             <PhoneHeaderButton label="Open settings" expanded={settings.state === 'overlay'} onClick={settings.onOpen}>
               <SettingsIcon />
             </PhoneHeaderButton>

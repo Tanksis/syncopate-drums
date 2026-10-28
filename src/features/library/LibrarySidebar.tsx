@@ -8,6 +8,7 @@ import { NameInput } from '@/components/NameInput'
 import { PatternDialog } from '@/components/PatternDialog'
 import { SelectButtonFace, selectButtonClass } from '@/components/SelectMenu'
 import { SidebarHeading } from '@/components/Sidebar'
+import { BestCleanBpm } from '@/features/playback/CleanRuns'
 import { keepFocus } from '@/components/keepFocus'
 import type { Exercise, Folder, LibraryTab } from '@/core'
 import { RUDIMENT_FAMILIES, exampleExercises, exampleTitle, foldersByName, isBuiltIn, libraryView, rudimentList, tabListing } from '@/core'
@@ -65,6 +66,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
   const tab = useAppStore((s) => s.device.libraryTab)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   const openFamilies = useAppStore((s) => s.device.openRudimentFamilies)
+  const builtInCleanRuns = useAppStore((s) => s.builtInCleanRuns)
   const tabLabel = TABS.find(({ id }) => id === tab)!.label
   const builtInOpen = isBuiltIn(openId)
   const openInStore = useAppStore((s) => s.openExercise)
@@ -165,6 +167,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
           >
             {exercise.name}
           </button>
+          <BestCleanBpm runs={exercise.cleanRuns} />
           <RenamePencil name={exercise.name} onClick={() => setRenamingId(exercise.id)} />
         </>
       )}
@@ -225,7 +228,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
         <>
           <ul aria-label="Examples" className="m-0 flex min-h-0 list-none flex-col overflow-auto p-0">
             {EXAMPLES.map((example) => (
-              <li key={example.id} className="flex">
+              <li key={example.id} className="flex items-center gap-1 pr-2">
                 <button
                   type="button"
                   title="Click to open"
@@ -236,6 +239,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
                 >
                   {exampleTitle(example)}
                 </button>
+                <BestCleanBpm runs={builtInCleanRuns[example.id]} />
               </li>
             ))}
           </ul>
@@ -272,18 +276,21 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
                         </>
                       )
                       return (
-                        <li key={number} className="flex">
+                        <li key={number} className="flex items-center gap-1 pr-2">
                           {id ? (
-                            <button
-                              type="button"
-                              title="Click to open"
-                              aria-current={id === openId}
-                              onMouseDown={keepFocus}
-                              onClick={() => openExercise(id)}
-                              className={listButtonClass(id === openId)}
-                            >
-                              {label}
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                title="Click to open"
+                                aria-current={id === openId}
+                                onMouseDown={keepFocus}
+                                onClick={() => openExercise(id)}
+                                className={listButtonClass(id === openId)}
+                              >
+                                {label}
+                              </button>
+                              <BestCleanBpm runs={builtInCleanRuns[id]} />
+                            </>
                           ) : (
                             <span
                               aria-disabled

@@ -2,7 +2,7 @@
 // change, unless it is built in (an example or a rudiment), which is never stored (ADR 0008, 0018).
 
 import { create } from 'zustand'
-import type { BassDrum, DeviceSettings, EditCommand, Mark, MetronomeSettings, EditorState, Exercise, Folder, HihatFoot, ImportChoice, PatternGrid, PatternId, PatternSuggestion, PlayPosition, PracticeSettings } from '@/core'
+import type { BassDrum, CleanRun, DeviceSettings, EditCommand, Mark, MetronomeSettings, EditorState, Exercise, Folder, HihatFoot, ImportChoice, PatternGrid, PatternId, PatternSuggestion, PlayPosition, PracticeSettings } from '@/core'
 import {
   DEFAULT_DEVICE_SETTINGS,
   addedOnTop,
@@ -31,6 +31,8 @@ import {
   tabListing,
   updatedInPlace,
   withBpm,
+  withCleanRun,
+  withoutCleanRun,
   withBassDrum,
   withHihatFoot,
   withLoopRange,
@@ -147,6 +149,20 @@ interface AppState {
    * sidebar switches to the Library tab, to show them.
    */
   importExercises: (incoming: Exercise[], fileFolders: Folder[], choice: ImportChoice) => number
+  /** The built-in exercises' clean runs, by id; a stored exercise keeps its own. */
+  builtInCleanRuns: Record<string, CleanRun[]>
+  /** Logs a clean run of the open exercise at its tempo, now. */
+  logCleanRun: () => void
+  /** Drops the open exercise's clean run logged at `at`, logged by mistake. */
+  removeCleanRun: (at: number) => void
+}
+
+/** One empty list for every exercise without clean runs, so a selector of them stays the same. */
+const NO_CLEAN_RUNS: CleanRun[] = []
+
+/** An exercise's clean runs, wherever they're kept: on it, or for a built-in one, on the side. */
+export function cleanRunsOf(state: Pick<AppState, 'builtInCleanRuns'>, exercise: Pick<Exercise, 'id' | 'cleanRuns'>): CleanRun[] {
+  return (isBuiltIn(exercise.id) ? state.builtInCleanRuns[exercise.id] : exercise.cleanRuns) ?? NO_CLEAN_RUNS
 }
 
 /** How long a slider must rest before its value is saved. */
@@ -241,6 +257,20 @@ export const useAppStore = create<AppState>()((set, get) => {
     // A new exercise isn't stored until it is first changed.
     if (!isUnchangedNew(opened)) autosave(opened)
     saveDevice(deviceNow)
+  }
+
+  /** Sets the open exercise's clean runs, on it or, for a built-in one, on the side. */
+  function setCleanRuns(runs: CleanRun[]) {
+    const { editor, builtInCleanRuns } = get()
+    const { id } = editor.exercise
+    if (!isBuiltIn(id)) {
+      // With none left it's as it was before the first, so a new exercise still counts as unchanged.
+      const { cleanRuns: _, ...rest } = editor.exercise
+      const exercise = runs.length ? { ...rest, cleanRuns: runs } : rest
+      return change(exercise, { ...editor, exercise })
+    }
+    set({ builtInCleanRuns: { ...builtInCleanRuns, [id]: runs } })
+    storage?.builtInCleanRuns.put(id, runs).catch((error) => console.error('Saving clean runs failed', error))
   }
 
   /** Opens a new exercise on top of the list. A collapsed folder it is filed in opens, so it shows there. */
@@ -443,6 +473,16 @@ export const useAppStore = create<AppState>()((set, get) => {
       })
       return stored.length
     },
+    builtInCleanRuns: {},
+    logCleanRun: () => {
+      const state = get()
+      const { exercise } = state.editor
+      setCleanRuns(withCleanRun(cleanRunsOf(state, exercise), exercise.practice.bpm, Date.now()))
+    },
+    removeCleanRun: (at) => {
+      const state = get()
+      setCleanRuns(withoutCleanRun(cleanRunsOf(state, state.editor.exercise), at))
+    },
   }
 })
 
@@ -459,6 +499,7 @@ export async function launchApp() {
     const opened = await openStorage()
     const device = await opened.device.load()
     const folders = await opened.folders.list()
+    const builtInCleanRuns = await opened.builtInCleanRuns.all()
     const now = Date.now()
     const listed = await opened.exercises.list()
     const leftovers = leftoverExamples(listed)
@@ -479,7 +520,7 @@ export async function launchApp() {
 
     // Only now does autosave start, so it never stores a placeholder from a launch that failed halfway.
     storage = opened
-    useAppStore.setState({ editor: newEditorState(exercise), library, folders, device: deviceNow, saving: true })
+    useAppStore.setState({ editor: newEditorState(exercise), library, folders, device: deviceNow, builtInCleanRuns, saving: true })
   } catch (error) {
     console.error('Could not open saved exercises', error)
   }
