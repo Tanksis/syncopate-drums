@@ -142,6 +142,12 @@ describe('ties', () => {
     expect(snareViews(setBeat(tied, 'snare', 0, 1, 'x.x.'))[0][1].tiedInto).toBe(true)
     expect(snareViews(setBeat(tied, 'snare', 0, 1, '..x.'))[0][1].tiedInto).toBe(false)
   })
+  it('ties the note before into a beat whose figure starts with ~, holding it to the first hit', () => {
+    expect(text(bar('x.x.', '~x..', 'x...', 'x...'))).toBe('e e~ s e. q q')
+  })
+  it('never ties on from a rest: a ~ after one leaves the start of the beat a rest', () => {
+    expect(text(bar('....', '~x..', 'x...', 'x...'))).toBe(text(bar('....', '.x..', 'x...', 'x...')))
+  })
 })
 
 describe('cut short', () => {

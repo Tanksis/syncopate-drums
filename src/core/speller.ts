@@ -330,8 +330,8 @@ function rowView(timeline: Timeline, index: number): RowView {
  * Writes a figure's hits into one beat of a row and re-spells the bars. Three characters make the
  * beat a triplet group, four a straight beat, unless it reads the same on either grid (only a
  * downbeat, or nothing), which is written as a plain beat. A hit that lands where a note already started keeps
- * that note's sticking override and marks, and a tie into the beat is kept if the figure starts with a hit.
- * A figure that starts with `-` ties the note before into the beat, holding it to the first hit.
+ * that note's sticking override and marks. A tie into the beat is kept if the figure starts with a
+ * hit, and made if it starts with `~`, which holds the note before on to the first hit (never a rest).
  * Where the figure puts the beat on the other grid from the other row's, the other row's beat is
  * cleared to its downbeat, as a grid switch does: a beat never mixes grids.
  */
@@ -343,7 +343,7 @@ export function setBeat(bars: readonly Bar[], row: Row, bar: number, beat: numbe
   const triplet = isTripletHits(hits)
   timeline.triplet[index] = triplet
   const hitTicks = new Set(slotTicks(triplet).filter((_, i) => hits[i] === 'x'))
-  let sounding = hits.startsWith('-')
+  let sounding = hits.startsWith('~') && first > 0 && cells[first - 1].state !== 'rest'
   for (let t = 0; t < TICKS_PER_BEAT; t++) {
     const old = cells[first + t]
     if (t === 0 && hitTicks.has(t) && old.state === 'hold') {

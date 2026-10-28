@@ -97,7 +97,9 @@ describe('the rudiments', () => {
     const list = rudimentList()
     expect(list.map((r) => r.number)).toEqual(Array.from({ length: 40 }, (_, i) => i + 1))
     expect([...new Set(list.map((r) => r.family))]).toEqual(RUDIMENT_FAMILIES)
-    expect(list.filter((r) => r.id).map((r) => r.number)).toEqual([1, 2, 3, ...Array.from({ length: 19 }, (_, i) => i + 16), 36, 37, 38, 39, 40])
+    // Waiting on the roll strokes: the rolls past the single strokes, and the single dragadiddle.
+    const unbuilt = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 35]
+    expect(list.filter((r) => r.id).map((r) => r.number)).toEqual(list.map((r) => r.number).filter((n) => !unbuilt.includes(n)))
     expect(list.find((r) => r.number === 16)).toEqual({ number: 16, name: 'Single paradiddle', family: 'Diddles', id: 'rudiment:single-paradiddle' })
   })
 

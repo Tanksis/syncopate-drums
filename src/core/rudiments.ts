@@ -28,7 +28,7 @@ export interface RudimentEntry {
  * sixteenth slots or three triplet-eighth slots: `.` for no hit, or a hand (`R` or `L`, as for a
  * right lead) after its marks: `>` an accent, then its grace hands in lower case as the PAS chart
  * writes them, the other hand (`lR` a flam, `llR` a drag). A hit sounds until the next hit or the
- * end of its beat, so `>R..` is an accented quarter, and `-` first in a beat ties the hit before
+ * end of its beat, so `>R..` is an accented quarter, and `~` first in a beat ties the hit before
  * on into it.
  */
 interface Written {
@@ -85,12 +85,12 @@ const RUDIMENTS: readonly Rudiment[] = [
   { number: 30, name: 'Flam drag', family: 'Flams', written: { timeSignature: '3/4', bpm: 80, bars: ['>lR.LL R.>rL. RRL.'] } },
   { number: 31, name: 'Drag', family: 'Drags', written: { bpm: 80, bars: ['llR... rrL... llR... rrL...'] } },
   { number: 32, name: 'Single drag tap', family: 'Drags', written: { bpm: 80, bars: ['llR.>L. rrL.>R. llR.>L. rrL.>R.'] } },
-  // A dotted eighth, a sixteenth and an eighth, twice: the chart's 6/8 halves, in 3/4 sixteenths.
-  { number: 33, name: 'Double drag tap', family: 'Drags', written: { timeSignature: '3/4', bpm: 70, bars: ['llR..llR >L.rrL. -rrL>R.'] } },
+  // A dotted eighth, a sixteenth and an eighth, twice: the PAS chart's 6/8 halves, in 3/4 sixteenths.
+  { number: 33, name: 'Double drag tap', family: 'Drags', written: { timeSignature: '3/4', bpm: 70, bars: ['llR..llR >L.rrL. ~rrL>R.'] } },
   { number: 34, name: 'Lesson 25', family: 'Drags', written: { bpm: 80, bars: ['llRL>R. rrLR>L. llRL>R. rrLR>L.'] } },
   // Its drag is a double stroke of the note's own hand (RR L R R), which waits for the roll strokes.
   { number: 35, name: 'Single dragadiddle', family: 'Drags' },
-  // An eighth and four sixteenths, twice: the chart's 6/8 halves, in 3/4 sixteenths.
+  // An eighth and four sixteenths, twice: the PAS chart's 6/8 halves, in 3/4 sixteenths.
   { number: 36, name: 'Drag paradiddle #1', family: 'Drags', written: { timeSignature: '3/4', bpm: 70, bars: ['>R.llRL RR>L. rrLRLL'] } },
   { number: 37, name: 'Drag paradiddle #2', family: 'Drags', written: { bpm: 70, bars: ['>R.llR. llRLRR >L.rrL. rrLRLL'] } },
   // The ratamacues' sixteenth triplets are written in triplet eighths, so every note is twice as
@@ -140,8 +140,11 @@ export function isRudiment(id: string): boolean {
 /** What one struck note of the text form carries besides its rhythm. */
 type Struck = Pick<Note, 'override' | 'dynamic' | 'grace'>
 
-/** One slot of a beat: `.`, `-`, or a hand after its accent and its grace hands. */
-const SLOT = /[.-]|>?(?:rr?|ll?)?[RL]/g
+/** One slot of a beat: `.`, `~` (first only), or a hand after its accent and its grace hands. */
+const SLOT = /^~|\.|>?(?:rr?|ll?)?[RL]/g
+
+/** Whether a slot of a beat strikes a note, rather than resting or holding on. */
+const strikes = (slot: string) => slot !== '.' && slot !== '~'
 
 /** The grace that lower-case hands before a note's hand write, so many grace notes of the other hand. */
 function graceOf(graces: string, hand: Hand): Grace {
@@ -163,9 +166,9 @@ function writeBars(lines: string[], beats: number): Bar[] {
     line.split(' ').forEach((beat, b) => {
       const slots = beat.match(SLOT) ?? []
       if (slots.join('') !== beat) throw new Error(`Unreadable rudiment beat "${beat}"`)
-      bars = setBeat(bars, 'snare', bar, b, slots.map((s) => (s === '.' || s === '-' ? s : 'x')).join(''))
+      bars = setBeat(bars, 'snare', bar, b, slots.map((s) => (strikes(s) ? 'x' : s)).join(''))
       for (const slot of slots) {
-        if (slot === '.' || slot === '-') continue
+        if (!strikes(slot)) continue
         const hand = slot.at(-1) as Hand
         const graces = slot.replace(/^>/, '').slice(0, -1)
         struck.push({
