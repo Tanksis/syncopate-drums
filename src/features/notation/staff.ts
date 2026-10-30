@@ -121,7 +121,7 @@ interface DrawnEvent {
 /** Pixels between a grace note's head and its note's: the grace notes are tucked close before it. */
 const GRACE_TUCK = 6
 /** Pixels more before a ghost note's parenthesis for a flagged grace note, so a flam's flag clears it. */
-const FLAG_TUCK = 3
+const PAREN_FLAG_TUCK = 3
 
 /**
  * A note's grace notes, tucked just before it, or before a ghost note's left parenthesis. VexFlow
@@ -137,7 +137,7 @@ class Graces extends GraceNoteGroup {
     const paren = note.getModifiersByType(Parenthesis.CATEGORY).find((m) => m.getPosition() === ModifierPosition.LEFT)
     // A left parenthesis is drawn its (negative) shift left of where the note's left modifiers start.
     const before = paren
-      ? note.getModifierStartXY(ModifierPosition.LEFT, paren.checkIndex()).x + paren.getXShift() - (last.hasFlag() ? FLAG_TUCK : 0)
+      ? note.getModifierStartXY(ModifierPosition.LEFT, paren.checkIndex()).x + paren.getXShift() - (last.hasFlag() ? PAREN_FLAG_TUCK : 0)
       : note.getNoteHeadBeginX()
     const gap = before - last.getNoteHeadEndX() - GRACE_TUCK
     this.setSpacingFromNextModifier(this.getSpacingFromNextModifier() + Math.max(0, gap))
