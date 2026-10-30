@@ -4,7 +4,7 @@
 
 **Blocked by:** none
 
-**Status:** ready-for-agent
+**Status:** done (merged in PR #170, 2026-10-30)
 
 - [x] `Dynamic` gains `ghost`; ghost and accent replace each other, carried through copy and regrid, cleared with the hit, unit-tested
 - [x] Schedule: the ghost level for a plain, doubled and buzzed note, grace events staying `grace`, unit-tested
@@ -14,3 +14,7 @@
 - [x] The Ghost tool, checked with real mouse clicks on the desktop and the phone
 - [x] `CONTEXT.md`: Ghost note
 - [ ] By ear, left to the user: the ghost band against normal and grace notes
+
+## Comments
+
+The spec didn't settle three things, so these were chosen here. A flam's or drag's grace notes tuck in before the ghost note's left parenthesis, not its notehead; a flam gets 3 px more so its flag clears the parenthesis. A ghosted buzz plays the buzz strokes at a gain of 0.5, about 6 dB down. The ghost band (vl5-vl9) shares vl8-vl9 with the grace band, so if a ghost sometimes matches a flam's grace note by ear, narrow it to vl5-vl7.
