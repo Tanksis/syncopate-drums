@@ -1168,3 +1168,49 @@ describe('roll strokes', () => {
     expect(rolls(keys(doubled, ctrl('c'), ctrl('Enter'), ctrl('v')))).toBe('d-d-')
   })
 })
+
+describe('ghost notes', () => {
+  /** Each struck snare note in order: `>` accented, `o` a ghost, `-` neither. */
+  const dynamics = (state: EditorState) =>
+    placeItems(state.exercise.bars, 'snare')
+      .filter((p) => p.item.kind === 'note' && !p.continuation)
+      .map((p) => (p.item.kind !== 'note' ? '' : p.item.dynamic === 'accent' ? '>' : p.item.dynamic === 'ghost' ? 'o' : '-'))
+      .join('')
+  const tap = (state: EditorState, beat: number, position: number) =>
+    applyEdit(state, { type: 'toggleGridPosition', row: 'snare', bar: 0, beat, position })
+  const mark = (state: EditorState, mark: Mark, beat: number, position: number) =>
+    applyEdit(state, { type: 'toggleMark', mark, row: 'snare', bar: 0, beat, position })
+  /** x.x. on beat 1. */
+  const twoHits = () => tap(tap(fresh(), 0, 0), 0, 2)
+
+  it('toggles a ghost on a hit, and off again', () => {
+    const ghosted = mark(twoHits(), 'ghost', 0, 2)
+    expect(dynamics(ghosted)).toBe('-o')
+    expect(marksAt(ghosted, { row: 'snare', bar: 0, beat: 0, position: 2 })).toEqual(['ghost'])
+    expect(dynamics(mark(ghosted, 'ghost', 0, 2))).toBe('--')
+  })
+
+  it('replaces an accent with a ghost and back: a note is one or the other', () => {
+    const ghosted = mark(mark(twoHits(), 'accent', 0, 0), 'ghost', 0, 0)
+    expect(dynamics(ghosted)).toBe('o-')
+    expect(dynamics(mark(ghosted, 'accent', 0, 0))).toBe('>-')
+  })
+
+  it('sits beside a grace and a roll stroke on the same note', () => {
+    const marked = mark(mark(mark(twoHits(), 'ghost', 0, 2), 'drag', 0, 2), 'buzz', 0, 2)
+    expect(marksAt(marked, { row: 'snare', bar: 0, beat: 0, position: 2 })).toEqual(['ghost', 'drag', 'buzz'])
+  })
+
+  it('adds a ghosted hit on an empty cell, and goes with its hit when cleared', () => {
+    const added = mark(fresh(), 'ghost', 1, 0)
+    expect(dynamics(added)).toBe('o')
+    expect(dynamics(tap(tap(added, 1, 0), 1, 0))).toBe('-')
+  })
+
+  it('stays on its note through a regrid, a duplicate and a paste', () => {
+    const ghosted = mark(twoHits(), 'ghost', 0, 0)
+    expect(dynamics(applyEdit(ghosted, { type: 'setBeatGrid', bar: 0, beat: 0, triplet: true }))).toBe('o')
+    expect(dynamics(keys(ghosted, ctrl('d')))).toBe('o-o-')
+    expect(dynamics(keys(ghosted, ctrl('c'), ctrl('Enter'), ctrl('v')))).toBe('o-o-')
+  })
+})

@@ -228,7 +228,7 @@ function isItem(item: unknown, row: Row): item is Item {
 
 const STICKING_MODES: StickingMode[] = ['natural', 'alternate', 'off']
 const HANDS: Hand[] = ['R', 'L']
-const DYNAMICS: Dynamic[] = ['accent']
+const DYNAMICS: Dynamic[] = ['accent', 'ghost']
 const GRACES: Grace[] = ['flam', 'drag']
 const ROLLS: Roll[] = ['double', 'buzz']
 const DURATIONS: Duration[] = ['quarter', 'eighth', 'sixteenth']

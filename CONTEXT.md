@@ -106,19 +106,23 @@ How long a note is written to last, in grid positions: by default until the next
 _Avoid_: Length, sustain
 
 **Note mark**:
-Something a struck snare note carries besides its rhythm, drawn on the staff and shown in small print on its grid position in the grid editor: an **Accent**, a **Grace note** or a **Roll stroke** (ADR 0017). A tied continuation carries none, and neither does a kick.
+Something a struck snare note carries besides its rhythm, drawn on the staff and shown in small print on its grid position in the grid editor: a dynamic (an **Accent** or a **Ghost note**), a **Grace note** or a **Roll stroke** (ADR 0017). A tied continuation carries none, and neither does a kick.
 _Avoid_: Articulation, ornament
 
 **Accent**:
-A note mark: the note is played from the snare's accent band, louder than the normal notes around it, and drawn `>` just above its stem, level across a beam group.
+A note mark: the note is played from the snare's accent band, louder than the normal notes around it, and drawn `>` just above its stem, level across a beam group. A note is accented or a ghost note, never both: each replaces the other.
 _Avoid_: Emphasis, stress
+
+**Ghost note**:
+A note mark: the snare note's soft dynamic, the other of the **Accent**. It's played from the snare's ghost band, softer than the normal notes and than a grace note, and drawn with parentheses round its notehead (only the snare's, in a chord). It sets the level of every stroke the note plays, a double's second stroke and a buzz too; its grace notes keep the grace level.
+_Avoid_: Soft note, dead note
 
 **Grace note**:
 A note mark: a **Flam** (one grace note) or a **Drag** (two), each replacing the other. They are played soft from the snare's grace band a short fixed time ahead of the note, by the other hand, and drawn small just before it: a flam's slashed, a drag's two beamed with no slur. The sticking prints their hands small and in lower case before the note's (`lR`, `llR`).
 _Avoid_: Ornament, ruff
 
 **Roll stroke**:
-A note mark: a **Double** or a **Buzz**, each replacing the other, played by the note's own hand. A double is two strokes, the second halfway through the note's time (its tied continuations too), at the normal level; it's drawn as one thin slash across the stem. A buzz is one stroke from the snare's buzz strokes, drawn as a Z across the stem. Both sit on the stem between its top notehead and its beam or flag.
+A note mark: a **Double** or a **Buzz**, each replacing the other, played by the note's own hand. A double is two strokes, the second halfway through the note's time (its tied continuations too), at the normal level (the ghost level on a ghost note); it's drawn as one thin slash across the stem. A buzz is one stroke from the snare's buzz strokes, drawn as a Z across the stem. Both sit on the stem between its top notehead and its beam or flag.
 _Avoid_: Tremolo
 
 **Tool palette**:

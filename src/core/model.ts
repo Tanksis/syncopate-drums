@@ -65,7 +65,7 @@ export const MAX_SWING = 0.75
 export const TRIPLET_SWING = 2 / 3
 
 /** Bumped whenever the stored shape changes; storage and import migrate through it. */
-export const SCHEMA_VERSION = 11
+export const SCHEMA_VERSION = 12
 
 export type Hand = 'R' | 'L'
 
@@ -121,8 +121,11 @@ export interface Note extends ItemBase {
   roll?: Roll
 }
 
-/** A note's dynamic: an accent is played louder and drawn `>` (ghost notes will be another). */
-export type Dynamic = 'accent'
+/**
+ * A note's dynamic: an accent is played louder and drawn `>`, a ghost played soft and drawn in
+ * parentheses. A note has one at most, so each replaces the other.
+ */
+export type Dynamic = 'accent' | 'ghost'
 
 /**
  * A note's grace notes, played soft just ahead of it by the other hand: a flam is one, a drag two.
@@ -140,11 +143,12 @@ export const GRACE_NOTES: Record<Grace, number> = { flam: 1, drag: 2 }
 export type Roll = 'double' | 'buzz'
 
 /** The marks the tool palette puts on a struck snare note (ADR 0017). */
-export type Mark = 'accent' | Grace | Roll
+export type Mark = Dynamic | Grace | Roll
 
 /** The note field each mark is kept in: marks sharing a field replace each other. */
 export const MARK_FIELD = {
   accent: 'dynamic',
+  ghost: 'dynamic',
   flam: 'grace',
   drag: 'grace',
   double: 'roll',
