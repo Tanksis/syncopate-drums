@@ -2,10 +2,10 @@
 // a syncopation method book (never copied from one), each showing one part of the app.
 
 import type { EditCommand } from './editor'
-import type { Bar, Dynamic, Exercise, Item, LibraryTab, PracticeSettings, Row, TimeSignature } from './model'
+import type { Bar, Dynamic, Exercise, LibraryTab, PracticeSettings, Row, TimeSignature } from './model'
 import { MIN_SWING, TRIPLET_SWING, meter, newExercise, restBar } from './model'
 import { isRudiment, rudimentExercises } from './rudiments'
-import { setBeat } from './speller'
+import { markStruckSnare, setBeat } from './speller'
 
 /** One example as written here; everything else is a new exercise's default, the lead hand R among it. */
 type Example = Pick<Exercise, 'id' | 'name' | 'sticking'> &
@@ -225,30 +225,19 @@ const DYNAMIC_MARKS = { '>x': 'accent', '(x)': 'ghost' } satisfies Record<string
 function writeRows(rows: Example['rows'], beats: number): Bar[] {
   const barCount = Math.max(...Object.values(rows).map((bars) => bars.length))
   let bars: Bar[] = Array.from({ length: barCount }, () => restBar(beats))
-  const dynamics: (Dynamic | undefined)[] = []
+  const dynamics: { dynamic?: Dynamic }[] = []
   for (const [row, lines] of Object.entries(rows) as [Row, string[]][]) {
     lines.forEach((line, bar) => {
       line.split(' ').forEach((hits, beat) => {
         const slots = [...hits.matchAll(SLOT)].map(([slot]) => slot)
         if (slots.join('') !== hits) throw new Error(`Unreadable example beat "${hits}"`)
         // A struck slot is any but a rest or a tie; only a snare one may carry a dynamic.
-        const struck = slots.filter((slot) => slot !== '.' && slot !== '~').map((slot) => DYNAMIC_MARKS[slot as keyof typeof DYNAMIC_MARKS])
-        if (row !== 'snare' && struck.some(Boolean)) throw new Error(`Only the snare takes a dynamic: "${hits}"`)
-        if (row === 'snare') dynamics.push(...struck)
+        const slotDynamics = slots.filter((slot) => slot !== '.' && slot !== '~').map((slot) => DYNAMIC_MARKS[slot as keyof typeof DYNAMIC_MARKS])
+        if (row !== 'snare' && slotDynamics.some(Boolean)) throw new Error(`Only the snare takes a dynamic: "${hits}"`)
+        if (row === 'snare') dynamics.push(...slotDynamics.map((dynamic) => (dynamic ? { dynamic } : {})))
         bars = setBeat(bars, row, bar, beat, slots.map((slot) => (slot in DYNAMIC_MARKS ? 'x' : slot)).join(''))
       })
     })
   }
-  let next = 0
-  let previous: Item | undefined
-  return bars.map((bar) => ({
-    ...bar,
-    snare: bar.snare.map((item) => {
-      const continuation = item.kind === 'note' && previous?.kind === 'note' && previous.tiedToNext
-      previous = item
-      if (item.kind !== 'note' || continuation) return item
-      const dynamic = dynamics[next++]
-      return dynamic ? { ...item, dynamic } : item
-    }),
-  }))
+  return markStruckSnare(bars, dynamics)
 }

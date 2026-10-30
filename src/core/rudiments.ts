@@ -1,9 +1,9 @@
 // The 40 PAS rudiments, built into the app and never stored, read-only like the examples (ADR 0018).
 // Our own notation of the standard patterns, each written in a compact text form of hands and marks.
 
-import type { Bar, Exercise, Grace, Hand, Item, Note, Roll, TimeSignature } from './model'
+import type { Bar, Exercise, Grace, Hand, Note, Roll, TimeSignature } from './model'
 import { GRACE_NOTES, meter, newExercise, restBar } from './model'
-import { setBeat } from './speller'
+import { markStruckSnare, setBeat } from './speller'
 import { opposite } from './sticking'
 
 /** The four families the PAS chart lists the rudiments under, in its order. */
@@ -178,14 +178,5 @@ function writeBars(lines: string[], beats: number): Bar[] {
       }
     })
   })
-  let next = 0
-  let previous: Item | undefined
-  return bars.map((bar) => ({
-    ...bar,
-    snare: bar.snare.map((item) => {
-      const continuation = item.kind === 'note' && previous?.kind === 'note' && previous.tiedToNext
-      previous = item
-      return item.kind === 'note' && !continuation ? { ...item, ...struck[next++] } : item
-    }),
-  }))
+  return markStruckSnare(bars, struck)
 }

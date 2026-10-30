@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { EditCommand, StaffEvent } from './index'
+import type { Dynamic, EditCommand, StaffEvent } from './index'
 import {
   ROWS,
   SCHEMA_VERSION,
@@ -147,7 +147,7 @@ describe('what each example shows', () => {
     expect(ghostGroove.sticking).toBe('off')
     const dynamics = placeItems(ghostGroove.bars, 'snare').flatMap((p) => (p.item.kind === 'note' && !p.continuation ? [p.item.dynamic] : []))
     // The snare row read back into the text form: `>x` an accent, `(x)` a ghost.
-    const mark = (dynamic: string | undefined) => (dynamic === 'accent' ? '>x' : dynamic === 'ghost' ? '(x)' : 'x')
+    const mark = (dynamic: Dynamic | undefined) => (dynamic === 'accent' ? '>x' : dynamic === 'ghost' ? '(x)' : 'x')
     let next = 0
     const views = editorBeatViews(newEditorState(ghostGroove))
     const snare = views.map((bar) => bar.map((beat) => beat.snare.hits.replace(/x/g, () => mark(dynamics[next++]))).join(' '))
