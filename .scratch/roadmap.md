@@ -4,11 +4,11 @@ What's planned beyond the open specs. Each item becomes a spec and tickets when 
 
 ## In progress
 
-- **The 40 rudiments and their note marks:** [spec](rudiments/spec.md). It ships in stages and doesn't hold the launch.
+- **Ghost notes:** a softer dynamic beside the accent, entered with the tool palette: [spec](ghost-notes/spec.md), two tickets. Asked for on 2026-10-26, grilled on 2026-10-30.
 
-## Next
+## Done
 
-- **Ghost notes:** a softer dynamic beside the accent, entered with the tool palette ([ADR 0017](../docs/adr/0017-note-marks-entered-with-a-tool-palette.md)). Asked for on 2026-10-26.
+- **The 40 rudiments and their note marks:** [spec](rudiments/spec.md). All 40 in on 2026-10-28 (#168).
 
 ## Launch readiness (v1.0.0), waiting on the user's answers
 
