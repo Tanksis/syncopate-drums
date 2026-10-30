@@ -4,8 +4,12 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done (merged in PR #171, 2026-10-30)
 
-- [ ] The examples' text form reads `>` and `(x)` on the snare row, unit-tested
-- [ ] The example, its bars adding up and its marks where written, unit-tested
-- [ ] Checked in a close-up screenshot, and opened and played from the Examples tab
+- [x] The examples' text form reads `>` and `(x)` on the snare row, unit-tested
+- [x] The example, its bars adding up and its marks where written, unit-tested
+- [x] Checked in a close-up screenshot, and opened and played from the Examples tab
+
+## Comments
+
+The groove is two bars at 80 bpm over the hi-hat eighths. The text form writes `>x` and `(x)`, and a mark on the kick row throws. The rudiments' and the examples' text forms now share `markStruckSnare` (speller), which throws if the marks don't match the struck notes. The browser check was headless (Playwright), as the Chrome extension wasn't connected: the example opened from the Examples tab, and Play ran the count-in with no console errors. Listening to the groove is left to the user.
