@@ -32,6 +32,11 @@ export interface ScheduledEvent {
   /** A bar's first click, played high; or an accented note of the exercise, played from the snare's accent band. */
   accent: boolean
   /**
+   * A ghosted note of the exercise, played from the snare's ghost band: its double's second stroke
+   * and its buzz too, but never its grace notes.
+   */
+  ghost?: true
+  /**
    * A grace note of a flam or drag, played from the snare's grace band just ahead of its note. It
    * isn't a struck note: it has no note id and moves no playhead.
    */
@@ -108,12 +113,13 @@ export function schedule(
       for (const ahead of note.grace ? GRACE_AHEAD[note.grace] : []) {
         events.push({ time: time - ahead, kind: 'exercise', instrument, accent: false, grace: true, position })
       }
+      const ghost = note.dynamic === 'ghost' ? { ghost: true as const } : {}
       const buzz = note.roll === 'buzz' ? { buzz: true as const } : {}
-      events.push({ time, kind: 'exercise', instrument, accent, ...buzz, noteId: noteId(row, bar, tick), position })
+      events.push({ time, kind: 'exercise', instrument, accent, ...ghost, ...buzz, noteId: noteId(row, bar, tick), position })
       if (note.roll === 'double') {
         // Halfway between the note's swung start and its swung end, so swing moves it with them.
         const end = straight + (ticks + swingShift((tick + ticks) % TICKS_PER_BEAT, swing)) * secondsPerTick
-        events.push({ time: (time + end) / 2, kind: 'exercise', instrument, accent: false, secondStroke: true, position })
+        events.push({ time: (time + end) / 2, kind: 'exercise', instrument, accent: false, ...ghost, secondStroke: true, position })
       }
     }
     if (bar >= 0) {

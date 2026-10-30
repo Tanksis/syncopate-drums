@@ -7,7 +7,7 @@
 // voice stems up (ADRs 0002, 0004).
 
 import type { RenderContext, StemmableNote } from 'vexflow/bravura'
-import { Articulation, Beam, Dot, Formatter, Fraction, GhostNote, GraceNote, GraceNoteGroup, Modifier, ModifierPosition, Renderer, Stave, StaveNote, StaveTie, Stem, Tuplet, Voice } from 'vexflow/bravura'
+import { Articulation, Beam, Dot, Formatter, Fraction, GhostNote, GraceNote, GraceNoteGroup, Modifier, ModifierPosition, Parenthesis, Renderer, Stave, StaveNote, StaveTie, Stem, Tuplet, Voice } from 'vexflow/bravura'
 import type { Cursor, Drum, Duration, Exercise, Grace, Limb, LoopRange, Meter, NotationShows, NoteSticking, PlayheadAnchor, PlayPosition, Roll, StaffBar, StaffEvent } from '@/core'
 import {
   GRACE_NOTES,
@@ -120,17 +120,26 @@ interface DrawnEvent {
 
 /** Pixels between a grace note's head and its note's: the grace notes are tucked close before it. */
 const GRACE_TUCK = 6
+/** Pixels more before a ghost note's parenthesis for a flagged grace note, so a flam's flag clears it. */
+const PAREN_FLAG_TUCK = 3
 
 /**
- * A note's grace notes, tucked just before it. VexFlow starts them at the left edge of the room it
- * makes for them, leaving a gap before the note; the room still keeps them clear of the note before.
+ * A note's grace notes, tucked just before it, or before a ghost note's left parenthesis. VexFlow
+ * starts them at the left edge of the room it makes for them, leaving a gap before the note; the
+ * room still keeps them clear of the note before.
  */
 class Graces extends GraceNoteGroup {
   draw() {
     const note = this.checkAttachedNote() as StaveNote
     const graces = this.getGraceNotes() as GraceNote[]
     this.alignSubNotesWithNote(graces, note, this.position)
-    const gap = note.getNoteHeadBeginX() - graces.at(-1)!.getNoteHeadEndX() - GRACE_TUCK
+    const last = graces.at(-1)!
+    const paren = note.getModifiersByType(Parenthesis.CATEGORY).find((m) => m.getPosition() === ModifierPosition.LEFT)
+    // A left parenthesis is drawn its (negative) shift left of where the note's left modifiers start.
+    const before = paren
+      ? note.getModifierStartXY(ModifierPosition.LEFT, paren.checkIndex()).x + paren.getXShift() - (last.hasFlag() ? PAREN_FLAG_TUCK : 0)
+      : note.getNoteHeadBeginX()
+    const gap = before - last.getNoteHeadEndX() - GRACE_TUCK
     this.setSpacingFromNextModifier(this.getSpacingFromNextModifier() + Math.max(0, gap))
     super.draw()
   }
@@ -201,9 +210,9 @@ class RollStroke extends Modifier {
 /**
  * The VexFlow note for one event of a part. Chord keys go bottom to top, the order ties index. In
  * compound time a value is written half as long again, with no triplet "3" (ADR 0015). An accented
- * note gets its `>` above the stem, and a flammed or dragged note its grace notes before it, as
- * modifiers, so the formatter makes room for them. A doubled or buzzed note gets its slash or Z
- * across the stem.
+ * note gets its `>` above the stem, a ghost note parentheses round its notehead (only its own, in a
+ * chord), and a flammed or dragged note its grace notes before it, as modifiers, so the formatter
+ * makes room for them. A doubled or buzzed note gets its slash or Z across the stem.
  */
 function eventNote(event: StaffEvent, limb: Limb, compound: boolean): StemmableNote {
   const value = compound ? compoundValue(event) : event
@@ -219,6 +228,11 @@ function eventNote(event: StaffEvent, limb: Limb, compound: boolean): StemmableN
   const accented = event.kind === 'chord' ? event.notes.find((n) => n.accent) : undefined
   if (accented) {
     note.addModifier(new Accent('a>').setPosition(ModifierPosition.ABOVE), keyIndex(event, accented.drum))
+  }
+  const ghosted = event.kind === 'chord' ? event.notes.find((n) => n.ghost) : undefined
+  if (ghosted) {
+    const index = keyIndex(event, ghosted.drum)
+    note.addModifier(new Parenthesis(ModifierPosition.LEFT), index).addModifier(new Parenthesis(ModifierPosition.RIGHT), index)
   }
   const graced = event.kind === 'chord' ? event.notes.find((n) => n.grace) : undefined
   if (graced?.grace) note.addModifier(graceGroup(graced.key, graced.grace), keyIndex(event, graced.drum))

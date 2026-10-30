@@ -6,11 +6,11 @@
 
 **Status:** ready-for-agent
 
-- [ ] `Dynamic` gains `ghost`; ghost and accent replace each other, carried through copy and regrid, cleared with the hit, unit-tested
-- [ ] Schedule: the ghost level for a plain, doubled and buzzed note, grace events staying `grace`, unit-tested
-- [ ] The engine's ghost band (vl5-vl9; vl5-vl7 added to `public/samples` from Virtuosity Drums and to `LICENSE.txt`), loaded like the other bands
-- [ ] `SCHEMA_VERSION` bumped; export and import with ghosts, an older version refusing, unit-tested
-- [ ] Drawn with parentheses round the notehead (the snare head only on a chord), checked in a close-up screenshot alone, beamed and with each other mark; the notation doesn't move when toggled
-- [ ] The Ghost tool, checked with real mouse clicks on the desktop and the phone
-- [ ] `CONTEXT.md`: Ghost note
+- [x] `Dynamic` gains `ghost`; ghost and accent replace each other, carried through copy and regrid, cleared with the hit, unit-tested
+- [x] Schedule: the ghost level for a plain, doubled and buzzed note, grace events staying `grace`, unit-tested
+- [x] The engine's ghost band (vl5-vl9; vl5-vl7 added to `public/samples` from Virtuosity Drums and to `LICENSE.txt`), loaded like the other bands
+- [x] `SCHEMA_VERSION` bumped; export and import with ghosts, an older version refusing, unit-tested
+- [x] Drawn with parentheses round the notehead (the snare head only on a chord), checked in a close-up screenshot alone, beamed and with each other mark; the notation doesn't move when toggled
+- [x] The Ghost tool, checked with real mouse clicks on the desktop and the phone
+- [x] `CONTEXT.md`: Ghost note
 - [ ] By ear, left to the user: the ghost band against normal and grace notes

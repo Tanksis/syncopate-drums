@@ -86,6 +86,9 @@ const steps: Record<number, (exercise: Stored) => Stored> = {
   // Version 10 had no roll strokes, so its notes have none as they are. The bump makes an older app
   // refuse an export with doubles or buzzes rather than drop them (ADR 0017).
   10: (exercise) => ({ ...exercise, schemaVersion: 11 }),
+  // Version 11 had no ghost notes, so its notes have none as they are. The bump makes an older app
+  // refuse an export with ghosts rather than read them as a dynamic it doesn't know (ADR 0017).
+  11: (exercise) => ({ ...exercise, schemaVersion: 12 }),
 }
 
 /** The stored exercise in the current shape; throws for one from a newer version of the app. */

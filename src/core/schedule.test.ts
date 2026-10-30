@@ -13,7 +13,7 @@ const blank = (bpm = 120): Exercise => {
 /** A compact view of the events for readable assertions: "time kind instrument [accent] [noteId]". */
 const show = (events: ScheduledEvent[]) =>
   events.map((e) =>
-    [e.time.toFixed(3), e.kind, e.instrument, e.accent && 'accent', e.grace && 'grace', e.buzz && 'buzz', e.secondStroke && 'second', e.noteId].filter(Boolean).join(' '),
+    [e.time.toFixed(3), e.kind, e.instrument, e.accent && 'accent', e.ghost && 'ghost', e.grace && 'grace', e.buzz && 'buzz', e.secondStroke && 'second', e.noteId].filter(Boolean).join(' '),
   )
 
 describe('the count-in', () => {
@@ -135,6 +135,34 @@ describe('playing the exercise', () => {
     const marked = { ...ex, bars: toggleMark(ex.bars, 'snare', 0, 0, 2, 'buzz') }
     const { events } = schedule(marked, marked.practice, device, { bar: 0, tick: 0 }, 0.5)
     expect(show(events)).toEqual(['0.000 click click accent', '0.000 exercise snare 0:0', '0.250 exercise snare buzz 0:6'])
+  })
+
+  it('plays a ghost note at the ghost level, a struck note', () => {
+    const ex = line(['x.x.', '....', '....', '....'])
+    const ghosted = { ...ex, bars: toggleMark(ex.bars, 'snare', 0, 0, 2, 'ghost') }
+    const { events } = schedule(ghosted, ghosted.practice, device, { bar: 0, tick: 0 }, 0.5)
+    expect(show(events)).toEqual(['0.000 click click accent', '0.000 exercise snare 0:0', '0.250 exercise snare ghost 0:6'])
+  })
+
+  it("plays a ghosted double's both strokes at the ghost level, and a ghosted buzz as a soft buzz", () => {
+    const ex = line(['x...', 'x...', '....', '....'])
+    const ghost = (bars: Exercise['bars'], beat: number) => toggleMark(bars, 'snare', 0, beat, 0, 'ghost')
+    const marked = { ...ex, bars: toggleMark(ghost(toggleMark(ghost(ex.bars, 0), 'snare', 0, 0, 0, 'double'), 1), 'snare', 0, 1, 0, 'buzz') }
+    const { events } = schedule(marked, marked.practice, device, { bar: 0, tick: 0 }, 1)
+    expect(show(events)).toEqual([
+      '0.000 click click accent',
+      '0.000 exercise snare ghost 0:0',
+      '0.250 exercise snare ghost second',
+      '0.500 click click',
+      '0.500 exercise snare ghost buzz 0:12',
+    ])
+  })
+
+  it("plays a ghosted flam's note at the ghost level and its grace note at the grace level", () => {
+    const ex = line(['x...', '....', '....', '....'])
+    const marked = { ...ex, bars: toggleMark(toggleMark(ex.bars, 'snare', 0, 0, 0, 'flam'), 'snare', 0, 0, 0, 'ghost') }
+    const { events } = schedule(marked, marked.practice, device, { bar: 0, tick: 0 }, 0.5)
+    expect(show(events)).toEqual(['-0.025 exercise snare grace', '0.000 click click accent', '0.000 exercise snare ghost 0:0'])
   })
 
   it('places triplet notes at thirds of the beat, next to straight beats', () => {

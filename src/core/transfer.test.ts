@@ -129,6 +129,21 @@ describe('parsing an import', () => {
     expect(parseImport(asJson(file), 10)).toEqual({ ok: false, reason: expect.stringMatching(/newer version/) })
   })
 
+  it('reads back the ghost notes on the snare notes', () => {
+    const [bar1, bar2] = paradiddles.bars
+    const ghosted: Exercise = {
+      ...paradiddles,
+      bars: [{ ...bar1, snare: [{ ...note('quarter'), dynamic: 'ghost', roll: 'double' }, { ...note('eighth'), dynamic: 'ghost', grace: 'flam' }, ...bar1.snare.slice(2)] }, bar2],
+    }
+    expect(parseImport(asJson(exportFile([ghosted], [])))).toEqual({ ok: true, folders: [], exercises: [ghosted] })
+  })
+
+  it('is refused by an app from before ghost notes, rather than read without them', () => {
+    const file = exportFile([paradiddles], [])
+    expect(file.version).toBeGreaterThan(11)
+    expect(parseImport(asJson(file), 11)).toEqual({ ok: false, reason: expect.stringMatching(/newer version/) })
+  })
+
   it('reads back the clean runs', () => {
     const practised: Exercise = { ...paradiddles, cleanRuns: [{ bpm: 96, at: 1000 }, { bpm: 120, at: 2000 }] }
     expect(parseImport(asJson(exportFile([practised], [])))).toEqual({ ok: true, folders: [], exercises: [practised] })
@@ -241,6 +256,7 @@ describe('parsing an import', () => {
     ['an unknown roll stroke', { ...paradiddles, bars: [{ ...bar1, snare: [{ ...note('quarter'), roll: 'triple' }, rest, rest, rest] }, bar2] }],
     ['a double on the kick row', { ...paradiddles, bars: [{ ...bar1, kick: [{ ...note('quarter'), roll: 'double' }, rest, rest, rest] }, bar2] }],
     ['a flam on the kick row', { ...paradiddles, bars: [{ ...bar1, kick: [{ ...note('quarter'), grace: 'flam' }, rest, rest, rest] }, bar2] }],
+    ['a ghost on the kick row', { ...paradiddles, bars: [{ ...bar1, kick: [{ ...note('quarter'), dynamic: 'ghost' }, rest, rest, rest] }, bar2] }],
     ['an accent on the kick row', { ...paradiddles, bars: [{ ...bar1, kick: [{ ...note('quarter'), dynamic: 'accent' }, rest, rest, rest] }, bar2] }],
     ['an unknown sticking mode', { ...paradiddles, sticking: 'paradiddle' }],
     ['an unknown lead hand', { ...paradiddles, leadHand: 'both' }],

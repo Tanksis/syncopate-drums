@@ -494,6 +494,25 @@ describe('the hi-hat foot setting under a fill (ADR 0012)', () => {
   })
 })
 
+describe('ghost notes', () => {
+  /** Each chord's notes, a ghost written `(snare)`. */
+  const ghosts = (bars: Bar[], groove: Groove = 'off') =>
+    staffParts(bars, groove)[0].hands.flatMap((e) =>
+      e.kind === 'chord' ? [e.notes.map((n) => (n.tied ? '~' : '') + (n.ghost ? `(${n.drum})` : n.drum)).join('+')] : [],
+    )
+
+  it('marks the ghosted snare note, and only it, in a chord with the groove', () => {
+    const ghosted = toggleMark(bar('x.x.', '....', '....', '....'), 'snare', 0, 0, 2, 'ghost')
+    expect(ghosts(ghosted)).toEqual(['snare', '(snare)'])
+    expect(ghosts(ghosted, 'hihatEighths').slice(0, 2)).toEqual(['hihat+snare', 'hihat+(snare)'])
+  })
+
+  it('leaves a tied continuation of a ghosted note unmarked', () => {
+    const held = setHold(bar('x...', '....', '....', '....'), { row: 'snare', bar: 0, beat: 0, position: 0 }, { row: 'snare', bar: 0, beat: 1, position: 1 })
+    expect(ghosts(toggleMark(held, 'snare', 0, 0, 0, 'ghost'))).toEqual(['(snare)', '~snare'])
+  })
+})
+
 describe('accents', () => {
   /** Each chord's notes, an accented one written `>snare`. */
   const accents = (bars: Bar[], groove: Groove = 'off') =>

@@ -53,12 +53,15 @@ const VOLUME_SMOOTHING = 0.02
 /** Virtuosity's snare-center velocity layers from `from` to `to`, a band of nearby loudness. */
 const snareCenter = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => `oh_snare_center_vl${from + i}`)
 
-/** What a sample set is played for: an instrument, the snare's accent or grace band, or its buzz strokes. */
-type Sound = Exclude<Instrument, 'click'> | 'snareAccent' | 'snareGrace' | 'snareBuzz'
+/** What a sample set is played for: an instrument, the snare's accent, ghost or grace band, or its buzz strokes. */
+type Sound = Exclude<Instrument, 'click'> | 'snareAccent' | 'snareGhost' | 'snareGrace' | 'snareBuzz'
+
+/** A ghosted buzz's level, about 6 dB down: the buzz articulation has only three layers, none soft enough. */
+const GHOST_BUZZ_GAIN = 0.5
 
 /**
  * Virtuosity Drums one-shots for each kit piece, at a fixed velocity. The snare's are bands of
- * nearby velocity layers (it has no round robins), normal, accent and grace, and its buzz strokes (ADR 0017), each stroke picked
+ * nearby velocity layers (it has no round robins), normal, accent, ghost and grace, and its buzz strokes (ADR 0017), each stroke picked
  * at random from its band, never the last one, and varied ±1 dB (`varied`), so a run of fast singles
  * doesn't machine-gun. The others play their round robins in turn.
  *
@@ -71,6 +74,7 @@ type Sound = Exclude<Instrument, 'click'> | 'snareAccent' | 'snareGrace' | 'snar
 const SAMPLES: Record<Sound, { files: string[]; velocity: number; hold?: number; varied?: true }> = {
   snare: { files: snareCenter(13, 17), velocity: 1, varied: true },
   snareAccent: { files: snareCenter(24, 30), velocity: 1, varied: true },
+  snareGhost: { files: snareCenter(5, 9), velocity: 1, varied: true },
   snareGrace: { files: snareCenter(8, 12), velocity: 1, varied: true },
   snareBuzz: { files: ['oh_snare_buzz_vl4', 'oh_snare_buzz_vl7', 'oh_snare_buzz_vl10'], velocity: 1, varied: true },
   kick: { files: ['oh_kick_snoff_vl2_rr1', 'oh_kick_snoff_vl2_rr2'], velocity: 10, hold: 0.06 },
@@ -321,9 +325,20 @@ function play(audio: Audio, when: number, event: ScheduledEvent, playing: Playba
 function startSounds(audio: Audio, when: number, event: ScheduledEvent, playing: PlaybackSource): AudioScheduledSourceNode[] {
   if (event.instrument !== 'click') {
     const sound =
-      event.instrument !== 'snare' ? event.instrument : event.grace ? 'snareGrace' : event.buzz ? 'snareBuzz' : event.accent ? 'snareAccent' : 'snare'
+      event.instrument !== 'snare'
+        ? event.instrument
+        : event.grace
+          ? 'snareGrace'
+          : event.buzz
+            ? 'snareBuzz'
+            : event.accent
+              ? 'snareAccent'
+              : event.ghost
+                ? 'snareGhost'
+                : 'snare'
     const { velocity } = SAMPLES[sound]
-    return [sample(audio, when, sound, velocity * (event.velocity ?? 1), audio.layers[event.kind])]
+    const ghostBuzz = event.buzz && event.ghost ? GHOST_BUZZ_GAIN : 1
+    return [sample(audio, when, sound, velocity * ghostBuzz * (event.velocity ?? 1), audio.layers[event.kind])]
   }
   if (playing.kind === 'exercise') {
     if (!clickHeard(event, playing.device)) return []

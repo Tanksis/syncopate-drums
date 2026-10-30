@@ -57,6 +57,8 @@ export interface StaffNote {
   noteId?: string
   /** An accented snare note, drawn `>`; never set on a tied continuation. */
   accent?: true
+  /** A ghosted snare note, drawn with parentheses round its notehead; never set on a tied continuation. */
+  ghost?: true
   /** A flammed or dragged snare note, drawn with its grace notes before it; never set on a tied continuation. */
   grace?: Grace
   /** A doubled or buzzed snare note, drawn with a slash or a Z across its stem; never set on a tied continuation. */
@@ -117,6 +119,8 @@ interface Sound {
   noteId?: string
   /** An accented note of the exercise. */
   accent?: true
+  /** A ghosted note of the exercise. */
+  ghost?: true
   /** A flammed or dragged note of the exercise. */
   grace?: Grace
   /** A doubled or buzzed note of the exercise. */
@@ -186,9 +190,10 @@ export function staffParts(
       if (p.continuation && sounds.length) sounds.at(-1)!.end = end
       else {
         const accent = p.item.dynamic === 'accent' ? { accent: true as const } : {}
+        const ghost = p.item.dynamic === 'ghost' ? { ghost: true as const } : {}
         const grace = p.item.grace ? { grace: p.item.grace } : {}
         const roll = p.item.roll ? { roll: p.item.roll } : {}
-        sounds.push({ drum: ROW_DRUM[row], notation: ROW_NOTATION[row], start, end, heard: start, noteId: noteId(row, p.bar, p.start), ...accent, ...grace, ...roll })
+        sounds.push({ drum: ROW_DRUM[row], notation: ROW_NOTATION[row], start, end, heard: start, noteId: noteId(row, p.bar, p.start), ...accent, ...ghost, ...grace, ...roll })
       }
     }
     return { sounds, triplet }
@@ -358,6 +363,7 @@ function writePart(
           notehead: s.notation.notehead,
           ...(s.noteId ? { noteId: s.noteId } : {}),
           ...(s.accent && piece === 0 ? { accent: s.accent } : {}),
+          ...(s.ghost && piece === 0 ? { ghost: s.ghost } : {}),
           ...(s.grace && piece === 0 ? { grace: s.grace } : {}),
           ...(s.roll && piece === 0 ? { roll: s.roll } : {}),
           tied: piece > 0,
