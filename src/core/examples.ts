@@ -2,10 +2,10 @@
 // a syncopation method book (never copied from one), each showing one part of the app.
 
 import type { EditCommand } from './editor'
-import type { Bar, Exercise, LibraryTab, PracticeSettings, Row, TimeSignature } from './model'
+import type { Bar, Dynamic, Exercise, LibraryTab, PracticeSettings, Row, TimeSignature } from './model'
 import { MIN_SWING, TRIPLET_SWING, meter, newExercise, restBar } from './model'
 import { isRudiment, rudimentExercises } from './rudiments'
-import { setBeat } from './speller'
+import { markStruckSnare, setBeat } from './speller'
 
 /** One example as written here; everything else is a new exercise's default, the lead hand R among it. */
 type Example = Pick<Exercise, 'id' | 'name' | 'sticking'> &
@@ -13,7 +13,10 @@ type Example = Pick<Exercise, 'id' | 'name' | 'sticking'> &
   Partial<Pick<PracticeSettings, 'hihatFoot'>> & {
     /** 4/4 unless given. */
     timeSignature?: TimeSignature
-    /** Each row bar by bar, as each beat figure's hits separated by spaces; a missing row rests. */
+    /**
+     * Each row bar by bar, as each beat figure's hits separated by spaces; a missing row rests. A
+     * snare hit may carry its dynamic: `>x` an accent, `(x)` a ghost.
+     */
     rows: Partial<Record<Row, string[]>>
   }
 
@@ -91,6 +94,18 @@ const EXAMPLES: readonly Example[] = [
     rows: {
       snare: ['... x..', '..x x..'],
       kick: ['x.. ..x', 'x.. ...'],
+    },
+  },
+  {
+    id: `${EXAMPLE_PREFIX}ghost-note-groove`,
+    name: `${EXAMPLE_NAME_PREFIX}ghost-note groove`,
+    bpm: 80,
+    pattern: 'hihatEighths',
+    swing: MIN_SWING,
+    sticking: 'off',
+    rows: {
+      snare: ['.... >x..(x) .(x).. >x...', '..(x). >x..(x) .(x).(x) >x.(x).'],
+      kick: ['x... .... x.x. ....', 'x..x .... ..x. ....'],
     },
   },
 ]
@@ -197,14 +212,32 @@ export function builtInAccepts(id: string, command: EditCommand): boolean {
   return exampleAccepts(command)
 }
 
-/** The bars of `beats` beats, each beat written through the speller so the spelling is the app's own. */
+/** One slot of a beat: `.`, `~` (first only), or a hit, `>x` accented or `(x)` a ghost. */
+const SLOT = /^~|\.|x|>x|\(x\)/g
+
+/** The dynamic each mark of the text form writes. */
+const DYNAMIC_MARKS = { '>x': 'accent', '(x)': 'ghost' } satisfies Record<string, Dynamic>
+
+/**
+ * The bars of `beats` beats: each beat's hits written through the speller so the spelling is the
+ * app's own, then each struck snare note given its dynamic, in order.
+ */
 function writeRows(rows: Example['rows'], beats: number): Bar[] {
   const barCount = Math.max(...Object.values(rows).map((bars) => bars.length))
   let bars: Bar[] = Array.from({ length: barCount }, () => restBar(beats))
+  const dynamics: { dynamic?: Dynamic }[] = []
   for (const [row, lines] of Object.entries(rows) as [Row, string[]][]) {
     lines.forEach((line, bar) => {
-      line.split(' ').forEach((hits, beat) => (bars = setBeat(bars, row, bar, beat, hits)))
+      line.split(' ').forEach((hits, beat) => {
+        const slots = [...hits.matchAll(SLOT)].map(([slot]) => slot)
+        if (slots.join('') !== hits) throw new Error(`Unreadable example beat "${hits}"`)
+        // A struck slot is any but a rest or a tie; only a snare one may carry a dynamic.
+        const slotDynamics = slots.filter((slot) => slot !== '.' && slot !== '~').map((slot) => DYNAMIC_MARKS[slot as keyof typeof DYNAMIC_MARKS])
+        if (row !== 'snare' && slotDynamics.some(Boolean)) throw new Error(`Only the snare takes a dynamic: "${hits}"`)
+        if (row === 'snare') dynamics.push(...slotDynamics.map((dynamic) => (dynamic ? { dynamic } : {})))
+        bars = setBeat(bars, row, bar, beat, slots.map((slot) => (slot in DYNAMIC_MARKS ? 'x' : slot)).join(''))
+      })
     })
   }
-  return bars
+  return markStruckSnare(bars, dynamics)
 }

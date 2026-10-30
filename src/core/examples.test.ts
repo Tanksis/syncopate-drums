@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { EditCommand, StaffEvent } from './index'
+import type { Dynamic, EditCommand, StaffEvent } from './index'
 import {
   ROWS,
   SCHEMA_VERSION,
@@ -18,6 +18,7 @@ import {
   meter,
   newEditorState,
   newExercise,
+  placeItems,
   staffParts,
   sticking,
   withBpm,
@@ -26,7 +27,7 @@ import {
 const examples = exampleExercises()
 
 describe('the example exercises', () => {
-  it('are six, named for what they show, in order', () => {
+  it('are seven, named for what they show, in order', () => {
     expect(examples.map((e) => e.name)).toEqual([
       'Example: syncopated eighths',
       'Example: jazz comping',
@@ -34,11 +35,12 @@ describe('the example exercises', () => {
       'Example: triplets',
       'Example: slow blues',
       'Example: afro-cuban 6/8',
+      'Example: ghost-note groove',
     ])
   })
 
   it('are listed by their titles, without the "Example: " prefix', () => {
-    expect(examples.map(exampleTitle)).toEqual(['syncopated eighths', 'jazz comping', 'rock beat', 'triplets', 'slow blues', 'afro-cuban 6/8'])
+    expect(examples.map(exampleTitle)).toEqual(['syncopated eighths', 'jazz comping', 'rock beat', 'triplets', 'slow blues', 'afro-cuban 6/8', 'ghost-note groove'])
   })
 
   it('each have a fixed id that isExample recognises, and come out the same from two calls', () => {
@@ -49,6 +51,7 @@ describe('the example exercises', () => {
       'example:triplets',
       'example:slow-blues',
       'example:afro-cuban',
+      'example:ghost-note-groove',
     ])
     expect(examples.every((e) => isExample(e.id))).toBe(true)
     expect(exampleExercises()).toEqual(examples)
@@ -78,7 +81,7 @@ describe('the example exercises', () => {
 })
 
 describe('what each example shows', () => {
-  const [eighths, comping, rock, triplets, blues, afroCuban] = examples
+  const [eighths, comping, rock, triplets, blues, afroCuban, ghostGroove] = examples
 
   /** Each event of a part as `start drums`, or `start rest`. */
   const show = (events: readonly StaffEvent[]) =>
@@ -137,6 +140,19 @@ describe('what each example shows', () => {
       editorBeatViews(newEditorState(afroCuban)).map((bar) => bar.map((beat) => beat[row].hits).join(' '))
     expect(grid('snare')).toEqual(['... x..', '..x x..'])
     expect(grid('kick')).toEqual(['x.. ..x', 'x.. ...'])
+  })
+
+  it('ghost-note groove: over the hi-hat eighths, accented backbeats on 2 and 4 with ghosted sixteenths around them', () => {
+    expect(ghostGroove.practice).toMatchObject({ pattern: 'hihatEighths', swing: 0.5 })
+    expect(ghostGroove.sticking).toBe('off')
+    const dynamics = placeItems(ghostGroove.bars, 'snare').flatMap((p) => (p.item.kind === 'note' && !p.continuation ? [p.item.dynamic] : []))
+    // The snare row read back into the text form: `>x` an accent, `(x)` a ghost.
+    const mark = (dynamic: Dynamic | undefined) => (dynamic === 'accent' ? '>x' : dynamic === 'ghost' ? '(x)' : 'x')
+    let next = 0
+    const views = editorBeatViews(newEditorState(ghostGroove))
+    const snare = views.map((bar) => bar.map((beat) => beat.snare.hits.replace(/x/g, () => mark(dynamics[next++]))).join(' '))
+    expect(snare).toEqual(['.... >x..(x) .(x).. >x...', '..(x). >x..(x) .(x).(x) >x.(x).'])
+    expect(views.map((bar) => bar.map((beat) => beat.kick.hits).join(' '))).toEqual(['x... .... x.x. ....', 'x..x .... ..x. ....'])
   })
 })
 

@@ -366,6 +366,25 @@ export function setBeat(bars: readonly Bar[], row: Row, bar: number, beat: numbe
 }
 
 /**
+ * The bars with each struck snare note given its marks, in order, as a text form writes them; a tied
+ * continuation isn't struck, so takes none. There must be marks for every struck note, no more.
+ */
+export function markStruckSnare(bars: readonly Bar[], marks: readonly Partial<Note>[]): Bar[] {
+  let next = 0
+  let previous: Item | undefined
+  const marked = bars.map((bar) => ({
+    ...bar,
+    snare: bar.snare.map((item) => {
+      const continuation = item.kind === 'note' && previous?.kind === 'note' && previous.tiedToNext
+      previous = item
+      return item.kind === 'note' && !continuation ? { ...item, ...marks[next++] } : item
+    }),
+  }))
+  if (next !== marks.length) throw new Error(`${marks.length} marks for ${next} struck snare notes`)
+  return marked
+}
+
+/**
  * Turns a hit on or off at one grid position of a beat in a row (on the beat's grid) and re-spells
  * the bars.
  *
