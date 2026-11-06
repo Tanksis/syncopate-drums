@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { cleanRunsOf, useAppStore } from '@/app/store'
 import { Button } from '@/components/Button'
-import { CheckIcon } from '@/components/icons'
+import { CheckIcon, CloseIcon } from '@/components/icons'
 import { Popover } from '@/components/Popover'
 import { Sheet } from '@/components/Sheet'
 import type { CleanRun } from '@/core'
@@ -79,7 +79,7 @@ function CleanRunsPanel({ large = false }: { large?: boolean }) {
               <span className="flex-1 text-mute">{dayOf(run)}</span>
               {run.bpm === best && <span className="text-xs font-semibold text-accent">best</span>}
               <Button variant="ghost" size={large ? 'lg' : 'sm'} icon aria-label={`Remove the clean run at ${run.bpm} BPM on ${dayOf(run)}`} title="Remove" onClick={() => removeCleanRun(run.at)}>
-                ×
+                <CloseIcon />
               </Button>
             </li>
           ))}

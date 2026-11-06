@@ -7,6 +7,7 @@ import { Button } from '@/components/Button'
 import type { MenuItem } from '@/components/Menu'
 import { Menu } from '@/components/Menu'
 import { Segmented } from '@/components/Segmented'
+import { TrashIcon } from '@/components/icons'
 import type { BeatView, EditCommand, EditorState, GridPoint, Hand, Mark, PositionState, Row, RowView } from '@/core'
 import { ROWS, applyEdit, canTieOverBarline, editorBeatViews, inLoopRange, isBuiltIn, marksAt, meter, sticking, stickingNoteAt } from '@/core'
 import { MARK_GLYPH, ToolPalette } from './ToolPalette'
@@ -256,7 +257,7 @@ export function BeatStrip({ phone, bar }: { phone?: PhoneOrientation; bar?: numb
                 onClick={() => dispatch({ type: 'deleteBar', bar: b })}
                 className="ml-auto enabled:hover:text-danger!"
               >
-                ✕ delete
+                <TrashIcon /> delete
               </Button>
             )}
           </div>

@@ -251,6 +251,17 @@
     @apply outline-2 outline-offset-2 outline-accent;
   }
 
+  /* The browser's own surfaces take the look's colours: the caret, selected text and scrollbars. */
+  html {
+    caret-color: var(--color-accent);
+    scrollbar-color: var(--color-edge) transparent;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-accent) 22%, transparent);
+    color: var(--color-ink);
+  }
+
   /* Tailwind's default placeholder is the text at half strength, short of 4.5:1. */
   ::placeholder {
     @apply text-mute;

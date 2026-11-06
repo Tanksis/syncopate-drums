@@ -4,6 +4,7 @@ import { Button } from '@/components/Button'
 import { headingFace } from '@/components/PanelHeading'
 import { FullScreenHeading } from '@/components/Sidebar'
 import { useModalDialog } from '@/components/useModalDialog'
+import { CloseIcon } from '@/components/icons'
 import type { KeyHelpGroup } from '@/features/editor/keyHelp'
 import { KEY_HELP } from '@/features/editor/keyHelp'
 import { KeyGroups } from '@/features/editor/CheatSheet'
@@ -74,7 +75,7 @@ export function HelpPage({ onClose }: { onClose: () => void }) {
           <div className="flex items-center justify-between gap-2 border-b border-line px-5 py-3">
             <h2 className="m-0 font-display text-xl font-bold">Help</h2>
             <Button variant="ghost" icon aria-label="Close help" title="Close (Esc)" onClick={onClose}>
-              ✕
+              <CloseIcon />
             </Button>
           </div>
         )}

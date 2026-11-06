@@ -10,7 +10,7 @@ import { SettingGroup } from '@/components/SettingGroup'
 import { Switch } from '@/components/Switch'
 import { FullScreenHeading } from '@/components/Sidebar'
 import { Slider } from '@/components/Slider'
-import { SpeakerIcon, SpeakerMutedIcon } from '@/components/icons'
+import { CloseIcon, SpeakerIcon, SpeakerMutedIcon } from '@/components/icons'
 import { ValueField } from '@/components/ValueField'
 import { keepFocus } from '@/components/keepFocus'
 import { MetronomeVolume } from '@/features/metronome/MetronomeVolume'
@@ -358,9 +358,9 @@ function PatternNoteLine() {
         title="Dismiss"
         onMouseDown={keepFocus}
         onClick={dismiss}
-        className="cursor-pointer border-0 bg-transparent p-0 text-mute"
+        className="flex cursor-pointer border-0 bg-transparent p-0 text-mute hover:text-ink"
       >
-        ✕
+        <CloseIcon />
       </button>
     </p>
   )
