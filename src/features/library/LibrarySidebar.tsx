@@ -3,7 +3,7 @@ import { useRef, useState } from 'react'
 import { useAppStore } from '@/app/store'
 import { Button, buttonClass } from '@/components/Button'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { BulbIcon, DuplicateIcon, HelpIcon, LibraryIcon, MoreIcon, PencilIcon, PlusIcon, SticksIcon, TrashIcon } from '@/components/icons'
+import { BulbIcon, CloseIcon, DuplicateIcon, HelpIcon, LibraryIcon, MoreIcon, PencilIcon, PlusIcon, SticksIcon, TrashIcon } from '@/components/icons'
 import { Menu } from '@/components/Menu'
 import { NameInput } from '@/components/NameInput'
 import { PatternDialog } from '@/components/PatternDialog'
@@ -354,7 +354,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
             <p role="status" className="m-0 flex items-center gap-1.5 text-xs text-mute">
               <span className="flex-1">{imported === 0 ? 'Nothing new imported.' : `Imported ${exerciseCount(imported)}.`}</span>
               <Button variant="ghost" icon aria-label="Dismiss" onClick={() => setImported(null)}>
-                ×
+                <CloseIcon />
               </Button>
             </p>
           )}
@@ -445,9 +445,9 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
                     title="Delete the folder; its exercises are kept"
                     onMouseDown={keepFocus}
                     onClick={() => setFolderToDelete({ folder, count })}
-                    className="shrink-0 cursor-pointer border-0 bg-transparent px-1 text-mute opacity-0 group-hover:opacity-100 hover:text-danger focus:opacity-100"
+                    className="flex shrink-0 cursor-pointer border-0 bg-transparent px-1 text-mute opacity-0 group-hover:opacity-100 hover:text-danger focus:opacity-100"
                   >
-                    ×
+                    <CloseIcon />
                   </button>
                 </div>
                 {exercises.length > 0 && (

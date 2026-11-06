@@ -140,6 +140,13 @@ export const PencilIcon = () => (
   </Icon>
 )
 
+/** A cross: close or dismiss. */
+export const CloseIcon = () => (
+  <Icon>
+    <path d="M4 4l8 8M12 4l-8 8" />
+  </Icon>
+)
+
 /** A tick: done. */
 export const CheckIcon = () => (
   <Icon>

@@ -1,4 +1,5 @@
 import type { KeyboardEvent, ReactNode } from 'react'
+import { CheckIcon } from '@/components/icons'
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { buttonClass } from './Button'
@@ -196,8 +197,8 @@ export function Menu({
                   }}
                   className={`flex cursor-pointer flex-wrap items-center gap-x-2 rounded px-2 text-left whitespace-nowrap ${large ? 'py-3 text-base' : 'py-1.5'} enabled:hover:bg-select focus-visible:bg-select focus-visible:-outline-offset-2 disabled:cursor-default disabled:opacity-40`}
                 >
-                  <span aria-hidden className="w-3 text-accent">
-                    {item.checked ? '✓' : ''}
+                  <span aria-hidden className="flex w-4 text-accent">
+                    {item.checked && <CheckIcon />}
                   </span>
                   {item.label}
                   {item.hint && <span className="ml-auto pl-3 text-mute">{item.hint}</span>}
