@@ -114,7 +114,10 @@ function EditorSheet({
   )
 }
 
-/** The phone's small ‹ or ›, beside the beat cards, which goes to the bar before or after. */
+/**
+ * The phone's small ‹ or ›, beside the beat cards, which goes to the bar before or after. It has only the
+ * cards' margin to sit in, so it reaches up and down for a finger instead.
+ */
 function BarStep({ side }: { side: 'left' | 'right' }) {
   const barCount = useAppStore((s) => s.editor.exercise.bars.length)
   const current = useAppStore((s) => s.editor.cursor.bar)
@@ -130,7 +133,7 @@ function BarStep({ side }: { side: 'left' | 'right' }) {
       tabIndex={-1}
       onMouseDown={keepFocus}
       onClick={() => dispatch({ type: 'moveTo', bar: to, beat: 0 })}
-      className={`absolute top-1/2 flex h-14 w-6 -translate-y-1/2 cursor-pointer touch-manipulation items-center justify-center text-xl/none text-mute hover:text-accent disabled:cursor-default disabled:opacity-25 disabled:hover:text-mute ${
+      className={`absolute top-1/2 flex h-24 w-6 -translate-y-1/2 cursor-pointer touch-manipulation items-center justify-center text-xl/none text-mute hover:text-accent disabled:cursor-default disabled:opacity-25 disabled:hover:text-mute ${
         side === 'left' ? 'left-0' : 'right-0'
       }`}
     >

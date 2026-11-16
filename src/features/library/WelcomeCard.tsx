@@ -19,7 +19,14 @@ export function WelcomeCard({ onBrowse }: { onBrowse: () => void }) {
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-paper/70 p-4">
       <section aria-labelledby="welcome-title" className="relative flex max-w-md flex-col gap-3 rounded-card border border-line bg-card p-5 shadow-popover">
-        <Button variant="ghost" icon aria-label="Close the welcome" onClick={dismiss} className="absolute top-2 right-2">
+        {/* For a finger, 44 px, its cross where the small one's is. */}
+        <Button
+          variant="ghost"
+          icon
+          aria-label="Close the welcome"
+          onClick={dismiss}
+          className="absolute top-2 right-2 pointer-coarse:-top-1 pointer-coarse:-right-1 pointer-coarse:size-11"
+        >
           <CloseIcon />
         </Button>
         <h2 id="welcome-title" className="m-0 pr-8 font-display text-xl font-bold">

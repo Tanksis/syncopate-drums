@@ -129,7 +129,8 @@ export function NotationView({ corner, coveredBottom, grow = false }: { corner?:
           value={notationShows}
           onChange={(value) => setDeviceSettings({ notationShows: value })}
           small
-          className={`absolute top-2.5 z-10 ${corner ? 'left-16' : 'left-4'}`}
+          // Beside the play button, centred on it.
+          className={`absolute z-10 ${corner ? 'top-4.5 left-16' : 'top-2.5 left-4'}`}
         />
       )}
     </div>

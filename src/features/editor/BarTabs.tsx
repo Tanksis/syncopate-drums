@@ -170,7 +170,7 @@ function Scroller({ sideways, children }: { sideways: boolean; children: ReactNo
   return <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">{children}</div>
 }
 
-/** ‹ or ›: to the bar before or after the cursor's. */
+/** ‹ or ›: to the bar before or after the cursor's. Small, its 32 px reach into the gaps beside it, so the glyph sits where it would. */
 function StepButton({
   large,
   label,
@@ -195,7 +195,7 @@ function StepButton({
       onMouseDown={keepFocus}
       onClick={onClick}
       className={`cursor-pointer rounded-md text-mute hover:text-accent disabled:cursor-default disabled:opacity-30 disabled:hover:text-mute ${
-        large ? 'h-10 min-w-9 shrink-0 text-2xl/none' : 'px-1 text-sm/none'
+        large ? 'h-11 min-w-11 shrink-0 text-2xl/none' : '-mx-1.5 h-8 w-8 shrink-0 text-sm/none'
       }`}
     >
       {children}
