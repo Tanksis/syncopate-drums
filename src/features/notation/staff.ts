@@ -67,6 +67,8 @@ const STAVE_LINE_GAP = 10
 const HAND_HIT_PAD = 3
 /** Pixels of clickable space around a bar number, which is printed small. */
 const BAR_NUMBER_HIT_PAD = 6
+/** The least width and height, in the page's px whatever the scale, of a bar number's clickable box. */
+const BAR_NUMBER_HIT_MIN = 32
 
 /**
  * Stave spaces between an accent's baseline and the stem tip it sits over. The `>` glyph's foot is a
@@ -480,7 +482,7 @@ export function drawExercise(
       ctx.restore()
     }
     stave.setContext(ctx).draw()
-    drawBarNumber(stave, b, exercise.practice.loopRange, barNumberLine, colour.loopInk, font)
+    drawBarNumber(stave, b, exercise.practice.loopRange, barNumberLine, colour.loopInk, font, scale)
 
     const drawings = drawnLimbs
       .filter((limb) => parts[b][limb].length)
@@ -554,9 +556,10 @@ function tie(from: TieEnd, to: TieEnd): StaveTie[] {
 /**
  * Prints the bar's number above its start, as VexFlow would, in a group tagged with the bar so a
  * click can loop it, on the given text line above the stave. Bars in a set loop range are numbered
- * in bold, in the loop colour.
+ * in bold, in the loop colour. Its clickable box is centred on it and at least `BAR_NUMBER_HIT_MIN`
+ * page px each way at the drawing's `scale`; it is invisible, so the notation looks the same.
  */
-function drawBarNumber(stave: Stave, bar: number, loopRange: LoopRange | null, line: number, loopInk: string, font: string) {
+function drawBarNumber(stave: Stave, bar: number, loopRange: LoopRange | null, line: number, loopInk: string, font: string, scale: number) {
   const ctx = stave.checkContext()
   const looped = inLoopRange(loopRange, bar)
   const group: SVGGElement = ctx.openGroup('bar-number')
@@ -574,8 +577,10 @@ function drawBarNumber(stave: Stave, bar: number, loopRange: LoopRange | null, l
   const x = stave.getX() - width / 2
   const y = stave.getYForTopText(line) + 3
   ctx.fillText(text, x, y)
-  const pad = BAR_NUMBER_HIT_PAD
-  ctx.pointerRect(x - pad, y - height - pad, width + 2 * pad, height + 2 * pad)
+  const least = BAR_NUMBER_HIT_MIN / scale
+  const hitWidth = Math.max(width + 2 * BAR_NUMBER_HIT_PAD, least)
+  const hitHeight = Math.max(height + 2 * BAR_NUMBER_HIT_PAD, least)
+  ctx.pointerRect(x + width / 2 - hitWidth / 2, y - height / 2 - hitHeight / 2, hitWidth, hitHeight)
   ctx.restore()
   ctx.closeGroup()
 }

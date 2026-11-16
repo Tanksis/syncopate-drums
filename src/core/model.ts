@@ -454,6 +454,15 @@ export function loopAt(exercise: Exercise, bar: number, { extend = false } = {})
   return withLoopRange(exercise, { first: Math.min(range.first, bar), last: Math.max(range.last, bar) })
 }
 
+/**
+ * The loop picker's step for a chosen bar: the first bar chosen loops alone and waits for a second,
+ * which extends the loop to it (`loopAt` with `extend`); a bar chosen after that starts again. `pick`
+ * is the bar waiting for its second, if one is; `next` is the one after this choice.
+ */
+export function pickLoopBar(pick: number | null, bar: number): { extend: boolean; next: number | null } {
+  return pick === null ? { extend: false, next: bar } : { extend: true, next: null }
+}
+
 /** Whether a bar is in a set loop range. */
 export function inLoopRange(range: LoopRange | null, bar: number): boolean {
   return range !== null && bar >= range.first && bar <= range.last

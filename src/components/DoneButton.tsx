@@ -1,9 +1,9 @@
 import { Button } from './Button'
-import { CheckIcon } from './icons'
 
 /**
- * The phone's tick, which closes what it sits in: a sheet, the editor, or a screen over the app. `label`
- * says what it closes. A `quiet` tick is drawn in the accent on no fill, to sit in a row of icon buttons.
+ * The phone's Done, which closes what it sits in: a sheet, the editor, or a screen over the app. `label`
+ * says what it closes. It keeps the square of a finger-sized icon button, so it sits where the tick did
+ * and nothing beside it moves. A `quiet` Done is drawn in the accent on no fill, to sit in a row of icon buttons.
  */
 export function DoneButton({
   label,
@@ -21,14 +21,12 @@ export function DoneButton({
       variant={quiet ? 'ghost' : 'primary'}
       size="lg"
       icon
-      aria-label={label}
+      aria-label={`Done: ${label.charAt(0).toLowerCase()}${label.slice(1)}`}
       title={label}
       onClick={onClick}
-      className={`${quiet ? 'text-accent! active:bg-hover' : ''} ${className}`}
+      className={`text-sm/none! ${quiet ? 'text-accent! active:bg-hover' : ''} ${className}`}
     >
-      <span aria-hidden className={`flex ${quiet ? '[&>svg]:size-6' : '[&>svg]:size-5.5'}`}>
-        <CheckIcon />
-      </span>
+      Done
     </Button>
   )
 }

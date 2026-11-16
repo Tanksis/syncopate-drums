@@ -23,7 +23,7 @@ const QUICK_START: { title: string; desktop: string; phone: string }[] = [
   {
     title: 'Enter the hits',
     desktop: 'Click the squares in the grid editor under the notation: the top row is the snare, the bottom row the kick. Drag a note along to change how long it’s written.',
-    phone: 'Press Edit and tap the squares: the top row is the snare, the bottom row the kick. The tick closes the editor.',
+    phone: 'Press Edit and tap the squares: the top row is the snare, the bottom row the kick. Done closes the editor.',
   },
   {
     title: 'Press play',
@@ -46,14 +46,14 @@ const WORDS: [word: string, meaning: string][] = [
   ['Bass drum', 'Off, or feathered: played softly on every beat, with any pattern or none.'],
   ['Hi-hat foot', 'The hi-hat pedal played under every bar: on 1, on the beats, 2 & 4 or the &s, with any pattern or none.'],
   ['Swing', 'How long the first eighth of each beat is: Straight (50%), Triplet (66.7%), Dotted (75%), or a Custom amount between. It eases toward straight as the tempo rises, and written triplets never swing.'],
-  ['Loop', 'The bars that repeat as you play, all of them unless you choose: click a bar number to loop it, Shift+click to extend.'],
+  ['Loop', 'The bars that repeat as you play, all of them unless you choose: press the Loop chip and choose a bar, or two to loop from one to the other. A click on a bar number over the staff loops that bar too; Shift+click extends.'],
   ['Count-in', 'One bar of click before the exercise starts, turned on and off with the Count-in chip.'],
 ]
 
 /**
  * Help and About: a quick start, the keys (not on a phone, which has none), the app's words, and
  * what the app is. A dialog-sized panel on the
- * desktop, which Escape, ✕ or a click outside closes; on a phone it fills the screen, closed by its tick.
+ * desktop, which Escape, ✕ or a click outside closes; on a phone it fills the screen, closed by its Done.
  */
 export function HelpPage({ onClose }: { onClose: () => void }) {
   const phone = usePhoneWindow()

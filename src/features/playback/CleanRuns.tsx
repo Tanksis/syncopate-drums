@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { cleanRunsOf, useAppStore } from '@/app/store'
-import { Button } from '@/components/Button'
-import { CheckIcon, CloseIcon } from '@/components/icons'
+import { Button, buttonClass } from '@/components/Button'
+import { CloseIcon, TrophyIcon } from '@/components/icons'
 import { Popover } from '@/components/Popover'
 import { Sheet } from '@/components/Sheet'
 import type { CleanRun } from '@/core'
@@ -16,14 +16,26 @@ const useOpenCleanRuns = () => useAppStore((s) => cleanRunsOf(s, s.editor.exerci
 /** A clean run's day, as the history lists it: "28 Oct 2026". */
 const dayOf = (run: CleanRun) => new Date(run.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
 
-/** The ✓ is the accent's once the exercise has a clean run, the same size either way. */
-const tickClass = (logged: boolean) => (logged ? 'text-accent' : '')
+/** The trophy is the accent's once the exercise has a clean run, the same size either way. */
+const trophyClass = (logged: boolean) => (logged ? 'text-accent' : '')
 
-/** The exercise bar's ✓, opening the clean runs under it. */
+/** The exercise bar's Clean button, its trophy and its word, opening the clean runs under it. */
 export function CleanRunsPopover() {
   const logged = useOpenCleanRuns().length > 0
   return (
-    <Popover label={PANEL_TITLE} title="Clean runs: log a tempo you played it cleanly at" icon={<span className={tickClass(logged)}><CheckIcon /></span>}>
+    <Popover
+      label={PANEL_TITLE}
+      title="Clean runs: log a tempo you played it cleanly at"
+      buttonClassName={`${buttonClass({ size: 'md' })} h-8 px-2.5`}
+      icon={
+        <>
+          <span className={`flex ${trophyClass(logged)}`}>
+            <TrophyIcon />
+          </span>
+          Clean
+        </>
+      }
+    >
       <CleanRunsPanel />
     </Popover>
   )
@@ -31,7 +43,7 @@ export function CleanRunsPopover() {
 
 /**
  * The phone's clean runs, in a sheet opened by the button `children` draws, given what opens it and
- * the ✓ to show, the accent's once the exercise has a clean run.
+ * the trophy to show, the accent's once the exercise has a clean run.
  */
 export function CleanRunsSheet({ children }: { children: (open: () => void, tick: ReactNode) => ReactNode }) {
   const [open, setOpen] = useState(false)
@@ -40,8 +52,8 @@ export function CleanRunsSheet({ children }: { children: (open: () => void, tick
     <>
       {children(
         () => setOpen(true),
-        <span className={tickClass(logged)}>
-          <CheckIcon />
+        <span className={trophyClass(logged)}>
+          <TrophyIcon />
         </span>,
       )}
       {open && (
@@ -66,7 +78,7 @@ function CleanRunsPanel({ large = false }: { large?: boolean }) {
   return (
     <div className={`flex flex-col gap-2 ${large ? 'w-full' : 'w-64 text-sm'}`}>
       <Button variant="primary" size={large ? 'lg' : 'md'} onClick={logCleanRun} className="gap-2">
-        <CheckIcon />
+        <TrophyIcon />
         Played it clean at {bpm} BPM
       </Button>
       {runs.length === 0 ? (
@@ -89,13 +101,14 @@ function CleanRunsPanel({ large = false }: { large?: boolean }) {
   )
 }
 
-/** ✓ and the best clean BPM, beside an exercise in a list; nothing before its first clean run. */
+/** A small trophy and the best clean BPM, beside an exercise in a list; nothing before its first clean run. */
 export function BestCleanBpm({ runs }: { runs: readonly CleanRun[] | undefined }) {
   const best = bestCleanBpm(runs)
   if (best === undefined) return null
   return (
-    <span title={`Played cleanly at up to ${best} BPM`} className="shrink-0 text-xs font-semibold whitespace-nowrap text-accent tabular-nums">
-      ✓ {best}
+    <span title={`Played cleanly at up to ${best} BPM`} className="inline-flex shrink-0 items-center gap-0.5 text-xs font-semibold whitespace-nowrap text-accent tabular-nums [&>svg]:size-3">
+      <TrophyIcon />
+      {best}
     </span>
   )
 }

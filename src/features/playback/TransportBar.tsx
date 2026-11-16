@@ -48,7 +48,8 @@ export function TransportBar({ onEdit, onCopy, slim = false }: { onEdit?: () => 
       </div>
       <ClickTile slim={slim} />
       {onCopy ? (
-        <SlotButton aria-label="Copy to Library" onClick={onCopy}>
+        // "Copy to Library" doesn't fit beside the tempo on a phone; its name says it in full.
+        <SlotButton aria-label="Copy to Library" title="Copy to Library: make an editable copy" onClick={onCopy}>
           Copy
         </SlotButton>
       ) : (
@@ -76,7 +77,7 @@ function PlayPauseButton({ className }: { className: string }) {
 }
 
 /** The button at the right of the bar: Edit, or Copy on an example. */
-function SlotButton(props: { 'aria-label'?: string; onClick: () => void; children: string }) {
+function SlotButton(props: { 'aria-label'?: string; title?: string; onClick: () => void; children: string }) {
   return (
     <Button size="lg" {...props} className="ml-auto active:border-accent active:text-accent" />
   )
