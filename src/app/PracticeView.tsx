@@ -11,7 +11,7 @@ export function togglePracticeView() {
 }
 
 /**
- * The desktop's Practice view toggle, at the end of the exercise's bar: lit while the view is on. The
+ * The desktop's Practice view toggle, in the header on the Practice screen: lit while the view is on. The
  * view folds the sidebars to rails and the editor to its bar tabs, and grows the notation into the
  * room (`workstationLayout`). Only this, and P, switch it: Play never changes the layout.
  */

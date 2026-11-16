@@ -23,7 +23,9 @@ const WHEEL_LINE_PX = 40
  * The metronome's tempo on a ring with a dot per beat: the BPM in the middle, with its tempo name
  * and any `hint`. Dragging around the ring changes the BPM (clockwise faster), saved once the drag
  * ends; the mouse wheel over it changes it a BPM a notch (up faster), and the arrow keys by one.
- * While playing, the beat's dot grows and takes its level's colour.
+ * Each beat's dot is a mark set into the ring, not a handle on it (the whole ring turns): a
+ * darker spot for a beat that sounds, a gap for one that's off. While playing, the beat's dot grows
+ * out of the ring and takes its level's colour.
  */
 export function Dial({ beat, size = SIZE, hint }: { beat: number | undefined; size?: number; hint?: string }) {
   const { bpm, levels } = useAppStore((s) => s.device.metronome)
@@ -118,13 +120,13 @@ export function Dial({ beat, size = SIZE, hint }: { beat: number | undefined; si
           {levels.map((level, i) => {
             const angle = (i / levels.length) * 2 * Math.PI - Math.PI / 2
             const on = beat === i
-            const dot = on ? 34 : 20
+            const dot = on ? 34 : 8
             return (
               <span
                 key={i}
                 aria-hidden
-                className={`absolute rounded-full border-2 transition-all duration-75 ${level === 'off' ? 'border-edge' : 'border-card'} ${
-                  on ? LEVEL_COLOUR[level] : level === 'off' ? 'bg-card' : 'bg-edge/40'
+                className={`absolute rounded-full transition-all duration-75 ${
+                  on ? `border-2 border-card ${LEVEL_COLOUR[level]}` : level === 'off' ? 'bg-card' : 'bg-mute/70'
                 }`}
                 style={{
                   width: dot,
