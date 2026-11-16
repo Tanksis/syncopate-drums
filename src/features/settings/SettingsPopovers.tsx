@@ -1,5 +1,6 @@
 import { useAppStore } from '@/app/store'
 import { Popover } from '@/components/Popover'
+import { GroupHeadingLevel } from '@/components/SettingGroup'
 import { GearIcon, SpeakerIcon, SpeakerMutedIcon } from '@/components/icons'
 import { AppearanceSettings, MetronomeSoundSettings, MixSettings } from './SettingsSidebar'
 
@@ -18,7 +19,7 @@ export function SoundButton() {
   const silence = onMetronome ? 'at 0%' : 'a layer is muted'
   return (
     <Popover label={label} title={muted ? `${label} (${silence})` : label} icon={muted ? <SpeakerMutedIcon /> : <SpeakerIcon />}>
-      {onMetronome ? <MetronomeSoundSettings /> : <MixSettings />}
+      <GroupHeadingLevel value={2}>{onMetronome ? <MetronomeSoundSettings /> : <MixSettings />}</GroupHeadingLevel>
     </Popover>
   )
 }
@@ -27,7 +28,9 @@ export function SoundButton() {
 export function PreferencesButton() {
   return (
     <Popover label="Preferences" icon={<GearIcon />}>
-      <AppearanceSettings />
+      <GroupHeadingLevel value={2}>
+        <AppearanceSettings />
+      </GroupHeadingLevel>
     </Popover>
   )
 }
