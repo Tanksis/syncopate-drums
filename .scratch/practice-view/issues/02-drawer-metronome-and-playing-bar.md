@@ -4,7 +4,7 @@
 
 **Blocked by:** 01
 
-**Status:** done (merged in PR #PRNUM, 2026-11-16)
+**Status:** done (merged in PR #176, 2026-11-16)
 
 - [x] Practice settings a drawer at 1024 px and below (the Metronome's stay docked down to 1000 px), unit-tested in `workstationLayout`
 - [x] The library sidebar hidden on the Metronome; its state on Practice kept

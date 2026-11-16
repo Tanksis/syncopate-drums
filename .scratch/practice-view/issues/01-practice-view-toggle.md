@@ -4,7 +4,7 @@
 
 **Blocked by:** none
 
-**Status:** done (merged in PR #PRNUM, 2026-11-16)
+**Status:** done (merged in PR #176, 2026-11-16)
 
 - [x] `DeviceSettings.practiceView`, default off, unit-tested through `deviceSettingsFrom`
 - [x] `workstationLayout` decides the sidebars' places, the editor's fold and the notation's growth, unit-tested
