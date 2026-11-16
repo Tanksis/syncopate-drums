@@ -3,8 +3,8 @@ import { keepFocus } from '@/components/keepFocus'
 import { togglePlayback } from './transport'
 
 /**
- * The desktop play/stop button: round, pinned at the top left of the notation area by bar 1.
- * It plays from the count-in, as Ctrl+Space does.
+ * The desktop play/stop button: round, 44 px, pinned at the top left of the notation area by bar 1,
+ * in the room the notation's padding keeps for it. It plays from the count-in, as Ctrl+Space does.
  */
 export function StaffPlayButton() {
   const playing = useAppStore((s) => s.playing)
@@ -16,7 +16,7 @@ export function StaffPlayButton() {
       // Keep focus off the button, so Space pauses rather than clicking it.
       onMouseDown={keepFocus}
       onClick={togglePlayback}
-      className="flex size-9 cursor-pointer items-center justify-center rounded-full border border-play-button-edge bg-play-button text-sm/none text-on-play-button shadow-md shadow-shade/10 hover:opacity-90"
+      className="flex size-11 cursor-pointer items-center justify-center rounded-full border border-play-button-edge bg-play-button text-base/none text-on-play-button shadow-md shadow-shade/10 hover:opacity-90"
     >
       <span aria-hidden>{playing ? '■' : '▶'}</span>
     </button>

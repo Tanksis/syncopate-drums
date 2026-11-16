@@ -39,7 +39,7 @@ export function ToolPalette({ large = false }: { large?: boolean }) {
           disabled={builtIn}
           tabIndex={-1}
           onClick={() => setTool(tool)}
-          className="rounded-full! text-xs"
+          className={`rounded-full! text-xs ${large ? '' : 'h-7'}`}
         >
           <span aria-hidden className="font-bold">
             {glyph}
