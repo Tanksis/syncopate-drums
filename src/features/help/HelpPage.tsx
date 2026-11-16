@@ -37,6 +37,13 @@ const QUICK_START: { title: string; desktop: string; phone: string }[] = [
   },
 ]
 
+/**
+ * Running text's measure and wrap: about 65 to 70 characters a line however wide the dialog (set in em,
+ * as this face's ch is wider than its average letter), without a lone word on the last. The keys use
+ * the whole width.
+ */
+const PROSE = 'max-w-[32em] text-pretty'
+
 /** The app's words, worded from `CONTEXT.md`. */
 const WORDS: [word: string, meaning: string][] = [
   ['Exercise', 'A run of bars practised as one unit, such as one numbered line from a method book.'],
@@ -96,7 +103,7 @@ export function HelpPage({ onClose }: { onClose: () => void }) {
                   <span aria-hidden className="flex size-6 shrink-0 items-center justify-center rounded-full bg-accent/10 font-bold text-accent">
                     {i + 1}
                   </span>
-                  <p className="m-0">
+                  <p className={`m-0 ${PROSE}`}>
                     <span className="font-semibold">{step.title}.</span> <span className="text-mute">{phone ? step.phone : step.desktop}</span>
                   </p>
                 </li>
@@ -107,7 +114,7 @@ export function HelpPage({ onClose }: { onClose: () => void }) {
           {!phone && (
             <Section title="Keys">
               <div className="text-xs">
-                <KeyGroups groups={KEYS} />
+                <KeyGroups groups={KEYS} level={4} />
               </div>
             </Section>
           )}
@@ -117,14 +124,14 @@ export function HelpPage({ onClose }: { onClose: () => void }) {
               {WORDS.map(([word, meaning]) => (
                 <div key={word}>
                   <dt className="font-semibold">{word}</dt>
-                  <dd className="m-0 text-mute">{meaning}</dd>
+                  <dd className={`m-0 text-mute ${PROSE}`}>{meaning}</dd>
                 </div>
               ))}
             </dl>
           </Section>
 
           <Section title="About">
-            <p className="m-0">Syncopate! is a drum practice tool: write rhythm exercises, see the sticking under them, add a groove, and play along with a click.</p>
+            <p className={`m-0 ${PROSE}`}>Syncopate! is a drum practice tool: write rhythm exercises, see the sticking under them, add a groove, and play along with a click.</p>
           </Section>
         </div>
       </div>
@@ -136,7 +143,7 @@ export function HelpPage({ onClose }: { onClose: () => void }) {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section aria-label={title} className="flex flex-col gap-2.5">
-      <h3 className={`m-0 text-[13px] text-ink ${headingFace}`}>{title}</h3>
+      <h3 className={`m-0 text-[13px] text-balance text-ink ${headingFace}`}>{title}</h3>
       {children}
     </section>
   )

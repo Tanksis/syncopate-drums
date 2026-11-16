@@ -1,5 +1,12 @@
 import type { ReactNode } from 'react'
+import { createContext, useContext } from 'react'
 import { headingFace } from './PanelHeading'
+
+/**
+ * The level of a settings group's heading: h3, under its sidebar's or sheet's h2, or h2 where the
+ * group is a panel's only content and heads it, as in the header's popovers.
+ */
+export const GroupHeadingLevel = createContext<2 | 3>(3)
 
 /**
  * A settings group: a hairline over its heading and its rows, which the first group in its section
@@ -24,9 +31,10 @@ export function SettingGroup({ title, aside, children }: { title: string; aside?
 
 /** A settings group's heading, in the ink colour and larger than `PanelHeading`'s section labels. */
 function GroupHeading({ children }: { children: ReactNode }) {
+  const Heading = `h${useContext(GroupHeadingLevel)}` as const
   return (
-    <h3 className={`mb-1 ${headingFace} text-[13px] text-ink`}>
+    <Heading className={`mb-1 ${headingFace} text-[13px] text-ink`}>
       {children}
-    </h3>
+    </Heading>
   )
 }
