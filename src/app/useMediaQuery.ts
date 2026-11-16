@@ -1,7 +1,11 @@
 import { useCallback, useSyncExternalStore } from 'react'
+import { NARROW_WIDTH, SETTINGS_DRAWER_WIDTH } from './workstation'
 
 /** Below 1000 px wide the sidebars are rails that open as overlays. */
-const NARROW = '(width < 1000px)'
+const NARROW = `(width < ${NARROW_WIDTH}px)`
+
+/** At 1024 px wide and below, Practice's settings are a drawer (`workstationLayout`). */
+const SETTINGS_DRAWER = `(width <= ${SETTINGS_DRAWER_WIDTH}px)`
 
 /**
  * The phone layout: a window under 640 px wide, or a touch screen under 500 px tall, which is a phone
@@ -36,6 +40,9 @@ function useMediaQuery(query: string): boolean {
 
 /** Whether the window is narrower than 1000 px. */
 export const useNarrowWindow = () => useMediaQuery(NARROW)
+
+/** Whether the window is 1024 px wide or narrower, where Practice's settings are a drawer. */
+export const useSettingsDrawerWindow = () => useMediaQuery(SETTINGS_DRAWER)
 
 /** Whether the window gets the phone layout: narrower than 640 px, or a phone turned sideways. */
 export const usePhoneWindow = () => useMediaQuery(PHONE)

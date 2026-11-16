@@ -169,6 +169,13 @@ export const PracticeIcon = () => (
   </Icon>
 )
 
+/** A staff line framed by four corners, as a viewfinder: the practice view, the notation filling the screen. */
+export const PracticeViewIcon = () => (
+  <Icon>
+    <path d="M1.5 5V2.5a1 1 0 0 1 1-1H5M11 1.5h2.5a1 1 0 0 1 1 1V5M14.5 11v2.5a1 1 0 0 1-1 1H11M5 14.5H2.5a1 1 0 0 1-1-1V11M4.5 8h7" />
+  </Icon>
+)
+
 /** A metronome with its arm swung over: the Metronome screen. */
 export const MetronomeIcon = () => (
   <Icon>
