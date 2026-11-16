@@ -4,6 +4,9 @@ import { createPortal } from 'react-dom'
 import { buttonClass } from './Button'
 import { keepFocus } from './keepFocus'
 
+/** The least room, in px, between the panel and the window's left edge. */
+const EDGE_PX = 8
+
 /** Where the panel hangs from: the button's box, and whether the keyboard opened it. */
 interface Anchor {
   bottom: number
@@ -20,16 +23,19 @@ interface Anchor {
  * A mouse click keeps focus where it was (`keepFocus`), so Space still plays; opened from the keyboard,
  * the focus goes to the panel's first control, and back to the button when `Esc` or Tab closes it.
  * The panel is a `dialog`, so a `Menu` inside it opens in it. `icon` is what the button shows, and
- * `buttonClassName` replaces its look, a kit button's with an icon.
+ * `buttonClassName` replaces its look, a kit button's with an icon. `label` names the button and the
+ * panel, unless `panelLabel` names the panel.
  */
 export function Popover({
   label,
+  panelLabel = label,
   title = label,
   icon,
   buttonClassName = buttonClass({ size: 'md', icon: true }),
   children,
 }: {
   label: string
+  panelLabel?: string
   title?: string
   icon: ReactNode
   buttonClassName?: string
@@ -55,6 +61,11 @@ export function Popover({
     const el = panel.current
     if (!anchor || !el) return
     el.style.maxHeight = `${window.innerHeight - anchor.bottom - 12}px`
+    // A button near the left edge (the phone's) would hang the panel off the screen: it starts at the edge instead.
+    if (el.getBoundingClientRect().left < EDGE_PX) {
+      el.style.right = 'auto'
+      el.style.left = `${EDGE_PX}px`
+    }
     if (anchor.byKeyboard) controls()[0]?.focus({ preventScroll: true })
   }, [anchor])
 
@@ -116,7 +127,7 @@ export function Popover({
           <dialog
             ref={panel}
             open
-            aria-label={label}
+            aria-label={panelLabel}
             onKeyDown={onPanelKeyDown}
             style={{ top: anchor.bottom + 6, right: anchor.right }}
             className="fixed left-auto z-30 m-0 flex w-72 flex-col gap-3.5 overflow-y-auto overscroll-contain rounded-lg border border-line bg-card p-3 text-ink shadow-popover"

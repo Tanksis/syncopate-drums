@@ -3,7 +3,7 @@ import { DoneButton } from './DoneButton'
 import { useModalDialog } from './useModalDialog'
 
 /**
- * A phone sheet over the lower part of the screen, with its title and the tick, which closes it; so do
+ * A phone sheet over the lower part of the screen, with its title and Done, which closes it; so do
  * Escape and a tap above it. It is modal: the screen under it waits until it closes.
  */
 export function Sheet({ title, onDone, children }: { title: string; onDone: () => void; children: ReactNode }) {

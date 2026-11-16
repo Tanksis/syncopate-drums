@@ -20,7 +20,7 @@ export const chevronButtonClass =
 
 /**
  * A sidebar's heading, with the chevron that collapses the sidebar to its rail, or, shown
- * `fullScreen` on a phone, the tick that closes it. `sidebarName` names the sidebar in the
+ * `fullScreen` on a phone, the Done that closes it. `sidebarName` names the sidebar in the
  * chevron's label where the heading names only what's under it. `title` takes the heading's place
  * (a switch between what the sidebar lists), `name` still naming the sidebar.
  */
@@ -61,7 +61,7 @@ export function SidebarHeading({
 
 /**
  * A phone's full-screen panel's title, as large as a sheet's, or `title` in its place as for
- * `SidebarHeading`, and the tick that closes the panel.
+ * `SidebarHeading`, and the Done that closes the panel.
  */
 export function FullScreenHeading({ name, title, onClose, className = '' }: { name: string; title?: ReactNode; onClose: () => void; className?: string }) {
   return (

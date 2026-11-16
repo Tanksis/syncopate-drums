@@ -26,7 +26,7 @@ export function WelcomeCard({ onBrowse }: { onBrowse: () => void }) {
           Welcome to Syncopate!
         </h2>
         <p className="m-0 text-mute">
-          Write a drum exercise on the grid, see it as notation with the sticking under it, and play along with a groove and a click. This is an example; make your own or try the others.
+          Write a drum exercise on the grid, see it as drum notation, and play along with a groove and a click. This is an example; make your own or try the others.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button

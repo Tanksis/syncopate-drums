@@ -35,7 +35,7 @@ export function ExampleNotice() {
       }`}
     >
       <p role="status" className="m-0 flex-1">
-        <span className="font-semibold text-ink">{kind === 'rudiment' ? 'Rudiment' : 'Example'}: read-only.</span> Copy to Library to edit it.
+        <span className="font-semibold text-ink">{kind === 'rudiment' ? 'Rudiment' : 'Example'}: read-only.</span> To change it, make your own copy.
       </p>
       <Button title={`Make an editable copy of this ${kind}`} onClick={copyToLibrary}>
         Copy to Library

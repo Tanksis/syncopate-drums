@@ -22,8 +22,8 @@ import { useEditorKeys } from './useEditorKeys'
  * `onDone`, it's the phone layout's sheet over the lower part of the screen, its transport and tab
  * bars too: a grab handle, the tool palette, the beat cards two to a row (on most phones they fit; else they scroll),
  * or all four in a row with the phone turned sideways (`orientation`), with a small ‹ and › either side, and a row at its foot, in the thumb's reach, of undo, redo, the
- * bar dots and +, the bin, the bar menu and the tick. Going to another bar slides its cards in; the
- * tick, or a drag down on the handle or the cards, closes the sheet (`onDone`). It is drawn in place
+ * bar dots and +, the bin, the bar menu and Done. Going to another bar slides its cards in; the
+ * Done, or a drag down on the handle or the cards, closes the sheet (`onDone`). It is drawn in place
  * while `open`, and below the screen, to slide in and out, while not. Otherwise it's docked under
  * the notation, and its chevron collapses it to its header row.
  */

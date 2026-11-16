@@ -132,7 +132,7 @@ function Wordmark() {
  * the notation filling the screen over the transport bar. Menu and settings open their sidebar over
  * the whole screen, sliding in; so does a swipe right and left on the screen, which pulls it in
  * under the finger, and a swipe back the other way closes it. Edit, in the transport bar, slides the
- * grid editor up as a sheet over the transport and tab bars, which its tick or a drag down closes;
+ * grid editor up as a sheet over the transport and tab bars, which its Done or a drag down closes;
  * while it's up, a play button floats over the notation above it. A built-in exercise, which can't be
  * changed, has no read-only notice; Copy takes Edit's place instead, and opens an editable copy.
  *
@@ -324,7 +324,7 @@ function SettingsToggle({ state, onOpen, onCollapse }: SidebarControl) {
  * exercise name its 12 letters or so, measured in each look's fonts with the click off (Warm's need
  * the most): under `full` the Click and Count-in chips and the loop chip move to a row under the bar's.
  */
-const EXERCISE_BAR_WIDTH = { full: 778 }
+const EXERCISE_BAR_WIDTH = { full: 843 }
 
 /**
  * A ref for the exercise's bar over the notation, and how much of the transport fits in it. That

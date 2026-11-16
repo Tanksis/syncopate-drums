@@ -117,7 +117,7 @@ type PhoneTab = (typeof PHONE_TABS)[number]['id']
 
 /**
  * The settings over the whole phone screen: Loop and Count-in pinned at the top, then a tab for each
- * section, so one section shows at a time and nothing needs a long scroll. The tick closes them.
+ * section, so one section shows at a time and nothing needs a long scroll. Done closes them.
  */
 export function PhoneSettings({ onDone }: { onDone: () => void }) {
   const [tab, setTab] = useState<PhoneTab>('groove')
@@ -127,7 +127,7 @@ export function PhoneSettings({ onDone }: { onDone: () => void }) {
     <aside aria-label="Settings" className="flex w-full flex-col bg-panel">
       <FullScreenHeading name="Settings" onClose={onDone} className="px-4 pt-3.5 pb-2.5" />
       <div className="flex items-center justify-between gap-3 px-4 pb-3.5">
-        <LoopChip />
+        <LoopChip large />
         <CountInToggle />
       </div>
       <PhoneTabs id={id} tab={tab} onChange={setTab} />

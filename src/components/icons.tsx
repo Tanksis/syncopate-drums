@@ -147,10 +147,17 @@ export const CloseIcon = () => (
   </Icon>
 )
 
-/** A tick: done. */
+/** A tick: a toggle that's on. */
 export const CheckIcon = () => (
   <Icon>
     <path d="M3 8.5l3.2 3.2L13 4.8" />
+  </Icon>
+)
+
+/** A trophy: the clean runs, a tempo played cleanly. */
+export const TrophyIcon = () => (
+  <Icon>
+    <path d="M4.5 2h7v3.75a3.5 3.5 0 0 1-7 0zM4.5 3.5H2.5v.75A2.25 2.25 0 0 0 4.75 6.5M11.5 3.5h2v.75a2.25 2.25 0 0 1-2.25 2.25M8 9.25V12M5 14h6M6 12h4v2" />
   </Icon>
 )
 
