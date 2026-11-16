@@ -40,6 +40,7 @@ export const KEY_HELP: KeyHelpGroup[] = [
     keys: [
       ['Space', 'pause / resume'],
       ['Ctrl+Space', 'play from the count-in / stop'],
+      ['P', 'practice view on / off'],
       ['Shift+Tab  Esc', 'into the controls / back to the editor'],
       ['?', 'show / hide the key sheet'],
     ],

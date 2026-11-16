@@ -25,7 +25,9 @@ import { useEditorKeys } from './useEditorKeys'
  * bar dots and +, the bin, the bar menu and Done. Going to another bar slides its cards in; the
  * Done, or a drag down on the handle or the cards, closes the sheet (`onDone`). It is drawn in place
  * while `open`, and below the screen, to slide in and out, while not. Otherwise it's docked under
- * the notation, and its chevron collapses it to its header row.
+ * the notation, and its chevron collapses it to its header row. It's `folded` to that row too while
+ * the practice view is on, when the chevron is the one deliberate click that shows the editor again,
+ * leaving the practice view; the keys and the notation still edit in place, moving nothing.
  */
 /**
  * How tall the phone's editor sheet is, from the bottom of the screen. Turned sideways the screen is
@@ -189,13 +191,16 @@ export function GridEditor({
   orientation = 'portrait',
   open = true,
   pull = 0,
+  folded = false,
 }: {
   onDone?: () => void
   orientation?: PhoneOrientation
   open?: boolean
   pull?: number
+  /** Docked, shown as its header row only: collapsed, or in the practice view. */
+  folded?: boolean
 }) {
-  const [collapsed, toggleCollapsed] = useEditorCollapsed()
+  const [collapsed, toggleCollapsed] = useEditorCollapsed(folded)
   const [helpOpen, setHelpOpen] = useState(false)
   // A collapsed editor has no room for the cheat sheet, so ? leaves it be.
   const helpHidden = collapsed && !onDone
@@ -205,7 +210,8 @@ export function GridEditor({
   useEditorKeys(toggleHelp)
   // A touch screen shows no keyboard hints.
   const touch = useCoarsePointer()
-  const chevronLabel = collapsed ? 'Expand the editor' : 'Collapse the editor'
+  const practiceView = useAppStore((s) => s.device.practiceView)
+  const chevronLabel = practiceView ? 'Show the editor (leaves the practice view)' : collapsed ? 'Expand the editor' : 'Collapse the editor'
   if (onDone) return <EditorSheet orientation={orientation} open={open} pull={pull} onDone={onDone} />
   return (
     <section
@@ -249,9 +255,14 @@ export function GridEditor({
   )
 }
 
-/** Whether the docked editor is collapsed, the device setting, and its toggle. */
-function useEditorCollapsed(): [boolean, () => void] {
+/**
+ * Whether the docked editor is `folded` to its header row, and its chevron's toggle: the collapsed
+ * device setting's, or, in the practice view, leaving it with the editor open.
+ */
+function useEditorCollapsed(folded: boolean): [boolean, () => void] {
   const collapsed = useAppStore((s) => s.device.editorCollapsed)
+  const practiceView = useAppStore((s) => s.device.practiceView)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
-  return [collapsed, () => setDeviceSettings({ editorCollapsed: !collapsed })]
+  const toggle = () => setDeviceSettings(practiceView ? { practiceView: false, editorCollapsed: false } : { editorCollapsed: !collapsed })
+  return [folded, toggle]
 }

@@ -27,7 +27,7 @@ const QUICK_START: { title: string; desktop: string; phone: string }[] = [
   },
   {
     title: 'Press play',
-    desktop: 'Press ▶ on the notation, or Ctrl+Space, and play along. Space pauses and resumes.',
+    desktop: 'Press ▶ on the notation, or Ctrl+Space, and play along. Space pauses and resumes. Press Practice view, or P, to fold the editor and sidebars away and read the notation larger.',
     phone: 'Press ▶ in the bar at the foot of the screen, and play along.',
   },
   {
@@ -53,6 +53,10 @@ const WORDS: [word: string, meaning: string][] = [
   ['Swing', 'How long the first eighth of each beat is: Straight (50%), Triplet (66.7%), Dotted (75%), or a Custom amount between. It eases toward straight as the tempo rises, and written triplets never swing.'],
   ['Loop', 'The bars that repeat as you play, all of them unless you choose: press the Loop chip and choose a bar, or two to loop from one to the other. A click on a bar number over the staff loops that bar too; Shift+click extends.'],
   ['Count-in', 'One bar of click before the exercise starts, turned on and off with the Count-in chip.'],
+  [
+    'Practice view',
+    'On a laptop or desktop, the Practice screen set out for playing: the Practice view button over the notation, or P, folds the editor to its bar tabs and the sidebars to their edges, and the notation grows into the room. Press it again, or the arrow at the end of the bar tabs, to bring them back. Play never changes the layout.',
+  ],
 ]
 
 /**

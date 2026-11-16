@@ -254,6 +254,11 @@ export interface DeviceSettings {
   settingsSidebarOpen: boolean
   /** The grid editor is collapsed to its header, giving the notation the room. */
   editorCollapsed: boolean
+  /**
+   * The practice view is on, on a desktop: both sidebars fold to their rails, the grid editor to its bar tabs, and the
+   * notation grows to fill the room they leave. Switched only by its toggle (or P), never by Play.
+   */
+  practiceView: boolean
   /** Light or dark, or `auto` to follow the device's own setting: the mode (ADR 0013). */
   theme: Theme
   /** How the app looks: a skin of colours, fonts and ornaments over the one layout (ADR 0013). */
@@ -335,6 +340,7 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   librarySidebarOpen: true,
   settingsSidebarOpen: true,
   editorCollapsed: false,
+  practiceView: false,
   theme: 'auto',
   look: 'warm',
   screen: 'practice',

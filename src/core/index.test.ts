@@ -140,6 +140,12 @@ describe('stored device settings', () => {
     expect(deviceSettingsFrom({ fitNotation: 'no' }).fitNotation).toBe(true)
   })
 
+  it('start with the practice view off, keep it on once switched on, and drop a stored one that is not a yes or no', () => {
+    expect(deviceSettingsFrom(undefined).practiceView).toBe(false)
+    expect(deviceSettingsFrom({ practiceView: true }).practiceView).toBe(true)
+    expect(deviceSettingsFrom({ practiceView: 'on' }).practiceView).toBe(false)
+  })
+
   it('show the beat count unless that is switched off, and drop a stored one that is not a yes or no', () => {
     expect(deviceSettingsFrom(undefined).beatCount).toBe(true)
     expect(deviceSettingsFrom({ beatCount: false }).beatCount).toBe(false)

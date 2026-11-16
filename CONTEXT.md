@@ -76,6 +76,10 @@ _Avoid_: Voice, lane, track
 The standard drum-staff rendering of an exercise and its groove layer, with sticking below; what the user reads from while practicing.
 _Avoid_: Score, sheet
 
+**Practice view**:
+On the desktop, the Practice screen set out for playing rather than editing: both sidebars folded to their rails, the grid editor to its bar tabs, and the notation view grown into the room they leave. It is switched only by its toggle (or P) and remembered per device; Play, stop and the loop never change the layout.
+_Avoid_: Focus mode, full screen, stage mode
+
 **As written**:
 An exercise's line alone, as it was entered: straight, on the snare and kick rows, with no groove layer and no feet. When the exercise is played differently (swing, a pattern, the bass drum or the hi-hat foot is on), a Written | Played switch lets the notation view show it (ADR 0016).
 

@@ -169,4 +169,13 @@ describe('notationFit growing a short exercise to fill a tall area', () => {
   it('balances the lines only when it grows: five bars too tall to grow keep 4 + 1, as today', () => {
     expect(notationFit({ bars: 5, width: 1000, height: 310, lineHeight: LINE, grow: true })).toEqual({ scale: 1, barsPerLine: 4, barWidth: 227 })
   })
+  it('draws a four-bar line larger, all of it in view, in the room the practice view frees', () => {
+    // 1024 × 768: the card beside both sidebars, over the editor, against the card the view leaves.
+    const docked = notationFit({ bars: 4, width: 664, height: 230, lineHeight: LINE, grow: true })
+    const view = notationFit({ bars: 4, width: 862, height: 520, lineHeight: LINE, grow: true })
+    expect(view.scale).toBeGreaterThan(docked.scale)
+    expect(view).toEqual({ scale: 1.65, barsPerLine: 2, barWidth: 216 })
+    const viewLines = Math.ceil(4 / view.barsPerLine)
+    expect((viewLines * LINE + NOTATION_LAYOUT.staveTop) * view.scale).toBeLessThanOrEqual(520)
+  })
 })

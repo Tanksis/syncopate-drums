@@ -333,14 +333,23 @@ export interface PlayheadMark {
   bottom: number
 }
 
+/** A bar's box on the staff, in the drawing's units: the band the cursor's bar is lit in. */
+export interface BarBox {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 /**
- * What was drawn: the SVG, where each bar's line is, and where the playhead line goes for a hit
- * at a position (in Played, undefined for a position with nothing struck on the staff; in Written,
- * a hit between written notes is placed between them).
+ * What was drawn: the SVG, where each bar's line is, each bar's box, and where the playhead line
+ * goes for a hit at a position (in Played, undefined for a position with nothing struck on the
+ * staff; in Written, a hit between written notes is placed between them).
  */
 export interface Drawing {
   svg: SVGSVGElement | null
   line: (bar: number) => DrawnLine
+  barBox: (bar: number) => BarBox | undefined
   playheadMark: (position: PlayPosition) => PlayheadMark | undefined
 }
 
@@ -456,6 +465,7 @@ export function drawExercise(
    * swung &) is placed between the written notes around it.
    */
   const barAnchors = new Map<number, { anchors: PlayheadAnchor[]; top: number; bottom: number }>()
+  const barBoxes: BarBox[] = []
 
   bars.forEach((_, b) => {
     const line = Math.floor(b / barsPerLine)
@@ -467,10 +477,12 @@ export function drawExercise(
     const stave = new Stave(x, y, w, { spaceAboveStaffLn: spaceAbove })
     if (column === 0) stave.addClef('percussion')
     if (b === 0) stave.addTimeSignature(exercise.timeSignature)
+    const box = { x, y: stave.getYForLine(-1), width: w, height: stave.getYForLine(5) - stave.getYForLine(-1) }
+    barBoxes.push(box)
     if (b === cursor?.bar) {
       ctx.save()
       ctx.setFillStyle(colour.currentBar)
-      ctx.fillRect(x, stave.getYForLine(-1), w, stave.getYForLine(5) - stave.getYForLine(-1))
+      ctx.fillRect(box.x, box.y, box.width, box.height)
       ctx.restore()
     }
     if (inLoopRange(exercise.practice.loopRange, b)) {
@@ -536,7 +548,7 @@ export function drawExercise(
     if (mark || !written) return mark
     return { x: playheadX(written.anchors, tick), top: written.top, bottom: written.bottom }
   }
-  return { svg: el.querySelector('svg'), line, playheadMark }
+  return { svg: el.querySelector('svg'), line, barBox: (bar: number) => barBoxes[bar], playheadMark }
 }
 
 /** A notehead a tie can run from or to: its note, its index in the chord, and its line of staves. */

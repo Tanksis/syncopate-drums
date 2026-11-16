@@ -1,7 +1,10 @@
 // Layout A, "Workstation": one header across the window, and under it library sidebar | the
 // exercise's bar, notation card, editor panel | settings sidebar. Either sidebar collapses to a rail;
-// below 1000 px both are rails that open over the notation. The header's switch shows the Metronome
-// page between the sidebars instead, and swaps the top of the settings sidebar for its own settings.
+// below 1000 px both are rails that open over the notation, and at 1024 px and below Practice's
+// settings are. The practice view folds both sidebars to rails and the editor to its bar tabs, and
+// grows the notation into the room (`workstationLayout`). The header's switch shows the Metronome
+// page beside the settings sidebar instead, with no library, and swaps the top of the settings
+// sidebar for its own settings.
 // Below 640 px, the phone layout: a column of header, notation, transport bar and tab bar, with the
 // editor sheet sliding up over the foot of it, and the sidebars sliding in over the whole screen.
 // Turned sideways, the header and tab bar give way to a rail of icons down the left.
@@ -26,7 +29,10 @@ import { PhoneSettings } from '@/features/settings/SettingsSidebar'
 import { PreferencesButton, SoundButton } from '@/features/settings/SettingsPopovers'
 import { SettingsSidebar } from '@/app/SettingsSidebar'
 import { useAppStore } from '@/app/store'
-import { useNarrowWindow, usePhoneOrientation, usePhoneWindow } from '@/app/useMediaQuery'
+import { useNarrowWindow, usePhoneOrientation, usePhoneWindow, useSettingsDrawerWindow } from '@/app/useMediaQuery'
+import { PracticeViewToggle, usePracticeViewKey } from '@/app/PracticeView'
+import type { SidebarId, SidebarPlace, WorkstationLayout } from '@/app/workstation'
+import { workstationLayout } from '@/app/workstation'
 import { NameInput } from '@/components/NameInput'
 import type { Side } from '@/components/Sidebar'
 import { SidebarFullScreen, SidebarOverlay, SidebarRail } from '@/components/Sidebar'
@@ -38,11 +44,12 @@ import { HelpIcon, MenuIcon, PencilIcon, SettingsIcon } from '@/components/icons
 import { isBuiltIn } from '@/core'
 
 export function App() {
-  const sidebars = useSidebars()
+  const layout = useWorkstationLayout()
+  const sidebars = useSidebars(layout)
   const phone = usePhoneWindow()
   const [barRef, room] = useExerciseBarRoom()
   const onMetronome = useAppStore((s) => s.device.screen === 'metronome')
-  const fitNotation = useAppStore((s) => s.device.fitNotation)
+  usePracticeViewKey(!phone && !onMetronome)
   // The Help page, over the rest; app state, like the sheets, so no route.
   const [helpOpen, setHelpOpen] = useState(false)
   const help = helpOpen && <HelpPage onClose={() => setHelpOpen(false)} />
@@ -73,10 +80,12 @@ export function App() {
       {help}
 
       {/* The sidebars stay put under it on both screens; an overlay opens over this, below the header. */}
-      <div className="relative grid min-h-0 flex-1 grid-cols-[auto_1fr_auto] grid-rows-[minmax(0,1fr)]">
-        <SidebarSlot name="Exercises" side="left" {...sidebars.library}>
-          <LibrarySidebar onCollapse={sidebars.library.onCollapse} />
-        </SidebarSlot>
+      <div className={`relative grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] ${layout.library === 'hidden' ? 'grid-cols-[1fr_auto]' : 'grid-cols-[auto_1fr_auto]'}`}>
+        {layout.library !== 'hidden' && (
+          <SidebarSlot name="Exercises" side="left" {...sidebars.library}>
+            <LibrarySidebar onCollapse={sidebars.library.onCollapse} />
+          </SidebarSlot>
+        )}
 
         {onMetronome ? (
           <MetronomePage />
@@ -90,6 +99,7 @@ export function App() {
                   <ExerciseName />
                 </div>
                 <TransportControls room={room} />
+                <PracticeViewToggle />
               </div>
               {room === 'compact' && <PlaybackChips className="justify-end" />}
             </div>
@@ -97,11 +107,11 @@ export function App() {
             {/* The music on a card, which takes the height the editor leaves, all of it when that's collapsed. */}
             <div className="flex min-h-0 flex-1 flex-col p-3">
               <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-card border-(length:--border-card) border-line bg-paper shadow-card">
-                <NotationView corner={<StaffPlayButton />} grow={fitNotation} />
+                <NotationView corner={<StaffPlayButton />} grow={layout.growNotation} />
                 <WelcomeCard onBrowse={sidebarShower(sidebars.library)} />
               </div>
             </div>
-            <GridEditor />
+            <GridEditor folded={layout.editorFolded} />
           </main>
         )}
 
@@ -321,10 +331,12 @@ function SettingsToggle({ state, onOpen, onCollapse }: SidebarControl) {
 
 /**
  * The exercise bar's widths, in px, below which its controls don't all fit while leaving the
- * exercise name its 12 letters or so, measured in each look's fonts with the click off (Warm's need
- * the most): under `full` the Click and Count-in chips and the loop chip move to a row under the bar's.
+ * exercise name its 10 letters or so, measured in each look's fonts with the click off and the
+ * Practice view toggle at the end (Warm's need the most: 32 padding, 96 name, 746 transport, 139
+ * toggle and two 12 gaps): under `full` the Click and Count-in chips and the loop chip move to a
+ * row under the bar's.
  */
-const EXERCISE_BAR_WIDTH = { full: 843 }
+const EXERCISE_BAR_WIDTH = { full: 1037 }
 
 /**
  * A ref for the exercise's bar over the notation, and how much of the transport fits in it. That
@@ -358,8 +370,6 @@ function NotSaving({ className = '' }: { className?: string }) {
   )
 }
 
-type SidebarId = 'library' | 'settings'
-
 /** How a sidebar shows: in its column, as a rail, or as a rail with the sidebar over the notation. */
 type SidebarState = 'open' | 'rail' | 'overlay'
 
@@ -371,20 +381,34 @@ interface SidebarControl {
 
 const STORED_OPEN = { library: 'librarySidebarOpen', settings: 'settingsSidebarOpen' } as const
 
-/**
- * Each sidebar's state and its open and collapse actions. In a wide window, whether each is open is
- * the stored device setting. In a narrow one both are rails, and at most one shows as an overlay,
- * which isn't stored, and which `Esc`, a click outside or opening an exercise closes.
- */
-function useSidebars(): Record<SidebarId, SidebarControl> {
+/** The desktop Workstation's layout for the screen showing, the window's width and the device settings. */
+function useWorkstationLayout(): WorkstationLayout {
   const narrow = useNarrowWindow()
+  const settingsDrawer = useSettingsDrawerWindow()
+  const screen = useAppStore((s) => s.device.screen)
+  const practiceView = useAppStore((s) => s.device.practiceView)
+  const editorCollapsed = useAppStore((s) => s.device.editorCollapsed)
+  const fitNotation = useAppStore((s) => s.device.fitNotation)
+  return workstationLayout(screen, { narrow, settingsDrawer }, { practiceView, editorCollapsed, fitNotation })
+}
+
+/**
+ * Each sidebar's state and its open and collapse actions, by its place in the `layout`. Docked,
+ * whether it's open is the stored device setting. As a drawer it's a rail, and at most one drawer
+ * shows as an overlay, which isn't stored, and which `Esc`, a click outside, opening an exercise or a
+ * change of layout closes. On a phone both are drawers, opened over the whole screen.
+ */
+function useSidebars(layout: WorkstationLayout): Record<SidebarId, SidebarControl> {
   const device = useAppStore((s) => s.device)
   const setDeviceSettings = useAppStore((s) => s.setDeviceSettings)
   const openId = useAppStore((s) => s.editor.exercise.id)
   const [overlay, setOverlay] = useState<SidebarId | null>(null)
+  const phone = usePhoneWindow()
+  const place = (id: SidebarId): SidebarPlace => (phone ? 'drawer' : layout[id])
 
-  // An overlay closes when the window widens past it, and when an exercise is opened from it.
-  useEffect(() => setOverlay(null), [narrow, openId])
+  // An overlay closes when its sidebar docks or goes, and when an exercise is opened from it.
+  const places = `${place('library')} ${place('settings')}`
+  useEffect(() => setOverlay(null), [places, openId])
 
   useEffect(() => {
     if (!overlay) return
@@ -403,7 +427,7 @@ function useSidebars(): Record<SidebarId, SidebarControl> {
   }, [overlay])
 
   const control = (id: SidebarId): SidebarControl =>
-    narrow
+    place(id) !== 'docked'
       ? {
           state: overlay === id ? 'overlay' : 'rail',
           onOpen: () => setOverlay(overlay === id ? null : id),
