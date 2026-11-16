@@ -6,10 +6,11 @@ import { commandForKey } from '@/core'
 /**
  * Turns key presses into editor commands, via the core's key map, while the focus is on the page
  * rather than a control (which Shift+Tab moves into); none while a dialog is open. `?` calls
- * `onHelp` instead. Esc on a control that doesn't take it hands the keyboard back to the editor.
+ * `onHelp` instead, and L loops the cursor bar or the selection (`loopCursorBars`). Esc on a control that doesn't take it hands the keyboard back to the editor.
  */
 export function useEditorKeys(onHelp: () => void) {
   const dispatch = useAppStore((s) => s.dispatch)
+  const loopCursorBars = useAppStore((s) => s.loopCursorBars)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (onControl(e.target)) {
@@ -23,6 +24,11 @@ export function useEditorKeys(onHelp: () => void) {
         onHelp()
         return
       }
+      if ((e.key === 'l' || e.key === 'L') && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) {
+        e.preventDefault()
+        if (!e.repeat) loopCursorBars()
+        return
+      }
       const command = commandForKey(e)
       if (!command) return
       e.preventDefault()
@@ -30,5 +36,5 @@ export function useEditorKeys(onHelp: () => void) {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [dispatch, onHelp])
+  }, [dispatch, loopCursorBars, onHelp])
 }

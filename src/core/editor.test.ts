@@ -10,6 +10,7 @@ import {
   commandForKey,
   editorBeatViews,
   loopAt,
+  loopRangeForKey,
   pickLoopBar,
   marksAt,
   newEditorState,
@@ -224,6 +225,18 @@ describe('the loop range', () => {
   it('the loop picker keeps one bar when the same bar is chosen twice', () => {
     const one = loopAt(five(), 2)
     expect(loopAt(one, 2, pickLoopBar(2, 2)).practice.loopRange).toEqual({ first: 2, last: 2 })
+  })
+
+  it('L loops the cursor bar or the selection, and L again on just those bars loops them all', () => {
+    expect(loopRangeForKey(null, { first: 2, last: 2 })).toEqual({ first: 2, last: 2 })
+    expect(loopRangeForKey(null, { first: 1, last: 3 })).toEqual({ first: 1, last: 3 })
+    expect(loopRangeForKey({ first: 2, last: 2 }, { first: 2, last: 2 })).toBeNull()
+    expect(loopRangeForKey({ first: 1, last: 3 }, { first: 1, last: 3 })).toBeNull()
+  })
+
+  it('L on other bars than the loop moves the loop to them', () => {
+    expect(loopRangeForKey({ first: 1, last: 3 }, { first: 2, last: 2 })).toEqual({ first: 2, last: 2 })
+    expect(loopRangeForKey({ first: 2, last: 2 }, { first: 2, last: 4 })).toEqual({ first: 2, last: 4 })
   })
 
   it('Shift+click with no range set loops just that bar', () => {
