@@ -1,7 +1,7 @@
 import { useAppStore } from '@/app/store'
 import { Popover } from '@/components/Popover'
 import { GroupHeadingLevel } from '@/components/SettingGroup'
-import { GearIcon, SpeakerIcon, SpeakerMutedIcon } from '@/components/icons'
+import { AppearanceIcon, SpeakerIcon, SpeakerMutedIcon } from '@/components/icons'
 import { AppearanceSettings, MetronomeSoundSettings, MixSettings } from './SettingsSidebar'
 
 /**
@@ -24,10 +24,10 @@ export function SoundButton() {
   )
 }
 
-/** The header's Preferences button, on either screen: a panel of how the app looks on this device. */
-export function PreferencesButton() {
+/** The header's Appearance button, on either screen: a panel of how the app looks on this device. */
+export function AppearanceButton() {
   return (
-    <Popover label="Preferences" icon={<GearIcon />}>
+    <Popover label="Appearance" icon={<AppearanceIcon />}>
       <GroupHeadingLevel value={2}>
         <AppearanceSettings />
       </GroupHeadingLevel>

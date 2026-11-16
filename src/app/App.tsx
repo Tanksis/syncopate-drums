@@ -26,7 +26,7 @@ import type { TransportRoom } from '@/features/playback/TransportControls'
 import { CleanRunsSheet } from '@/features/playback/CleanRuns'
 import { PlaybackChips, TransportControls } from '@/features/playback/TransportControls'
 import { PhoneSettings } from '@/features/settings/SettingsSidebar'
-import { PreferencesButton, SoundButton } from '@/features/settings/SettingsPopovers'
+import { AppearanceButton, SoundButton } from '@/features/settings/SettingsPopovers'
 import { SettingsSidebar } from '@/app/SettingsSidebar'
 import { useAppStore } from '@/app/store'
 import { useNarrowWindow, usePhoneOrientation, usePhoneWindow, useSettingsDrawerWindow } from '@/app/useMediaQuery'
@@ -68,12 +68,14 @@ export function App() {
         <ScreenTabs place="header" />
         <div className="flex items-center justify-end gap-3">
           <NotSaving />
+          {/* Practice's own: first in the row, so the buttons after it stay put on the Metronome, where it isn't. */}
+          {!onMetronome && <PracticeViewToggle />}
           {/* The same buttons on both screens, so none moves when the screen does; the speaker's panel follows the screen. */}
           <Button size="md" icon aria-label="Help" title="Help and about" onClick={() => setHelpOpen(true)}>
             <HelpIcon />
           </Button>
           <SoundButton />
-          <PreferencesButton />
+          <AppearanceButton />
           <SettingsToggle {...sidebars.settings} />
         </div>
       </header>
@@ -99,7 +101,6 @@ export function App() {
                   <ExerciseName />
                 </div>
                 <TransportControls room={room} />
-                <PracticeViewToggle />
               </div>
               {room === 'compact' && <PlaybackChips className="justify-end" />}
             </div>
@@ -116,7 +117,7 @@ export function App() {
         )}
 
         <SidebarSlot name="Settings" side="right" {...sidebars.settings}>
-          <SettingsSidebar onCollapse={sidebars.settings.onCollapse} />
+          <SettingsSidebar wide={sidebars.settings.state !== 'open'} onCollapse={sidebars.settings.onCollapse} />
         </SidebarSlot>
       </div>
     </div>
@@ -331,12 +332,12 @@ function SettingsToggle({ state, onOpen, onCollapse }: SidebarControl) {
 
 /**
  * The exercise bar's widths, in px, below which its controls don't all fit while leaving the
- * exercise name its 10 letters or so, measured in each look's fonts with the click off and the
- * Practice view toggle at the end (Warm's need the most: 32 padding, 96 name, 746 transport, 139
- * toggle and two 12 gaps): under `full` the Click and Count-in chips and the loop chip move to a
- * row under the bar's.
+ * exercise name its 10 letters or so, measured in each look's fonts with the click off (Warm's need
+ * the most: 32 padding, 96 name, a 12 gap and 746 transport): under `full` the Click and Count-in
+ * chips and the loop chip move to a row under the bar's. The Practice view toggle is in the header,
+ * so it takes none of this.
  */
-const EXERCISE_BAR_WIDTH = { full: 1037 }
+const EXERCISE_BAR_WIDTH = { full: 886 }
 
 /**
  * A ref for the exercise's bar over the notation, and how much of the transport fits in it. That

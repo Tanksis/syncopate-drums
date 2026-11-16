@@ -26,3 +26,7 @@ On the desktop, the two screens share one layout: a full-width header (the name,
 ## Amended 2026-10-17 (time signatures tickets 06 and 07)
 
 The Settings section at the sidebar's foot is gone: on most laptop windows it left both it and the screen's own settings scrolling. The sidebar now holds only the screen's own settings. A speaker in the header, on both screens, opens a panel of the screen's own sound: the mix on the Practice screen, and the metronome's sound and volume, heard only there, on the Metronome screen. How the app looks is in a Preferences panel from a gear beside it. The header's buttons (Help, the speaker, Preferences, the settings toggle) are the same on both screens, so nothing in the header moves when the screen does. The phone keeps its own layout.
+
+## Amended 2026-11-16 (critique polish)
+
+The Preferences button is called Appearance, its panel's name and the glossary's, and shows a half-shaded circle rather than a gear, which beside the settings toggle's sliders read as a second Settings. On the Practice screen the Practice view toggle sits first in the header's buttons, so the ones after it stay put on the Metronome, where it isn't.

@@ -110,7 +110,7 @@ const PHONE_TABS = [
   { id: 'groove', name: 'Groove' },
   { id: 'sticking', name: 'Sticking' },
   { id: 'mix', name: 'Mix' },
-  { id: 'theme', name: 'Theme' },
+  { id: 'appearance', name: 'Appearance' },
 ] as const
 
 type PhoneTab = (typeof PHONE_TABS)[number]['id']
@@ -154,7 +154,7 @@ export function PhoneSettings({ onDone }: { onDone: () => void }) {
             <MixRow layer="groove" large />
           </>
         )}
-        {tab === 'theme' && (
+        {tab === 'appearance' && (
           <>
             <LookChoice large />
             <ModeChoice stacked />
@@ -179,8 +179,9 @@ function PhoneTabs({ id, tab, onChange }: { id: string; tab: PhoneTab; onChange:
     onChange(PHONE_TABS[next].id)
     list.current?.querySelectorAll<HTMLElement>('[role=tab]')[next]?.focus()
   }
+  // Each tab at least as wide as its name, so Appearance isn't cut on a narrow phone.
   return (
-    <div ref={list} role="tablist" aria-label="Settings sections" onKeyDown={onKeyDown} className="mx-4 grid grid-cols-4 border-b border-line">
+    <div ref={list} role="tablist" aria-label="Settings sections" onKeyDown={onKeyDown} className="mx-4 grid grid-cols-[repeat(4,minmax(max-content,1fr))] border-b border-line">
       {PHONE_TABS.map((t) => (
         <button
           key={t.id}

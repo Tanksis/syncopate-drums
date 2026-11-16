@@ -276,7 +276,7 @@ export function LibrarySidebar({ onCollapse, fullScreen = false, onHelp }: { onC
                           onClick={() => openExercise(id)}
                           className={`flex min-w-0 flex-1 items-baseline gap-2 ${rowClass(id === openId, { plain: true })}`}
                         >
-                          <span className="w-4 shrink-0 text-right text-xs font-normal tabular-nums opacity-60">{number}</span>
+                          <span className="w-4 shrink-0 text-right text-xs font-normal tabular-nums text-mute">{number}</span>
                           {/* The best clean BPM follows the name, wrapping with it, rather than taking a column. */}
                           <span className="min-w-0 flex-1">
                             {name} <BestCleanBpm runs={builtInCleanRuns[id]} />

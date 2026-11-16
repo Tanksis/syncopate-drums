@@ -62,7 +62,7 @@ const WORDS: [word: string, meaning: string][] = [
   ['Count-in', 'One bar of click before the exercise starts, turned on and off with the Count-in chip.'],
   [
     'Practice view',
-    'On a laptop or desktop, the Practice screen set out for playing: the Practice view button over the notation, or P, folds the editor to its bar tabs and the sidebars to their edges, and the notation grows into the room. Press it again, or the arrow at the end of the bar tabs, to bring them back. Play never changes the layout.',
+    'On a laptop or desktop, the Practice screen set out for playing: the Practice view button in the header, or P, folds the editor to its bar tabs and the sidebars to their edges, and the notation grows into the room. Press it again, or the arrow at the end of the bar tabs, to bring them back. Play never changes the layout.',
   ],
 ]
 
