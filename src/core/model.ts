@@ -463,6 +463,14 @@ export function pickLoopBar(pick: number | null, bar: number): { extend: boolean
   return pick === null ? { extend: false, next: bar } : { extend: true, next: null }
 }
 
+/**
+ * The L key's loop range: `bars` (the bar selection, or else the cursor bar), or the whole exercise
+ * again (`null`) when just those bars already loop, so a second L lets the loop go.
+ */
+export function loopRangeForKey(range: LoopRange | null, bars: LoopRange): LoopRange | null {
+  return range && range.first === bars.first && range.last === bars.last ? null : { first: bars.first, last: bars.last }
+}
+
 /** Whether a bar is in a set loop range. */
 export function inLoopRange(range: LoopRange | null, bar: number): boolean {
   return range !== null && bar >= range.first && bar <= range.last

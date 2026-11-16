@@ -21,6 +21,7 @@ import {
   launchListOrder,
   leftoverExamples,
   loopAt,
+  loopRangeForKey,
   moveToFolder,
   newEditorState,
   newExercise,
@@ -110,6 +111,8 @@ interface AppState {
   loopBar: (bar: number, options?: { extend?: boolean }) => void
   /** Loops the whole exercise again. */
   loopAll: () => void
+  /** The L key: loops the bar selection, or else the cursor bar; the whole exercise again if just those bars loop. */
+  loopCursorBars: () => void
   /** Opens a stored exercise or a built-in one, switching the sidebar to the tab that lists it. */
   openExercise: (id: string) => void
   /** Opens a new Untitled exercise, on top of the list, in the open exercise's folder. */
@@ -376,6 +379,12 @@ export const useAppStore = create<AppState>()((set, get) => {
       const { editor } = get()
       if (editor.exercise.practice.loopRange === null) return
       const exercise = withLoopRange(editor.exercise, null)
+      change(exercise, { ...editor, exercise })
+    },
+    loopCursorBars: () => {
+      const { editor } = get()
+      const bars = editor.selection ?? { first: editor.cursor.bar, last: editor.cursor.bar }
+      const exercise = withLoopRange(editor.exercise, loopRangeForKey(editor.exercise.practice.loopRange, bars))
       change(exercise, { ...editor, exercise })
     },
     openExercise: (id) => {

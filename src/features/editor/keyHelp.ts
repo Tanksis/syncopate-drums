@@ -27,6 +27,7 @@ export const KEY_HELP: KeyHelpGroup[] = [
     title: 'Bars',
     keys: [
       ['Shift+← →', 'select bars'],
+      ['L', 'loop the bar or selection; again for all bars'],
       ['Ctrl+C  Ctrl+V', 'copy / paste over from the cursor bar'],
       ['Ctrl+Enter', 'add a bar after'],
       ['Ctrl+D', 'duplicate the bar'],

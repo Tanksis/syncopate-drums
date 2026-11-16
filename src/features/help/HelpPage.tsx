@@ -13,7 +13,7 @@ import { METRONOME_KEY_HELP } from '@/features/metronome/useMetronomeKeys'
 /** Every key, the editor's and the Metronome page's. */
 const KEYS: KeyHelpGroup[] = [...KEY_HELP, METRONOME_KEY_HELP]
 
-/** The three steps to a first exercise, on a phone and on the desktop. */
+/** The steps to a first exercise and the way to practise it, on a phone and on the desktop. */
 const QUICK_START: { title: string; desktop: string; phone: string }[] = [
   {
     title: 'Make an exercise',
@@ -29,6 +29,11 @@ const QUICK_START: { title: string; desktop: string; phone: string }[] = [
     title: 'Press play',
     desktop: 'Press ▶ on the notation, or Ctrl+Space, and play along. Space pauses and resumes.',
     phone: 'Press ▶ in the bar at the foot of the screen, and play along.',
+  },
+  {
+    title: 'Loop a hard bar',
+    desktop: 'Press the Loop chip over the notation and choose the bar, or press L with the cursor on it (L again loops all bars). Raise the BPM as it comes clean, and log it under Clean.',
+    phone: 'Open the settings (the sliders), press the Loop chip and choose the bar. Raise the BPM as it comes clean, and log it under the trophy.',
   },
 ]
 
